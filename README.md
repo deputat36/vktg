@@ -1,30 +1,34 @@
 # vktg Crossposter
 
-A simple Telegram to VK crossposting bot.
+Простой бот, который помогает публиковать сообщения из Telegram в группу ВКонтакте.
 
-## Setup
+## Настройка
 
-1. Install Python dependencies:
+1. Установите зависимости Python:
 
 ```bash
 pip install telethon requests
 ```
 
-2. Edit `bot_config.py` and fill in your Telegram API credentials, bot token, channel IDs, and VK parameters.
+2. Откройте файл `bot_config.py` и впишите свои значения:
+   - `API_ID` и `API_HASH` из [my.telegram.org](https://my.telegram.org)
+   - `BOT_TOKEN` – токен вашего телеграм‑бота
+   - ID исходных и целевого каналов
+   - `VK_TOKEN` и `VK_GROUP_ID` для публикации в VK
 
-   The script checks these values on startup and will exit with an error if any placeholders remain.
+   Скрипт проверяет, чтобы все эти параметры были заполнены, и завершится с ошибкой, если что-то забыто.
 
-3. Run the bot:
+3. Запустите бот командой:
 
 ```bash
 python crosspost.py
 ```
 
-Windows users can double-click `run.bat`.
+Пользователи Windows могут запустить `run.bat` двойным щелчком.
 
-## Files
+## Файлы
 
-- `crosspost.py` – main bot script that polls Telegram channels, sends new posts for moderation, and on approval forwards to the target channel and VK.
-- `bot_config.py` – configuration with tokens and IDs.
-- `run.bat` – helper script to start the bot on Windows.
-- `logs/` – directory where `bot.log` is written.
+- `crosspost.py` – основной скрипт бота. Следит за каналами, отправляет новые посты на модерацию, а после одобрения публикует их в VK и целевом канале.
+- `bot_config.py` – здесь хранятся все токены и ID.
+- `run.bat` – удобный запуск на Windows.
+- папка `logs/` – сюда пишется файл `bot.log`.
