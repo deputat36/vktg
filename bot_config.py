@@ -7,8 +7,8 @@
 """
 
 # Данные Telegram API. Их можно получить на https://my.telegram.org
-API_ID = 123456  # ваш API ID
-API_HASH = 'your_api_hash'  # ваш API HASH
+API_ID = 25480516  # ваш API ID
+API_HASH = '28efe5dbaed02df8764062c257f8e84f'  # ваш API HASH
 BOT_TOKEN = 'your_bot_token'  # токен бота
 
 # Каналы и чаты Telegram
