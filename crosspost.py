@@ -21,6 +21,32 @@ from telethon import TelegramClient, events, Button
 
 import bot_config as config
 
+
+def validate_config() -> None:
+    """Проверяем, что в конфигурации нет значений по умолчанию."""
+    errors = []
+    if config.API_ID == 0:
+        errors.append('API_ID не указан')
+    if config.API_HASH in {'', 'your_api_hash'}:
+        errors.append('API_HASH не указан')
+    if config.BOT_TOKEN == 'your_bot_token':
+        errors.append('Заполните BOT_TOKEN в bot_config.py')
+    if config.SOURCE_CHANNELS == ['@source_channel']:
+        errors.append('Укажите реальные SOURCE_CHANNELS')
+    if config.MODERATION_CHAT == '@moderation_chat':
+        errors.append('Укажите MODERATION_CHAT')
+    if config.TARGET_CHANNEL == '@target_channel':
+        errors.append('Укажите TARGET_CHANNEL')
+    if config.VK_TOKEN == 'your_vk_token':
+        errors.append('Укажите VK_TOKEN')
+    if config.VK_GROUP_ID == 123456789:
+        errors.append('Укажите VK_GROUP_ID')
+
+    if errors:
+        for err in errors:
+            logging.error(err)
+        raise SystemExit('Исправьте значения в bot_config.py и перезапустите бота')
+
 # Убеждаемся, что папка для логов существует
 os.makedirs('logs', exist_ok=True)
 # Настраиваем запись логов: в файл и на экран
@@ -32,6 +58,9 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# Проверяем конфигурацию перед запуском клиента
+validate_config()
 
 # Создаём клиента Telegram. Он подключается с учётными данными бота
 client = TelegramClient('crosspost', config.API_ID, config.API_HASH).start(bot_token=config.BOT_TOKEN)

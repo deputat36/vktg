@@ -12,6 +12,8 @@ pip install telethon requests
 
 2. Edit `bot_config.py` and fill in your Telegram API credentials, bot token, channel IDs, and VK parameters.
 
+   The script checks these values on startup and will exit with an error if any placeholders remain.
+
 3. Run the bot:
 
 ```bash
