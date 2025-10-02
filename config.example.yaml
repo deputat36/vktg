@@ -1,0 +1,33 @@
+# Основные настройки сервиса
+PROFILE: local
+
+SOURCES:
+  - source_channel_username
+TARGET: target_channel_username
+MOD_CHAT: moderator_chat_username
+ATTRIBUTION_ENABLED: false
+DEDUP_TTL_DAYS: 30
+
+RETRY:
+  ATTEMPTS: 5
+  INITIAL: 3
+  MULTIPLIER: 2
+  MAX: 60
+
+LOGGING:
+  LEVEL: INFO
+  DIRECTORY: logs
+  ROTATION_SIZE_MB: 10
+  ROTATION_BACKUPS: 5
+
+# Опциональные профили (например, cloud)
+profiles:
+  cloud:
+    SOURCES:
+      - source_channel_username
+    TARGET: target_channel_username
+    MOD_CHAT: moderator_chat_username
+    ATTRIBUTION_ENABLED: true
+    DEDUP_TTL_DAYS: 30
+    DATABASE_PATH: cloud_storage/state.sqlite3
+    MEDIA_STORAGE_PATH: cloud_storage/media
