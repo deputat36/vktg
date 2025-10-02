@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+logs/
+storage/
+config.yaml
+.env
+*.session
+service.pid
