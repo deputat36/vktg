@@ -1,0 +1,17 @@
+{
+  "app_name": "Навигатор сделки СПН",
+  "version": "7.0",
+  "city": "Борисоглебск",
+  "region": "Воронежская область",
+  "default_lawyer": "Рябушкина",
+  "default_manager": "Ковтун Алексей Вадимович",
+  "default_broker": "Татьяна Стерликова",
+  "tariffs_checked_at": "2026-05-17",
+  "tariffs": {
+    "registration_right": 4000,
+    "registration_land": 700,
+    "sber_sbr": 3400,
+    "evaluation_flat": "3 000–5 000",
+    "evaluation_house": "6 000–9 000"
+  }
+}

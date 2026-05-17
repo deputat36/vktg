@@ -1,0 +1,15 @@
+[
+  {"id":"manual","title":"Ручное заполнение / свой сценарий","patch":{}},
+  {"id":"flat_cash","title":"Квартира, свободная продажа","patch":{"objectType":"Квартира в многоквартирном доме","rightForm":"Весь объект целиком","basis":["sale"],"payments":["accreditive"],"bankType":"Наличный / безналичный расчет без банка"}},
+  {"id":"flat_sber","title":"Квартира, ипотека Сбер","patch":{"objectType":"Квартира в многоквартирном доме","rightForm":"Весь объект целиком","basis":["sale"],"payments":["mortgage","safe"],"bankType":"Сбер / Домклик","bankInfo":"Одобрение через ипотечного брокера Татьяну Стерликову или самостоятельно. Документы загружаются в Домклик."}},
+  {"id":"flat_sber_matcap","title":"Квартира, Сбер + маткапитал","patch":{"objectType":"Квартира в многоквартирном доме","rightForm":"Весь объект целиком","basis":["sale"],"payments":["mortgage","safe"],"certificates":["matcap"],"bankType":"Сбер / Домклик","flags":["spouse"]}},
+  {"id":"house_cash","title":"Дом + участок, наличные","patch":{"objectType":"Жилой дом + земельный участок","rightForm":"Весь объект целиком","basis":["sale","admin"],"payments":["accreditive"],"flags":["landBoundary","landUse"]}},
+  {"id":"house_sber","title":"Дом + участок, ипотека","patch":{"objectType":"Жилой дом + земельный участок","rightForm":"Весь объект целиком","basis":["sale","admin"],"payments":["mortgage","safe"],"bankType":"Сбер / Домклик","flags":["landBoundary","landUse","unregisteredBuildings"]}},
+  {"id":"private_flat","title":"Квартира в частном секторе","patch":{"objectType":"Квартира в частном секторе / часть дома по документам квартира","rightForm":"Весь объект целиком","basis":["privat"],"payments":["mortgage"],"bankType":"Сбер / Домклик","flags":["privateSectorFlat","privatRefusers"]}},
+  {"id":"share_flat","title":"Доля в квартире","patch":{"objectType":"Квартира в многоквартирном доме","rightForm":"Доля в праве на квартиру","basis":["sale"],"payments":["transfer"],"flags":["shareDeal","preemptive"]}},
+  {"id":"share_house_land","title":"Доля в доме/земле","patch":{"objectType":"Жилой дом + земельный участок","rightForm":"Доля в праве на дом и доля в праве на участок","basis":["inheritLaw"],"payments":["transfer"],"flags":["shareDeal","preemptive","landBoundary","landUse"]}},
+  {"id":"minor_owner","title":"Несовершеннолетний собственник","patch":{"basis":["sale"],"flags":["minorSeller"],"questions":"Можно ли брать задаток до разрешения опеки? Какие условия прописать?"}},
+  {"id":"seller_mortgage","title":"Ипотека продавца / снятие обременения","patch":{"basis":["sale"],"payments":["mortgage","sellerMortgageClose","safe"],"bankType":"Сбер / Домклик","flags":["encumbrance"]}},
+  {"id":"nis","title":"Военная ипотека / НИС","patch":{"basis":["sale"],"payments":["mortgage","safe"],"certificates":["nis"],"bankType":"Сбер / Домклик"}},
+  {"id":"young","title":"Сертификат Молодая семья","patch":{"basis":["sale"],"payments":["transfer"],"certificates":["young"]}}
+]

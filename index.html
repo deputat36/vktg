@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Навигатор сделки СПН</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div>
+        <h1>Навигатор сделки СПН v7.0</h1>
+        <p>Модульная онлайн-версия для GitHub Pages и дальнейшего подключения Supabase.</p>
+        <div id="status" class="status">Загрузка...</div>
+      </div>
+      <div class="actions">
+        <button id="btnGenerate">Сформировать</button>
+        <button id="btnSelfCheck" class="orange">Самопроверка</button>
+        <button id="btnCopyLawyer" class="light">Копировать юристу</button>
+        <button id="btnExport" class="light">Скачать JSON</button>
+        <button id="btnRestore" class="light">Восстановить</button>
+      </div>
+    </header>
+    <main class="grid">
+      <aside class="panel left">
+        <section>
+          <h2>Быстрые сценарии</h2>
+          <div id="scenarios" class="scenario-grid"></div>
+          <p class="small">Если подходящего сценария нет — выберите ручное заполнение и заполните поля вручную.</p>
+        </section>
+        <section class="section">
+          <h2>Основное</h2>
+          <div class="row"><label>Режим<select id="mode"><option>Новичок</option><option>Опытный СПН</option></select></label><label>Этап<select id="stage"><option>Первичная подготовка до задатка</option><option>Задаток планируется</option><option>Задаток уже внесен</option><option>Сделка назначена</option><option>Сделка проблемная / нужен срочный разбор</option></select></label></div>
+          <div class="row"><label>Юрист<input id="lawyer"></label><label>Менеджер<select id="manager"></select></label></div>
+          <div class="row"><label>СПН продавца<select id="sellerSpn"></select></label><label>СПН покупателя<select id="buyerSpn"></select></label></div>
+          <div class="row"><label>Телефон продавца<input id="sellerPhone"></label><label>Телефон покупателя<input id="buyerPhone"></label></div>
+        </section>
+        <section class="section">
+          <h2>Объект</h2>
+          <label>Тип объекта<select id="objectType"><option>Квартира в многоквартирном доме</option><option>Квартира в частном секторе / часть дома по документам квартира</option><option>Комната</option><option>Жилой дом</option><option>Жилой дом + земельный участок</option><option>Часть жилого дома</option><option>Земельный участок без дома</option><option>Дача / садовый дом / СНТ</option><option>Коммерческая недвижимость</option><option>Новостройка / ДДУ</option><option>Уступка права требования</option></select></label>
+          <label>Форма права<select id="rightForm"><option>Весь объект целиком</option><option>Доля в праве на квартиру</option><option>Доля в праве на комнату</option><option>Доля в праве на жилой дом</option><option>Доля в праве на земельный участок</option><option>Доля в праве на дом и доля в праве на участок</option><option>Несколько объектов одним пакетом</option></select></label>
+          <label>Адрес<input id="address" placeholder="Борисоглебск, адрес объекта"></label>
+          <div class="row"><label>КН объекта<input id="cadObject"></label><label>КН земли<input id="cadLand"></label></div>
+          <div class="row"><label>Фактическая цена<input id="priceFact"></label><label>Цена в договоре<input id="priceContract"></label></div>
+          <label>Комментарий по цене<textarea id="priceComment"></textarea></label>
+          <label>Что остается<textarea id="included"></textarea></label>
+          <div class="row"><label>Что забирают<textarea id="excluded"></textarea></label><label>Освобождение / ключи<textarea id="releaseInfo"></textarea></label></div>
+        </section>
+        <section class="section">
+          <h2>Основания, расчет, особенности</h2>
+          <h3>Основания</h3><div id="basisBox"></div>
+          <h3>Расчет</h3><div id="paymentsBox"></div>
+          <h3>Сертификаты</h3><div id="certificatesBox"></div>
+          <label>Банк<select id="bankType"><option>Не выбран / не требуется</option><option>Сбер / Домклик</option><option>Другой банк</option><option>Наличный / безналичный расчет без банка</option></select></label>
+          <label>Комментарий банка / расчетов<textarea id="bankInfo"></textarea></label>
+          <h3>Особенности</h3><div id="flagsBox"></div>
+        </section>
+        <section class="section">
+          <h2>Документы</h2>
+          <label>ЕГРН с ЭЦП<select id="stEgrn"><option>не запрошено</option><option>запрошено</option><option>получено</option><option>проверено</option><option>не подходит / нужно исправить</option></select></label>
+          <label>Справка о зарегистрированных<select id="stRegistered"><option>не запрошено</option><option>запрошено</option><option>получено</option><option>проверено</option><option>не подходит / нужно исправить</option></select></label>
+          <label>Папка Яндекс Диска<textarea id="folderLink"></textarea></label>
+          <label>Вопросы юристу<textarea id="questions"></textarea></label>
+        </section>
+      </aside>
+      <section class="panel result">
+        <nav class="tabs"><button class="tab active" data-tab="summary">Сводка</button><button class="tab" data-tab="now">Что сейчас</button><button class="tab" data-tab="lawyerTab">Юристу</button><button class="tab" data-tab="broker">Брокеру</button><button class="tab" data-tab="docs">Документы</button><button class="tab" data-tab="client">Клиенту</button><button class="tab" data-tab="local">Борисоглебск</button></nav>
+        <div id="summary" class="tabpage active"></div><div id="now" class="tabpage"></div><div id="lawyerTab" class="tabpage"></div><div id="broker" class="tabpage"></div><div id="docs" class="tabpage"></div><div id="client" class="tabpage"></div><div id="local" class="tabpage"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>

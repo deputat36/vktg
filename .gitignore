@@ -1,0 +1,7 @@
+# local exports with personal data
+deal_export*.json
+navigator_sdelki_deal*.json
+
+# OS
+.DS_Store
+Thumbs.db

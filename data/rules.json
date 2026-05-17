@@ -1,0 +1,10 @@
+[
+  {"id":"share_base","when":{"rightFormContains":"Доля"},"level":"stop","score":4,"message":"Продажа доли: не брать задаток до проверки нотариальной формы и преимущественного права покупки."},
+  {"id":"share_mortgage","when":{"rightFormContains":"Доля","paymentsIncludes":"mortgage"},"level":"stop","score":3,"message":"Ипотека на отдельную долю часто невозможна или требует отдельного одобрения банка. Сначала банк и юрист."},
+  {"id":"land_boundary","when":{"flagsIncludes":"landBoundary"},"level":"stop","score":3,"message":"Если границы участка не отображаются/не уточнены, не обещать ипотеку и не брать задаток без проверки."},
+  {"id":"private_flat_mortgage","when":{"flagsIncludes":"privateSectorFlat","paymentsIncludes":"mortgage"},"level":"stop","score":3,"message":"Квартира в частном секторе с ипотекой/сертификатом: сначала проверка банка/программы."},
+  {"id":"matcap_history","when":{"flagsIncludes":"matcapPast"},"level":"stop","score":4,"message":"Маткапитал в истории объекта без проверки выделения долей детям — критичный риск. Не брать задаток без юриста."},
+  {"id":"minor_owner","when":{"flagsIncludes":"minorSeller"},"level":"stop","score":4,"message":"Несовершеннолетний собственник: нельзя выходить на основной договор без разрешения опеки, если оно требуется."},
+  {"id":"seller_mortgage","when":{"paymentsIncludes":"sellerMortgageClose"},"level":"stop","score":3,"message":"Ипотека продавца: нельзя проводить расчеты без понятного механизма погашения и снятия обременения."},
+  {"id":"price_diff","when":{"priceDiff":true},"level":"stop","score":3,"message":"Цена в договоре отличается от фактической. Нужна консультация юриста до задатка."}
+]
