@@ -78,6 +78,62 @@ export function createRenderer(labels, clientMessages, localData) {
     `;
   }
 
+  function spnDecision(result) {
+    if (result.stop.length) return {
+      title: 'Задаток пока не брать',
+      cls: 'redBox',
+      text: 'Есть условия, которые могут сорвать сделку или сделать задаток небезопасным. Сначала передайте карточку юристу/менеджеру и устраните стоп-факторы.'
+    };
+    if (result.warn.length || result.missing.length) return {
+      title: 'Готовить можно, но сначала закрыть замечания',
+      cls: 'orangeBox',
+      text: 'Сделка не выглядит полностью заблокированной, но есть данные или документы, без которых рискованно брать задаток.'
+    };
+    return {
+      title: 'Можно готовить задаток',
+      cls: 'greenBox',
+      text: 'Критичных препятствий не выявлено. Всё равно проверьте документы и зафиксируйте условия до передачи денег.'
+    };
+  }
+
+  function spnWarnings(result) {
+    const d = result.deal;
+    const items = [];
+    if (result.stop.length) items.push('Не обещайте клиентам дату задатка/сделки, пока юрист или менеджер не подтвердит возможность продолжения.');
+    if ((d.rightForm || '').toLowerCase().includes('доля')) items.push('Не обещайте обычную ипотечную сделку по доле без проверки юриста и банка.');
+    if (/дом|зем|снт|дача/i.test(d.objectType || '')) items.push('Не обещайте сделку по дому/земле без проверки кадастровых номеров, границ участка и ВРИ.');
+    if (/частном секторе/i.test(d.objectType || '')) items.push('Не обещайте, что объект точно пройдет ипотеку или маткапитал, пока банк/юрист не подтвердит статус объекта.');
+    if ((d.payments || []).includes('mortgage') || /сбер|банк|ипот/i.test(d.bankType || '')) items.push('Не обещайте одобрение объекта банком и точную дату сделки, пока банк не проверит документы и оценку.');
+    if ((d.certificates || []).length) items.push('Не обещайте сроки перечисления сертификата без проверки остатка, требований программы и документов.');
+    if (priceMismatch(d)) items.push('Не обсуждайте с клиентом отличие цены “на словах”. Причина и безопасная схема должны быть понятны юристу до задатка.');
+    if (!d.stRegistered || d.stRegistered === 'не запрошено') items.push('Не обещайте свободную передачу объекта, пока не проверена справка о зарегистрированных.');
+    if (!items.length) items.push('Не обещайте клиентам то, что зависит от банка, юриста, МФЦ, Росреестра или другой стороны. Фиксируйте только проверенные условия.');
+    return items;
+  }
+
+  function spnDocsPriority(result) {
+    const d = result.deal;
+    const items = [];
+    if (!d.folderLink) items.push('Создать папку на Яндекс Диске и складывать документы отдельными файлами: фамилия + название документа.');
+    if (!d.stEgrn || d.stEgrn === 'не запрошено') items.push('Запросить ЕГРН с ЭЦП: PDF + XML + SIG/архив. Один PDF для банка/нотариуса недостаточен.');
+    if (!d.stRegistered || d.stRegistered === 'не запрошено') items.push('Запросить справку о зарегистрированных через Госуслуги/МФЦ/уполномоченный орган.');
+    if (result.docsSeller?.length) items.push('От продавца: ' + result.docsSeller.slice(0, 5).join('; ') + '.');
+    if (result.docsBuyer?.length) items.push('От покупателя: ' + result.docsBuyer.slice(0, 5).join('; ') + '.');
+    if (result.bank?.length) items.push('Для банка: ' + result.bank.slice(0, 5).join('; ') + '.');
+    return items;
+  }
+
+  function spnCommunication(result) {
+    const d = result.deal;
+    const items = [];
+    if (d.sellerRepresentation === 'our_spn') items.push('Продавцу — отправить список документов из вкладки «Клиенту» и объяснить, что ЕГРН нужна с ЭЦП.');
+    if (d.buyerRepresentation === 'our_spn') items.push('Покупателю — отправить список документов и отдельно предупредить про банк/оценку/сертификаты, если они есть.');
+    if (d.sellerRepresentation === 'external_agency' || d.buyerRepresentation === 'external_agency') items.push('Другому агентству — коротко запросить документы их стороны и согласовать, кто отвечает за исправления.');
+    if (result.stop.length) items.push('Клиенту пока не отправлять обещания по дате. Формулировка: “Сначала проверим документы и согласуем безопасный порядок”.');
+    if (!items.length) items.push('Используйте вкладку «Клиенту»: там только сообщения, которые можно отправлять клиентам без юридической технички.');
+    return items;
+  }
+
   function renderAll(result) {
     renderSummary(result);
     renderNow(result);
@@ -117,7 +173,53 @@ export function createRenderer(labels, clientMessages, localData) {
   }
 
   function renderNow(result) {
-    $('now').innerHTML = `<h2>Что сделать сейчас</h2><div class="box blue">${list(result.actions)}</div>`;
+    const d = result.deal;
+    const decision = spnDecision(result);
+    $('now').innerHTML = `
+      <h2>Рабочий результат для СПН</h2>
+      <div class="box ${decision.cls}">
+        <h3>${esc(decision.title)}</h3>
+        <p>${esc(decision.text)}</p>
+        <table>
+          <tr><th>Формат сделки</th><td>${esc(cooperationTitle(d))}</td></tr>
+          <tr><th>Готовность к задатку</th><td><b>${result.ready}%</b></td></tr>
+          <tr><th>Кого подключить</th><td>${chips(result.to, result.cls)}</td></tr>
+        </table>
+      </div>
+
+      <div class="metrics">
+        <div class="metric ${decision.cls}"><b>${result.ready}%</b><span>готовность</span></div>
+        <div class="metric"><b>${result.stop.length}</b><span>стоп-факторы</span></div>
+        <div class="metric"><b>${result.warn.length}</b><span>предупреждения</span></div>
+        <div class="metric"><b>${result.missing.length}</b><span>не хватает</span></div>
+      </div>
+
+      <div class="box blue">
+        <h3>1. Что сделать сейчас</h3>
+        ${list(result.actions)}
+      </div>
+
+      <div class="box orangeBox">
+        <h3>2. Что собрать в первую очередь</h3>
+        ${list(spnDocsPriority(result))}
+      </div>
+
+      <div class="box redBox">
+        <h3>3. Что нельзя обещать клиенту</h3>
+        ${list(spnWarnings(result))}
+      </div>
+
+      <div class="box greenBox">
+        <h3>4. Что можно отправить / сказать клиенту</h3>
+        ${list(spnCommunication(result))}
+        <p class="small">Готовые тексты находятся во вкладке «Клиенту». Юридическую карточку клиенту не отправлять.</p>
+      </div>
+
+      <div class="box blue">
+        <h3>5. Что уйдет юристу без засорения интерфейса СПН</h3>
+        <p>Во вкладке «Юристу» автоматически собрана отдельная карточка: формат представительства, ответственные, объект, стороны, расчет, документы, стоп-факторы и вопросы. СПН не нужно вручную переписывать это в сообщение.</p>
+      </div>
+    `;
   }
 
   function renderLawyer(result) {
