@@ -3,6 +3,7 @@ import './cloudRolePatch.js';
 import './stepNavigator.js';
 import './roleWorkspace.js';
 import './cooperationMode.js';
+import './cooperationSavePatch.js';
 
 function get(id) {
   return document.getElementById(id);
