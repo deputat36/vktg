@@ -52,6 +52,14 @@ const STEPS = [
 
 let activeStep = localStorage.getItem('navigator_active_step_v1') || 'scenario';
 
+function loadStylesheet() {
+  if (document.querySelector('link[href="./assets/css/wizard.css"]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './assets/css/wizard.css';
+  document.head.appendChild(link);
+}
+
 function get(id) {
   return document.getElementById(id);
 }
@@ -238,6 +246,7 @@ function bindLiveProgress() {
 }
 
 function start() {
+  loadStylesheet();
   ensureWizard();
   ensureResultHelper();
   bindLiveProgress();
