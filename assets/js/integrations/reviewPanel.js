@@ -1,4 +1,5 @@
 import { listDealReviews, addDealReview, REVIEW_DECISIONS, REVIEW_ROLES } from './reviews.js';
+import { createTasksFromReview, suggestTasksForReview } from './autoTasks.js';
 
 let currentDealId = null;
 let currentDealTitle = null;
@@ -48,6 +49,20 @@ function roleLabel(value) {
   return (REVIEW_ROLES.find((item) => item[0] === value) || [value, value])[1];
 }
 
+function renderSuggestedTasks() {
+  const role = document.getElementById('reviewRole')?.value || 'lawyer';
+  const decision = document.getElementById('reviewDecision')?.value || 'needs_documents';
+  const comment = document.getElementById('reviewComment')?.value || '';
+  const target = document.getElementById('reviewTaskSuggestions');
+  if (!target) return;
+
+  const tasks = suggestTasksForReview(role, decision, comment);
+  target.innerHTML = `
+    <h3>Какие задачи будут созданы автоматически</h3>
+    ${tasks.length ? '<ul>' + tasks.map((task) => `<li><b>${esc(task.title)}</b><br><span class="small">${esc(task.description || '')}</span></li>`).join('') + '</ul>' : '<p>Для этого решения автозадач нет. Можно добавить задачу вручную во вкладке «Задачи».</p>'}
+  `;
+}
+
 async function renderPanel() {
   const body = document.getElementById('reviewPanelBody');
   if (!body) return;
@@ -76,22 +91,28 @@ async function renderPanel() {
       <label>Комментарий / что нужно сделать
         <textarea id="reviewComment" placeholder="Например: нужна свежая ЕГРН с ЭЦП, справка о зарегистрированных, уточнить порядок расчетов..."></textarea>
       </label>
-      <button id="btnAddReview" class="green">Добавить решение</button>
+      <div id="reviewTaskSuggestions" class="box orangeBox"></div>
+      <button id="btnAddReview" class="green">Добавить решение и создать задачи</button>
       <h3>История решений</h3>
       ${items.length ? renderReviews(items) : '<div class="box grayBox">Решений пока нет.</div>'}
     `;
 
+    renderSuggestedTasks();
+    document.getElementById('reviewRole').onchange = renderSuggestedTasks;
+    document.getElementById('reviewDecision').onchange = renderSuggestedTasks;
+    document.getElementById('reviewComment').oninput = renderSuggestedTasks;
+
     document.getElementById('btnAddReview').onclick = async () => {
       try {
-        await addDealReview(
-          currentDealId,
-          document.getElementById('reviewRole').value,
-          document.getElementById('reviewDecision').value,
-          document.getElementById('reviewComment').value
-        );
+        const role = document.getElementById('reviewRole').value;
+        const decision = document.getElementById('reviewDecision').value;
+        const comment = document.getElementById('reviewComment').value;
+        await addDealReview(currentDealId, role, decision, comment);
+        const createdTasks = await createTasksFromReview(currentDealId, role, decision, comment);
         document.getElementById('reviewComment').value = '';
+        window.dispatchEvent(new CustomEvent('navigatorTasksChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
         await renderPanel();
-        alert('Решение добавлено');
+        alert('Решение добавлено. Создано задач: ' + createdTasks.length);
       } catch (error) {
         alert('Ошибка добавления решения: ' + error.message);
       }
