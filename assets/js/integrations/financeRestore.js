@@ -1,4 +1,5 @@
 import './cloudRolePatch.js';
+import './stepNavigator.js';
 
 function get(id) {
   return document.getElementById(id);
