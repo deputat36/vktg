@@ -2,6 +2,7 @@ import './appNav.js';
 import './cloudRolePatch.js';
 import './stepNavigator.js';
 import './roleWorkspace.js';
+import './cooperationMode.js';
 
 function get(id) {
   return document.getElementById(id);
