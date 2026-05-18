@@ -13,6 +13,15 @@ function setStatus(text) {
   if (el) el.textContent = text;
 }
 
+function emitDealEvent(name) {
+  window.dispatchEvent(new CustomEvent(name, {
+    detail: {
+      id: currentDealId,
+      title: currentDealTitle
+    }
+  }));
+}
+
 async function getAnalysis() {
   if (!cachedData) cachedData = await loadData();
   return analyzeDeal(getDeal(), cachedData);
@@ -42,6 +51,7 @@ async function openCloudDeal(id) {
   document.querySelector('input,select,textarea')?.dispatchEvent(new Event('input', { bubbles: true }));
   document.querySelector('[data-tab="summary"]')?.click();
   showEditState();
+  emitDealEvent('navigatorDealOpened');
   setStatus('Открыта сделка из Supabase: ' + row.title);
 }
 
@@ -53,6 +63,7 @@ async function saveCloudDeal() {
   currentDealId = saved.id;
   currentDealTitle = saved.title;
   showEditState();
+  emitDealEvent('navigatorDealSaved');
   setStatus('Сделка сохранена: ' + saved.title);
   alert('Сделка сохранена: ' + saved.title);
 }
@@ -87,6 +98,7 @@ function ensureDetachButton() {
     currentDealId = null;
     currentDealTitle = null;
     showEditState();
+    emitDealEvent('navigatorDealOpened');
     setStatus('Связь с открытой сделкой сброшена. Следующее сохранение создаст новую запись.');
   };
   panel.querySelector('.actions')?.appendChild(btn);
