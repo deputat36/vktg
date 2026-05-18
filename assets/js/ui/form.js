@@ -39,6 +39,11 @@ export function setCheckedValues(name, values = []) {
   });
 }
 
+function value(id) {
+  const element = $(id);
+  return element ? element.value : '';
+}
+
 export function getDeal() {
   return {
     mode: $('mode').value,
@@ -49,6 +54,27 @@ export function getDeal() {
     buyerSpn: $('buyerSpn').value,
     sellerPhone: $('sellerPhone').value,
     buyerPhone: $('buyerPhone').value,
+    sellerCount: value('sellerCount'),
+    buyerCount: value('buyerCount'),
+    sellerMainName: value('sellerMainName'),
+    buyerMainName: value('buyerMainName'),
+    sellerSideComment: value('sellerSideComment'),
+    buyerSideComment: value('buyerSideComment'),
+    sellerRealtorCommission: value('sellerRealtorCommission'),
+    buyerRealtorCommission: value('buyerRealtorCommission'),
+    sellerCommissionComment: value('sellerCommissionComment'),
+    buyerCommissionComment: value('buyerCommissionComment'),
+    totalOfficeCommission: value('totalOfficeCommission'),
+    commissionDistribution: value('commissionDistribution'),
+    registrationFeePayer: value('registrationFeePayer'),
+    registrationFeeAmount: value('registrationFeeAmount'),
+    landRegistrationFeeAmount: value('landRegistrationFeeAmount'),
+    evaluationCost: value('evaluationCost'),
+    sbrCost: value('sbrCost'),
+    notaryCost: value('notaryCost'),
+    bankInsuranceCost: value('bankInsuranceCost'),
+    otherCosts: value('otherCosts'),
+    costsComment: value('costsComment'),
     objectType: $('objectType').value,
     rightForm: $('rightForm').value,
     address: $('address').value,
