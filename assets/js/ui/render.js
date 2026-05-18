@@ -5,6 +5,21 @@ export function createRenderer(labels, clientMessages, localData) {
   const chips = (items, cls = 'blue') => (items || []).map((item) => `<span class="pill ${cls}">${esc(label(item))}</span>`).join('') || '<span class="pill green">Не выбрано</span>';
   const boxClass = (cls) => cls === 'red' ? 'redBox' : cls === 'orange' ? 'orangeBox' : 'greenBox';
 
+  function financePartiesTable(d) {
+    return `
+      <table>
+        <tr><th>Продавцы</th><td>${esc(d.sellerCount || '—')}<br>${esc(d.sellerMainName || '')}<br>${esc(d.sellerSideComment || '')}</td></tr>
+        <tr><th>Покупатели</th><td>${esc(d.buyerCount || '—')}<br>${esc(d.buyerMainName || '')}<br>${esc(d.buyerSideComment || '')}</td></tr>
+        <tr><th>Комиссия продавца</th><td>${esc(d.sellerRealtorCommission || '—')}<br>${esc(d.sellerCommissionComment || '')}</td></tr>
+        <tr><th>Комиссия покупателя</th><td>${esc(d.buyerRealtorCommission || '—')}<br>${esc(d.buyerCommissionComment || '')}</td></tr>
+        <tr><th>Общая комиссия / распределение</th><td>${esc(d.totalOfficeCommission || '—')}<br>${esc(d.commissionDistribution || '')}</td></tr>
+        <tr><th>Госпошлина</th><td>Плательщик: ${esc(d.registrationFeePayer || '—')}<br>Право: ${esc(d.registrationFeeAmount || '—')}<br>Земля: ${esc(d.landRegistrationFeeAmount || '—')}</td></tr>
+        <tr><th>Банк / сделочные расходы</th><td>Оценка: ${esc(d.evaluationCost || '—')}<br>СБР: ${esc(d.sbrCost || '—')}<br>Нотариус: ${esc(d.notaryCost || '—')}<br>Страховка/банк: ${esc(d.bankInsuranceCost || '—')}<br>Прочее: ${esc(d.otherCosts || '—')}</td></tr>
+        <tr><th>Комментарий по расходам</th><td>${esc(d.costsComment || '—')}</td></tr>
+      </table>
+    `;
+  }
+
   function renderAll(result) {
     renderSummary(result);
     renderNow(result);
@@ -38,6 +53,7 @@ export function createRenderer(labels, clientMessages, localData) {
           <tr><th>Объект</th><td colspan="3">${esc(d.objectType)}<br>${esc(d.rightForm)}<br>${esc(d.address || 'адрес не указан')}<br>КН объекта: ${esc(d.cadObject || '—')}<br>КН земли: ${esc(d.cadLand || '—')}</td></tr>
         </table>
       </div>
+      <div class="box blue"><h3>Стороны и деньги</h3>${financePartiesTable(d)}</div>
     `;
   }
 
@@ -58,6 +74,7 @@ export function createRenderer(labels, clientMessages, localData) {
         <tr><th>Папка</th><td colspan="3">${esc(d.folderLink || '—')}</td></tr>
         <tr><th>Вопросы</th><td colspan="3">${esc(d.questions || '—')}</td></tr>
       </table>
+      <div class="box greenBox"><h3>Стороны / комиссии / расходы для юриста</h3>${financePartiesTable(d)}</div>
       <div class="box redBox"><h3>Стоп-факторы</h3>${list(result.stop)}</div>
       <div class="box orangeBox"><h3>Не хватает</h3>${list(result.missing.concat(result.warn))}</div>
     `;
@@ -69,9 +86,10 @@ export function createRenderer(labels, clientMessages, localData) {
       <h2>Карточка брокеру</h2>
       <div class="box ${result.stop.length ? 'redBox' : result.mortgage || result.sber ? 'orangeBox' : 'greenBox'}"><h3>${result.mortgage || result.sber ? 'Ипотечный сценарий требует проверки банка' : 'Ипотека не выбрана'}</h3></div>
       <table>
-        <tr><th>Покупатель</th><td>${esc(d.buyerSpn)}<br>${esc(d.buyerPhone || '—')}</td></tr>
+        <tr><th>Покупатель</th><td>${esc(d.buyerSpn)}<br>${esc(d.buyerPhone || '—')}<br>Покупателей: ${esc(d.buyerCount || '—')}<br>${esc(d.buyerMainName || '')}</td></tr>
         <tr><th>Объект</th><td>${esc(d.objectType)} / ${esc(d.rightForm)}<br>${esc(d.address || '—')}</td></tr>
         <tr><th>Банк</th><td>${esc(d.bankType)}</td></tr>
+        <tr><th>Расходы банка</th><td>Оценка: ${esc(d.evaluationCost || '—')}<br>СБР: ${esc(d.sbrCost || '—')}<br>Страховка/банк: ${esc(d.bankInsuranceCost || '—')}</td></tr>
         <tr><th>Папка</th><td>${esc(d.folderLink || '—')}</td></tr>
       </table>
     `;
