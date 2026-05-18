@@ -4,7 +4,6 @@ import {
   updateDealTaskStatus,
   TASK_STATUSES,
   TASK_PRIORITIES,
-  getTaskStatusLabel,
   getTaskPriorityLabel
 } from './tasks.js';
 
@@ -155,6 +154,11 @@ function start() {
     renderPanel();
   });
   window.addEventListener('navigatorDealSaved', (event) => {
+    currentDealId = event.detail?.id || currentDealId;
+    currentDealTitle = event.detail?.title || currentDealTitle;
+    renderPanel();
+  });
+  window.addEventListener('navigatorTasksChanged', (event) => {
     currentDealId = event.detail?.id || currentDealId;
     currentDealTitle = event.detail?.title || currentDealTitle;
     renderPanel();
