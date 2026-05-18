@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Сделки — Навигатор сделки СПН</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div>
+        <h1>Сделки / мини-CRM</h1>
+        <p>Ролевой список сделок: админ, менеджер, юрист, брокер и СПН видят разные рабочие зоны.</p>
+        <div id="pageStatus" class="status">Загрузка...</div>
+      </div>
+      <div class="actions">
+        <a class="button light" href="./index.html">Навигатор</a>
+        <button id="btnLogout" class="light">Выйти</button>
+      </div>
+    </header>
+
+    <section id="authBox" class="panel" style="display:none">
+      <h2>Вход</h2>
+      <div class="row">
+        <label>Email<input id="email" type="email" autocomplete="username"></label>
+        <label>Пароль<input id="password" type="password" autocomplete="current-password"></label>
+      </div>
+      <button id="btnLogin" class="green">Войти</button>
+      <p class="small">Используются те же аккаунты Supabase, что и в Навигаторе сделки.</p>
+    </section>
+
+    <main id="crmBox" class="grid" style="display:none">
+      <aside class="panel left">
+        <div id="rolePanel"></div>
+        <div id="filters" class="section"></div>
+      </aside>
+      <section class="panel result">
+        <div id="stats"></div>
+        <div id="dealsList"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./assets/js/pages/deals.js"></script>
+</body>
+</html>
