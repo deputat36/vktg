@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Дашборд — Навигатор сделки СПН</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <link rel="stylesheet" href="./assets/css/dashboard.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div>
+        <h1>Дашборд руководителя</h1>
+        <p>Воронка сделок, риски, задачи, ипотека, юридические проверки и загрузка сотрудников.</p>
+        <div id="pageStatus" class="status">Загрузка...</div>
+      </div>
+      <div class="actions">
+        <a class="button light" href="./index.html">Навигатор</a>
+        <a class="button light" href="./deals.html">Сделки</a>
+        <a class="button light" href="./admin.html">Сотрудники</a>
+        <button id="btnLogout" class="light">Выйти</button>
+      </div>
+    </header>
+
+    <section id="authBox" class="panel" style="display:none">
+      <h2>Вход</h2>
+      <div class="row">
+        <label>Email<input id="email" type="email" autocomplete="username"></label>
+        <label>Пароль<input id="password" type="password" autocomplete="current-password"></label>
+      </div>
+      <button id="btnLogin" class="green">Войти</button>
+      <p class="small">Дашборд использует те же роли и доступы, что и CRM сделок.</p>
+    </section>
+
+    <main id="dashboardBox" style="display:none">
+      <section class="panel">
+        <div id="toolbar"></div>
+        <div id="kpis"></div>
+        <div id="charts"></div>
+        <div id="problems"></div>
+        <div id="loads"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./assets/js/pages/dashboard.js"></script>
+</body>
+</html>
