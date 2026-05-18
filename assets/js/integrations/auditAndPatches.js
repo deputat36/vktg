@@ -12,61 +12,6 @@ function esc(value) {
   }[ch]));
 }
 
-function value(id) {
-  return get(id)?.value || '';
-}
-
-function ensureExtraSummary() {
-  const summary = get('summary');
-  if (!summary || !get('sellerCount')) return;
-
-  let box = get('extraPartySummaryBox');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'extraPartySummaryBox';
-    box.className = 'box blue';
-    summary.appendChild(box);
-  }
-
-  box.innerHTML = `
-    <h3>Стороны и деньги</h3>
-    <table>
-      <tr><th>Продавцы</th><td>${esc(value('sellerCount') || '—')}<br>${esc(value('sellerMainName'))}<br>${esc(value('sellerSideComment'))}</td></tr>
-      <tr><th>Покупатели</th><td>${esc(value('buyerCount') || '—')}<br>${esc(value('buyerMainName'))}<br>${esc(value('buyerSideComment'))}</td></tr>
-      <tr><th>Комиссия продавца</th><td>${esc(value('sellerRealtorCommission') || '—')}<br>${esc(value('sellerCommissionComment'))}</td></tr>
-      <tr><th>Комиссия покупателя</th><td>${esc(value('buyerRealtorCommission') || '—')}<br>${esc(value('buyerCommissionComment'))}</td></tr>
-      <tr><th>Расходы</th><td>Госпошлина: ${esc(value('registrationFeeAmount') || '—')}; земля: ${esc(value('landRegistrationFeeAmount') || '—')}; оценка: ${esc(value('evaluationCost') || '—')}; СБР: ${esc(value('sbrCost') || '—')}; нотариус: ${esc(value('notaryCost') || '—')}</td></tr>
-    </table>
-  `;
-}
-
-function ensureLawyerFinanceBox() {
-  const lawyer = get('lawyerTab');
-  if (!lawyer || !get('sellerCount')) return;
-
-  let box = get('lawyerFinanceBox');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'lawyerFinanceBox';
-    box.className = 'box greenBox';
-    lawyer.appendChild(box);
-  }
-
-  box.innerHTML = `
-    <h3>Стороны / комиссии / расходы для юриста</h3>
-    <table>
-      <tr><th>Продавцы</th><td>${esc(value('sellerCount') || '—')}<br>${esc(value('sellerMainName'))}<br>${esc(value('sellerSideComment'))}</td></tr>
-      <tr><th>Покупатели</th><td>${esc(value('buyerCount') || '—')}<br>${esc(value('buyerMainName'))}<br>${esc(value('buyerSideComment'))}</td></tr>
-      <tr><th>Комиссия продавца</th><td>${esc(value('sellerRealtorCommission') || '—')}<br>${esc(value('sellerCommissionComment'))}</td></tr>
-      <tr><th>Комиссия покупателя</th><td>${esc(value('buyerRealtorCommission') || '—')}<br>${esc(value('buyerCommissionComment'))}</td></tr>
-      <tr><th>Общая комиссия / распределение</th><td>${esc(value('totalOfficeCommission') || '—')}<br>${esc(value('commissionDistribution'))}</td></tr>
-      <tr><th>Госпошлина</th><td>Плательщик: ${esc(value('registrationFeePayer') || '—')}<br>Право: ${esc(value('registrationFeeAmount') || '—')}<br>Земля: ${esc(value('landRegistrationFeeAmount') || '—')}</td></tr>
-      <tr><th>Банк / сделочные расходы</th><td>Оценка: ${esc(value('evaluationCost') || '—')}<br>СБР: ${esc(value('sbrCost') || '—')}<br>Нотариус: ${esc(value('notaryCost') || '—')}<br>Страховка/банк: ${esc(value('bankInsuranceCost') || '—')}<br>Прочее: ${esc(value('otherCosts') || '—')}</td></tr>
-      <tr><th>Комментарий по расходам</th><td>${esc(value('costsComment') || '—')}</td></tr>
-    </table>
-  `;
-}
-
 function ensureAuditTab() {
   if (get('systemAudit')) return;
   const tabs = document.querySelector('.tabs');
@@ -110,7 +55,8 @@ function renderAudit() {
     ['Состояние входа', Boolean(get('authStateBox')), 'Понятный статус авторизации'],
     ['Вкладка Решения', Boolean(get('dealReviews')), 'Решение юриста/брокера/менеджера'],
     ['Вкладка Задачи', Boolean(get('dealTasks')), 'Задачи по открытой сделке'],
-    ['Карточка юристу + финансы', Boolean(get('lawyerFinanceBox')), 'Дополнительная финансовая часть карточки'],
+    ['Карточка юристу + финансы', Boolean(String(get('lawyerTab')?.innerHTML || '').includes('Стороны / комиссии / расходы для юриста')), 'Финансовая часть теперь отрисовывается в ui/render.js'],
+    ['Сводка + стороны и деньги', Boolean(String(get('summary')?.innerHTML || '').includes('Стороны и деньги')), 'Блок теперь отрисовывается в ui/render.js'],
     ['Сохранение новых полей', Boolean(get('sellerCount')), 'Поля сохраняются через getDeal() при экспорте/Supabase']
   ];
 
@@ -123,18 +69,12 @@ function renderAudit() {
   `;
 }
 
-function refreshPatches() {
-  ensureExtraSummary();
-  ensureLawyerFinanceBox();
-  renderAudit();
-}
-
 function start() {
   ensureAuditTab();
-  refreshPatches();
-  document.addEventListener('input', () => setTimeout(refreshPatches, 0));
-  document.addEventListener('change', () => setTimeout(refreshPatches, 0));
-  document.addEventListener('click', () => setTimeout(refreshPatches, 30));
+  renderAudit();
+  document.addEventListener('input', () => setTimeout(renderAudit, 0));
+  document.addEventListener('change', () => setTimeout(renderAudit, 0));
+  document.addEventListener('click', () => setTimeout(renderAudit, 30));
 }
 
 let attempts = 0;
