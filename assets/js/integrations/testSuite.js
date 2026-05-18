@@ -52,178 +52,72 @@ const REQUIRED_ELEMENTS = [
 
 const DEMO_CASES = [
   {
-    id: 'flat_cash_full',
     title: 'Квартира, наличный/безналичный расчет, 1 продавец, 1 покупатель',
-    patch: {
-      objectType: 'Квартира в многоквартирном доме',
-      rightForm: 'Весь объект целиком',
-      address: 'Борисоглебск, ул. Тестовая, 1',
-      cadObject: '36:04:0000000:1111',
-      priceFact: '3500000',
-      priceContract: '3500000',
-      sellerPhone: '+7 900 000-00-01',
-      buyerPhone: '+7 900 000-00-02',
-      sellerCount: '1',
-      buyerCount: '1',
-      sellerMainName: 'Тестовый продавец',
-      buyerMainName: 'Тестовый покупатель',
-      sellerRealtorCommission: '59000',
-      buyerRealtorCommission: '0',
-      totalOfficeCommission: '59000',
-      registrationFeeAmount: '4000',
-      basis: ['sale'],
-      payments: ['accreditive'],
-      certificates: [],
-      flags: []
-    },
+    patch: { objectType: 'Квартира в многоквартирном доме', rightForm: 'Весь объект целиком', address: 'Борисоглебск, ул. Тестовая, 1', cadObject: '36:04:0000000:1111', priceFact: '3500000', priceContract: '3500000', sellerPhone: '+7 900 000-00-01', buyerPhone: '+7 900 000-00-02', sellerCount: '1', buyerCount: '1', sellerMainName: 'Тестовый продавец', buyerMainName: 'Тестовый покупатель', sellerRealtorCommission: '59000', buyerRealtorCommission: '0', totalOfficeCommission: '59000', registrationFeeAmount: '4000', basis: ['sale'], payments: ['accreditive'], certificates: [], flags: [] },
     expected: { maxStop: 0 }
   },
   {
-    id: 'flat_sber_matcap',
     title: 'Квартира, Сбер + маткапитал',
-    patch: {
-      objectType: 'Квартира в многоквартирном доме',
-      rightForm: 'Весь объект целиком',
-      address: 'Борисоглебск, ул. Ипотечная, 2',
-      cadObject: '36:04:0000000:2222',
-      priceFact: '4200000',
-      priceContract: '4200000',
-      sellerPhone: '+7 900 000-00-03',
-      buyerPhone: '+7 900 000-00-04',
-      sellerCount: '1',
-      buyerCount: '2',
-      sellerRealtorCommission: '59000',
-      totalOfficeCommission: '59000',
-      registrationFeeAmount: '4000',
-      evaluationCost: '5000',
-      sbrCost: '3400',
-      bankType: 'Сбер / Домклик',
-      basis: ['sale'],
-      payments: ['mortgage', 'safe'],
-      certificates: ['matcap'],
-      flags: ['spouse']
-    },
+    patch: { objectType: 'Квартира в многоквартирном доме', rightForm: 'Весь объект целиком', address: 'Борисоглебск, ул. Ипотечная, 2', cadObject: '36:04:0000000:2222', priceFact: '4200000', priceContract: '4200000', sellerPhone: '+7 900 000-00-03', buyerPhone: '+7 900 000-00-04', sellerCount: '1', buyerCount: '2', sellerRealtorCommission: '59000', totalOfficeCommission: '59000', registrationFeeAmount: '4000', evaluationCost: '5000', sbrCost: '3400', bankType: 'Сбер / Домклик', basis: ['sale'], payments: ['mortgage', 'safe'], certificates: ['matcap'], flags: ['spouse'] },
     expected: { mustHaveBank: true }
   },
   {
-    id: 'house_land_sber',
     title: 'Дом + участок, ипотека',
-    patch: {
-      objectType: 'Жилой дом + земельный участок',
-      rightForm: 'Весь объект целиком',
-      address: 'Борисоглебск, ул. Домовая, 3',
-      cadObject: '36:04:0000000:3333',
-      cadLand: '36:04:0000000:3334',
-      priceFact: '6000000',
-      priceContract: '6000000',
-      sellerPhone: '+7 900 000-00-05',
-      buyerPhone: '+7 900 000-00-06',
-      sellerCount: '1',
-      buyerCount: '1',
-      sellerRealtorCommission: '109000',
-      totalOfficeCommission: '109000',
-      registrationFeeAmount: '4000',
-      landRegistrationFeeAmount: '700',
-      evaluationCost: '9000',
-      sbrCost: '3400',
-      bankType: 'Сбер / Домклик',
-      basis: ['sale', 'admin'],
-      payments: ['mortgage', 'safe'],
-      certificates: [],
-      flags: ['landBoundary', 'landUse']
-    },
+    patch: { objectType: 'Жилой дом + земельный участок', rightForm: 'Весь объект целиком', address: 'Борисоглебск, ул. Домовая, 3', cadObject: '36:04:0000000:3333', cadLand: '36:04:0000000:3334', priceFact: '6000000', priceContract: '6000000', sellerPhone: '+7 900 000-00-05', buyerPhone: '+7 900 000-00-06', sellerCount: '1', buyerCount: '1', sellerRealtorCommission: '109000', totalOfficeCommission: '109000', registrationFeeAmount: '4000', landRegistrationFeeAmount: '700', evaluationCost: '9000', sbrCost: '3400', bankType: 'Сбер / Домклик', basis: ['sale', 'admin'], payments: ['mortgage', 'safe'], certificates: [], flags: ['landBoundary', 'landUse'] },
     expected: { mustHaveLand: true }
   },
   {
-    id: 'share_flat_stop',
     title: 'Доля в квартире — должен быть стоп-фактор',
-    patch: {
-      objectType: 'Квартира в многоквартирном доме',
-      rightForm: 'Доля в праве на квартиру',
-      address: 'Борисоглебск, ул. Долевая, 4',
-      cadObject: '36:04:0000000:4444',
-      priceFact: '900000',
-      priceContract: '900000',
-      sellerPhone: '+7 900 000-00-07',
-      buyerPhone: '+7 900 000-00-08',
-      sellerCount: '1',
-      buyerCount: '1',
-      basis: ['sale'],
-      payments: ['transfer'],
-      certificates: [],
-      flags: ['shareDeal', 'preemptive']
-    },
+    patch: { objectType: 'Квартира в многоквартирном доме', rightForm: 'Доля в праве на квартиру', address: 'Борисоглебск, ул. Долевая, 4', cadObject: '36:04:0000000:4444', priceFact: '900000', priceContract: '900000', sellerPhone: '+7 900 000-00-07', buyerPhone: '+7 900 000-00-08', sellerCount: '1', buyerCount: '1', basis: ['sale'], payments: ['transfer'], certificates: [], flags: ['shareDeal', 'preemptive'] },
     expected: { minStop: 1 }
   },
   {
-    id: 'minor_owner_stop',
     title: 'Несовершеннолетний собственник — должен быть стоп-фактор',
-    patch: {
-      objectType: 'Квартира в многоквартирном доме',
-      rightForm: 'Весь объект целиком',
-      address: 'Борисоглебск, ул. Опеки, 5',
-      cadObject: '36:04:0000000:5555',
-      priceFact: '3000000',
-      priceContract: '3000000',
-      sellerPhone: '+7 900 000-00-09',
-      buyerPhone: '+7 900 000-00-10',
-      sellerCount: '2',
-      buyerCount: '1',
-      basis: ['sale'],
-      payments: ['transfer'],
-      certificates: [],
-      flags: ['minorSeller']
-    },
+    patch: { objectType: 'Квартира в многоквартирном доме', rightForm: 'Весь объект целиком', address: 'Борисоглебск, ул. Опеки, 5', cadObject: '36:04:0000000:5555', priceFact: '3000000', priceContract: '3000000', sellerPhone: '+7 900 000-00-09', buyerPhone: '+7 900 000-00-10', sellerCount: '2', buyerCount: '1', basis: ['sale'], payments: ['transfer'], certificates: [], flags: ['minorSeller'] },
     expected: { minStop: 1 }
   },
   {
-    id: 'nis_sber',
     title: 'Военная ипотека / НИС',
-    patch: {
-      objectType: 'Квартира в многоквартирном доме',
-      rightForm: 'Весь объект целиком',
-      address: 'Борисоглебск, ул. НИС, 6',
-      cadObject: '36:04:0000000:6666',
-      priceFact: '3800000',
-      priceContract: '3800000',
-      sellerPhone: '+7 900 000-00-11',
-      buyerPhone: '+7 900 000-00-12',
-      sellerCount: '1',
-      buyerCount: '1',
-      bankType: 'Сбер / Домклик',
-      basis: ['sale'],
-      payments: ['mortgage', 'safe'],
-      certificates: ['nis'],
-      flags: []
-    },
+    patch: { objectType: 'Квартира в многоквартирном доме', rightForm: 'Весь объект целиком', address: 'Борисоглебск, ул. НИС, 6', cadObject: '36:04:0000000:6666', priceFact: '3800000', priceContract: '3800000', sellerPhone: '+7 900 000-00-11', buyerPhone: '+7 900 000-00-12', sellerCount: '1', buyerCount: '1', bankType: 'Сбер / Домклик', basis: ['sale'], payments: ['mortgage', 'safe'], certificates: ['nis'], flags: [] },
     expected: { mustHaveBank: true }
   }
 ];
 
 function ensureTab() {
-  if (get('testSuite')) return;
-  const tabs = document.querySelector('.tabs');
-  const result = document.querySelector('.result');
-  if (!tabs || !result) return;
+  let page = get('testSuite');
+  if (!page) {
+    const tabs = document.querySelector('.tabs');
+    const result = document.querySelector('.result');
+    if (!tabs || !result) return false;
 
-  const btn = document.createElement('button');
-  btn.className = 'tab';
-  btn.dataset.tab = 'testSuite';
-  btn.textContent = 'Тесты';
-  tabs.appendChild(btn);
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.dataset.tab = 'testSuite';
+    btn.textContent = 'Тесты';
+    btn.id = 'testSuiteTabButton';
+    tabs.appendChild(btn);
 
-  const page = document.createElement('div');
-  page.id = 'testSuite';
-  page.className = 'tabpage';
-  result.appendChild(page);
+    page = document.createElement('div');
+    page.id = 'testSuite';
+    page.className = 'tabpage';
+    result.appendChild(page);
 
-  btn.onclick = () => {
-    document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
-    document.querySelectorAll('.tabpage').forEach((item) => item.classList.remove('active'));
-    btn.classList.add('active');
-    page.classList.add('active');
-    renderHome();
-  };
+    btn.addEventListener('click', () => activateTestsTab());
+  }
+
+  if (!page.innerHTML.trim()) renderHome();
+  return true;
+}
+
+function activateTestsTab() {
+  ensureTab();
+  document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
+  document.querySelectorAll('.tabpage').forEach((item) => item.classList.remove('active'));
+  const btn = document.querySelector('[data-tab="testSuite"]');
+  const page = get('testSuite');
+  btn?.classList.add('active');
+  page?.classList.add('active');
+  renderHome();
 }
 
 function row(ok, name, comment) {
@@ -238,8 +132,8 @@ function renderHome() {
     <div class="box blue">
       <p>Тесты проверяют интерфейс, заполнение формы, анализ рисков, сохранение восстановленных полей сторон/финансов и работу ключевых вкладок. Тесты не сохраняют данные в Supabase.</p>
       <div class="actions" style="justify-content:flex-start">
-        <button id="btnRunAllTests" class="green">Проверить все сценарии</button>
-        <button id="btnRunUiTests" class="light">Проверить интерфейс</button>
+        <button id="btnRunAllTests" class="green" type="button">Проверить все сценарии</button>
+        <button id="btnRunUiTests" class="light" type="button">Проверить интерфейс</button>
       </div>
     </div>
     <div id="testSuiteResults"></div>
@@ -318,6 +212,11 @@ function showResults(title, results) {
 
 function start() {
   ensureTab();
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-tab="testSuite"]');
+    if (!btn) return;
+    setTimeout(activateTestsTab, 0);
+  }, true);
 }
 
 let attempts = 0;
