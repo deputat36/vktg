@@ -1,3 +1,4 @@
+import './appNav.js';
 import './cloudRolePatch.js';
 import './stepNavigator.js';
 import './roleWorkspace.js';
