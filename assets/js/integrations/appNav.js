@@ -10,12 +10,14 @@ function currentPage() {
   const path = location.pathname.split('/').pop() || 'index.html';
   if (path === 'deals.html') return 'deals';
   if (path === 'admin.html') return 'admin';
+  if (path === 'dashboard.html') return 'dashboard';
   return 'index';
 }
 
 function pageTitle(id) {
   if (id === 'deals') return 'Сделки / CRM';
   if (id === 'admin') return 'Сотрудники / роли';
+  if (id === 'dashboard') return 'Дашборд руководителя';
   return 'Навигатор сделки';
 }
 
@@ -32,6 +34,7 @@ function ensureNav() {
   nav.innerHTML = `
     <a href="./index.html" class="${page === 'index' ? 'active' : ''}">🏠 Навигатор</a>
     <a href="./deals.html" class="${page === 'deals' ? 'active' : ''}">📋 Сделки</a>
+    <a href="./dashboard.html" class="${page === 'dashboard' ? 'active' : ''}">📊 Дашборд</a>
     <a href="./admin.html" class="${page === 'admin' ? 'active' : ''}">⚙️ Сотрудники</a>
     <a href="./index.html#systemAudit" data-open-check>✅ Проверка</a>
     <span class="nav-spacer"></span>
