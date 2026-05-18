@@ -36,6 +36,21 @@
           <div class="row"><label>СПН продавца<select id="sellerSpn"></select></label><label>СПН покупателя<select id="buyerSpn"></select></label></div>
           <div class="row"><label>Телефон продавца<input id="sellerPhone"></label><label>Телефон покупателя<input id="buyerPhone"></label></div>
         </section>
+        <section class="section" id="partiesSection">
+          <h2>Стороны сделки</h2>
+          <div class="row">
+            <label>Количество продавцов<input id="sellerCount" placeholder="например: 1"></label>
+            <label>Количество покупателей<input id="buyerCount" placeholder="например: 1"></label>
+          </div>
+          <div class="row">
+            <label>Основной продавец / представитель<input id="sellerMainName" placeholder="ФИО или коротко"></label>
+            <label>Основной покупатель / представитель<input id="buyerMainName" placeholder="ФИО или коротко"></label>
+          </div>
+          <div class="row">
+            <label>Комментарий по стороне продавца<textarea id="sellerSideComment" placeholder="несовершеннолетние, доверенность, супруг, наследники, доли..."></textarea></label>
+            <label>Комментарий по стороне покупателя<textarea id="buyerSideComment" placeholder="ипотека, сертификаты, несколько покупателей, маткапитал..."></textarea></label>
+          </div>
+        </section>
         <section class="section">
           <h2>Объект</h2>
           <label>Тип объекта<select id="objectType"><option>Квартира в многоквартирном доме</option><option>Квартира в частном секторе / часть дома по документам квартира</option><option>Комната</option><option>Жилой дом</option><option>Жилой дом + земельный участок</option><option>Часть жилого дома</option><option>Земельный участок без дома</option><option>Дача / садовый дом / СНТ</option><option>Коммерческая недвижимость</option><option>Новостройка / ДДУ</option><option>Уступка права требования</option></select></label>
@@ -46,6 +61,40 @@
           <label>Комментарий по цене<textarea id="priceComment"></textarea></label>
           <label>Что остается<textarea id="included"></textarea></label>
           <div class="row"><label>Что забирают<textarea id="excluded"></textarea></label><label>Освобождение / ключи<textarea id="releaseInfo"></textarea></label></div>
+        </section>
+        <section class="section" id="financeSection">
+          <h2>Финансы / комиссии / расходы</h2>
+          <h3>Комиссии</h3>
+          <div class="row">
+            <label>Комиссия со стороны продавца<input id="sellerRealtorCommission" placeholder="например: 59 000"></label>
+            <label>Комиссия со стороны покупателя<input id="buyerRealtorCommission" placeholder="например: 0 / 50 000"></label>
+          </div>
+          <div class="row">
+            <label>Комментарий по комиссии продавца<textarea id="sellerCommissionComment" placeholder="кто платит, когда, по какому договору"></textarea></label>
+            <label>Комментарий по комиссии покупателя<textarea id="buyerCommissionComment" placeholder="кто платит, когда, по какому договору"></textarea></label>
+          </div>
+          <div class="row">
+            <label>Общая комиссия офиса<input id="totalOfficeCommission" placeholder="сумма или формула"></label>
+            <label>Распределение комиссии<textarea id="commissionDistribution" placeholder="между СПН продавца/покупателя, офисом, партнерами"></textarea></label>
+          </div>
+          <h3>Расходы сделки</h3>
+          <div class="row">
+            <label>Кто оплачивает госпошлину<select id="registrationFeePayer"><option>Не указано</option><option>Покупатель</option><option>Продавец</option><option>50/50</option><option>По договоренности</option></select></label>
+            <label>Госпошлина за регистрацию права<input id="registrationFeeAmount" placeholder="4000"></label>
+          </div>
+          <div class="row">
+            <label>Госпошлина по земле<input id="landRegistrationFeeAmount" placeholder="700"></label>
+            <label>Оценка объекта<input id="evaluationCost" placeholder="квартира 3000–5000, дом 6000–9000"></label>
+          </div>
+          <div class="row">
+            <label>СБР / безопасные расчеты<input id="sbrCost" placeholder="Сбер сейчас 3400"></label>
+            <label>Нотариус<input id="notaryCost" placeholder="если требуется"></label>
+          </div>
+          <div class="row">
+            <label>Страховка / услуги банка<input id="bankInsuranceCost" placeholder="если ипотека"></label>
+            <label>Прочие расходы<input id="otherCosts" placeholder="курьер, доверенность, выписки..."></label>
+          </div>
+          <label>Комментарий по расходам<textarea id="costsComment" placeholder="что обязательно, от чего можно отказаться, что согласовать с клиентом"></textarea></label>
         </section>
         <section class="section">
           <h2>Основания, расчет, особенности</h2>
