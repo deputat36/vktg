@@ -22,89 +22,6 @@ function fmt(n) {
   return n ? new Intl.NumberFormat('ru-RU').format(n) + ' ₽' : '—';
 }
 
-function input(id, label, placeholder = '') {
-  return `<label>${label}<input id="${id}" placeholder="${placeholder}"></label>`;
-}
-
-function textarea(id, label, placeholder = '') {
-  return `<label>${label}<textarea id="${id}" placeholder="${placeholder}"></textarea></label>`;
-}
-
-function ensureRestoredFields() {
-  if (get('sellerCount')) return;
-
-  const mainSection = [...document.querySelectorAll('aside .section')].find((section) => section.textContent.includes('Основное'));
-  const objectSection = [...document.querySelectorAll('aside .section')].find((section) => section.textContent.includes('Объект'));
-  if (!mainSection || !objectSection) return;
-
-  const parties = document.createElement('section');
-  parties.className = 'section';
-  parties.id = 'partiesFinanceSection';
-  parties.innerHTML = `
-    <h2>Стороны сделки</h2>
-    <div class="row">
-      ${input('sellerCount', 'Количество продавцов', 'например: 1')}
-      ${input('buyerCount', 'Количество покупателей', 'например: 1')}
-    </div>
-    <div class="row">
-      ${input('sellerMainName', 'Основной продавец / представитель', 'ФИО или коротко')}
-      ${input('buyerMainName', 'Основной покупатель / представитель', 'ФИО или коротко')}
-    </div>
-    <div class="row">
-      ${textarea('sellerSideComment', 'Комментарий по стороне продавца', 'несовершеннолетние, доверенность, супруг, наследники, доли...')}
-      ${textarea('buyerSideComment', 'Комментарий по стороне покупателя', 'ипотека, сертификаты, несколько покупателей, маткапитал...')}
-    </div>
-  `;
-  mainSection.insertAdjacentElement('afterend', parties);
-
-  const finance = document.createElement('section');
-  finance.className = 'section';
-  finance.id = 'financeSection';
-  finance.innerHTML = `
-    <h2>Финансы / комиссии / расходы</h2>
-    <h3>Комиссии</h3>
-    <div class="row">
-      ${input('sellerRealtorCommission', 'Комиссия со стороны продавца', 'например: 59 000')}
-      ${input('buyerRealtorCommission', 'Комиссия со стороны покупателя', 'например: 0 / 50 000')}
-    </div>
-    <div class="row">
-      ${textarea('sellerCommissionComment', 'Комментарий по комиссии продавца', 'кто платит, когда, по какому договору')}
-      ${textarea('buyerCommissionComment', 'Комментарий по комиссии покупателя', 'кто платит, когда, по какому договору')}
-    </div>
-    <div class="row">
-      ${input('totalOfficeCommission', 'Общая комиссия офиса', 'сумма или формула')}
-      ${textarea('commissionDistribution', 'Распределение комиссии', 'между СПН продавца/покупателя, офисом, партнерами')}
-    </div>
-    <h3>Расходы сделки</h3>
-    <div class="row">
-      <label>Кто оплачивает госпошлину
-        <select id="registrationFeePayer">
-          <option>Не указано</option>
-          <option>Покупатель</option>
-          <option>Продавец</option>
-          <option>50/50</option>
-          <option>По договоренности</option>
-        </select>
-      </label>
-      ${input('registrationFeeAmount', 'Госпошлина за регистрацию права', '4000')}
-    </div>
-    <div class="row">
-      ${input('landRegistrationFeeAmount', 'Госпошлина по земле', '700')}
-      ${input('evaluationCost', 'Оценка объекта', 'квартира 3000–5000, дом 6000–9000')}
-    </div>
-    <div class="row">
-      ${input('sbrCost', 'СБР / безопасные расчеты', 'Сбер сейчас 3400')}
-      ${input('notaryCost', 'Нотариус', 'если требуется')}
-    </div>
-    <div class="row">
-      ${input('bankInsuranceCost', 'Страховка / услуги банка', 'если ипотека')}
-      ${input('otherCosts', 'Прочие расходы', 'курьер, доверенность, выписки...')}
-    </div>
-    ${textarea('costsComment', 'Комментарий по расходам', 'что обязательно, от чего можно отказаться, что согласовать с клиентом')}
-  `;
-  objectSection.insertAdjacentElement('afterend', finance);
-}
-
 function ensureFinanceTab() {
   if (get('financeSummary')) return;
   const tabs = document.querySelector('.tabs');
@@ -188,7 +105,6 @@ function bindRefresh() {
 }
 
 function start() {
-  ensureRestoredFields();
   ensureFinanceTab();
   bindRefresh();
   renderFinanceSummary();
@@ -197,7 +113,7 @@ function start() {
 let attempts = 0;
 const timer = setInterval(() => {
   attempts += 1;
-  if (document.querySelector('aside .section') && document.querySelector('.tabs')) {
+  if (document.querySelector('.tabs') && get('sellerCount') && get('sellerRealtorCommission')) {
     clearInterval(timer);
     start();
   }
