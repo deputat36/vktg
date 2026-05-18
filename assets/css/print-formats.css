@@ -1,0 +1,4 @@
+.handoff-panel{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0;box-shadow:var(--shadow-soft)}
+.handoff-panel h2{display:flex;align-items:center;gap:8px;margin-bottom:6px}.handoff-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.handoff-card{background:#fff;border:1px solid #e4e7ec;border-radius:16px;padding:12px}.handoff-card h3{margin:0 0 6px;color:#101828}.handoff-card p{font-size:13px;color:#667085;margin:0 0 10px}.handoff-actions{display:flex;gap:7px;flex-wrap:wrap}.handoff-actions button{min-height:34px;padding:8px 10px;font-size:13px}.topbar .handoff-top-btn{background:#f8fafc!important;color:#344054!important;border:1px solid #d0d5dd!important;box-shadow:none!important}
+@media(max-width:900px){.handoff-grid{grid-template-columns:1fr}}
+@media print{.handoff-panel{display:none!important}}
