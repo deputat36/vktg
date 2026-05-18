@@ -1,3 +1,4 @@
+import '../integrations/appNav.js';
 import { signInWithPassword, signOut, getCurrentUser } from '../integrations/supabase.js';
 import { getAdminProfile, listAllProfiles, updateProfile, ROLE_OPTIONS } from '../integrations/adminApi.js';
 
@@ -35,6 +36,8 @@ async function refresh() {
   try {
     admin = await getAdminProfile();
     profiles = await listAllProfiles();
+    document.body.dataset.role = 'admin';
+    document.body.dataset.zone = 'admin';
     get('authBox').style.display = 'none';
     get('adminBox').style.display = '';
     renderAdminInfo();
@@ -50,8 +53,8 @@ async function refresh() {
 
 function renderAdminInfo() {
   get('adminInfo').innerHTML = `
-    <div class="box blue">
-      <h2>Администратор</h2>
+    <div class="box role-card">
+      <h2>⚙️ Администратор</h2>
       <table>
         <tr><th>ФИО</th><td>${esc(admin.full_name || '—')}</td></tr>
         <tr><th>Email</th><td>${esc(admin.email || '—')}</td></tr>
@@ -123,10 +126,10 @@ function renderProfilesTable() {
   get('profilesTable').innerHTML = `
     <div class="box blue">
       <h2>Сотрудники и роли</h2>
-      <table>
+      <div class="table-wrap"><table>
         <tr><th>ФИО / ID</th><th>Контакты</th><th>Роль / должность</th><th>Команда / руководитель</th><th>Статус</th><th></th></tr>
         ${rows || '<tr><td colspan="6">Сотрудники не найдены.</td></tr>'}
-      </table>
+      </table></div>
     </div>
   `;
 
