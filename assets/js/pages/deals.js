@@ -50,6 +50,12 @@ function setStatus(text, type = 'info') {
   el.className = 'status ' + type;
   el.textContent = text;
 }
+function applyVisualRole() {
+  const role = state.profile?.role || 'spn';
+  const zone = state.workZone || defaultZoneForRole(role);
+  document.body.dataset.role = role;
+  document.body.dataset.zone = zone;
+}
 
 async function refreshAuth() {
   state.user = await getCurrentUser();
@@ -74,6 +80,7 @@ async function loadCrm() {
   state.taskMap = related.taskMap;
   state.reviewMap = related.reviewMap;
   if (state.workZone === 'auto') state.workZone = defaultZoneForRole(state.profile?.role);
+  applyVisualRole();
   renderRolePanel();
   renderFilters();
   renderStats();
@@ -89,21 +96,41 @@ function defaultZoneForRole(role) {
   return 'spn';
 }
 
+function roleIcon(role) {
+  if (role === 'admin') return '⚙️';
+  if (role === 'manager') return '📊';
+  if (role === 'lawyer') return '⚖️';
+  if (role === 'broker') return '🏦';
+  return '🏠';
+}
+function zoneIcon(zone) {
+  if (zone === 'admin') return '⚙️';
+  if (zone === 'manager') return '📊';
+  if (zone === 'lawyer') return '⚖️';
+  if (zone === 'broker') return '🏦';
+  if (zone === 'all') return '🗂️';
+  return '🏠';
+}
+
 function renderRolePanel() {
   const role = state.profile?.role || 'spn';
   get('rolePanel').innerHTML = `
-    <div class="box blue">
-      <h2>${esc(ROLE_LABELS[role] || role)}</h2>
-      <p>${esc(roleDescription(role))}</p>
+    <div class="box role-card">
+      <div class="work-zone-title">
+        <div>
+          <h2>${roleIcon(role)} ${esc(ROLE_LABELS[role] || role)}</h2>
+          <p>${esc(roleDescription(role))}</p>
+        </div>
+        <span class="pill blue">${esc(state.profile?.team_name || 'Команда не указана')}</span>
+      </div>
       <table>
         <tr><th>Пользователь</th><td>${esc(state.profile?.full_name || state.user?.email || '—')}</td></tr>
         <tr><th>Email</th><td>${esc(state.profile?.email || state.user?.email || '—')}</td></tr>
-        <tr><th>Команда</th><td>${esc(state.profile?.team_name || '—')}</td></tr>
         <tr><th>Руководитель</th><td>${esc(profileName(state.profile?.manager_id))}</td></tr>
       </table>
     </div>
     <div class="box orangeBox">
-      <h3>Рабочая зона</h3>
+      <h3>${zoneIcon(state.workZone)} Рабочая зона</h3>
       <p>${esc(workZoneDescription(state.workZone))}</p>
     </div>
   `;
@@ -129,7 +156,7 @@ function renderFilters() {
   ];
   get('filters').innerHTML = `
     <div class="row">
-      <label>Рабочая зона<select id="workZoneFilter">${zones.map(([id, title]) => `<option value="${id}" ${state.workZone === id ? 'selected' : ''}>${esc(title)}</option>`).join('')}</select></label>
+      <label>Рабочая зона<select id="workZoneFilter">${zones.map(([id, title]) => `<option value="${id}" ${state.workZone === id ? 'selected' : ''}>${zoneIcon(id)} ${esc(title)}</option>`).join('')}</select></label>
       <label>Поиск<input id="dealSearch" placeholder="адрес, телефон, объект, кадастровый номер"></label>
     </div>
     <div class="row">
@@ -146,7 +173,7 @@ function renderFilters() {
   get('dealStatusFilter').value = state.status;
   get('dealRiskFilter').value = state.risk;
   get('workZoneFilter').value = state.workZone;
-  get('workZoneFilter').onchange = (e) => { state.workZone = e.target.value; renderRolePanel(); renderDeals(); renderStats(); };
+  get('workZoneFilter').onchange = (e) => { state.workZone = e.target.value; applyVisualRole(); renderRolePanel(); renderDeals(); renderStats(); };
   get('dealSearch').oninput = (e) => { state.search = e.target.value; renderDeals(); renderStats(); };
   get('dealStatusFilter').onchange = (e) => { state.status = e.target.value; renderDeals(); renderStats(); };
   get('dealRiskFilter').onchange = (e) => { state.risk = e.target.value; renderDeals(); renderStats(); };
@@ -206,7 +233,7 @@ function renderWorkZoneTips(deals) {
     : 'Что СПН сделать сейчас';
   return `
     <div class="box orangeBox">
-      <h3>${esc(title)}</h3>
+      <h3>${zoneIcon(zone)} ${esc(title)}</h3>
       ${urgent.length ? '<ul>' + urgent.map((deal) => `<li><b>${esc(deal.title || deal.address || 'Сделка')}</b>: ${esc(shortReason(deal))}</li>`).join('') + '</ul>' : '<p>Критичных задач в текущей зоне не найдено.</p>'}
     </div>
   `;
@@ -259,11 +286,11 @@ function renderDeals() {
 
   get('dealsList').innerHTML = `
     <div class="box blue">
-      <h2>${esc(tableTitle())}</h2>
-      <table>
+      <h2>${zoneIcon(state.workZone)} ${esc(tableTitle())}</h2>
+      <div class="table-wrap"><table>
         <tr><th>Обновлено</th><th>Сделка</th><th>Статус</th><th>Объект / цена</th><th>СПН / контакты</th><th>Готовность / риск</th><th>Работа</th><th></th></tr>
         ${body || '<tr><td colspan="8">Сделки не найдены.</td></tr>'}
-      </table>
+      </table></div>
     </div>
   `;
 
