@@ -1,0 +1,21 @@
+.step-wizard{position:sticky;top:0;z-index:8;margin:-4px 0 16px;background:linear-gradient(180deg,var(--brand-soft),#fff);border-color:#c7d7fe;box-shadow:0 10px 30px rgba(15,23,42,.08)}
+.wizard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.wizard-head h2{margin-bottom:4px}
+.step-progress{height:8px;background:#e4e7ec;border-radius:999px;overflow:hidden;margin:10px 0 14px}
+#stepProgressBar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));border-radius:999px;transition:width .25s ease}
+.step-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.step-btn{justify-content:flex-start;gap:8px;min-height:44px;background:#fff!important;color:#344054!important;border:1px solid #d0d5dd!important;box-shadow:none!important;text-align:left;padding:9px 10px}
+.step-btn:hover{background:#f8fbff!important;transform:none;box-shadow:none!important}
+.step-btn.active{background:linear-gradient(180deg,var(--brand),var(--brand-2))!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 18px rgba(21,94,239,.18)!important}
+.step-btn.complete:not(.active){border-color:#abefc6!important;background:#ecfdf3!important;color:#05603a!important}
+.step-num{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:999px;background:#eef2f6;color:#344054;font-size:12px;font-weight:900}
+.step-btn.active .step-num{background:rgba(255,255,255,.22);color:#fff}
+.step-icon{font-size:17px;line-height:1}
+.wizard-actions{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px}
+.wizard-section{display:none;animation:fadeStep .18s ease}
+.wizard-section.active-step-section{display:block}
+body[data-all-steps="true"] .wizard-section{display:block}
+.result-helper{margin-top:0;background:linear-gradient(180deg,#fff,#f8fafc)}
+@keyframes fadeStep{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1180px){.step-wizard{position:static}.step-list{grid-template-columns:1fr}.wizard-actions{grid-template-columns:1fr}}
+@media print{.step-wizard,.result-helper{display:none!important}.wizard-section{display:block!important}}
