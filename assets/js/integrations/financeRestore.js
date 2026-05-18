@@ -1,5 +1,6 @@
 import './cloudRolePatch.js';
 import './stepNavigator.js';
+import './roleWorkspace.js';
 
 function get(id) {
   return document.getElementById(id);
