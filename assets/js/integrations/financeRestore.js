@@ -4,6 +4,7 @@ import './stepNavigator.js';
 import './roleWorkspace.js';
 import './cooperationMode.js';
 import './cooperationSavePatch.js';
+import './smartDealIntake.js';
 
 function get(id) {
   return document.getElementById(id);
