@@ -1,32 +1,7 @@
 import { getSupabaseClient, getCurrentUser, ensureNavigatorProfile } from './supabase.js';
+import { buildDealPayload } from './dealPayload.js';
 
 const NAV_DEALS_TABLE = 'nav_deals';
-
-function buildDealPayload(result) {
-  const deal = result.deal;
-  const title = [deal.objectType || 'Сделка', deal.address || 'без адреса'].join(' — ');
-
-  return {
-    title,
-    status: 'draft',
-    object_type: deal.objectType || null,
-    address: deal.address || null,
-    price_fact: deal.priceFact || null,
-    price_contract: deal.priceContract || null,
-    risk_level: result.decision || null,
-    readiness_deposit: result.ready || 0,
-    readiness_deal: 0,
-    deal_json: deal,
-    analysis_json: {
-      score: result.score,
-      stop: result.stop,
-      warnings: result.warn,
-      actions: result.actions,
-      missing: result.missing,
-      transfer_to: result.to
-    }
-  };
-}
 
 export async function getDealFromSupabase(dealId) {
   const supabase = await getSupabaseClient();
@@ -52,6 +27,9 @@ export async function updateDealInSupabase(dealId, result) {
   await ensureNavigatorProfile();
 
   const payload = buildDealPayload(result);
+  delete payload.created_by;
+  delete payload.seller_spn_id;
+  delete payload.buyer_spn_id;
 
   const { data, error } = await supabase
     .from(NAV_DEALS_TABLE)
