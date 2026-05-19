@@ -6,6 +6,7 @@ import './cooperationMode.js';
 import './cooperationSavePatch.js';
 import './smartDealIntake.js';
 import './fieldOptimizer.js';
+import './detailedFieldsLayout.js';
 import './printFormats.js';
 import './settlementsField.js';
 import './dealPassportPanel.js';
