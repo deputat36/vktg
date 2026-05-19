@@ -1,21 +1,31 @@
 import { listDealReviews, addDealReview, REVIEW_DECISIONS, REVIEW_ROLES } from './reviews.js';
-import { createTasksFromReview, suggestTasksForReview } from './autoTasks.js';
+import { createTasksFromReview, suggestTasksForReview, suggestTasksForDeal } from './autoTasks.js';
+import { getDeal } from '../ui/form.js';
+import { normalizeDeal } from '../core/dealSchema.js';
 
 let currentDealId = null;
 let currentDealTitle = null;
 
+const QUICK_DECISIONS = [
+  ['lawyer', 'can_prepare_deposit', 'Юрист: можно к задатку', 'Документы и условия достаточны для подготовки задатка.'],
+  ['lawyer', 'needs_documents', 'Юрист: нужны документы', 'Не хватает документов для юридической проверки.'],
+  ['lawyer', 'needs_correction', 'Юрист: доработать условия', 'Нужно изменить или уточнить условия сделки до задатка.'],
+  ['lawyer', 'stop_current_conditions', 'Юрист: стоп', 'На текущих условиях задаток брать нельзя.'],
+  ['broker', 'needs_documents', 'Брокер: нужны документы в банк', 'Нужно загрузить пакет покупателя, продавца и объекта.'],
+  ['broker', 'can_prepare_deal', 'Брокер: можно к сделке', 'Банк/ипотечный сценарий предварительно готов.'],
+  ['manager', 'manager_required', 'Менеджер: взять на контроль', 'Нужно управленческое решение по риску или конфликту.']
+];
+
 function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[ch]));
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
+function get(id) { return document.getElementById(id); }
+function decisionLabel(value) { return (REVIEW_DECISIONS.find((item) => item[0] === value) || [value, value])[1]; }
+function roleLabel(value) { return (REVIEW_ROLES.find((item) => item[0] === value) || [value, value])[1]; }
+function currentDealSafe() { try { return getDeal(); } catch (_) { return {}; } }
 
 function ensureTab() {
-  if (document.getElementById('dealReviews')) return;
+  if (get('dealReviews')) return;
   const tabs = document.querySelector('.tabs');
   const result = document.querySelector('.result');
   if (!tabs || !result) return;
@@ -29,7 +39,7 @@ function ensureTab() {
   const page = document.createElement('div');
   page.id = 'dealReviews';
   page.className = 'tabpage';
-  page.innerHTML = '<h2>Решения по сделке</h2><div id="reviewPanelBody" class="box blue">Откройте сделку из Supabase, чтобы добавить решение юриста, брокера или менеджера.</div>';
+  page.innerHTML = '<h2>Решения по сделке</h2><div id="reviewPanelBody" class="box blue">Сохраните или откройте сделку из Supabase, чтобы добавить решение юриста, брокера или менеджера.</div>';
   result.appendChild(page);
 
   btn.onclick = () => {
@@ -41,35 +51,50 @@ function ensureTab() {
   };
 }
 
-function decisionLabel(value) {
-  return (REVIEW_DECISIONS.find((item) => item[0] === value) || [value, value])[1];
-}
-
-function roleLabel(value) {
-  return (REVIEW_ROLES.find((item) => item[0] === value) || [value, value])[1];
+function schemaSummary() {
+  const deal = currentDealSafe();
+  const schema = normalizeDeal(deal);
+  const cards = [
+    ['Стоп-признаки', schema.stopReasons.length, schema.stopReasons.length ? 'redBox' : 'greenBox'],
+    ['Не хватает', schema.required.length, schema.required.length ? 'orangeBox' : 'greenBox'],
+    ['Дети', schema.owners.hasChildren ? 'да' : 'нет', schema.owners.hasChildren ? 'redBox' : 'greenBox'],
+    ['Брокер', schema.needs.broker ? 'нужен' : 'нет', schema.needs.broker ? 'orangeBox' : 'greenBox']
+  ];
+  return `<div class="metrics">${cards.map(([title, value, cls]) => `<div class="metric ${cls}"><b>${esc(value)}</b><span>${esc(title)}</span></div>`).join('')}</div>`;
 }
 
 function renderSuggestedTasks() {
-  const role = document.getElementById('reviewRole')?.value || 'lawyer';
-  const decision = document.getElementById('reviewDecision')?.value || 'needs_documents';
-  const comment = document.getElementById('reviewComment')?.value || '';
-  const target = document.getElementById('reviewTaskSuggestions');
+  const role = get('reviewRole')?.value || 'lawyer';
+  const decision = get('reviewDecision')?.value || 'needs_documents';
+  const comment = get('reviewComment')?.value || '';
+  const target = get('reviewTaskSuggestions');
   if (!target) return;
 
-  const tasks = suggestTasksForReview(role, decision, comment);
+  const deal = currentDealSafe();
+  const tasks = suggestTasksForReview(role, decision, comment, deal);
   target.innerHTML = `
     <h3>Какие задачи будут созданы автоматически</h3>
-    ${tasks.length ? '<ul>' + tasks.map((task) => `<li><b>${esc(task.title)}</b><br><span class="small">${esc(task.description || '')}</span></li>`).join('') + '</ul>' : '<p>Для этого решения автозадач нет. Можно добавить задачу вручную во вкладке «Задачи».</p>'}
+    ${tasks.length ? '<ul>' + tasks.map((task) => `<li><b>${esc(task.title)}</b> <span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'orange' : 'blue'}">${esc(task.priority || 'normal')}</span><br><span class="small">${esc(task.description || '')}</span></li>`).join('') + '</ul>' : '<p>Для этого решения автозадач нет. Можно добавить задачу вручную во вкладке «Задачи».</p>'}
   `;
 }
 
+function renderQuickButtons() {
+  return `<div class="box grayBox"><h3>Быстрые решения</h3><div class="scenario-grid">${QUICK_DECISIONS.map((item, index) => `<button type="button" class="light" data-quick-review="${index}"><b>${esc(item[2])}</b><br><span class="small">${esc(item[3])}</span></button>`).join('')}</div></div>`;
+}
+
 async function renderPanel() {
-  const body = document.getElementById('reviewPanelBody');
+  const body = get('reviewPanelBody');
   if (!body) return;
 
   if (!currentDealId) {
+    const draftTasks = suggestTasksForDeal(currentDealSafe());
     body.className = 'box blue';
-    body.innerHTML = 'Откройте сделку из Supabase, чтобы добавить решение юриста, брокера или менеджера.';
+    body.innerHTML = `
+      <h3>Сделка еще не сохранена в Supabase</h3>
+      <p>Решение юриста и задачи сохраняются только к сохраненной сделке. Сначала нажмите «Сохранить в Supabase» или откройте сделку из списка.</p>
+      ${schemaSummary()}
+      <div class="box orangeBox"><h3>Что система уже видит по текущей карточке</h3>${draftTasks.length ? '<ul>' + draftTasks.slice(0, 8).map((task) => `<li><b>${esc(task.title)}</b><br><span class="small">${esc(task.description || '')}</span></li>`).join('') + '</ul>' : '<p>Критичных автозадач по текущей карточке нет.</p>'}</div>
+    `;
     return;
   }
 
@@ -80,36 +105,52 @@ async function renderPanel() {
     const items = await listDealReviews(currentDealId);
     body.innerHTML = `
       <h3>${esc(currentDealTitle || 'Открытая сделка')}</h3>
-      <div class="row">
-        <label>Кто оставляет решение
-          <select id="reviewRole">${REVIEW_ROLES.map((item) => `<option value="${item[0]}">${esc(item[1])}</option>`).join('')}</select>
+      ${schemaSummary()}
+      ${renderQuickButtons()}
+      <div class="box blue">
+        <h3>Добавить решение</h3>
+        <div class="row">
+          <label>Кто оставляет решение
+            <select id="reviewRole">${REVIEW_ROLES.map((item) => `<option value="${item[0]}">${esc(item[1])}</option>`).join('')}</select>
+          </label>
+          <label>Решение
+            <select id="reviewDecision">${REVIEW_DECISIONS.map((item) => `<option value="${item[0]}">${esc(item[1])}</option>`).join('')}</select>
+          </label>
+        </div>
+        <label>Комментарий / что нужно сделать
+          <textarea id="reviewComment" placeholder="Например: нужна свежая ЕГРН с ЭЦП, справка о зарегистрированных, уточнить порядок расчетов..."></textarea>
         </label>
-        <label>Решение
-          <select id="reviewDecision">${REVIEW_DECISIONS.map((item) => `<option value="${item[0]}">${esc(item[1])}</option>`).join('')}</select>
-        </label>
+        <div id="reviewTaskSuggestions" class="box orangeBox"></div>
+        <button id="btnAddReview" class="green">Добавить решение и создать задачи</button>
       </div>
-      <label>Комментарий / что нужно сделать
-        <textarea id="reviewComment" placeholder="Например: нужна свежая ЕГРН с ЭЦП, справка о зарегистрированных, уточнить порядок расчетов..."></textarea>
-      </label>
-      <div id="reviewTaskSuggestions" class="box orangeBox"></div>
-      <button id="btnAddReview" class="green">Добавить решение и создать задачи</button>
       <h3>История решений</h3>
       ${items.length ? renderReviews(items) : '<div class="box grayBox">Решений пока нет.</div>'}
     `;
 
     renderSuggestedTasks();
-    document.getElementById('reviewRole').onchange = renderSuggestedTasks;
-    document.getElementById('reviewDecision').onchange = renderSuggestedTasks;
-    document.getElementById('reviewComment').oninput = renderSuggestedTasks;
+    get('reviewRole').onchange = renderSuggestedTasks;
+    get('reviewDecision').onchange = renderSuggestedTasks;
+    get('reviewComment').oninput = renderSuggestedTasks;
 
-    document.getElementById('btnAddReview').onclick = async () => {
+    body.querySelectorAll('[data-quick-review]').forEach((button) => {
+      button.onclick = () => {
+        const [role, decision, , comment] = QUICK_DECISIONS[Number(button.dataset.quickReview)];
+        get('reviewRole').value = role;
+        get('reviewDecision').value = decision;
+        get('reviewComment').value = comment;
+        renderSuggestedTasks();
+      };
+    });
+
+    get('btnAddReview').onclick = async () => {
       try {
-        const role = document.getElementById('reviewRole').value;
-        const decision = document.getElementById('reviewDecision').value;
-        const comment = document.getElementById('reviewComment').value;
+        const role = get('reviewRole').value;
+        const decision = get('reviewDecision').value;
+        const comment = get('reviewComment').value;
+        const deal = currentDealSafe();
         await addDealReview(currentDealId, role, decision, comment);
-        const createdTasks = await createTasksFromReview(currentDealId, role, decision, comment);
-        document.getElementById('reviewComment').value = '';
+        const createdTasks = await createTasksFromReview(currentDealId, role, decision, comment, deal);
+        get('reviewComment').value = '';
         window.dispatchEvent(new CustomEvent('navigatorTasksChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
         await renderPanel();
         alert('Решение добавлено. Создано задач: ' + createdTasks.length);
@@ -141,6 +182,8 @@ function start() {
     currentDealTitle = event.detail?.title || currentDealTitle;
     renderPanel();
   });
+  document.addEventListener('input', () => setTimeout(renderPanel, 150));
+  document.addEventListener('change', () => setTimeout(renderPanel, 150));
 }
 
 start();
