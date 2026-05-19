@@ -1,4 +1,5 @@
 import { updateDealStatus, STATUS_LABELS, getMyProfile } from './crmApi.js';
+import { addStatusEvent } from './dealEvents.js';
 import { getDeal } from '../ui/form.js';
 import { normalizeDeal } from '../core/dealSchema.js';
 
@@ -145,9 +146,12 @@ async function changeStatus(status) {
     return;
   }
   try {
+    const oldStatus = currentStatus;
     const updated = await updateDealStatus(currentDealId, status);
     currentStatus = updated.status || status;
-    window.dispatchEvent(new CustomEvent('navigatorDealStatusChanged', { detail: { id: currentDealId, title: currentDealTitle, status: currentStatus } }));
+    try { await addStatusEvent(currentDealId, oldStatus, currentStatus); } catch (_) {}
+    window.dispatchEvent(new CustomEvent('navigatorDealStatusChanged', { detail: { id: currentDealId, title: currentDealTitle, status: currentStatus, oldStatus } }));
+    window.dispatchEvent(new CustomEvent('navigatorDealEventsChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
     render();
   } catch (error) {
     alert('Ошибка смены статуса: ' + error.message);
