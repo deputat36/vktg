@@ -1,11 +1,15 @@
 import { $, esc } from '../core/utils.js';
 
 export function fillSelect(id, values) {
-  $(id).innerHTML = values.map((value) => `<option>${esc(value)}</option>`).join('');
+  const element = $(id);
+  if (!element) return;
+  element.innerHTML = values.map((value) => `<option>${esc(value)}</option>`).join('');
 }
 
 export function renderChecks(containerId, name, rows) {
-  $(containerId).innerHTML = rows.map(([id, title]) => `
+  const container = $(containerId);
+  if (!container) return;
+  container.innerHTML = rows.map(([id, title]) => `
     <label class="check">
       <input type="checkbox" name="${esc(name)}" value="${esc(id)}"> ${esc(title)}
     </label>
