@@ -2,6 +2,7 @@ import './appNav.js';
 import './cloudRolePatch.js';
 import './stepNavigator.js';
 import './roleWorkspace.js';
+import './statusWorkflow.js';
 import './cooperationMode.js';
 import './cooperationSavePatch.js';
 import './smartDealIntake.js';
