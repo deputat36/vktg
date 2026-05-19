@@ -1,11 +1,13 @@
 import { listDealReviews, addDealReview, REVIEW_DECISIONS, REVIEW_ROLES } from './reviews.js';
 import { updateDealStatus } from './crmApi.js';
+import { addReviewEvent, addStatusEvent } from './dealEvents.js';
 import { createTasksFromReview, suggestTasksForReview, suggestTasksForDeal } from './autoTasks.js';
 import { getDeal } from '../ui/form.js';
 import { normalizeDeal } from '../core/dealSchema.js';
 
 let currentDealId = null;
 let currentDealTitle = null;
+let currentStatus = null;
 
 const QUICK_DECISIONS = [
   ['lawyer', 'can_prepare_deposit', 'Юрист: можно к задатку', 'Документы и условия достаточны для подготовки задатка.'],
@@ -171,14 +173,19 @@ async function renderPanel() {
         const comment = get('reviewComment').value;
         const deal = currentDealSafe();
         await addDealReview(currentDealId, role, decision, comment);
+        try { await addReviewEvent(currentDealId, roleLabel(role), decisionLabel(decision), comment); } catch (_) {}
         const createdTasks = await createTasksFromReview(currentDealId, role, decision, comment, deal);
         const nextStatus = statusFromReview(role, decision);
         if (nextStatus) {
+          const oldStatus = currentStatus;
           await updateDealStatus(currentDealId, nextStatus);
-          window.dispatchEvent(new CustomEvent('navigatorDealStatusChanged', { detail: { id: currentDealId, title: currentDealTitle, status: nextStatus } }));
+          try { await addStatusEvent(currentDealId, oldStatus, nextStatus, 'Статус изменен по решению'); } catch (_) {}
+          currentStatus = nextStatus;
+          window.dispatchEvent(new CustomEvent('navigatorDealStatusChanged', { detail: { id: currentDealId, title: currentDealTitle, status: nextStatus, oldStatus } }));
         }
         get('reviewComment').value = '';
         window.dispatchEvent(new CustomEvent('navigatorTasksChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
+        window.dispatchEvent(new CustomEvent('navigatorDealEventsChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
         await renderPanel();
         alert('Решение добавлено. Создано задач: ' + createdTasks.length + (nextStatus ? '. Статус обновлен.' : ''));
       } catch (error) {
@@ -202,12 +209,17 @@ function start() {
   window.addEventListener('navigatorDealOpened', (event) => {
     currentDealId = event.detail?.id || null;
     currentDealTitle = event.detail?.title || null;
+    currentStatus = event.detail?.status || currentStatus;
     renderPanel();
   });
   window.addEventListener('navigatorDealSaved', (event) => {
     currentDealId = event.detail?.id || currentDealId;
     currentDealTitle = event.detail?.title || currentDealTitle;
+    currentStatus = event.detail?.status || currentStatus;
     renderPanel();
+  });
+  window.addEventListener('navigatorDealStatusChanged', (event) => {
+    currentStatus = event.detail?.status || currentStatus;
   });
   document.addEventListener('input', () => setTimeout(renderPanel, 150));
   document.addEventListener('change', () => setTimeout(renderPanel, 150));
