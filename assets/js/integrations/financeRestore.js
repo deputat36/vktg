@@ -12,6 +12,8 @@ import './settlementsField.js';
 import './dealPassportPanel.js';
 import './smartWizard.js';
 import './smartCoach.js';
+import './reviewPanel.js';
+import './taskPanel.js';
 
 function get(id) {
   return document.getElementById(id);
