@@ -15,6 +15,7 @@ import './smartWizard.js';
 import './smartCoach.js';
 import './reviewPanel.js';
 import './taskPanel.js';
+import './eventPanel.js';
 
 function get(id) {
   return document.getElementById(id);
