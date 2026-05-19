@@ -1,4 +1,5 @@
 import { getSupabaseClient, getCurrentUser, ensureNavigatorProfile } from './supabase.js';
+import { addTaskEvent, addDealEvent } from './dealEvents.js';
 
 const TASKS_TABLE = 'nav_deal_tasks';
 
@@ -53,10 +54,12 @@ export async function addDealTask(dealId, task) {
       created_by: user.id,
       assigned_to: task.assigned_to || null
     })
-    .select('id,deal_id,title,status,priority,due_date,created_at,updated_at')
+    .select('id,deal_id,title,description,status,priority,due_date,created_at,updated_at')
     .single();
 
   if (error) throw error;
+
+  try { await addTaskEvent(dealId, data, 'task_created'); } catch (_) {}
   return data;
 }
 
@@ -65,14 +68,32 @@ export async function updateDealTaskStatus(taskId, status) {
   if (!supabase) throw new Error('Supabase не настроен');
   await ensureNavigatorProfile();
 
+  const { data: before } = await supabase
+    .from(TASKS_TABLE)
+    .select('id,deal_id,title,status')
+    .eq('id', taskId)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from(TASKS_TABLE)
     .update({ status })
     .eq('id', taskId)
-    .select('id,status,updated_at')
+    .select('id,deal_id,title,status,updated_at')
     .single();
 
   if (error) throw error;
+
+  try {
+    await addDealEvent(data.deal_id, {
+      event_type: status === 'done' ? 'task_completed' : 'task_status_changed',
+      title: status === 'done' ? 'Задача закрыта' : 'Статус задачи изменен',
+      body: data.title || before?.title || 'Задача',
+      old_value: before?.status || null,
+      new_value: status,
+      metadata: { task_id: taskId, title: data.title || before?.title || '' }
+    });
+  } catch (_) {}
+
   return data;
 }
 
