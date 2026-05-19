@@ -25,6 +25,7 @@ export function renderInputs(data) {
 
   renderChecks('basisBox', 'basis', data.dictionaries.basis);
   renderChecks('paymentsBox', 'payments', data.dictionaries.payments);
+  renderChecks('settlementsBox', 'settlements', data.dictionaries.settlements || []);
   renderChecks('certificatesBox', 'certificates', data.dictionaries.certificates);
   renderChecks('flagsBox', 'flags', data.dictionaries.flags);
 }
@@ -96,6 +97,7 @@ export function getDeal() {
     releaseInfo: $('releaseInfo').value,
     basis: checkedValues('basis'),
     payments: checkedValues('payments'),
+    settlements: checkedValues('settlements'),
     certificates: checkedValues('certificates'),
     bankType: $('bankType').value,
     bankInfo: $('bankInfo').value,
@@ -109,7 +111,7 @@ export function getDeal() {
 
 export function applyDealPatch(patch = {}) {
   Object.entries(patch).forEach(([key, value]) => {
-    if (['basis', 'payments', 'certificates', 'flags'].includes(key)) {
+    if (['basis', 'payments', 'settlements', 'certificates', 'flags'].includes(key)) {
       setCheckedValues(key, value || []);
       return;
     }
