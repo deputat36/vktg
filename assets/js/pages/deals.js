@@ -21,7 +21,6 @@ function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 function fmtDate(value) { return value ? new Date(value).toLocaleString('ru-RU') : '—'; }
-function fmtDay(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
 function todayYmd() { return new Date().toISOString().slice(0, 10); }
 function profileName(id) {
   if (!id) return '—';
@@ -70,13 +69,16 @@ function openTaskList(deal) { return tasks(deal).filter((task) => task.status !=
 function openTaskCount(deal) { return openTaskList(deal).length; }
 function urgentTaskCount(deal) { return openTaskList(deal).filter((task) => task.priority === 'urgent' || task.priority === 'high').length; }
 function overdueTaskCount(deal) { const today = todayYmd(); return openTaskList(deal).filter((task) => task.due_date && task.due_date < today).length; }
-function reviewCount(deal) { return reviews(deal).length; }
 function lastReview(deal) { return reviews(deal).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null; }
 function setStatus(text, type = 'info') {
   const el = get('pageStatus');
   if (!el) return;
   el.className = 'status ' + type;
   el.textContent = text;
+}
+function rerenderCrmView() {
+  renderStats();
+  renderDeals();
 }
 function applyVisualRole() {
   const role = state.profile?.role || 'spn';
@@ -112,8 +114,7 @@ async function loadCrm() {
   applyVisualRole();
   renderRolePanel();
   renderFilters();
-  renderStats();
-  renderDeals();
+  rerenderCrmView();
   setStatus('Готово. Загружено сделок: ' + state.deals.length, 'ok');
 }
 
@@ -145,8 +146,7 @@ function zoneIcon(zone) {
   if (zone === 'broker') return '🏦';
   if (zone === 'all') return '🗂️';
   return '🏠';
-}
-function queueIcon(queue) {
+}\nfunction queueIcon(queue) {
   if (queue === 'attention') return '🚨';
   if (queue === 'overdue') return '⏰';
   if (queue === 'lawyer_review') return '⚖️';
@@ -219,10 +219,10 @@ function renderFilters() {
   get('dealStatusFilter').value = state.status;
   get('dealRiskFilter').value = state.risk;
   get('workZoneFilter').value = state.workZone;
-  get('workZoneFilter').onchange = (e) => { state.workZone = e.target.value; state.queue = defaultQueueForZone(state.workZone); applyVisualRole(); renderRolePanel(); renderDeals(); renderStats(); };
-  get('dealSearch').oninput = (e) => { state.search = e.target.value; renderDeals(); renderStats(); };
-  get('dealStatusFilter').onchange = (e) => { state.status = e.target.value; renderDeals(); renderStats(); };
-  get('dealRiskFilter').onchange = (e) => { state.risk = e.target.value; renderDeals(); renderStats(); };
+  get('workZoneFilter').onchange = (e) => { state.workZone = e.target.value; state.queue = defaultQueueForZone(state.workZone); applyVisualRole(); renderRolePanel(); rerenderCrmView(); };
+  get('dealSearch').oninput = (e) => { state.search = e.target.value; rerenderCrmView(); };
+  get('dealStatusFilter').onchange = (e) => { state.status = e.target.value; rerenderCrmView(); };
+  get('dealRiskFilter').onchange = (e) => { state.risk = e.target.value; rerenderCrmView(); };
   get('btnReloadDeals').onclick = loadCrm;
 }
 
@@ -421,8 +421,7 @@ function renderDeals() {
   document.querySelectorAll('[data-queue]').forEach((el) => {
     el.onclick = () => {
       state.queue = el.dataset.queue;
-      renderStats();
-      renderDeals();
+      rerenderCrmView();
     };
   });
 }
