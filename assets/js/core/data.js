@@ -22,7 +22,7 @@ export async function loadData() {
 
 export function makeLabels(data) {
   const labels = {};
-  for (const group of ['basis', 'payments', 'certificates', 'flags']) {
+  for (const group of ['basis', 'payments', 'settlements', 'certificates', 'flags']) {
     for (const row of data.dictionaries[group] || []) labels[row[0]] = row[1];
   }
   return labels;
