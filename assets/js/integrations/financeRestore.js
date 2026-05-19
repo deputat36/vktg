@@ -10,6 +10,7 @@ import './printFormats.js';
 import './settlementsField.js';
 import './dealPassportPanel.js';
 import './smartWizard.js';
+import './smartCoach.js';
 
 function get(id) {
   return document.getElementById(id);
