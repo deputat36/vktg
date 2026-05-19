@@ -6,6 +6,7 @@ import './cooperationMode.js';
 import './cooperationSavePatch.js';
 import './smartDealIntake.js';
 import './fieldOptimizer.js';
+import './printFormats.js';
 
 function get(id) {
   return document.getElementById(id);
