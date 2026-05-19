@@ -6,10 +6,6 @@ import { getDeal, applyDealPatch } from '../ui/form.js';
 function get(id) { return document.getElementById(id); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
 function hasText(list, text) { return (list || []).some((item) => String(item).toLowerCase().includes(text.toLowerCase())); }
-function dispatchFormEvents() {
-  document.dispatchEvent(new Event('input', { bubbles: true }));
-  document.dispatchEvent(new Event('change', { bubbles: true }));
-}
 
 const REQUIRED_ELEMENTS = [
   ['mode', 'Режим'], ['stage', 'Этап'], ['sellerSpn', 'СПН продавца'], ['buyerSpn', 'СПН покупателя'], ['sellerPhone', 'Телефон продавца'], ['buyerPhone', 'Телефон покупателя'],
@@ -137,7 +133,6 @@ async function runAllTests() {
   for (const testCase of DEMO_CASES) {
     try {
       applyDealPatch(testCase.patch);
-      dispatchFormEvents();
       const deal = getDeal();
       const schema = normalizeDeal(deal);
       const analysis = analyzeDeal(deal, data);
