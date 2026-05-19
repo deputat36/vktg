@@ -102,13 +102,13 @@ export async function listDealTasksAndReviews(dealIds = []) {
   for (const dealId of dealIds) {
     const { data: tasks } = await supabase
       .from(TASKS_TABLE)
-      .select('id,deal_id,status')
+      .select('id,deal_id,title,description,status,priority,due_date,assigned_to,created_by,created_at,updated_at')
       .eq('deal_id', dealId)
       .limit(100);
 
     const { data: reviews } = await supabase
       .from(REVIEWS_TABLE)
-      .select('id,deal_id,decision,reviewer_role,created_at')
+      .select('id,deal_id,decision,reviewer_role,comment,created_at')
       .eq('deal_id', dealId)
       .limit(100);
 
