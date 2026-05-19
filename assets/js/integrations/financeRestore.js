@@ -7,6 +7,7 @@ import './cooperationSavePatch.js';
 import './smartDealIntake.js';
 import './fieldOptimizer.js';
 import './printFormats.js';
+import './settlementsField.js';
 
 function get(id) {
   return document.getElementById(id);
