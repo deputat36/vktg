@@ -1,4 +1,5 @@
 import { listDealReviews, addDealReview, REVIEW_DECISIONS, REVIEW_ROLES } from './reviews.js';
+import { updateDealStatus } from './crmApi.js';
 import { createTasksFromReview, suggestTasksForReview, suggestTasksForDeal } from './autoTasks.js';
 import { getDeal } from '../ui/form.js';
 import { normalizeDeal } from '../core/dealSchema.js';
@@ -15,6 +16,25 @@ const QUICK_DECISIONS = [
   ['broker', 'can_prepare_deal', 'Брокер: можно к сделке', 'Банк/ипотечный сценарий предварительно готов.'],
   ['manager', 'manager_required', 'Менеджер: взять на контроль', 'Нужно управленческое решение по риску или конфликту.']
 ];
+
+function statusFromReview(role, decision) {
+  if (decision === 'stop_current_conditions') return 'cancelled';
+  if (decision === 'needs_documents' || decision === 'needs_correction') return 'needs_documents';
+  if (decision === 'manager_required') return 'needs_lawyer';
+  if (decision === 'can_prepare_deposit') return 'ready_for_deposit';
+  if (decision === 'can_prepare_deal') return 'ready_for_deal';
+  if (role === 'broker' && decision === 'needs_documents') return 'mortgage_review';
+  return null;
+}
+
+const STATUS_LABELS_LOCAL = {
+  cancelled: 'Сорвана / отменена',
+  needs_documents: 'Нужны документы',
+  needs_lawyer: 'Нужна проверка юриста',
+  ready_for_deposit: 'Готова к задатку',
+  ready_for_deal: 'Готова к сделке',
+  mortgage_review: 'Ипотека / банк'
+};
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
@@ -72,8 +92,10 @@ function renderSuggestedTasks() {
 
   const deal = currentDealSafe();
   const tasks = suggestTasksForReview(role, decision, comment, deal);
+  const nextStatus = statusFromReview(role, decision);
   target.innerHTML = `
     <h3>Какие задачи будут созданы автоматически</h3>
+    ${nextStatus ? `<p class="small"><b>Статус сделки после решения:</b> ${esc(STATUS_LABELS_LOCAL[nextStatus] || nextStatus)}</p>` : ''}
     ${tasks.length ? '<ul>' + tasks.map((task) => `<li><b>${esc(task.title)}</b> <span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'orange' : 'blue'}">${esc(task.priority || 'normal')}</span><br><span class="small">${esc(task.description || '')}</span></li>`).join('') + '</ul>' : '<p>Для этого решения автозадач нет. Можно добавить задачу вручную во вкладке «Задачи».</p>'}
   `;
 }
@@ -121,7 +143,7 @@ async function renderPanel() {
           <textarea id="reviewComment" placeholder="Например: нужна свежая ЕГРН с ЭЦП, справка о зарегистрированных, уточнить порядок расчетов..."></textarea>
         </label>
         <div id="reviewTaskSuggestions" class="box orangeBox"></div>
-        <button id="btnAddReview" class="green">Добавить решение и создать задачи</button>
+        <button id="btnAddReview" class="green">Добавить решение, создать задачи и обновить статус</button>
       </div>
       <h3>История решений</h3>
       ${items.length ? renderReviews(items) : '<div class="box grayBox">Решений пока нет.</div>'}
@@ -150,10 +172,15 @@ async function renderPanel() {
         const deal = currentDealSafe();
         await addDealReview(currentDealId, role, decision, comment);
         const createdTasks = await createTasksFromReview(currentDealId, role, decision, comment, deal);
+        const nextStatus = statusFromReview(role, decision);
+        if (nextStatus) {
+          await updateDealStatus(currentDealId, nextStatus);
+          window.dispatchEvent(new CustomEvent('navigatorDealStatusChanged', { detail: { id: currentDealId, title: currentDealTitle, status: nextStatus } }));
+        }
         get('reviewComment').value = '';
         window.dispatchEvent(new CustomEvent('navigatorTasksChanged', { detail: { id: currentDealId, title: currentDealTitle } }));
         await renderPanel();
-        alert('Решение добавлено. Создано задач: ' + createdTasks.length);
+        alert('Решение добавлено. Создано задач: ' + createdTasks.length + (nextStatus ? '. Статус обновлен.' : ''));
       } catch (error) {
         alert('Ошибка добавления решения: ' + error.message);
       }
