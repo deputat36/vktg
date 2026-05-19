@@ -9,7 +9,7 @@ export async function listDealReviews(dealId) {
 
   const { data, error } = await supabase
     .from(REVIEWS_TABLE)
-    .select('id,deal_id,reviewer_id,reviewer_role,decision,comment,created_at')
+    .select('id,deal_id,user_id,reviewer_id,reviewer_role,decision,comment,created_at')
     .eq('deal_id', dealId)
     .order('created_at', { ascending: false });
 
@@ -29,12 +29,13 @@ export async function addDealReview(dealId, role, decision, comment) {
     .from(REVIEWS_TABLE)
     .insert({
       deal_id: dealId,
+      user_id: user.id,
       reviewer_id: user.id,
       reviewer_role: role || 'lawyer',
       decision: decision || 'needs_documents',
       comment: comment || ''
     })
-    .select('id,deal_id,reviewer_role,decision,comment,created_at')
+    .select('id,deal_id,user_id,reviewer_id,reviewer_role,decision,comment,created_at')
     .single();
 
   if (error) throw error;
