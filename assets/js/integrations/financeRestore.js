@@ -16,6 +16,7 @@ import './smartCoach.js';
 import './reviewPanel.js';
 import './taskPanel.js';
 import './eventPanel.js';
+import './uxRedesign.js';
 
 function get(id) {
   return document.getElementById(id);
