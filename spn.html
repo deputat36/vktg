@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>СПН — простое заполнение сделки</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <link rel="stylesheet" href="./assets/css/app-nav.css">
+  <link rel="stylesheet" href="./assets/css/spn-workbench.css">
+</head>
+<body>
+  <div class="wrap spn-wrap">
+    <header class="topbar spn-topbar">
+      <div>
+        <h1>Рабочее место СПН</h1>
+        <p>Простое пошаговое заполнение сделки без лишних блоков и технических режимов.</p>
+        <div id="spnStatus" class="status">Загрузка...</div>
+      </div>
+      <div class="actions">
+        <a class="button light" href="./deals.html">Мои сделки</a>
+        <a class="button light" href="./index.html">Расширенный навигатор</a>
+        <button id="btnSpnLogout" class="light">Выйти</button>
+      </div>
+    </header>
+
+    <section id="spnLogin" class="spn-card spn-login" style="display:none">
+      <h2>Вход СПН</h2>
+      <p>Войдите, чтобы сохранить сделку в CRM.</p>
+      <div class="spn-form-grid two">
+        <label>Email<input id="spnEmail" type="email" autocomplete="username"></label>
+        <label>Пароль<input id="spnPassword" type="password" autocomplete="current-password"></label>
+      </div>
+      <button id="btnSpnLogin" class="primary">Войти</button>
+    </section>
+
+    <main id="spnApp" class="spn-layout" style="display:none">
+      <section class="spn-card spn-wizard-card">
+        <div class="spn-wizard-head">
+          <div>
+            <h2 id="stepTitle">Шаг</h2>
+            <p id="stepHint">Подсказка</p>
+          </div>
+          <div class="spn-progress-badge"><span id="progressPercent">0%</span></div>
+        </div>
+
+        <div class="spn-progress-line"><span id="progressBar"></span></div>
+        <div id="stepTabs" class="spn-step-tabs"></div>
+        <div id="stepBody" class="spn-step-body"></div>
+
+        <div class="spn-step-footer">
+          <button id="btnPrev" class="light">Назад</button>
+          <button id="btnNext" class="primary">Далее</button>
+          <button id="btnSave" class="success">Сохранить в CRM</button>
+        </div>
+      </section>
+
+      <aside class="spn-side">
+        <section class="spn-card">
+          <h2>Сводка</h2>
+          <div id="summaryBox" class="summary-box"></div>
+        </section>
+        <section class="spn-card">
+          <h2>Что важно сейчас</h2>
+          <div id="adviceBox" class="advice-box"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="./assets/js/pages/spn.js"></script>
+</body>
+</html>
