@@ -4,32 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>СПН — простое заполнение сделки</title>
-  <link rel="stylesheet" href="./assets/css/style.css">
-  <link rel="stylesheet" href="./assets/css/app-nav.css">
   <link rel="stylesheet" href="./assets/css/spn-workbench.css">
 </head>
 <body>
-  <div class="wrap spn-wrap">
-    <header class="topbar spn-topbar">
+  <div class="spn-wrap">
+    <header class="spn-topbar">
       <div>
         <h1>Рабочее место СПН</h1>
-        <p>Простое пошаговое заполнение сделки без лишних блоков и технических режимов.</p>
-        <div id="spnStatus" class="status warn">Если страница не загрузится автоматически, обновите ее через Ctrl + F5.</div>
+        <p>Один понятный мастер: заполнил шаг → нажал «Далее» → сохранил сделку.</p>
+        <div id="spnStatus" class="spn-status warn">Проверяю вход...</div>
       </div>
-      <div class="actions">
-        <a class="button light" href="./deals.html">Мои сделки</a>
-        <a class="button light" href="./index.html">Вход / расширенный навигатор</a>
-        <button id="btnSpnLogout" class="light" type="button">Выйти</button>
+      <div class="spn-top-actions">
+        <a class="spn-button light" href="./deals.html">Мои сделки</a>
+        <a class="spn-button light" href="./index.html">Расширенный режим</a>
+        <button id="btnSpnLogout" class="spn-button light" type="button">Выйти</button>
       </div>
     </header>
 
     <section id="spnLogin" class="spn-card spn-login">
-      <h2>Вход нужен только для сохранения в CRM</h2>
-      <p>Если ты уже вошел на главной странице, мастер откроется автоматически. Если нет — открой вход на главной странице, войди как СПН и вернись сюда.</p>
-      <div class="spn-form-grid one">
-        <a class="button primary" href="./index.html">Открыть вход на главной</a>
+      <h2>Сначала войдите</h2>
+      <p>Для сохранения сделки нужна активная сессия. Войдите на главной странице, затем вернитесь сюда.</p>
+      <div class="spn-login-actions">
+        <a class="spn-button primary" href="./index.html">Открыть вход</a>
+        <a class="spn-button light" href="./deals.html">Посмотреть сделки</a>
       </div>
-      <p class="small">Эта страница специально сделана чистой: без старого перегруженного навигатора, режимов и технических блоков.</p>
     </section>
 
     <main id="spnApp" class="spn-layout" style="display:none">
@@ -47,9 +45,9 @@
         <div id="stepBody" class="spn-step-body"></div>
 
         <div class="spn-step-footer">
-          <button id="btnPrev" class="light" type="button">Назад</button>
-          <button id="btnNext" class="primary" type="button">Далее</button>
-          <button id="btnSave" class="success" type="button">Сохранить в CRM</button>
+          <button id="btnPrev" class="spn-button light" type="button">Назад</button>
+          <button id="btnNext" class="spn-button primary" type="button">Далее</button>
+          <button id="btnSave" class="spn-button success" type="button">Сохранить в CRM</button>
         </div>
       </section>
 
