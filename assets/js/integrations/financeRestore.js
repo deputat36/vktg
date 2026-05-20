@@ -18,6 +18,7 @@ import './taskPanel.js';
 import './eventPanel.js';
 import './uxRedesign.js';
 import './clarityShell.js';
+import './spnExperience.js';
 
 function get(id) {
   return document.getElementById(id);
