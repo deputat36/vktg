@@ -14,23 +14,22 @@
       <div>
         <h1>Рабочее место СПН</h1>
         <p>Простое пошаговое заполнение сделки без лишних блоков и технических режимов.</p>
-        <div id="spnStatus" class="status">Загрузка...</div>
+        <div id="spnStatus" class="status warn">Если страница не загрузится автоматически, обновите ее через Ctrl + F5.</div>
       </div>
       <div class="actions">
         <a class="button light" href="./deals.html">Мои сделки</a>
-        <a class="button light" href="./index.html">Расширенный навигатор</a>
-        <button id="btnSpnLogout" class="light">Выйти</button>
+        <a class="button light" href="./index.html">Вход / расширенный навигатор</a>
+        <button id="btnSpnLogout" class="light" type="button">Выйти</button>
       </div>
     </header>
 
-    <section id="spnLogin" class="spn-card spn-login" style="display:none">
-      <h2>Вход СПН</h2>
-      <p>Войдите, чтобы сохранить сделку в CRM.</p>
-      <div class="spn-form-grid two">
-        <label>Email<input id="spnEmail" type="email" autocomplete="username"></label>
-        <label>Пароль<input id="spnPassword" type="password" autocomplete="current-password"></label>
+    <section id="spnLogin" class="spn-card spn-login">
+      <h2>Вход нужен только для сохранения в CRM</h2>
+      <p>Если ты уже вошел на главной странице, мастер откроется автоматически. Если нет — открой вход на главной странице, войди как СПН и вернись сюда.</p>
+      <div class="spn-form-grid one">
+        <a class="button primary" href="./index.html">Открыть вход на главной</a>
       </div>
-      <button id="btnSpnLogin" class="primary">Войти</button>
+      <p class="small">Эта страница специально сделана чистой: без старого перегруженного навигатора, режимов и технических блоков.</p>
     </section>
 
     <main id="spnApp" class="spn-layout" style="display:none">
@@ -48,9 +47,9 @@
         <div id="stepBody" class="spn-step-body"></div>
 
         <div class="spn-step-footer">
-          <button id="btnPrev" class="light">Назад</button>
-          <button id="btnNext" class="primary">Далее</button>
-          <button id="btnSave" class="success">Сохранить в CRM</button>
+          <button id="btnPrev" class="light" type="button">Назад</button>
+          <button id="btnNext" class="primary" type="button">Далее</button>
+          <button id="btnSave" class="success" type="button">Сохранить в CRM</button>
         </div>
       </section>
 
