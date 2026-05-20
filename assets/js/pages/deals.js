@@ -1,4 +1,5 @@
 import '../integrations/appNav.js';
+import '../integrations/demoSeedButton.js';
 import { getCurrentUser, signInWithPassword, signOut } from '../integrations/supabase.js';
 import { getMyProfile, listAccessibleDeals, listProfiles, listDealTasksAndReviews, updateDealStatus, ROLE_LABELS, STATUS_LABELS, roleDescription } from '../integrations/crmApi.js';
 
