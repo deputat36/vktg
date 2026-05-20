@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>СПН — простое заполнение сделки</title>
+  <title>СПН — мастер сделки</title>
   <link rel="stylesheet" href="./assets/css/spn-workbench.css">
 </head>
 <body>
   <div class="spn-wrap">
     <header class="spn-topbar">
       <div>
-        <h1>Рабочее место СПН</h1>
-        <p>Один понятный мастер: заполнил шаг → нажал «Далее» → сохранил сделку.</p>
-        <div id="spnStatus" class="spn-status warn">Проверяю вход...</div>
+        <div class="spn-kicker">Этажи · Борисоглебск</div>
+        <h1>Мастер подготовки задатка / сделки</h1>
+        <p>Один экран. Один текущий шаг. Только вопросы, которые помогают подготовить сделку и не забыть важное.</p>
       </div>
       <div class="spn-top-actions">
         <a class="spn-button light" href="./deals.html">Мои сделки</a>
@@ -21,19 +21,22 @@
       </div>
     </header>
 
+    <div id="spnStatus" class="spn-status warn">Проверяю вход...</div>
+
     <section id="spnLogin" class="spn-card spn-login">
-      <h2>Сначала войдите</h2>
-      <p>Для сохранения сделки нужна активная сессия. Войдите на главной странице, затем вернитесь сюда.</p>
+      <h2>Войдите, чтобы сохранять в CRM</h2>
+      <p>Заполнять можно и без входа, но сохранить карточку сделки получится только после авторизации.</p>
       <div class="spn-login-actions">
         <a class="spn-button primary" href="./index.html">Открыть вход</a>
-        <a class="spn-button light" href="./deals.html">Посмотреть сделки</a>
+        <button id="btnContinueLocal" class="spn-button light" type="button">Продолжить без сохранения</button>
       </div>
     </section>
 
-    <main id="spnApp" class="spn-layout" style="display:none">
+    <main id="spnApp" class="spn-layout">
       <section class="spn-card spn-wizard-card">
         <div class="spn-wizard-head">
           <div>
+            <div class="spn-kicker" id="stepKicker">Шаг 1 из 5</div>
             <h2 id="stepTitle">Шаг</h2>
             <p id="stepHint">Подсказка</p>
           </div>
