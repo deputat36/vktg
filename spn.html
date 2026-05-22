@@ -17,7 +17,6 @@
       <div class="spn-top-actions">
         <a class="spn-button light" href="./deals.html">Мои сделки</a>
         <a class="spn-button light" href="./index.html">Расширенный режим</a>
-        <button id="btnSpnLogout" class="spn-button light" type="button">Выйти</button>
       </div>
     </header>
 
@@ -25,15 +24,18 @@
 
     <section id="spnLogin" class="spn-card spn-login">
       <h2>Войдите, чтобы сохранять в CRM</h2>
-      <p>Заполнять можно и без входа, но сохранить карточку сделки получится только после авторизации.</p>
+      <p>Заполнять можно и без входа. Сохранение в CRM заработает после авторизации на главной странице.</p>
       <div class="spn-login-actions">
         <a class="spn-button primary" href="./index.html">Открыть вход</a>
         <button id="btnContinueLocal" class="spn-button light" type="button">Продолжить без сохранения</button>
       </div>
+      <p class="small">Эта страница не подключает старый навигатор и не показывает технические блоки.</p>
     </section>
 
     <main id="spnApp" class="spn-layout">
-      <section class="spn-card spn-wizard-card">
+      <nav id="stepTabs" class="spn-rail" aria-label="Шаги заполнения"></nav>
+
+      <section class="spn-card spn-main-card">
         <div class="spn-wizard-head">
           <div>
             <div class="spn-kicker" id="stepKicker">Шаг 1 из 5</div>
@@ -44,7 +46,6 @@
         </div>
 
         <div class="spn-progress-line"><span id="progressBar"></span></div>
-        <div id="stepTabs" class="spn-step-tabs"></div>
         <div id="stepBody" class="spn-step-body"></div>
 
         <div class="spn-step-footer">
@@ -62,6 +63,10 @@
         <section class="spn-card">
           <h2>Что важно сейчас</h2>
           <div id="adviceBox" class="advice-box"></div>
+        </section>
+        <section class="spn-help">
+          <b>Как пользоваться</b>
+          Заполняйте слева направо: шаг → ответы → далее. Если данных нет, оставьте пустым и вернитесь позже.
         </section>
       </aside>
     </main>
