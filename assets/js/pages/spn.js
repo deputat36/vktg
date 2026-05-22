@@ -1,135 +1,30 @@
-import { getCurrentUser, saveDealToSupabase } from '../integrations/supabase.js';
-
-const state = {
-  user: null,
-  step: Number(localStorage.getItem('spn_clean_step_v2') || '0'),
-  deal: JSON.parse(localStorage.getItem('spn_clean_deal_v2') || '{}'),
-  allowLocal: localStorage.getItem('spn_allow_local_v2') === '1'
-};
-
-const steps = [
-  { title: 'Суть сделки', hint: 'Что готовим, кого представляем и какой объект.', short: 'Суть' },
-  { title: 'Стороны', hint: 'Продавцы, покупатели, дети, представители.', short: 'Стороны' },
-  { title: 'Документы', hint: 'Право собственности и документы для проверки.', short: 'Документы' },
-  { title: 'Деньги и расчет', hint: 'Источник денег, банк, маткапитал и порядок расчета.', short: 'Расчет' },
-  { title: 'Проверка', hint: 'Что мешает идти к задатку или сделке.', short: 'Проверка' }
+const state={i:Number(localStorage.getItem('spn_i')||'0'),d:JSON.parse(localStorage.getItem('spn_d')||'{}')};
+const qs=[
+{key:'mode',g:'Сделка',t:'Что сейчас готовим?',h:'Выберите главную цель.',type:'one',o:[['deposit','Задаток'],['deal','Сделка'],['consult','Проверка ситуации']]},
+{key:'representation',g:'Сделка',t:'Кого мы представляем?',h:'Это влияет на ответственность и коммуникацию.',type:'one',o:[['both','Обе стороны'],['seller','Только продавца'],['buyer','Только покупателя'],['partner','Вторая сторона от партнера']]},
+{key:'objectType',g:'Объект',t:'Что продается по документам?',h:'Выберите точный тип объекта.',type:'one',o:[['flat','Квартира'],['house_land','Дом + земля'],['land','Земля'],['share','Доля'],['new_building','Новостройка / ДДУ'],['commercial','Коммерция']]},
+{key:'address',g:'Объект',t:'Адрес объекта',h:'Можно указать кратко.',type:'text',p:'Борисоглебск, улица, дом, квартира'},
+{key:'priceFact',g:'Объект',t:'Фактическая цена',h:'Цена, о которой договорились или которую обсуждают.',type:'text',p:'Например: 3 650 000'},
+{key:'sellerCount',g:'Стороны',t:'Сколько продавцов / собственников?',h:'Если собственников несколько, это важно для документов.',type:'text',p:'Например: 1'},
+{key:'buyerCount',g:'Стороны',t:'Сколько покупателей?',h:'Если покупают супруги, дети или несколько людей — укажите количество.',type:'text',p:'Например: 1'},
+{key:'flags',g:'Стороны',t:'Есть ли дети или особые участники?',h:'Отметьте все подходящее. Если ничего нет — жмите “Пропустить”.',type:'many',o:[['minorSeller','Ребенок-собственник'],['minorBuyer','Ребенок-покупатель'],['minorRegistered','Ребенок зарегистрирован'],['attorney','Доверенность'],['incapable','Опека / недееспособность'],['marriage','Супруг / согласие']]},
+{key:'basis',g:'Документы',t:'Документ-основание',h:'На основании чего продавец получил право?',type:'many',o:[['sale','Купля-продажа'],['gift','Дарение'],['inheritLaw','Наследство'],['privat','Приватизация'],['ddu','ДДУ'],['court','Решение суда'],['exchange','Мена']]},
+{key:'stEgrn',g:'Документы',t:'ЕГРН уже есть?',h:'Для проверки желательно иметь свежую выписку.',type:'one',o:[['нет','Нет'],['получено','Получено'],['проверено','Проверено']]},
+{key:'payments',g:'Расчет',t:'За какие деньги покупают?',h:'Можно выбрать несколько источников.',type:'many',o:[['cash','Свои деньги'],['mortgage','Ипотека'],['matcap','Маткапитал'],['nominalChild','Детский номинальный счет'],['svoChildAccount','Детские деньги / СВО'],['certificate','Сертификат']]},
+{key:'settlements',g:'Расчет',t:'Как планируется расчет?',h:'Выберите предполагаемый порядок расчетов.',type:'many',o:[['after','После регистрации'],['sbr','СБР'],['accreditive','Аккредитив'],['cell','Ячейка'],['pfr','СФР/ПФР'],['notary','Депозит нотариуса']]},
+{key:'bankType',g:'Расчет',t:'Банк / Домклик / ипотека',h:'Заполняйте, если есть ипотека или банковский сервис.',type:'text',p:'Например: Сбер, Домклик'},
+{key:'teamComment',g:'Комментарий',t:'Что важно не потерять?',h:'Коротко опишите ситуацию человеческим языком.',type:'area',p:'Например: продавец в другом городе, покупатель с ипотекой...'},
+{key:'final',g:'Проверка',t:'Проверка карточки',h:'Посмотрите сводку и замечания.',type:'final'}
 ];
-
-function get(id) { return document.getElementById(id); }
-function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch])); }
-function saveLocal() { localStorage.setItem('spn_clean_deal_v2', JSON.stringify(state.deal)); localStorage.setItem('spn_clean_step_v2', String(state.step)); }
-function setStatus(text, type = 'warn') { const el = get('spnStatus'); if (!el) return; el.textContent = text; el.className = 'spn-status ' + type; }
-function val(key) { return state.deal[key] || ''; }
-function setVal(key, value) { state.deal[key] = value; saveLocal(); renderAll(); }
-function arr(key) { return Array.isArray(state.deal[key]) ? state.deal[key] : []; }
-function toggleArr(key, value) { const list = arr(key); state.deal[key] = list.includes(value) ? list.filter((x) => x !== value) : [...list, value]; saveLocal(); renderAll(); }
-function has(key, value) { return arr(key).includes(value); }
-
-async function refreshAuth() {
-  try { state.user = await getCurrentUser(); } catch (_) { state.user = null; }
-  if (!state.user && !state.allowLocal) {
-    get('spnLogin').style.display = '';
-    get('spnApp').style.display = 'none';
-    setStatus('Можно войти для сохранения в CRM или продолжить локально для проверки интерфейса.', 'warn');
-    renderAll();
-    return;
-  }
-  get('spnLogin').style.display = 'none';
-  get('spnApp').style.display = '';
-  setStatus(state.user ? 'Вы вошли. Можно заполнять и сохранять сделку.' : 'Локальный режим: можно проверить интерфейс, но сохранить в CRM нельзя.', state.user ? 'ok' : 'warn');
-  renderAll();
-}
-
-function stepComplete(index) {
-  const d = state.deal;
-  if (index === 0) return Boolean(d.mode && d.representation && d.objectType && d.address);
-  if (index === 1) return Boolean(d.sellerCount && d.buyerCount);
-  if (index === 2) return Boolean(arr('basis').length && d.stEgrn);
-  if (index === 3) return Boolean(arr('payments').length && arr('settlements').length);
-  if (index === 4) return importantIssues().filter((x) => x.type === 'red').length === 0;
-  return false;
-}
-function progress() { return Math.round(steps.filter((_, i) => stepComplete(i)).length / steps.length * 100); }
-
-function renderAll() { renderStepTabs(); renderStep(); renderSummary(); renderAdvice(); }
-function renderStepTabs() {
-  get('stepKicker').textContent = `Шаг ${state.step + 1} из ${steps.length}`;
-  get('stepTitle').textContent = steps[state.step].title;
-  get('stepHint').textContent = steps[state.step].hint;
-  get('progressPercent').textContent = progress() + '%';
-  get('progressBar').style.width = progress() + '%';
-  get('stepTabs').innerHTML = steps.map((s, i) => `<button class="spn-rail-step ${state.step === i ? 'active' : ''} ${stepComplete(i) ? 'done' : ''}" data-step="${i}"><b>${i + 1}. ${esc(s.short)}</b><span>${esc(s.hint)}</span></button>`).join('');
-  get('stepTabs').querySelectorAll('[data-step]').forEach((button) => button.onclick = () => { state.step = Number(button.dataset.step); saveLocal(); renderAll(); });
-  get('btnPrev').disabled = state.step === 0;
-  get('btnNext').textContent = state.step === steps.length - 1 ? 'Проверить и сохранить' : 'Далее';
-}
-function optionButton(key, value, label, multi = false) {
-  const active = multi ? has(key, value) : val(key) === value;
-  return `<button type="button" class="spn-option ${active ? 'active' : ''}" data-key="${key}" data-value="${value}" data-multi="${multi ? '1' : '0'}">${esc(label)}</button>`;
-}
-function input(key, label, placeholder = '') { return `<label>${esc(label)}<input data-field="${key}" value="${esc(val(key))}" placeholder="${esc(placeholder)}"></label>`; }
-function textarea(key, label, placeholder = '') { return `<label>${esc(label)}<textarea data-field="${key}" placeholder="${esc(placeholder)}">${esc(val(key))}</textarea></label>`; }
-
-function renderStep() {
-  const views = [stepMain, stepParties, stepDocs, stepMoney, stepCheck];
-  get('stepBody').innerHTML = views[state.step]();
-  bindFields();
-}
-function stepMain() {
-  return `<div class="spn-question"><h3>1. Что сейчас готовим?</h3><p>Выберите главную цель. Это убирает лишние вопросы.</p><div class="spn-options">${optionButton('mode','deposit','Задаток')}${optionButton('mode','deal','Сделка')}${optionButton('mode','consult','Проверка ситуации')}</div></div><div class="spn-question"><h3>2. Кого мы представляем?</h3><p>Это влияет на ответственность, комиссию и коммуникацию.</p><div class="spn-options">${optionButton('representation','both','Обе стороны')}${optionButton('representation','seller','Только продавца')}${optionButton('representation','buyer','Только покупателя')}${optionButton('representation','partner','Вторая сторона от партнера / другого АН')}</div></div><div class="spn-question"><h3>3. Что продается по документам?</h3><div class="spn-options">${optionButton('objectType','flat','Квартира')}${optionButton('objectType','house_land','Дом + земля')}${optionButton('objectType','land','Земля')}${optionButton('objectType','share','Доля')}${optionButton('objectType','new_building','Новостройка / ДДУ')}${optionButton('objectType','commercial','Коммерция')}</div></div><div class="spn-question"><h3>4. Минимум по объекту</h3><div class="spn-field-grid">${input('address','Адрес объекта','город, улица, дом, квартира')}${input('priceFact','Фактическая цена','например 3 650 000')}</div></div>`;
-}
-function stepParties() {
-  return `<div class="spn-question"><h3>1. Сколько участников?</h3><div class="spn-field-grid">${input('sellerCount','Сколько продавцов / собственников','1, 2, 3...')}${input('buyerCount','Сколько покупателей','1, 2...')}${input('sellerPhone','Телефон продавца','можно позже')}${input('buyerPhone','Телефон покупателя','можно позже')}</div></div><div class="spn-question"><h3>2. Есть ли дети или особые участники?</h3><p>Отметьте только то, что есть. Если ничего нет — просто идите дальше.</p><div class="spn-options">${optionButton('flags','minorSeller','Ребенок-собственник',true)}${optionButton('flags','minorBuyer','Ребенок-покупатель',true)}${optionButton('flags','minorRegistered','Ребенок зарегистрирован',true)}${optionButton('flags','attorney','Доверенность',true)}${optionButton('flags','incapable','Опека / недееспособность',true)}${optionButton('flags','marriage','Супруг / согласие',true)}</div></div><div class="spn-question">${textarea('partiesComment','Комментарий по сторонам','Например: продавец в другом городе, покупатель с ипотекой, собственник ребенок...')}</div>`;
-}
-function stepDocs() {
-  return `<div class="spn-question"><h3>1. Документ-основание</h3><p>На основании чего продавец получил право?</p><div class="spn-options">${optionButton('basis','sale','Купля-продажа',true)}${optionButton('basis','gift','Дарение',true)}${optionButton('basis','inheritLaw','Наследство',true)}${optionButton('basis','privat','Приватизация',true)}${optionButton('basis','ddu','ДДУ',true)}${optionButton('basis','court','Решение суда',true)}${optionButton('basis','exchange','Мена',true)}</div></div><div class="spn-question"><h3>2. Что уже есть?</h3><div class="spn-field-grid"><label>ЕГРН<select data-field="stEgrn"><option value="">Не выбрано</option><option ${val('stEgrn')==='нет'?'selected':''} value="нет">Нет</option><option ${val('stEgrn')==='получено'?'selected':''} value="получено">Получено</option><option ${val('stEgrn')==='проверено'?'selected':''} value="проверено">Проверено</option></select></label><label>Справка о зарегистрированных<select data-field="stRegistered"><option value="">Не выбрано</option><option ${val('stRegistered')==='нет'?'selected':''} value="нет">Нет</option><option ${val('stRegistered')==='есть'?'selected':''} value="есть">Есть</option></select></label>${input('folderLink','Ссылка на папку с документами','Google/Яндекс/CRM')}</div></div><div class="spn-question">${textarea('lawyerQuestion','Вопрос юристу','Что нужно уточнить у юриста?')}</div>`;
-}
-function stepMoney() {
-  return `<div class="spn-question"><h3>1. За какие деньги покупают?</h3><div class="spn-options">${optionButton('payments','cash','Свои деньги',true)}${optionButton('payments','mortgage','Ипотека',true)}${optionButton('payments','matcap','Маткапитал',true)}${optionButton('payments','nominalChild','Детский номинальный счет',true)}${optionButton('payments','svoChildAccount','Детские деньги / СВО',true)}${optionButton('payments','certificate','Сертификат',true)}</div></div><div class="spn-question"><h3>2. Как планируется расчет?</h3><div class="spn-options">${optionButton('settlements','cash_after_registration','После регистрации',true)}${optionButton('settlements','sbr','СБР',true)}${optionButton('settlements','accreditive','Аккредитив',true)}${optionButton('settlements','cell','Ячейка',true)}${optionButton('settlements','pensionFund','СФР/ПФР',true)}${optionButton('settlements','notary_deposit','Депозит нотариуса',true)}</div></div><div class="spn-question"><h3>3. Банк и расходы</h3><div class="spn-field-grid">${input('bankType','Банк / Домклик','если есть ипотека')}${input('sellerRealtorCommission','Комиссия продавца','если известно')}${input('buyerRealtorCommission','Комиссия покупателя','если известно')}${input('registrationFeeAmount','Госпошлина / расходы','если известно')}</div></div>`;
-}
-function stepCheck() {
-  const issues = importantIssues();
-  return `<div class="spn-question"><h3>Проверка перед движением дальше</h3><p>Здесь только то, что может помешать задатку или сделке.</p><div class="advice-box">${issues.length ? issues.map((x) => `<div class="advice ${x.type}">${esc(x.text)}</div>`).join('') : '<div class="advice green">Критичных стоп-факторов по заполненным данным не видно. Можно сохранить карточку.</div>'}</div></div><div class="spn-question">${textarea('teamComment','Комментарий по сделке','Что важно не потерять?')}</div>`;
-}
-function bindFields() {
-  get('stepBody').querySelectorAll('[data-key]').forEach((button) => button.onclick = () => button.dataset.multi === '1' ? toggleArr(button.dataset.key, button.dataset.value) : setVal(button.dataset.key, button.dataset.value));
-  get('stepBody').querySelectorAll('[data-field]').forEach((field) => field.oninput = field.onchange = () => { state.deal[field.dataset.field] = field.value; saveLocal(); renderSummary(); renderAdvice(); renderStepTabs(); });
-}
-
-function importantIssues() {
-  const d = state.deal; const issues = [];
-  if (has('flags','minorSeller')) issues.push({ type:'red', text:'Есть несовершеннолетний собственник. Без разрешения опеки нельзя спокойно идти к задатку.' });
-  if (has('payments','matcap')) issues.push({ type:'orange', text:'Маткапитал: нужны документы по сертификату, детям и порядок перечисления через СФР.' });
-  if (has('payments','nominalChild') || has('payments','svoChildAccount')) issues.push({ type:'red', text:'Детские деньги/номинальный счет: сначала проверить законность и порядок использования средств.' });
-  if (has('basis','inheritLaw')) issues.push({ type:'orange', text:'Наследство: проверить круг наследников и риск оспаривания.' });
-  if (d.objectType === 'share') issues.push({ type:'orange', text:'Доля: возможно преимущественное право покупки и нотариальная форма.' });
-  if (!d.address) issues.push({ type:'orange', text:'Не указан адрес объекта.' });
-  if (!arr('payments').length) issues.push({ type:'orange', text:'Не выбран источник денег покупателя.' });
-  return issues;
-}
-function renderSummary() {
-  const d = state.deal;
-  get('summaryBox').innerHTML = `<div class="spn-mini-metrics"><div class="spn-mini"><b>${progress()}%</b><span>заполнено</span></div><div class="spn-mini"><b>${importantIssues().length}</b><span>замечаний</span></div></div><div class="summary-item"><b>${esc(d.objectType || 'Объект не выбран')}</b><span>${esc(d.address || 'Адрес не указан')}</span></div><div class="summary-item"><b>${esc(d.priceFact || 'Цена не указана')}</b><span>Фактическая цена</span></div><div class="summary-item"><b>${esc(arr('payments').join(', ') || 'Источник денег не выбран')}</b><span>Деньги покупателя</span></div><div class="summary-item"><b>${esc(arr('basis').join(', ') || 'Основание не выбрано')}</b><span>Документ-основание</span></div>`;
-}
-function renderAdvice() {
-  const issues = importantIssues(); const list = issues.length ? issues.slice(0, 6) : [{ type:'green', text:'Заполните шаги и нажмите “Сохранить в CRM”.' }];
-  get('adviceBox').innerHTML = list.map((x) => `<div class="advice ${x.type}">${esc(x.text)}</div>`).join('');
-}
-function normalizedResult() {
-  const d = state.deal; const issues = importantIssues(); const ready = Math.max(0, Math.min(100, progress() - issues.filter((x) => x.type === 'red').length * 15));
-  return { deal: { ...d, priceContract: d.priceContract || d.priceFact }, decision: issues.some((x) => x.type === 'red') ? 'Стоп / нужна проверка' : issues.length ? 'Нужна доработка' : 'Можно двигаться дальше', ready, score: ready, stop: issues.filter((x) => x.type === 'red').map((x) => x.text), warn: issues.filter((x) => x.type !== 'red').map((x) => x.text), actions: issues.map((x) => x.text), missing: [], to: issues.length ? ['lawyer'] : [] };
-}
-async function saveDeal() {
-  if (!state.user) { alert('Сейчас включен локальный режим. Чтобы сохранить в CRM, войдите на главной странице.'); return; }
-  try { setStatus('Сохраняю сделку...', 'warn'); const saved = await saveDealToSupabase(normalizedResult()); setStatus('Сделка сохранена: ' + saved.title, 'ok'); alert('Сделка сохранена в CRM.'); }
-  catch (error) { setStatus('Ошибка сохранения: ' + error.message, 'error'); alert('Ошибка сохранения: ' + error.message); }
-}
-function bindGlobal() {
-  get('btnPrev').onclick = () => { if (state.step > 0) { state.step -= 1; saveLocal(); renderAll(); } };
-  get('btnNext').onclick = () => { if (state.step < steps.length - 1) { state.step += 1; saveLocal(); renderAll(); } else saveDeal(); };
-  get('btnSave').onclick = saveDeal;
-  get('btnContinueLocal').onclick = () => { state.allowLocal = true; localStorage.setItem('spn_allow_local_v2', '1'); refreshAuth(); };
-}
-
-bindGlobal();
-refreshAuth().catch((error) => { setStatus('Ошибка: ' + error.message, 'error'); state.allowLocal = true; get('spnApp').style.display = ''; renderAll(); });
+const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const arr=k=>Array.isArray(state.d[k])?state.d[k]:[];const has=(k,v)=>arr(k).includes(v);const save=()=>{localStorage.setItem('spn_i',state.i);localStorage.setItem('spn_d',JSON.stringify(state.d));};
+function answered(q){if(q.type==='final')return true;if(q.type==='many')return arr(q.key).length>0;return !!state.d[q.key];}
+function pct(){return Math.round(qs.filter(q=>q.type!=='final').filter(answered).length/(qs.length-1)*100)}
+function label(k,v){const q=qs.find(x=>x.key===k);const f=q?.o?.find(x=>x[0]===v);return f?f[1]:v}function list(k){return arr(k).map(v=>label(k,v)).join(', ')}
+function issues(){let d=state.d,out=[];if(has('flags','minorSeller'))out.push(['red','Есть несовершеннолетний собственник: нужна опека до задатка.']);if(has('payments','nominalChild')||has('payments','svoChildAccount'))out.push(['red','Детские деньги/номинальный счет: сначала проверить порядок использования средств.']);if(has('payments','matcap'))out.push(['orange','Маткапитал: нужны документы по сертификату, детям и перечислению через СФР.']);if(has('basis','inheritLaw'))out.push(['orange','Наследство: проверить круг наследников и риск оспаривания.']);if(d.objectType==='share')out.push(['orange','Доля: проверить преимущественное право покупки и нотариальную форму.']);if(!d.address)out.push(['orange','Не указан адрес объекта.']);if(!arr('payments').length)out.push(['orange','Не выбран источник денег покупателя.']);if(!arr('basis').length)out.push(['orange','Не выбран документ-основание.']);return out;}
+function render(){let q=qs[state.i],p=pct();$('spnStatus').textContent='Локальный мастер: сначала доводим интерфейс до удобного состояния, затем возвращаем сохранение в CRM.';$('spnStatus').className='spn-status warn';$('progressPercent').textContent=p+'%';$('progressBar').style.width=p+'%';$('questionCounter').textContent=`Вопрос ${state.i+1} из ${qs.length}`;$('progressDots').innerHTML=qs.map((x,i)=>`<span class="spn-dot ${i===state.i?'active':''} ${answered(x)?'done':''}"></span>`).join('');$('questionMeta').textContent=q.g;$('questionTitle').textContent=q.t;$('questionHint').textContent=q.h;$('questionCard').style.display=q.type==='final'?'none':'block';$('finalCard').style.display=q.type==='final'?'block':'none';$('btnBack').disabled=state.i===0;$('btnNext').textContent=q.type==='final'?'Готово':'Далее';body(q);final();}
+function body(q){let b=$('questionBody');if(q.type==='one'){b.innerHTML='<div class="spn-options">'+q.o.map(([v,l])=>`<button class="spn-option ${state.d[q.key]===v?'active':''}" data-v="${esc(v)}">${esc(l)}</button>`).join('')+'</div>';b.querySelectorAll('[data-v]').forEach(x=>x.onclick=()=>{state.d[q.key]=x.dataset.v;save();setTimeout(()=>move(1),120)});}else if(q.type==='many'){b.innerHTML='<div class="spn-options">'+q.o.map(([v,l])=>`<button class="spn-option ${has(q.key,v)?'active':''}" data-v="${esc(v)}">${esc(l)}</button>`).join('')+'</div>';b.querySelectorAll('[data-v]').forEach(x=>x.onclick=()=>{let a=arr(q.key);state.d[q.key]=a.includes(x.dataset.v)?a.filter(y=>y!==x.dataset.v):[...a,x.dataset.v];save();render();});}else if(q.type==='area'){b.innerHTML=`<div class="spn-field"><label>${esc(q.t)}</label><textarea id="inp" class="spn-textarea" placeholder="${esc(q.p)}">${esc(state.d[q.key]||'')}</textarea></div>`;$('inp').oninput=e=>{state.d[q.key]=e.target.value;save();};}else if(q.type==='text'){b.innerHTML=`<div class="spn-field"><label>${esc(q.t)}</label><input id="inp" class="spn-input" value="${esc(state.d[q.key]||'')}" placeholder="${esc(q.p)}"></div>`;$('inp').oninput=e=>{state.d[q.key]=e.target.value;save();};}else b.innerHTML='';$('questionHelp').textContent=q.type==='many'?'Можно выбрать несколько вариантов. Если не подходит ни один — нажмите “Пропустить”.':'';}
+function final(){let d=state.d;$('finalSummary').innerHTML=`<div class="spn-summary-item"><b>${esc(label('objectType',d.objectType)||'Объект не выбран')}</b><span>${esc(d.address||'Адрес не указан')}</span></div><div class="spn-summary-item"><b>${esc(d.priceFact||'Цена не указана')}</b><span>Цена</span></div><div class="spn-summary-item"><b>${esc(list('payments')||'Источник не выбран')}</b><span>Деньги</span></div><div class="spn-summary-item"><b>${esc(list('basis')||'Основание не выбрано')}</b><span>Документы</span></div>`;let is=issues();$('finalIssues').innerHTML=is.length?is.map(([t,s])=>`<div class="spn-issue ${t}">${esc(s)}</div>`).join(''):'<div class="spn-issue green">Критичных стоп-факторов по заполненным данным не видно.</div>';}
+function move(n){state.i=Math.max(0,Math.min(qs.length-1,state.i+n));save();render();}function done(){state.i=qs.length-1;save();render();}
+$('btnBack').onclick=()=>move(-1);$('btnSkip').onclick=()=>move(1);$('btnNext').onclick=()=>qs[state.i].type==='final'?alert('Черновик готов. После утверждения интерфейса верну сохранение в CRM.'):move(1);$('btnEdit').onclick=()=>{state.i=0;save();render();};$('btnSave').onclick=()=>alert('Сначала утверждаем удобство мастера. После этого подключу сохранение в CRM без изменения интерфейса.');$('btnClear').onclick=()=>{if(confirm('Очистить черновик?')){state.d={};state.i=0;save();render();}};
+render();
