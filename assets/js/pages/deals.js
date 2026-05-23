@@ -14,7 +14,7 @@ let state = {
   status: '',
   risk: '',
   workZone: 'auto',
-  queue: 'auto',
+  queue: 'all',
   view: localStorage.getItem('navigator_deals_view_v1') || 'cards'
 };
 
@@ -38,7 +38,7 @@ function hasChildren(deal) {
   return flags.includes('minorSeller') || flags.includes('minorBuyer') || flags.includes('minorRegistered') || payments.includes('matcap') || payments.includes('nominalChild') || payments.includes('svoChildAccount') || certificates.includes('matcap') || certificates.includes('nominalChild') || certificates.includes('svoChildAccount');
 }
 function hasStop(deal) { return Boolean((deal.analysis_json?.stop || []).length || deal.status === 'cancelled' || String(deal.risk_level || '').toLowerCase().includes('нельзя')); }
-function isMine(deal) { const id = state.profile?.id; return Boolean(id && (deal.created_by === id || deal.seller_spn_id === id || deal.buyer_spn_id === id)); }
+function isMine(deal) { const id = state.profile?.id || state.user?.id; return Boolean(id && (deal.created_by === id || deal.seller_spn_id === id || deal.buyer_spn_id === id)); }
 function tasks(deal) { return state.taskMap.get(deal.id) || []; }
 function reviews(deal) { return state.reviewMap.get(deal.id) || []; }
 function openTaskList(deal) { return tasks(deal).filter((task) => task.status !== 'done' && task.status !== 'cancelled'); }
@@ -51,119 +51,84 @@ function rerenderCrmView() { renderStats(); renderDeals(); }
 function applyVisualRole() { const role = state.profile?.role || 'spn'; const zone = state.workZone || defaultZoneForRole(role); document.body.dataset.role = role; document.body.dataset.zone = zone; document.body.classList.add('ux-page-deals'); }
 
 async function refreshAuth() {
+  setStatus('Проверяю вход...', 'info');
   state.user = await getCurrentUser();
   if (!state.user) { get('authBox').style.display = ''; get('crmBox').style.display = 'none'; setStatus('Войдите, чтобы открыть список сделок.', 'warn'); return; }
-  get('authBox').style.display = 'none'; get('crmBox').style.display = ''; await loadCrm();
+  get('authBox').style.display = 'none'; get('crmBox').style.display = '';
+  await loadCrmFast();
 }
-async function loadCrm() {
-  setStatus('Загружаю профиль и сделки...', 'info');
-  state.profile = await getMyProfile(); state.profiles = await listProfiles(); state.deals = await listAccessibleDeals();
-  const ids = state.deals.map((deal) => deal.id).slice(0, 80); const related = await listDealTasksAndReviews(ids);
-  state.taskMap = related.taskMap; state.reviewMap = related.reviewMap;
+async function loadCrmFast() {
+  setStatus('Загружаю сделки...', 'info');
+  state.taskMap = new Map();
+  state.reviewMap = new Map();
+  state.profile = { id: state.user.id, full_name: state.user.email, email: state.user.email, role: 'admin' };
+  state.profiles = [state.profile];
+  try {
+    state.profile = await getMyProfile();
+  } catch (error) {
+    setStatus('Профиль временно не загрузился, показываю сделки по аккаунту. ' + error.message, 'warn');
+  }
   if (state.workZone === 'auto') state.workZone = defaultZoneForRole(state.profile?.role);
-  if (state.queue === 'auto') state.queue = defaultQueueForZone(state.workZone);
-  applyVisualRole(); renderCrmHero(); renderRolePanel(); renderFilters(); rerenderCrmView(); setStatus('Готово. Загружено сделок: ' + state.deals.length, 'ok');
+  if (state.queue === 'auto') state.queue = 'all';
+  state.deals = await listAccessibleDeals(50);
+  applyVisualRole(); renderCrmHero(); renderRolePanel(); renderFilters(); rerenderCrmView();
+  setStatus('Сделки загружены: ' + state.deals.length + '. Дополнительные данные догружаются...', 'ok');
+  loadSecondaryCrmData();
+}
+async function loadSecondaryCrmData() {
+  try {
+    state.profiles = await listProfiles();
+    renderRolePanel(); rerenderCrmView();
+  } catch (error) {
+    setStatus('Сделки показаны. Список сотрудников временно не загрузился: ' + error.message, 'warn');
+  }
+  try {
+    const ids = state.deals.map((deal) => deal.id).slice(0, 20);
+    const related = await listDealTasksAndReviews(ids);
+    state.taskMap = related.taskMap; state.reviewMap = related.reviewMap;
+    rerenderCrmView();
+    setStatus('Готово. Загружено сделок: ' + state.deals.length, 'ok');
+  } catch (error) {
+    setStatus('Сделки показаны. Задачи/решения временно не загрузились: ' + error.message, 'warn');
+  }
 }
 
 function defaultZoneForRole(role) { if (role === 'lawyer') return 'lawyer'; if (role === 'broker') return 'broker'; if (role === 'manager') return 'manager'; if (role === 'admin') return 'admin'; return 'spn'; }
-function defaultQueueForZone(zone) { if (zone === 'lawyer') return 'lawyer_review'; if (zone === 'broker') return 'mortgage'; if (zone === 'manager') return 'attention'; if (zone === 'admin') return 'attention'; return 'my_tasks'; }
+function defaultQueueForZone(zone) { if (zone === 'lawyer') return 'lawyer_review'; if (zone === 'broker') return 'mortgage'; if (zone === 'manager') return 'attention'; if (zone === 'admin') return 'all'; return 'all'; }
 function roleIcon(role) { if (role === 'admin') return '⚙️'; if (role === 'manager') return '📊'; if (role === 'lawyer') return '⚖️'; if (role === 'broker') return '🏦'; return '🏠'; }
 function zoneIcon(zone) { if (zone === 'admin') return '⚙️'; if (zone === 'manager') return '📊'; if (zone === 'lawyer') return '⚖️'; if (zone === 'broker') return '🏦'; if (zone === 'all') return '🗂️'; return '🏠'; }
 function queueIcon(queue) { if (queue === 'attention') return '🚨'; if (queue === 'overdue') return '⏰'; if (queue === 'lawyer_review') return '⚖️'; if (queue === 'mortgage') return '🏦'; if (queue === 'ready') return '✅'; if (queue === 'my_tasks') return '📝'; if (queue === 'children') return '👶'; return '🗂️'; }
 
-function ensureHeroSlot() {
-  const crmBox = get('crmBox');
-  if (!crmBox || get('crmHero')) return;
-  const hero = document.createElement('section'); hero.id = 'crmHero'; hero.className = 'crm-hero'; crmBox.insertAdjacentElement('beforebegin', hero);
-}
+function ensureHeroSlot() { const crmBox = get('crmBox'); if (!crmBox || get('crmHero')) return; const hero = document.createElement('section'); hero.id = 'crmHero'; hero.className = 'crm-hero'; crmBox.insertAdjacentElement('beforebegin', hero); }
 function renderCrmHero() {
   ensureHeroSlot();
   const hero = get('crmHero'); if (!hero) return;
   const role = state.profile?.role || 'spn';
-  hero.innerHTML = `
-    <h2>${roleIcon(role)} Центр управления сделками</h2>
-    <p>Здесь не нужно искать нужную таблицу. Выберите рабочую зону и очередь: система покажет, что требует внимания сейчас.</p>
-    <div class="crm-hero-actions">
-      <button id="crmHeroReload" type="button">Обновить сделки</button>
-      <a class="button" href="./index.html">Новая сделка</a>
-      <a class="button" href="./index.html">Навигатор</a>
-      <a class="button" href="./admin.html">Сотрудники</a>
-    </div>`;
-  get('crmHeroReload').onclick = loadCrm;
+  hero.innerHTML = `<h2>${roleIcon(role)} Центр управления сделками</h2><p>Сначала показываем сделки, затем догружаем задачи, сотрудников и аналитику. Так страница не зависает при медленном соединении.</p><div class="crm-hero-actions"><button id="crmHeroReload" type="button">Обновить сделки</button><a class="button" href="./spn.html">Новая сделка СПН</a><a class="button" href="./index.html">Расширенный навигатор</a><a class="button" href="./admin.html">Сотрудники</a></div>`;
+  get('crmHeroReload').onclick = loadCrmFast;
 }
-
 function renderRolePanel() {
   const role = state.profile?.role || 'spn';
-  get('rolePanel').innerHTML = `
-    <div class="crm-side-card">
-      <div class="work-zone-title"><div><h2>${roleIcon(role)} ${esc(ROLE_LABELS[role] || role)}</h2><p>${esc(roleDescription(role))}</p></div><span class="pill blue">${esc(state.profile?.team_name || 'Команда не указана')}</span></div>
-      <table><tr><th>Пользователь</th><td>${esc(state.profile?.full_name || state.user?.email || '—')}</td></tr><tr><th>Email</th><td>${esc(state.profile?.email || state.user?.email || '—')}</td></tr><tr><th>Руководитель</th><td>${esc(profileName(state.profile?.manager_id))}</td></tr></table>
-    </div>
-    <div class="crm-side-card"><h3>${zoneIcon(state.workZone)} Рабочая зона</h3><p>${esc(workZoneDescription(state.workZone))}</p></div>`;
+  get('rolePanel').innerHTML = `<div class="crm-side-card"><div class="work-zone-title"><div><h2>${roleIcon(role)} ${esc(ROLE_LABELS[role] || role)}</h2><p>${esc(roleDescription(role))}</p></div><span class="pill blue">${esc(state.profile?.team_name || 'Команда не указана')}</span></div><table><tr><th>Пользователь</th><td>${esc(state.profile?.full_name || state.user?.email || '—')}</td></tr><tr><th>Email</th><td>${esc(state.profile?.email || state.user?.email || '—')}</td></tr><tr><th>Руководитель</th><td>${esc(profileName(state.profile?.manager_id))}</td></tr></table></div><div class="crm-side-card"><h3>${zoneIcon(state.workZone)} Рабочая зона</h3><p>${esc(workZoneDescription(state.workZone))}</p></div>`;
 }
-function workZoneDescription(zone) {
-  if (zone === 'spn') return 'Мои сделки и задатки: что нужно доделать, какие задачи открыты, где есть риск.';
-  if (zone === 'lawyer') return 'Юридическая проверка: сделки, где нужно решение юриста или есть повышенный риск.';
-  if (zone === 'broker') return 'Ипотека и банк: сделки со Сбером, ипотекой, сертификатами, оценкой и безопасными расчетами.';
-  if (zone === 'manager') return 'Контроль группы: рискованные сделки, открытые задачи, готовность к задатку и сделке.';
-  if (zone === 'admin') return 'Общая аналитика: все доступные сделки, роли, риски, ипотека, задачи и статусы.';
-  return 'Все доступные сделки.';
-}
+function workZoneDescription(zone) { if (zone === 'spn') return 'Мои сделки и задатки: что нужно доделать, какие задачи открыты, где есть риск.'; if (zone === 'lawyer') return 'Юридическая проверка: сделки, где нужно решение юриста или есть повышенный риск.'; if (zone === 'broker') return 'Ипотека и банк: сделки со Сбером, ипотекой, сертификатами, оценкой и безопасными расчетами.'; if (zone === 'manager') return 'Контроль группы: рискованные сделки, открытые задачи, готовность к задатку и сделке.'; if (zone === 'admin') return 'Общая аналитика: все доступные сделки, роли, риски, ипотека, задачи и статусы.'; return 'Все доступные сделки.'; }
 function renderFilters() {
   const zones = [['spn','Мои сделки СПН'],['lawyer','Юрист'],['broker','Брокер'],['manager','Менеджер'],['admin','Админ'],['all','Все доступные']];
-  get('filters').innerHTML = `
-    <div class="crm-filter-shell">
-      <h3>Фильтры</h3>
-      <div class="row"><label>Рабочая зона<select id="workZoneFilter">${zones.map(([id,title]) => `<option value="${id}" ${state.workZone === id ? 'selected' : ''}>${zoneIcon(id)} ${esc(title)}</option>`).join('')}</select></label><label>Поиск<input id="dealSearch" placeholder="адрес, телефон, объект, кадастровый номер"></label></div>
-      <div class="row"><label>Статус<select id="dealStatusFilter"><option value="">Все статусы</option>${Object.entries(STATUS_LABELS).map(([id,title]) => `<option value="${id}">${esc(title)}</option>`).join('')}</select></label><label>Риск<select id="dealRiskFilter"><option value="">Все риски</option><option value="Нельзя">Стоп / нельзя</option><option value="юрист">Юрист</option><option value="банк">Банк</option><option value="Можно">Можно</option></select></label></div>
-      <div class="crm-view-switch"><button type="button" data-view="cards" class="${state.view === 'cards' ? 'active' : ''}">Карточки</button><button type="button" data-view="table" class="${state.view === 'table' ? 'active' : ''}">Таблица</button></div>
-      <div class="actions" style="justify-content:flex-start"><button id="btnReloadDeals" class="green">Обновить</button><a class="button light" href="./index.html">Новая сделка</a><a class="button light" href="./admin.html">Сотрудники</a></div>
-      <div class="queue-filter-note">Очереди автоматически подстраиваются под выбранную рабочую зону.</div>
-    </div>`;
+  get('filters').innerHTML = `<div class="crm-filter-shell"><h3>Фильтры</h3><div class="row"><label>Рабочая зона<select id="workZoneFilter">${zones.map(([id,title]) => `<option value="${id}" ${state.workZone === id ? 'selected' : ''}>${zoneIcon(id)} ${esc(title)}</option>`).join('')}</select></label><label>Поиск<input id="dealSearch" placeholder="адрес, телефон, объект, кадастровый номер"></label></div><div class="row"><label>Статус<select id="dealStatusFilter"><option value="">Все статусы</option>${Object.entries(STATUS_LABELS).map(([id,title]) => `<option value="${id}">${esc(title)}</option>`).join('')}</select></label><label>Риск<select id="dealRiskFilter"><option value="">Все риски</option><option value="Нельзя">Стоп / нельзя</option><option value="юрист">Юрист</option><option value="банк">Банк</option><option value="Можно">Можно</option></select></label></div><div class="crm-view-switch"><button type="button" data-view="cards" class="${state.view === 'cards' ? 'active' : ''}">Карточки</button><button type="button" data-view="table" class="${state.view === 'table' ? 'active' : ''}">Таблица</button></div><div class="actions" style="justify-content:flex-start"><button id="btnReloadDeals" class="green">Обновить</button><a class="button light" href="./spn.html">Новая сделка СПН</a><a class="button light" href="./admin.html">Сотрудники</a></div><div class="queue-filter-note">Очереди автоматически подстраиваются под выбранную рабочую зону.</div></div>`;
   get('dealSearch').value = state.search; get('dealStatusFilter').value = state.status; get('dealRiskFilter').value = state.risk; get('workZoneFilter').value = state.workZone;
   get('workZoneFilter').onchange = (e) => { state.workZone = e.target.value; state.queue = defaultQueueForZone(state.workZone); applyVisualRole(); renderRolePanel(); rerenderCrmView(); };
   get('dealSearch').oninput = (e) => { state.search = e.target.value; rerenderCrmView(); };
   get('dealStatusFilter').onchange = (e) => { state.status = e.target.value; rerenderCrmView(); };
   get('dealRiskFilter').onchange = (e) => { state.risk = e.target.value; rerenderCrmView(); };
-  get('btnReloadDeals').onclick = loadCrm;
+  get('btnReloadDeals').onclick = loadCrmFast;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => { state.view = button.dataset.view; localStorage.setItem('navigator_deals_view_v1', state.view); renderFilters(); renderDeals(); });
 }
-
-function zoneMatches(deal) {
-  const zone = state.workZone;
-  if (zone === 'all' || zone === 'admin') return true;
-  if (zone === 'spn') return isMine(deal);
-  if (zone === 'lawyer') return needsLawyer(deal) || ['needs_lawyer','lawyer_review','needs_documents'].includes(deal.status);
-  if (zone === 'broker') return isMortgageDeal(deal) || deal.status === 'mortgage_review';
-  if (zone === 'manager') return openTaskCount(deal) > 0 || needsLawyer(deal) || isMortgageDeal(deal) || hasStop(deal) || Number(deal.readiness_deposit || 0) < 80;
-  return true;
-}
-function queueMatches(deal) {
-  const queue = state.queue;
-  if (!queue || queue === 'all') return true;
-  if (queue === 'my_tasks') return isMine(deal) && openTaskCount(deal) > 0;
-  if (queue === 'attention') return hasStop(deal) || urgentTaskCount(deal) > 0 || overdueTaskCount(deal) > 0 || hasChildren(deal);
-  if (queue === 'overdue') return overdueTaskCount(deal) > 0;
-  if (queue === 'lawyer_review') return needsLawyer(deal) || ['needs_lawyer','lawyer_review','needs_documents'].includes(deal.status);
-  if (queue === 'mortgage') return isMortgageDeal(deal) || deal.status === 'mortgage_review';
-  if (queue === 'ready') return ['ready_for_deposit','ready_for_deal'].includes(deal.status) || Number(deal.readiness_deposit || 0) >= 80;
-  if (queue === 'children') return hasChildren(deal);
-  return true;
-}
-function baseFilteredDeals() {
-  const q = state.search.trim().toLowerCase();
-  return state.deals.filter((deal) => {
-    const text = [deal.title, deal.address, deal.object_type, deal.seller_phone, deal.buyer_phone, deal.price_fact, deal.deal_json?.cadObject, deal.deal_json?.cadLand].join(' ').toLowerCase();
-    if (!zoneMatches(deal)) return false; if (q && !text.includes(q)) return false; if (state.status && deal.status !== state.status) return false; if (state.risk && !String(deal.risk_level || '').toLowerCase().includes(state.risk.toLowerCase())) return false; return true;
-  });
-}
+function zoneMatches(deal) { const zone = state.workZone; if (zone === 'all' || zone === 'admin') return true; if (zone === 'spn') return isMine(deal); if (zone === 'lawyer') return needsLawyer(deal) || ['needs_lawyer','lawyer_review','needs_documents'].includes(deal.status); if (zone === 'broker') return isMortgageDeal(deal) || deal.status === 'mortgage_review'; if (zone === 'manager') return openTaskCount(deal) > 0 || needsLawyer(deal) || isMortgageDeal(deal) || hasStop(deal) || Number(deal.readiness_deposit || 0) < 80; return true; }
+function queueMatches(deal) { const queue = state.queue; if (!queue || queue === 'all') return true; if (queue === 'my_tasks') return isMine(deal) && openTaskCount(deal) > 0; if (queue === 'attention') return hasStop(deal) || urgentTaskCount(deal) > 0 || overdueTaskCount(deal) > 0 || hasChildren(deal); if (queue === 'overdue') return overdueTaskCount(deal) > 0; if (queue === 'lawyer_review') return needsLawyer(deal) || ['needs_lawyer','lawyer_review','needs_documents'].includes(deal.status); if (queue === 'mortgage') return isMortgageDeal(deal) || deal.status === 'mortgage_review'; if (queue === 'ready') return ['ready_for_deposit','ready_for_deal'].includes(deal.status) || Number(deal.readiness_deposit || 0) >= 80; if (queue === 'children') return hasChildren(deal); return true; }
+function baseFilteredDeals() { const q = state.search.trim().toLowerCase(); return state.deals.filter((deal) => { const text = [deal.title, deal.address, deal.object_type, deal.seller_phone, deal.buyer_phone, deal.price_fact, deal.deal_json?.cadObject, deal.deal_json?.cadLand].join(' ').toLowerCase(); if (!zoneMatches(deal)) return false; if (q && !text.includes(q)) return false; if (state.status && deal.status !== state.status) return false; if (state.risk && !String(deal.risk_level || '').toLowerCase().includes(state.risk.toLowerCase())) return false; return true; }); }
 function filterDeals() { return baseFilteredDeals().filter(queueMatches); }
 function queueItems(deals = baseFilteredDeals()) { return [['attention','На контроле',deals.filter((d)=>hasStop(d)||urgentTaskCount(d)>0||hasChildren(d)).length,'red'],['overdue','Просрочки',deals.filter((d)=>overdueTaskCount(d)>0).length,'red'],['lawyer_review','Юристу',deals.filter((d)=>needsLawyer(d)||['needs_lawyer','lawyer_review','needs_documents'].includes(d.status)).length,'orange'],['mortgage','Брокеру',deals.filter((d)=>isMortgageDeal(d)||d.status==='mortgage_review').length,'orange'],['my_tasks','Мои задачи',deals.filter((d)=>isMine(d)&&openTaskCount(d)>0).length,'blue'],['children','Дети',deals.filter(hasChildren).length,'red'],['ready','Готово',deals.filter((d)=>['ready_for_deposit','ready_for_deal'].includes(d.status)||Number(d.readiness_deposit||0)>=80).length,'green'],['all','Все в зоне',deals.length,'blue']]; }
-
-function renderStats() {
-  const base = baseFilteredDeals(); const deals = filterDeals(); const mortgage = base.filter(isMortgageDeal).length; const lawyer = base.filter(needsLawyer).length; const openTasks = base.reduce((sum,d)=>sum+openTaskCount(d),0); const overdue = base.reduce((sum,d)=>sum+overdueTaskCount(d),0); const ready = base.filter((d)=>Number(d.readiness_deposit||0)>=80||['ready_for_deposit','ready_for_deal'].includes(d.status)).length; const my = base.filter(isMine).length;
-  get('stats').innerHTML = `<div class="metrics"><div class="metric"><b>${base.length}</b><span>сделок в зоне</span></div><div class="metric greenBox"><b>${my}</b><span>мои сделки</span></div><div class="metric orangeBox"><b>${lawyer}</b><span>юрист</span></div><div class="metric blue"><b>${mortgage}</b><span>ипотека / брокер</span></div><div class="metric redBox"><b>${openTasks}</b><span>открытых задач</span></div><div class="metric redBox"><b>${overdue}</b><span>просрочено</span></div><div class="metric greenBox"><b>${ready}</b><span>готовность</span></div><div class="metric"><b>${deals.length}</b><span>в очереди</span></div></div>${renderQueueDashboard(base)}${renderWorkZoneTips(deals)}`;
-}
+function renderStats() { const base = baseFilteredDeals(); const deals = filterDeals(); const mortgage = base.filter(isMortgageDeal).length; const lawyer = base.filter(needsLawyer).length; const openTasks = base.reduce((sum,d)=>sum+openTaskCount(d),0); const overdue = base.reduce((sum,d)=>sum+overdueTaskCount(d),0); const ready = base.filter((d)=>Number(d.readiness_deposit||0)>=80||['ready_for_deposit','ready_for_deal'].includes(d.status)).length; const my = base.filter(isMine).length; get('stats').innerHTML = `<div class="metrics"><div class="metric"><b>${base.length}</b><span>сделок в зоне</span></div><div class="metric greenBox"><b>${my}</b><span>мои сделки</span></div><div class="metric orangeBox"><b>${lawyer}</b><span>юрист</span></div><div class="metric blue"><b>${mortgage}</b><span>ипотека / брокер</span></div><div class="metric redBox"><b>${openTasks}</b><span>открытых задач</span></div><div class="metric redBox"><b>${overdue}</b><span>просрочено</span></div><div class="metric greenBox"><b>${ready}</b><span>готовность</span></div><div class="metric"><b>${deals.length}</b><span>в очереди</span></div></div>${renderQueueDashboard(base)}${renderWorkZoneTips(deals)}`; }
 function renderQueueDashboard(base) { const items = queueItems(base); return `<div class="box blue queue-dashboard"><div class="queue-section-title"><h3>Очереди по роли</h3><span class="pill blue">${zoneIcon(state.workZone)} ${esc(tableTitle())}</span></div><div class="queue-grid">${items.map(([id,title,count,tone])=>`<div class="queue-card ${tone} ${state.queue===id?'active':''}" data-queue="${id}"><b>${count}</b><span>${queueIcon(id)} ${esc(title)}</span></div>`).join('')}</div><div class="queue-tabs">${items.map(([id,title])=>`<button type="button" class="${state.queue===id?'active':''}" data-queue="${id}">${queueIcon(id)} ${esc(title)}</button>`).join('')}</div></div>`; }
 function renderWorkZoneTips(deals) { const zone = state.workZone; const urgent = deals.filter((d)=>openTaskCount(d)>0||needsLawyer(d)||isMortgageDeal(d)||hasChildren(d)).slice(0,6); const title = zone==='lawyer'?'Что юристу разобрать в первую очередь':zone==='broker'?'Что брокеру взять в работу':zone==='manager'?'Что менеджеру проконтролировать':zone==='admin'?'На что обратить внимание руководителю':'Что СПН сделать сейчас'; return `<div class="box orangeBox"><h3>${zoneIcon(zone)} ${esc(title)}</h3>${urgent.length?'<div class="queue-priority-list">'+urgent.map((deal)=>`<div class="queue-priority-item"><div class="main"><b>${esc(deal.title||deal.address||'Сделка')}</b><span>${esc(shortReason(deal))}</span></div><div class="queue-badges">${badgesForDeal(deal)}</div></div>`).join('')+'</div>':'<p>Критичных задач в текущей очереди не найдено.</p>'}</div>`; }
 function shortReason(deal) { const r=[]; if(overdueTaskCount(deal))r.push('просрочено: '+overdueTaskCount(deal)); if(urgentTaskCount(deal))r.push('срочных задач: '+urgentTaskCount(deal)); if(openTaskCount(deal))r.push('открытых задач: '+openTaskCount(deal)); if(hasChildren(deal))r.push('дети/маткапитал/детские деньги'); if(needsLawyer(deal))r.push('нужна юридическая проверка'); if(isMortgageDeal(deal))r.push('ипотека/банк'); if(Number(deal.readiness_deposit||0)<80)r.push('готовность ниже 80%'); return r.join(', ')||'проверить статус'; }
@@ -172,29 +137,12 @@ function dealRoleHint(deal) { const role=state.profile?.role; if(role==='admin')
 function nextAction(deal) { if(overdueTaskCount(deal))return 'Срочно: закрыть просроченные задачи'; if(needsLawyer(deal))return 'Юрист: оставить решение / список замечаний'; if(isMortgageDeal(deal))return 'Брокер: проверить банк, Домклик, оценку'; if(openTaskCount(deal))return 'СПН: закрыть открытые задачи'; if(Number(deal.readiness_deposit||0)>=80)return 'Можно готовить задаток / сделку'; return 'СПН: дозаполнить карточку и документы'; }
 function rowClass(deal) { if(overdueTaskCount(deal))return 'deal-row-overdue'; if(hasStop(deal)||hasChildren(deal))return 'deal-row-attention'; if(needsLawyer(deal))return 'deal-row-lawyer'; if(isMortgageDeal(deal))return 'deal-row-mortgage'; if(['ready_for_deposit','ready_for_deal'].includes(deal.status))return 'deal-row-ready'; return ''; }
 function cardClass(deal) { if(overdueTaskCount(deal))return 'overdue'; if(hasStop(deal)||hasChildren(deal))return 'attention'; if(needsLawyer(deal))return 'lawyer'; if(isMortgageDeal(deal))return 'mortgage'; if(['ready_for_deposit','ready_for_deal'].includes(deal.status))return 'ready'; return ''; }
-
-function renderDeals() {
-  const deals = filterDeals();
-  get('dealsList').innerHTML = state.view === 'cards' ? renderDealCards(deals) : renderDealTable(deals);
-  bindDealControls();
-}
-function renderDealCards(deals) {
-  const cards = deals.map((deal)=>{ const recentReview=lastReview(deal); return `<article class="deal-card ${cardClass(deal)}"><div class="deal-card-head"><div class="deal-card-title"><b>${esc(deal.title||deal.address||'Сделка')}</b><span>${esc(deal.address||deal.object_type||'')}</span><div class="queue-status-row">${badgesForDeal(deal)}</div></div><span class="deal-card-status">${esc(STATUS_LABELS[deal.status]||deal.status||'Черновик')}</span></div><div class="deal-card-grid"><div class="deal-card-mini"><b>${deal.readiness_deposit||0}%</b><span>готовность</span></div><div class="deal-card-mini"><b>${openTaskCount(deal)}</b><span>открыто задач</span></div><div class="deal-card-mini"><b>${overdueTaskCount(deal)}</b><span>просрочено</span></div><div class="deal-card-mini"><b>${esc(deal.price_fact||'—')}</b><span>цена</span></div><div class="deal-card-mini"><b>${reviewCountLabel(deal)}</b><span>решения</span></div><div class="deal-card-mini"><b>${esc(dealRoleHint(deal))}</b><span>роль</span></div></div><div class="deal-card-next"><b>Следующее действие:</b> ${esc(nextAction(deal))}${recentReview?`<br><span>Последнее решение: ${esc(recentReview.decision||'—')}</span>`:''}</div><div class="deal-card-actions"><div class="left"><a class="button light" href="./index.html?deal=${deal.id}">Открыть</a></div><div class="right"><select data-status-deal="${deal.id}">${Object.entries(STATUS_LABELS).map(([id,title])=>`<option value="${id}" ${id===deal.status?'selected':''}>${esc(title)}</option>`).join('')}</select></div></div></article>`; }).join('');
-  return `<div class="box blue"><h2>${queueIcon(state.queue)} ${esc(tableTitle())} / ${esc(queueTitle())}</h2>${cards?`<div class="deal-cards">${cards}</div>`:'<div class="queue-empty">Сделки не найдены.</div>'}</div>`;
-}
+function renderDeals() { const deals = filterDeals(); get('dealsList').innerHTML = state.view === 'cards' ? renderDealCards(deals) : renderDealTable(deals); bindDealControls(); }
+function renderDealCards(deals) { const cards = deals.map((deal)=>{ const recentReview=lastReview(deal); return `<article class="deal-card ${cardClass(deal)}"><div class="deal-card-head"><div class="deal-card-title"><b>${esc(deal.title||deal.address||'Сделка')}</b><span>${esc(deal.address||deal.object_type||'')}</span><div class="queue-status-row">${badgesForDeal(deal)}</div></div><span class="deal-card-status">${esc(STATUS_LABELS[deal.status]||deal.status||'Черновик')}</span></div><div class="deal-card-grid"><div class="deal-card-mini"><b>${deal.readiness_deposit||0}%</b><span>готовность</span></div><div class="deal-card-mini"><b>${openTaskCount(deal)}</b><span>открыто задач</span></div><div class="deal-card-mini"><b>${overdueTaskCount(deal)}</b><span>просрочено</span></div><div class="deal-card-mini"><b>${esc(deal.price_fact||'—')}</b><span>цена</span></div><div class="deal-card-mini"><b>${reviewCountLabel(deal)}</b><span>решения</span></div><div class="deal-card-mini"><b>${esc(dealRoleHint(deal))}</b><span>роль</span></div></div><div class="deal-card-next"><b>Следующее действие:</b> ${esc(nextAction(deal))}${recentReview?`<br><span>Последнее решение: ${esc(recentReview.decision||'—')}</span>`:''}</div><div class="deal-card-actions"><div class="left"><a class="button light" href="./index.html?deal=${deal.id}">Открыть</a></div><div class="right"><select data-status-deal="${deal.id}">${Object.entries(STATUS_LABELS).map(([id,title])=>`<option value="${id}" ${id===deal.status?'selected':''}>${esc(title)}</option>`).join('')}</select></div></div></article>`; }).join(''); return `<div class="box blue"><h2>${queueIcon(state.queue)} ${esc(tableTitle())} / ${esc(queueTitle())}</h2>${cards?`<div class="deal-cards">${cards}</div>`:'<div class="queue-empty">Сделки не найдены.</div>'}</div>`; }
 function reviewCountLabel(deal) { return String(reviews(deal).length || 0); }
-function renderDealTable(deals) {
-  const body = deals.map((deal)=>{ const dealReviews=reviews(deal); const recentReview=lastReview(deal); return `<tr class="${rowClass(deal)}"><td>${fmtDate(deal.updated_at)}</td><td><b>${esc(deal.title||'—')}</b><br><span class="small">${esc(deal.address||'')}</span><br><span class="pill blue">${esc(dealRoleHint(deal))}</span><div class="queue-status-row">${badgesForDeal(deal)}</div></td><td>${esc(STATUS_LABELS[deal.status]||deal.status||'—')}<br><select data-status-deal="${deal.id}">${Object.entries(STATUS_LABELS).map(([id,title])=>`<option value="${id}" ${id===deal.status?'selected':''}>${esc(title)}</option>`).join('')}</select></td><td>${esc(deal.object_type||'—')}<br>${esc(deal.price_fact||'—')}</td><td>${esc(profileName(deal.created_by))}<br><span class="small">Продавец: ${esc(deal.seller_phone||deal.deal_json?.sellerPhone||'—')}<br>Покупатель: ${esc(deal.buyer_phone||deal.deal_json?.buyerPhone||'—')}</span></td><td>${deal.readiness_deposit||0}%<br>${esc(deal.risk_level||'—')}</td><td>${openTaskCount(deal)} откр. / ${overdueTaskCount(deal)} проср.<br>${dealReviews.length} реш.<br><span class="small">${esc(nextAction(deal))}</span>${recentReview?`<br><span class="small">Последнее: ${esc(recentReview.decision||'')}</span>`:''}</td><td><a class="button light" href="./index.html?deal=${deal.id}">Открыть</a></td></tr>`; }).join('');
-  return `<div class="box blue"><h2>${queueIcon(state.queue)} ${esc(tableTitle())} / ${esc(queueTitle())}</h2><div class="table-wrap"><table><tr><th>Обновлено</th><th>Сделка</th><th>Статус</th><th>Объект / цена</th><th>СПН / контакты</th><th>Готовность / риск</th><th>Работа</th><th></th></tr>${body||'<tr><td colspan="8">Сделки не найдены.</td></tr>'}</table></div></div>`;
-}
-function bindDealControls() {
-  document.querySelectorAll('[data-status-deal]').forEach((select)=>{ select.onchange=async()=>{ try{ await updateDealStatus(select.dataset.statusDeal, select.value); await loadCrm(); }catch(error){ alert('Не удалось изменить статус: '+error.message); } }; });
-  document.querySelectorAll('[data-queue]').forEach((el)=>{ el.onclick=()=>{ state.queue=el.dataset.queue; rerenderCrmView(); }; });
-}
+function renderDealTable(deals) { const body = deals.map((deal)=>{ const dealReviews=reviews(deal); const recentReview=lastReview(deal); return `<tr class="${rowClass(deal)}"><td>${fmtDate(deal.updated_at)}</td><td><b>${esc(deal.title||'—')}</b><br><span class="small">${esc(deal.address||'')}</span><br><span class="pill blue">${esc(dealRoleHint(deal))}</span><div class="queue-status-row">${badgesForDeal(deal)}</div></td><td>${esc(STATUS_LABELS[deal.status]||deal.status||'—')}<br><select data-status-deal="${deal.id}">${Object.entries(STATUS_LABELS).map(([id,title])=>`<option value="${id}" ${id===deal.status?'selected':''}>${esc(title)}</option>`).join('')}</select></td><td>${esc(deal.object_type||'—')}<br>${esc(deal.price_fact||'—')}</td><td>${esc(profileName(deal.created_by))}<br><span class="small">Продавец: ${esc(deal.seller_phone||deal.deal_json?.sellerPhone||'—')}<br>Покупатель: ${esc(deal.buyer_phone||deal.deal_json?.buyerPhone||'—')}</span></td><td>${deal.readiness_deposit||0}%<br>${esc(deal.risk_level||'—')}</td><td>${openTaskCount(deal)} откр. / ${overdueTaskCount(deal)} проср.<br>${dealReviews.length} реш.<br><span class="small">${esc(nextAction(deal))}</span>${recentReview?`<br><span class="small">Последнее: ${esc(recentReview.decision||'')}</span>`:''}</td><td><a class="button light" href="./index.html?deal=${deal.id}">Открыть</a></td></tr>`; }).join(''); return `<div class="box blue"><h2>${queueIcon(state.queue)} ${esc(tableTitle())} / ${esc(queueTitle())}</h2><div class="table-wrap"><table><tr><th>Обновлено</th><th>Сделка</th><th>Статус</th><th>Объект / цена</th><th>СПН / контакты</th><th>Готовность / риск</th><th>Работа</th><th></th></tr>${body||'<tr><td colspan="8">Сделки не найдены.</td></tr>'}</table></div></div>`; }
+function bindDealControls() { document.querySelectorAll('[data-status-deal]').forEach((select)=>{ select.onchange=async()=>{ try{ await updateDealStatus(select.dataset.statusDeal, select.value); await loadCrmFast(); }catch(error){ alert('Не удалось изменить статус: '+error.message); } }; }); document.querySelectorAll('[data-queue]').forEach((el)=>{ el.onclick=()=>{ state.queue=el.dataset.queue; rerenderCrmView(); }; }); }
 function tableTitle(){ if(state.workZone==='spn')return 'Мои сделки СПН'; if(state.workZone==='lawyer')return 'Юридическая проверка'; if(state.workZone==='broker')return 'Ипотека / банк'; if(state.workZone==='manager')return 'Контроль менеджера'; if(state.workZone==='admin')return 'Админская аналитика сделок'; return 'Все доступные сделки'; }
 function queueTitle(){ const found=queueItems(baseFilteredDeals()).find(([id])=>id===state.queue); return found?found[1]:'Все'; }
 function bindAuth(){ get('btnLogin').onclick=async()=>{ try{ setStatus('Выполняю вход...','info'); await signInWithPassword(get('email').value.trim(), get('password').value); await refreshAuth(); }catch(error){ setStatus('Ошибка входа: '+error.message,'error'); } }; get('btnLogout').onclick=async()=>{ await signOut(); await refreshAuth(); }; }
-
-loadQueueCss();
-bindAuth();
-refreshAuth().catch((error)=>setStatus('Ошибка загрузки CRM: '+error.message,'error'));
+loadQueueCss(); bindAuth(); refreshAuth().catch((error)=>setStatus('Ошибка загрузки CRM: '+error.message,'error'));
