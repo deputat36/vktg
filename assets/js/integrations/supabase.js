@@ -33,9 +33,14 @@ function authHeaders() {
 
 async function parseResponse(response) {
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  let payload = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (_) {
+    payload = text || null;
+  }
   if (!response.ok) {
-    const message = payload?.message || payload?.msg || payload?.error_description || response.statusText || 'Supabase request failed';
+    const message = payload?.message || payload?.msg || payload?.error_description || payload?.hint || response.statusText || 'Supabase request failed';
     throw new Error(message);
   }
   return payload;
@@ -55,6 +60,33 @@ async function refreshSession() {
   const payload = await parseResponse(response);
   writeSession(payload);
   return payload;
+}
+
+async function safeFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    throw new Error('Не удалось подключиться к Supabase. Проверьте интернет/VPN и обновите страницу. Детали: ' + error.message);
+  }
+}
+
+async function rpc(functionName, payload) {
+  const headers = authHeaders();
+  const response = await safeFetch(SUPABASE_URL + '/rest/v1/rpc/' + functionName, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload || {})
+  });
+  if (response.status === 401) {
+    await refreshSession();
+    const retry = await safeFetch(SUPABASE_URL + '/rest/v1/rpc/' + functionName, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload || {})
+    });
+    return parseResponse(retry);
+  }
+  return parseResponse(response);
 }
 
 class RestQuery {
@@ -127,7 +159,7 @@ class RestQuery {
       const headers = authHeaders();
       if (this.method !== 'GET') headers.Prefer = 'return=representation';
 
-      let response = await fetch(url.toString(), {
+      let response = await safeFetch(url.toString(), {
         method: this.method,
         headers,
         body: this.body ? JSON.stringify(this.body) : undefined
@@ -135,7 +167,7 @@ class RestQuery {
 
       if (response.status === 401) {
         await refreshSession();
-        response = await fetch(url.toString(), {
+        response = await safeFetch(url.toString(), {
           method: this.method,
           headers: authHeaders(),
           body: this.body ? JSON.stringify(this.body) : undefined
@@ -163,12 +195,12 @@ export async function getSupabaseClient() {
         const session = readSession();
         if (!session?.access_token) return { data: { user: null }, error: null };
         try {
-          let response = await fetch(SUPABASE_URL + '/auth/v1/user', {
+          let response = await safeFetch(SUPABASE_URL + '/auth/v1/user', {
             headers: authHeaders()
           });
-          if (response.status === 401) {
+          if (response.status === 401 || response.status === 403) {
             await refreshSession();
-            response = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: authHeaders() });
+            response = await safeFetch(SUPABASE_URL + '/auth/v1/user', { headers: authHeaders() });
           }
           const user = await parseResponse(response);
           return { data: { user }, error: null };
@@ -178,7 +210,7 @@ export async function getSupabaseClient() {
       },
       async signInWithPassword({ email, password }) {
         try {
-          const response = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+          const response = await safeFetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
             method: 'POST',
             headers: {
               apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -197,7 +229,7 @@ export async function getSupabaseClient() {
         try {
           const session = readSession();
           if (session?.access_token) {
-            await fetch(SUPABASE_URL + '/auth/v1/logout', {
+            await safeFetch(SUPABASE_URL + '/auth/v1/logout', {
               method: 'POST',
               headers: authHeaders()
             });
@@ -264,45 +296,11 @@ export async function ensureNavigatorProfile() {
 }
 
 export async function saveDealToSupabase(result) {
-  const supabase = await getSupabaseClient();
-  if (!supabase) throw new Error('Supabase не настроен');
-
   const user = await getCurrentUser();
   if (!user) throw new Error('Сначала войдите в Supabase');
-  await ensureNavigatorProfile();
-
-  const deal = result.deal;
-  const title = [deal.objectType || 'Сделка', deal.address || 'без адреса'].join(' — ');
-
-  const payload = {
-    title,
-    status: 'draft',
-    created_by: user.id,
-    object_type: deal.objectType || null,
-    address: deal.address || null,
-    price_fact: deal.priceFact || null,
-    price_contract: deal.priceContract || null,
-    risk_level: result.decision || null,
-    readiness_deposit: result.ready || 0,
-    readiness_deal: 0,
-    deal_json: deal,
-    analysis_json: {
-      score: result.score,
-      stop: result.stop,
-      warnings: result.warn,
-      actions: result.actions,
-      missing: result.missing,
-      transfer_to: result.to
-    }
-  };
-
-  const { data, error } = await supabase
-    .from(NAV_DEALS_TABLE)
-    .insert(payload)
-    .select('id,title,status,created_at,updated_at')
-    .single();
-  if (error) throw error;
-  return data;
+  const saved = await rpc('nav_save_wizard_deal', { p_result: result });
+  if (!saved?.id) throw new Error('Supabase не вернул id созданной сделки');
+  return saved;
 }
 
 export async function listMyDeals(limit = 20) {
@@ -316,4 +314,56 @@ export async function listMyDeals(limit = 20) {
     .limit(limit);
   if (error) throw error;
   return data || [];
+}
+
+export async function readDealFromSupabase(id) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) throw new Error('Supabase не настроен');
+  await ensureNavigatorProfile();
+  const { data, error } = await supabase
+    .from(NAV_DEALS_TABLE)
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateDealInSupabase(id, result) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) throw new Error('Supabase не настроен');
+  await ensureNavigatorProfile();
+
+  const deal = result.deal;
+  const transferTo = Array.isArray(result.to) ? result.to : [];
+  const payload = {
+    title: [deal.objectType || 'Сделка', deal.address || 'без адреса'].join(' — '),
+    object_type: deal.objectType || null,
+    address: deal.address || null,
+    price_fact: deal.priceFact || null,
+    price_contract: deal.priceContract || null,
+    risk_level: result.decision || null,
+    readiness_deposit: result.ready || 0,
+    lawyer_needed: transferTo.includes('lawyer') || Boolean(result.stop?.length || result.warn?.length),
+    broker_needed: transferTo.includes('broker'),
+    deal_json: deal,
+    analysis_json: {
+      score: result.score,
+      stop: result.stop,
+      warnings: result.warn,
+      actions: result.actions,
+      missing: result.missing,
+      transfer_to: transferTo,
+      spn_final: deal.spn_final || null
+    },
+    updated_at: new Date().toISOString()
+  };
+  const { data, error } = await supabase
+    .from(NAV_DEALS_TABLE)
+    .update(payload)
+    .eq('id', id)
+    .select('id,title,status,updated_at')
+    .single();
+  if (error) throw error;
+  return data;
 }
