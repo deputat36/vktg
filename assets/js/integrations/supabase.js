@@ -22,6 +22,10 @@ function writeSession(session) {
   else localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
+export function clearSupabaseSession() {
+  writeSession(null);
+}
+
 function authHeaders() {
   const session = readSession();
   return {
@@ -46,22 +50,6 @@ async function parseResponse(response) {
   return payload;
 }
 
-async function refreshSession() {
-  const session = readSession();
-  if (!session?.refresh_token) return null;
-  const response = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ refresh_token: session.refresh_token })
-  });
-  const payload = await parseResponse(response);
-  writeSession(payload);
-  return payload;
-}
-
 async function safeFetch(url, options) {
   try {
     return await fetch(url, options);
@@ -70,22 +58,45 @@ async function safeFetch(url, options) {
   }
 }
 
+async function refreshSession() {
+  const session = readSession();
+  if (!session?.refresh_token) {
+    writeSession(null);
+    return null;
+  }
+  try {
+    const response = await safeFetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    });
+    const payload = await parseResponse(response);
+    writeSession(payload);
+    return payload;
+  } catch (error) {
+    writeSession(null);
+    throw new Error('Старая сессия устарела или повреждена. Войдите заново. Детали: ' + error.message);
+  }
+}
+
+async function retryWithRefresh(fetcher) {
+  let response = await fetcher(authHeaders());
+  if (response.status === 401 || response.status === 403) {
+    await refreshSession();
+    response = await fetcher(authHeaders());
+  }
+  return response;
+}
+
 async function rpc(functionName, payload) {
-  const headers = authHeaders();
-  const response = await safeFetch(SUPABASE_URL + '/rest/v1/rpc/' + functionName, {
+  const response = await retryWithRefresh((headers) => safeFetch(SUPABASE_URL + '/rest/v1/rpc/' + functionName, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload || {})
-  });
-  if (response.status === 401) {
-    await refreshSession();
-    const retry = await safeFetch(SUPABASE_URL + '/rest/v1/rpc/' + functionName, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(payload || {})
-    });
-    return parseResponse(retry);
-  }
+  }));
   return parseResponse(response);
 }
 
@@ -156,23 +167,14 @@ class RestQuery {
       for (const [column, value] of this.filters) url.searchParams.append(column, value);
       if (this.orders.length) url.searchParams.set('order', this.orders.join(','));
 
-      const headers = authHeaders();
-      if (this.method !== 'GET') headers.Prefer = 'return=representation';
-
-      let response = await safeFetch(url.toString(), {
-        method: this.method,
-        headers,
-        body: this.body ? JSON.stringify(this.body) : undefined
-      });
-
-      if (response.status === 401) {
-        await refreshSession();
-        response = await safeFetch(url.toString(), {
+      const response = await retryWithRefresh((headers) => {
+        if (this.method !== 'GET') headers.Prefer = 'return=representation';
+        return safeFetch(url.toString(), {
           method: this.method,
-          headers: authHeaders(),
+          headers,
           body: this.body ? JSON.stringify(this.body) : undefined
         });
-      }
+      });
 
       let data = await parseResponse(response);
       if (this.returnSingle || this.returnMaybeSingle) {
@@ -195,21 +197,17 @@ export async function getSupabaseClient() {
         const session = readSession();
         if (!session?.access_token) return { data: { user: null }, error: null };
         try {
-          let response = await safeFetch(SUPABASE_URL + '/auth/v1/user', {
-            headers: authHeaders()
-          });
-          if (response.status === 401 || response.status === 403) {
-            await refreshSession();
-            response = await safeFetch(SUPABASE_URL + '/auth/v1/user', { headers: authHeaders() });
-          }
+          const response = await retryWithRefresh((headers) => safeFetch(SUPABASE_URL + '/auth/v1/user', { headers }));
           const user = await parseResponse(response);
           return { data: { user }, error: null };
         } catch (error) {
+          writeSession(null);
           return { data: { user: null }, error };
         }
       },
       async signInWithPassword({ email, password }) {
         try {
+          writeSession(null);
           const response = await safeFetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
             method: 'POST',
             headers: {
@@ -222,6 +220,7 @@ export async function getSupabaseClient() {
           writeSession(session);
           return { data: { user: session.user, session }, error: null };
         } catch (error) {
+          writeSession(null);
           return { data: null, error };
         }
       },
@@ -269,6 +268,7 @@ export async function signOut() {
   const supabase = await getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.auth.signOut();
+  writeSession(null);
   if (error) throw error;
 }
 
