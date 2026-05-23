@@ -22,6 +22,35 @@ function writeSession(session) {
   else localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const part = String(token || '').split('.')[1];
+    if (!part) return null;
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(Array.prototype.map.call(atob(base64), (c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch (_) {
+    return null;
+  }
+}
+
+export function getCachedUser() {
+  const session = readSession();
+  if (!session?.access_token) return null;
+  const payload = decodeJwtPayload(session.access_token);
+  const user = session.user || {};
+  return {
+    id: user.id || payload?.sub || null,
+    email: user.email || payload?.email || null,
+    raw: user,
+    exp: payload?.exp || null
+  };
+}
+
+export function hasCachedSession() {
+  return Boolean(getCachedUser()?.id);
+}
+
 export function clearSupabaseSession() {
   writeSession(null);
 }
@@ -50,11 +79,16 @@ async function parseResponse(response) {
   return payload;
 }
 
-async function safeFetch(url, options) {
+async function safeFetch(url, options = {}, timeoutMs = 25000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, options);
+    return await fetch(url, { ...options, signal: controller.signal });
   } catch (error) {
+    if (error.name === 'AbortError') throw new Error('Запрос к Supabase выполнялся слишком долго. Проверьте интернет/VPN и попробуйте обновить страницу.');
     throw new Error('Не удалось подключиться к Supabase. Проверьте интернет/VPN и обновите страницу. Детали: ' + error.message);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -72,7 +106,7 @@ async function refreshSession() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ refresh_token: session.refresh_token })
-    });
+    }, 20000);
     const payload = await parseResponse(response);
     writeSession(payload);
     return payload;
@@ -96,7 +130,7 @@ async function rpc(functionName, payload) {
     method: 'POST',
     headers,
     body: JSON.stringify(payload || {})
-  }));
+  }, 25000));
   return parseResponse(response);
 }
 
@@ -112,53 +146,15 @@ class RestQuery {
     this.returnMaybeSingle = false;
   }
 
-  select(columns = '*') {
-    this.params.set('select', columns);
-    return this;
-  }
-
-  eq(column, value) {
-    this.filters.push([column, 'eq.' + value]);
-    return this;
-  }
-
-  order(column, options = {}) {
-    const dir = options.ascending === false ? 'desc' : 'asc';
-    const nulls = options.nullsFirst === false ? '.nullslast' : options.nullsFirst === true ? '.nullsfirst' : '';
-    this.orders.push(column + '.' + dir + nulls);
-    return this;
-  }
-
-  limit(value) {
-    this.params.set('limit', String(value));
-    return this;
-  }
-
-  insert(payload) {
-    this.method = 'POST';
-    this.body = payload;
-    return this;
-  }
-
-  update(payload) {
-    this.method = 'PATCH';
-    this.body = payload;
-    return this;
-  }
-
-  single() {
-    this.returnSingle = true;
-    return this.execute();
-  }
-
-  maybeSingle() {
-    this.returnMaybeSingle = true;
-    return this.execute();
-  }
-
-  then(resolve, reject) {
-    return this.execute().then(resolve, reject);
-  }
+  select(columns = '*') { this.params.set('select', columns); return this; }
+  eq(column, value) { this.filters.push([column, 'eq.' + value]); return this; }
+  order(column, options = {}) { const dir = options.ascending === false ? 'desc' : 'asc'; const nulls = options.nullsFirst === false ? '.nullslast' : options.nullsFirst === true ? '.nullsfirst' : ''; this.orders.push(column + '.' + dir + nulls); return this; }
+  limit(value) { this.params.set('limit', String(value)); return this; }
+  insert(payload) { this.method = 'POST'; this.body = payload; return this; }
+  update(payload) { this.method = 'PATCH'; this.body = payload; return this; }
+  single() { this.returnSingle = true; return this.execute(); }
+  maybeSingle() { this.returnMaybeSingle = true; return this.execute(); }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
 
   async execute() {
     try {
@@ -169,11 +165,7 @@ class RestQuery {
 
       const response = await retryWithRefresh((headers) => {
         if (this.method !== 'GET') headers.Prefer = 'return=representation';
-        return safeFetch(url.toString(), {
-          method: this.method,
-          headers,
-          body: this.body ? JSON.stringify(this.body) : undefined
-        });
+        return safeFetch(url.toString(), { method: this.method, headers, body: this.body ? JSON.stringify(this.body) : undefined }, 25000);
       });
 
       let data = await parseResponse(response);
@@ -194,10 +186,15 @@ export async function getSupabaseClient() {
   client = {
     auth: {
       async getUser() {
+        const cached = getCachedUser();
+        if (!cached?.id) return { data: { user: null }, error: null };
+        return { data: { user: { id: cached.id, email: cached.email, ...cached.raw } }, error: null };
+      },
+      async verifyUser() {
         const session = readSession();
         if (!session?.access_token) return { data: { user: null }, error: null };
         try {
-          const response = await retryWithRefresh((headers) => safeFetch(SUPABASE_URL + '/auth/v1/user', { headers }));
+          const response = await retryWithRefresh((headers) => safeFetch(SUPABASE_URL + '/auth/v1/user', { headers }, 15000));
           const user = await parseResponse(response);
           return { data: { user }, error: null };
         } catch (error) {
@@ -210,12 +207,9 @@ export async function getSupabaseClient() {
           writeSession(null);
           const response = await safeFetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
             method: 'POST',
-            headers: {
-              apikey: SUPABASE_PUBLISHABLE_KEY,
-              'Content-Type': 'application/json'
-            },
+            headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
-          });
+          }, 25000);
           const session = await parseResponse(response);
           writeSession(session);
           return { data: { user: session.user, session }, error: null };
@@ -228,10 +222,7 @@ export async function getSupabaseClient() {
         try {
           const session = readSession();
           if (session?.access_token) {
-            await safeFetch(SUPABASE_URL + '/auth/v1/logout', {
-              method: 'POST',
-              headers: authHeaders()
-            });
+            await safeFetch(SUPABASE_URL + '/auth/v1/logout', { method: 'POST', headers: authHeaders() }, 10000);
           }
           writeSession(null);
           return { error: null };
@@ -241,19 +232,15 @@ export async function getSupabaseClient() {
         }
       }
     },
-    from(table) {
-      return new RestQuery(table);
-    }
+    from(table) { return new RestQuery(table); }
   };
   return client;
 }
 
 export async function getCurrentUser() {
-  const supabase = await getSupabaseClient();
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error) return null;
-  return data.user || null;
+  const cached = getCachedUser();
+  if (cached?.id) return { id: cached.id, email: cached.email, ...cached.raw };
+  return null;
 }
 
 export async function signInWithPassword(email, password) {
@@ -278,19 +265,11 @@ export async function ensureNavigatorProfile() {
   const user = await getCurrentUser();
   if (!user) throw new Error('Сначала войдите в Supabase');
 
-  const { data: existing, error: selectError } = await supabase
-    .from(NAV_PROFILES_TABLE)
-    .select('id,full_name,role')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: existing, error: selectError } = await supabase.from(NAV_PROFILES_TABLE).select('id,full_name,role').eq('id', user.id).maybeSingle();
   if (selectError) throw selectError;
   if (existing) return existing;
 
-  const { data, error } = await supabase
-    .from(NAV_PROFILES_TABLE)
-    .insert({ id: user.id, full_name: user.email || 'Пользователь', role: 'spn' })
-    .select('id,full_name,role')
-    .single();
+  const { data, error } = await supabase.from(NAV_PROFILES_TABLE).insert({ id: user.id, full_name: user.email || 'Пользователь', role: 'spn' }).select('id,full_name,role').single();
   if (error) throw error;
   return data;
 }
@@ -306,12 +285,7 @@ export async function saveDealToSupabase(result) {
 export async function listMyDeals(limit = 20) {
   const supabase = await getSupabaseClient();
   if (!supabase) return [];
-  await ensureNavigatorProfile();
-  const { data, error } = await supabase
-    .from(NAV_DEALS_TABLE)
-    .select('id,title,status,address,risk_level,readiness_deposit,created_at,updated_at')
-    .order('updated_at', { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.from(NAV_DEALS_TABLE).select('id,title,status,address,risk_level,readiness_deposit,created_at,updated_at').order('updated_at', { ascending: false }).limit(limit);
   if (error) throw error;
   return data || [];
 }
@@ -319,12 +293,7 @@ export async function listMyDeals(limit = 20) {
 export async function readDealFromSupabase(id) {
   const supabase = await getSupabaseClient();
   if (!supabase) throw new Error('Supabase не настроен');
-  await ensureNavigatorProfile();
-  const { data, error } = await supabase
-    .from(NAV_DEALS_TABLE)
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from(NAV_DEALS_TABLE).select('*').eq('id', id).single();
   if (error) throw error;
   return data;
 }
@@ -332,8 +301,6 @@ export async function readDealFromSupabase(id) {
 export async function updateDealInSupabase(id, result) {
   const supabase = await getSupabaseClient();
   if (!supabase) throw new Error('Supabase не настроен');
-  await ensureNavigatorProfile();
-
   const deal = result.deal;
   const transferTo = Array.isArray(result.to) ? result.to : [];
   const payload = {
@@ -347,23 +314,10 @@ export async function updateDealInSupabase(id, result) {
     lawyer_needed: transferTo.includes('lawyer') || Boolean(result.stop?.length || result.warn?.length),
     broker_needed: transferTo.includes('broker'),
     deal_json: deal,
-    analysis_json: {
-      score: result.score,
-      stop: result.stop,
-      warnings: result.warn,
-      actions: result.actions,
-      missing: result.missing,
-      transfer_to: transferTo,
-      spn_final: deal.spn_final || null
-    },
+    analysis_json: { score: result.score, stop: result.stop, warnings: result.warn, actions: result.actions, missing: result.missing, transfer_to: transferTo, spn_final: deal.spn_final || null },
     updated_at: new Date().toISOString()
   };
-  const { data, error } = await supabase
-    .from(NAV_DEALS_TABLE)
-    .update(payload)
-    .eq('id', id)
-    .select('id,title,status,updated_at')
-    .single();
+  const { data, error } = await supabase.from(NAV_DEALS_TABLE).update(payload).eq('id', id).select('id,title,status,updated_at').single();
   if (error) throw error;
   return data;
 }
