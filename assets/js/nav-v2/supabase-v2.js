@@ -1,7 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../config/supabase.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-let client = null;
 
 function readSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
