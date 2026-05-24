@@ -14,6 +14,16 @@ function metric(label, value, cls = '') {
   return `<div class="metric ${cls}"><span>${label}</span><b>${value ?? 0}</b></div>`;
 }
 
+function isDemoDeal(deal) {
+  return deal?.deal_summary?.demo === true
+    || deal?.wizard_snapshot?.demo === true
+    || String(deal?.title || '').startsWith('ДЕМО:');
+}
+
+function demoBadge(deal) {
+  return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : '';
+}
+
 function activeTasksForDeal(dealId) {
   return (data?.tasks || []).filter((task) => task.deal_id === dealId && ['open', 'in_progress'].includes(task.status));
 }
@@ -44,11 +54,11 @@ function queueBadges(deal) {
 }
 
 function dealCard(deal) {
-  return `<a class="deal-card" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">
+  return `<a class="deal-card ${isDemoDeal(deal) ? 'demo-card' : ''}" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">
     <div class="deal-head">
       <div>
         <div class="small">ID ${shortId(deal.id)} · ${dateText(deal.created_at)}</div>
-        <div class="deal-title">${esc(deal.title)}</div>
+        <div class="deal-title">${demoBadge(deal)}${esc(deal.title)}</div>
         <div class="small">${esc(deal.address || 'Адрес не указан')}</div>
       </div>
       ${riskPill(deal.risk_level)}
@@ -59,13 +69,14 @@ function dealCard(deal) {
       <div><span class="small">Задачи</span><b>${deal.open_tasks_count || 0}</b></div>
     </div>
     <p><b>Следующее действие:</b><br>${esc(deal.next_action || 'Проверить карточку')}</p>
-    <div>${deal.has_children ? '<span class="pill red">дети</span> ' : ''}${queueBadges(deal)}${!deal.expenses_agreed ? '<span class="pill yellow">расходы</span> ' : ''}${!deal.settlements_agreed ? '<span class="pill yellow">расчеты</span> ' : ''}<span class="pill">${statusText(deal.status)}</span></div>
+    <div>${demoBadge(deal)}${deal.has_children ? '<span class="pill red">дети</span> ' : ''}${queueBadges(deal)}${!deal.expenses_agreed ? '<span class="pill yellow">расходы</span> ' : ''}${!deal.settlements_agreed ? '<span class="pill yellow">расчеты</span> ' : ''}<span class="pill">${statusText(deal.status)}</span></div>
   </a>`;
 }
 
 function taskItem(task) {
+  const isDemoTask = String(task.deal_title || '').startsWith('ДЕМО:');
   return `<div class="list-item">
-    <div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.assigned_role || 'роль')}</span></div>
+    <div>${isDemoTask ? '<span class="pill blue">ДЕМО</span> ' : ''}<span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.assigned_role || 'роль')}</span></div>
     <b>${esc(task.title)}</b>
     <p class="muted">${esc(task.description || '')}</p>
     <a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(task.deal_id)}">Открыть сделку</a>
@@ -86,15 +97,19 @@ function render() {
   const readyDeposit = deals.filter(d => Number(d.readiness_deposit || 0) >= 80);
   const noExpenses = deals.filter(d => !d.expenses_agreed);
   const noSettlements = deals.filter(d => !d.settlements_agreed);
+  const demoDeals = deals.filter(isDemoDeal);
+  const realDeals = deals.filter(d => !isDemoDeal(d));
 
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Рабочий стол</h1><p>Главный экран контроля: что требует внимания, что передать юристу или брокеру, где не согласованы расходы и расчеты.</p></section>
-    <div class="status ok">Очереди «Юристу» и «Брокеру» считаются по активным задачам, статусу сделки и стоп-факторам, а не только по флагам lawyer_needed / broker_needed.</div>
+    <div class="status ok">Демо-сделки помечаются бейджем «ДЕМО». Очереди «Юристу» и «Брокеру» считаются по активным задачам, статусу сделки и стоп-факторам.</div>
     <div class="kpi-row">
       ${metric('Всего сделок', summary.total)}
       ${metric('На контроле', attention.length, 'red')}
       ${metric('Юристу', lawyer.length, 'yellow')}
       ${metric('Брокеру', broker.length)}
+      ${metric('Демо', demoDeals.length)}
+      ${metric('Рабочие', realDeals.length)}
     </div>
     <div class="kpi-row">
       ${metric('Готовы к задатку', summary.ready_for_deposit, 'green')}
@@ -104,7 +119,7 @@ function render() {
     </div>
     <section class="grid">
       <div class="card"><h2>Профиль</h2><div class="list"><div class="list-item"><b>${esc(data.profile?.full_name || 'Пользователь')}</b><span class="small">${esc(data.profile?.email || '')}</span></div><div class="list-item"><b>Роль</b>${esc(data.profile?.role || '—')}</div></div></div>
-      <div class="card"><h2>Быстрые действия</h2><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Создать сделку</a><a class="btn light" href="./deals-v2.html">Все сделки</a><button id="reloadDashboard" class="btn light" type="button">Обновить</button></div></div>
+      <div class="card"><h2>Быстрые действия</h2><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Создать сделку</a><a class="btn light" href="./deals-v2.html">Все сделки</a><a class="btn light" href="./deals-v2.html">Фильтр демо</a><button id="reloadDashboard" class="btn light" type="button">Обновить</button></div></div>
     </section>
     ${queue('На контроле', attention, 'Критичных сделок сейчас нет.')}
     ${queue('Передать юристу', lawyer, 'Очередь юриста пустая.')}
