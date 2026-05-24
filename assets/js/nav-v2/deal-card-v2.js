@@ -11,6 +11,16 @@ function setPageStatus(text, type = 'info') {
   if (el) { el.className = 'status ' + type; el.textContent = text; }
 }
 
+function isDemoDeal(deal) {
+  return deal?.deal_summary?.demo === true
+    || deal?.wizard_snapshot?.demo === true
+    || String(deal?.title || '').startsWith('ДЕМО:');
+}
+
+function demoBadge(deal) {
+  return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : '';
+}
+
 function statusSelector(deal) {
   const statuses = [
     ['draft','Черновик'],['need_info','Нужно дозаполнить'],['need_lawyer','Юрист'],['need_broker','Брокер'],
@@ -59,14 +69,15 @@ function renderCard(data) {
   currentData = data;
   const deal = data.deal;
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>${esc(deal.title)}</h1><p>${esc(deal.next_action || 'Проверить карточку и определить следующий шаг.')}</p></section>
+    <section class="hero"><h1>${demoBadge(deal)}${esc(deal.title)}</h1><p>${esc(deal.next_action || 'Проверить карточку и определить следующий шаг.')}</p></section>
+    ${isDemoDeal(deal) ? '<div class="status ok">Это демо-сделка. Ее можно безопасно пересоздать или удалить через админку демо-данных.</div>' : ''}
     <div class="kpi-row">
       ${metric('К задатку', (deal.readiness_deposit || 0) + '%', deal.readiness_deposit >= 80 ? 'green' : 'yellow')}
       ${metric('К сделке', (deal.readiness_deal || 0) + '%', deal.readiness_deal >= 80 ? 'green' : 'yellow')}
       ${metric('Статус', statusText(deal.status))}
       ${metric('Риск', riskPill(deal.risk_level))}
     </div>
-    <section class="grid"><div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div></div></div>${statusSelector(deal)}</section>
+    <section class="grid"><div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div></div></div>${statusSelector(deal)}</section>
     <section class="card"><h2>Риски и рекомендации</h2>${renderRisks(list(data,'risks'))}</section>
     <section class="card"><h2>Документы</h2>${renderDocs(list(data,'documents'))}</section>
     <section class="card"><h2>Расходы</h2>${renderExpenses(list(data,'expenses'))}</section>
