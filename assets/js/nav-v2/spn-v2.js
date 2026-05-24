@@ -7,6 +7,8 @@ const state = {
   deal: JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
 };
 
+let isSaving = false;
+
 const steps = [
   { key:'start', title:'Что готовим', hint:'Задаток, сделку или консультацию' },
   { key:'representation', title:'Кого представляем', hint:'Продавец, покупатель, обе стороны' },
@@ -108,24 +110,24 @@ function localAnalysis(){
   if (state.deal.settlementsAgreed !== true) { if(risk!=='red') risk='yellow'; notes.push('Порядок расчетов не согласован.'); }
   return { risk, notes, children, mortgage };
 }
-function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div><div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${field('spnFinalComment','Комментарий СПН','text','Кратко: что уже понятно, что нужно проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div><div class="status warn">После сохранения система создаст карточку сделки, документы, риски, расходы и задачи.</div>`; }
+function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div><div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${field('spnFinalComment','Комментарий СПН','text','Кратко: что уже понятно, что нужно проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div><div class="status warn">После сохранения система создаст карточку сделки, документы, риски, расходы и задачи. Сохранение может занять до 90 секунд. Не нажимайте кнопку повторно.</div>`; }
 
 const renderers = [stepStart, stepRepresentation, stepObject, stepParties, stepBasis, stepMoney, stepSettlements, stepExpenses, stepFinish];
 
 function render(){
   const app=document.getElementById('app');
   const progress=Math.round(((state.step+1)/steps.length)*100);
-  app.innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Новая сделка</h1><p>Чистый мастер v2: без лишних блоков, с готовностью к задатку и сделке, расходами, рисками, документами и задачами.</p></section><section class="stepper"><aside class="steps card"><h3>Шаги</h3><div class="progress"><i style="width:${progress}%"></i></div><div class="step-list">${steps.map((s,i)=>`<button class="step-pill ${i===state.step?'active':''}" data-step="${i}"><b>${i+1}. ${s.title}</b><span>${s.hint}</span></button>`).join('')}</div></aside><section class="card"><div class="section-title"><div><span class="pill blue">Шаг ${state.step+1} из ${steps.length}</span></div><button class="btn light" id="clearDraft" type="button">Очистить черновик</button></div>${renderers[state.step]()}<div id="pageStatus"></div><div class="actions"><button class="btn light" id="prevBtn" ${state.step===0?'disabled':''}>Назад</button><div><button class="btn light" id="saveDraftBtn">Сохранить черновик</button>${state.step<steps.length-1?'<button class="btn primary" id="nextBtn">Далее</button>':'<button class="btn green" id="saveDealBtn">Сохранить в CRM</button>'}</div></div></section></section></main>`;
+  app.innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Новая сделка</h1><p>Чистый мастер v2: без лишних блоков, с готовностью к задатку и сделке, расходами, рисками, документами и задачами.</p></section><section class="stepper"><aside class="steps card"><h3>Шаги</h3><div class="progress"><i style="width:${progress}%"></i></div><div class="step-list">${steps.map((s,i)=>`<button class="step-pill ${i===state.step?'active':''}" data-step="${i}" ${isSaving ? 'disabled' : ''}><b>${i+1}. ${s.title}</b><span>${s.hint}</span></button>`).join('')}</div></aside><section class="card"><div class="section-title"><div><span class="pill blue">Шаг ${state.step+1} из ${steps.length}</span></div><button class="btn light" id="clearDraft" type="button" ${isSaving ? 'disabled' : ''}>Очистить черновик</button></div>${renderers[state.step]()}<div id="pageStatus"></div><div class="actions"><button class="btn light" id="prevBtn" ${state.step===0 || isSaving?'disabled':''}>Назад</button><div><button class="btn light" id="saveDraftBtn" ${isSaving ? 'disabled' : ''}>Сохранить черновик</button>${state.step<steps.length-1?`<button class="btn primary" id="nextBtn" ${isSaving ? 'disabled' : ''}>Далее</button>`:`<button class="btn green" id="saveDealBtn" ${isSaving ? 'disabled' : ''}>${isSaving ? 'Сохраняю...' : 'Сохранить в CRM'}</button>`}</div></div></section></section></main>`;
   bind();
 }
 function bind(){
-  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.step=Number(b.dataset.step);render();});
-  document.querySelectorAll('[data-click]').forEach(el=>el.onclick=()=>handleClick(el.dataset.click));
-  document.querySelectorAll('[data-field]').forEach(el=>el.oninput=()=>{state.deal[el.dataset.field]=el.value;saveDraft();});
-  document.getElementById('prevBtn').onclick=()=>{ if(state.step>0){state.step--;render();} };
-  const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>{ if(state.step<steps.length-1){state.step++;render();} };
+  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ if(isSaving) return; state.step=Number(b.dataset.step);render();});
+  document.querySelectorAll('[data-click]').forEach(el=>el.onclick=()=>{ if(isSaving) return; handleClick(el.dataset.click); });
+  document.querySelectorAll('[data-field]').forEach(el=>el.oninput=()=>{ if(isSaving) return; state.deal[el.dataset.field]=el.value;saveDraft();});
+  document.getElementById('prevBtn').onclick=()=>{ if(!isSaving && state.step>0){state.step--;render();} };
+  const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>{ if(!isSaving && state.step<steps.length-1){state.step++;render();} };
   document.getElementById('saveDraftBtn').onclick=()=>setStatus('Черновик сохранен в браузере.', 'ok');
-  document.getElementById('clearDraft').onclick=()=>{ if(confirm('Очистить черновик?')){localStorage.removeItem(DRAFT_KEY);state.deal={};state.step=0;render();} };
+  document.getElementById('clearDraft').onclick=()=>{ if(!isSaving && confirm('Очистить черновик?')){localStorage.removeItem(DRAFT_KEY);state.deal={};state.step=0;render();} };
   const save=document.getElementById('saveDealBtn'); if(save) save.onclick=saveDeal;
 }
 function handleClick(action){
@@ -137,14 +139,23 @@ function handleClick(action){
 }
 function setStatus(text,type='info'){ const el=document.getElementById('pageStatus'); if(el){el.className='status '+type;el.textContent=text;} }
 async function saveDeal(){
+  if (isSaving) return;
+  isSaving = true;
+  render();
   try{
-    setStatus('Сохраняю сделку в CRM...', 'info');
+    setStatus('Сохраняю сделку в CRM. Это может занять до 90 секунд, особенно с телефона. Не закрывайте страницу и не нажимайте кнопку повторно...', 'info');
     const payload = { deal: { ...state.deal, spn_final: { comment: state.deal.spnFinalComment || '', next_step: state.deal.clientNextStep || '' } } };
-    const saved = await rpc('nav_v2_save_wizard_result', { p_result: payload });
+    const saved = await rpc('nav_v2_save_wizard_result', { p_result: payload }, 90000);
     localStorage.removeItem(DRAFT_KEY);
     setStatus('Сделка сохранена. Открываю карточку...', 'ok');
     setTimeout(()=>location.href=`./deal-card-v2.html?id=${saved.id}`, 700);
-  }catch(error){ setStatus('Ошибка сохранения: '+error.message, 'error'); }
+  }catch(error){
+    const hint = ' Проверьте список сделок: если карточка уже появилась, повторно сохранять не нужно. Черновик пока оставлен в браузере.';
+    setStatus('Ошибка сохранения: '+error.message + hint, 'error');
+    isSaving = false;
+    const save = document.getElementById('saveDealBtn');
+    if (save) { save.disabled = false; save.textContent = 'Сохранить в CRM'; }
+  }
 }
 
 async function init(){
