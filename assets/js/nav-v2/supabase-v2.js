@@ -42,7 +42,7 @@ async function safeFetch(url, options = {}, timeout = 25000) {
   const timer = setTimeout(() => controller.abort(), timeout);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   catch (error) {
-    if (error.name === 'AbortError') throw new Error('Запрос к Supabase выполнялся слишком долго. Проверьте интернет/VPN и обновите страницу.');
+    if (error.name === 'AbortError') throw new Error(`Запрос к Supabase выполнялся дольше ${Math.round(timeout / 1000)} сек. Если это было сохранение сделки, она могла успеть создаться. Проверьте список сделок и не нажимайте сохранение повторно сразу.`);
     throw new Error('Не удалось подключиться к Supabase: ' + error.message);
   } finally { clearTimeout(timer); }
 }
@@ -93,16 +93,16 @@ export function requireUser() {
   return user;
 }
 
-export async function rpc(name, payload = {}) {
+export async function rpc(name, payload = {}, timeout = 25000) {
   requireUser();
   let response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: 'POST', headers: headers(), body: JSON.stringify(payload)
-  });
+  }, timeout);
   if (response.status === 401 || response.status === 403) {
     await refreshSession();
     response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST', headers: headers(), body: JSON.stringify(payload)
-    });
+    }, timeout);
   }
   return parse(response);
 }
