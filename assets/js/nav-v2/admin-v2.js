@@ -1,6 +1,7 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
 
 let users = [];
+let dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
 const roles = [
   ['owner','Владелец'],
   ['admin','Админ'],
@@ -18,6 +19,30 @@ function roleOptions(selected) {
 function managerOptions(selected) {
   const managers = users.filter((u) => ['owner','admin','manager'].includes(u.role));
   return `<option value="">Без менеджера</option>${managers.map((u) => `<option value="${u.id}" ${selected === u.id ? 'selected' : ''}>${esc(u.full_name || u.email)}</option>`).join('')}`;
+}
+
+function dateText(value) {
+  return value ? new Date(value).toLocaleString('ru-RU') : '—';
+}
+
+function isDemoDeal(deal) {
+  return deal?.deal_summary?.demo === true
+    || deal?.wizard_snapshot?.demo === true
+    || String(deal?.title || '').startsWith('ДЕМО:');
+}
+
+function calcDealStats(deals = []) {
+  const demoDeals = deals.filter(isDemoDeal);
+  const lastDemoAt = demoDeals
+    .map((deal) => deal.created_at || deal.updated_at)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b) - new Date(a))[0] || null;
+  dealStats = {
+    total: deals.length,
+    demo: demoDeals.length,
+    real: deals.length - demoDeals.length,
+    lastDemoAt
+  };
 }
 
 function row(user) {
@@ -54,6 +79,12 @@ function demoControls() {
       </div>
       <span class="pill yellow">owner/admin</span>
     </div>
+    <div class="kpi-row">
+      <div class="metric"><span>Всего сделок</span><b>${dealStats.total}</b></div>
+      <div class="metric"><span>Демо</span><b>${dealStats.demo}</b></div>
+      <div class="metric green"><span>Рабочие</span><b>${dealStats.real}</b></div>
+      <div class="metric"><span>Последнее демо</span><b>${dateText(dealStats.lastDemoAt)}</b></div>
+    </div>
     <div class="list">
       <div class="list-item">
         <b>Что создается</b>
@@ -69,7 +100,8 @@ function demoControls() {
       <button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button>
       <button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button>
       <a class="btn light" href="./dashboard-v2.html">Проверить рабочий стол</a>
-      <a class="btn light" href="./deals-v2.html">Открыть список сделок</a>
+      <a class="btn light" href="./deals-v2.html?filter=demo">Открыть только демо-сделки</a>
+      <a class="btn light" href="./deals-v2.html?filter=real">Открыть рабочие сделки</a>
     </div>
   </section>`;
 }
@@ -116,6 +148,11 @@ function setDemoStatus(text, type='info') {
   if (el) { el.className = 'status ' + type; el.textContent = text; }
 }
 
+async function reloadDealStats() {
+  const data = await rpc('nav_v2_get_deals_list', { p_limit: 200 });
+  calcDealStats(data.items || []);
+}
+
 function bind() {
   document.getElementById('reloadUsers').onclick = load;
   document.getElementById('addUser').onclick = async () => {
@@ -137,6 +174,8 @@ function bind() {
     try {
       setDemoStatus('Создаю демо-набор. Старые демо-сделки будут безопасно пересозданы...');
       const result = await rpc('nav_v2_seed_demo_data', {});
+      await reloadDealStats();
+      render();
       setDemoStatus(`Демо-набор создан: ${result.created_deals || 0} сделок.`, 'ok');
     } catch (e) {
       setDemoStatus('Ошибка создания демо-набора: ' + e.message, 'error');
@@ -148,6 +187,8 @@ function bind() {
     try {
       setDemoStatus('Очищаю демо-набор...');
       const result = await rpc('nav_v2_clear_demo_data', {});
+      await reloadDealStats();
+      render();
       setDemoStatus(`Демо-набор очищен. Удалено сделок: ${result.deleted_deals || 0}.`, 'ok');
     } catch (e) {
       setDemoStatus('Ошибка очистки демо-набора: ' + e.message, 'error');
@@ -177,10 +218,14 @@ async function saveUser(id, activeOverride) {
 }
 
 async function load() {
-  document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю пользователей...</div></main>';
+  document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю пользователей и статистику...</div></main>';
   try {
-    const data = await rpc('nav_v2_list_users', {});
-    users = data.items || [];
+    const [userData, dealsData] = await Promise.all([
+      rpc('nav_v2_list_users', {}),
+      rpc('nav_v2_get_deals_list', { p_limit: 200 })
+    ]);
+    users = userData.items || [];
+    calcDealStats(dealsData.items || []);
     render();
   } catch (e) {
     document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(e.message)}</div></main>`;
