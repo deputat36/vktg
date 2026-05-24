@@ -27,24 +27,39 @@ function confirmDemoAction(actionText) {
   return confirm(`Это демо-сделка. Подтвердите тестовое действие: ${actionText}. Реальные сделки не будут затронуты.`);
 }
 
-function demoSafetyPanel(deal) {
-  if (!isDemoDeal(deal)) return '';
-  return `<section class="card" style="border:2px solid rgba(37,99,235,.35)">
+function dealModePanel(deal) {
+  if (isDemoDeal(deal)) {
+    return `<section class="card" style="border:2px solid rgba(37,99,235,.35)">
+      <div class="section-title">
+        <div>
+          <h2><span class="pill blue">ДЕМО</span> Тестовая карточка</h2>
+          <p class="muted">Эта сделка создана для проверки CRM. Изменения в ней безопасны, но перед каждым действием появится подтверждение.</p>
+        </div>
+        <span class="pill blue">не рабочая сделка</span>
+      </div>
+      <div class="list">
+        <div class="list-item"><b>Что можно делать</b>Менять статус, отмечать документы, закрывать задачи и добавлять комментарии для проверки сценариев.</div>
+        <div class="list-item"><b>Как удалить</b>Через админку демо-данных: очистка удаляет только сделки с признаком demo: true или заголовком «ДЕМО:».</div>
+      </div>
+      <div class="actions" style="justify-content:flex-start">
+        <a class="btn light" href="./deals-v2.html?filter=demo">Все демо-сделки</a>
+        <a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a>
+        <a class="btn light" href="./admin-v2.html">Админка демо-данных</a>
+      </div>
+    </section>`;
+  }
+
+  return `<section class="card" style="border:2px solid rgba(22,163,74,.25)">
     <div class="section-title">
       <div>
-        <h2><span class="pill blue">ДЕМО</span> Тестовая карточка</h2>
-        <p class="muted">Эта сделка создана для проверки CRM. Изменения в ней безопасны, но перед каждым действием появится подтверждение.</p>
+        <h2><span class="pill green">Рабочая</span> Рабочая сделка</h2>
+        <p class="muted">Это реальные данные Навигатора. Изменения статусов, документов, задач и комментариев сохраняются в CRM.</p>
       </div>
-      <span class="pill blue">не рабочая сделка</span>
-    </div>
-    <div class="list">
-      <div class="list-item"><b>Что можно делать</b>Менять статус, отмечать документы, закрывать задачи и добавлять комментарии для проверки сценариев.</div>
-      <div class="list-item"><b>Как удалить</b>Через админку демо-данных: очистка удаляет только сделки с признаком demo: true или заголовком «ДЕМО:».</div>
+      <span class="pill green">реальные данные</span>
     </div>
     <div class="actions" style="justify-content:flex-start">
-      <a class="btn light" href="./deals-v2.html?filter=demo">Все демо-сделки</a>
-      <a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a>
-      <a class="btn light" href="./admin-v2.html">Админка демо-данных</a>
+      <a class="btn light" href="./deals-v2.html?filter=real">Все рабочие сделки</a>
+      <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
     </div>
   </section>`;
 }
@@ -99,7 +114,7 @@ function renderCard(data) {
   const deal = data.deal;
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>${demoBadge(deal)}${esc(deal.title)}</h1><p>${esc(deal.next_action || 'Проверить карточку и определить следующий шаг.')}</p></section>
-    ${demoSafetyPanel(deal)}
+    ${dealModePanel(deal)}
     <div class="kpi-row">
       ${metric('К задатку', (deal.readiness_deposit || 0) + '%', deal.readiness_deposit >= 80 ? 'green' : 'yellow')}
       ${metric('К сделке', (deal.readiness_deal || 0) + '%', deal.readiness_deal >= 80 ? 'green' : 'yellow')}
