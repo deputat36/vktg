@@ -106,6 +106,54 @@ function demoControls() {
   </section>`;
 }
 
+function testingSummary() {
+  const demoReady = dealStats.demo >= 5;
+  const realReady = dealStats.real > 0;
+  return `<section class="card">
+    <div class="section-title">
+      <div>
+        <h2>Сводка тестирования v2</h2>
+        <p class="muted">Короткий контрольный список по текущей версии Навигатора сделок v2.</p>
+      </div>
+      <span class="pill ${demoReady ? 'green' : 'yellow'}">${demoReady ? 'демо-набор есть' : 'демо-набор не полный'}</span>
+    </div>
+    <div class="kpi-row">
+      <div class="metric green"><span>Проверено сценариев</span><b>3</b></div>
+      <div class="metric"><span>Демо-сделок</span><b>${dealStats.demo}</b></div>
+      <div class="metric"><span>Рабочих сделок</span><b>${dealStats.real}</b></div>
+      <div class="metric ${realReady ? 'green' : 'yellow'}"><span>Готовность к UI-тесту</span><b>${demoReady ? 'да' : 'нет'}</b></div>
+    </div>
+    <div class="grid">
+      <div class="card" style="box-shadow:none">
+        <h3>Уже проверено</h3>
+        <div class="list">
+          <div class="list-item"><b><span class="pill green">OK</span> Зеленая сделка</b>Статус, документы, задача, комментарий и пересчет рабочего стола.</div>
+          <div class="list-item"><b><span class="pill green">OK</span> Красная сделка</b>Дети, маткапитал, красные риски, задача юриста, стоп-документы и комментарий.</div>
+          <div class="list-item"><b><span class="pill green">OK</span> Ипотечная сделка</b>Очередь брокера, ипотечные документы, задачи брокера и комментарий.</div>
+          <div class="list-item"><b><span class="pill green">OK</span> Демо-защита</b>Демо-сделки отделены от рабочих, есть фильтры, бейджи и подтверждения действий.</div>
+          <div class="list-item"><b><span class="pill green">OK</span> Разделение проектов</b>Работа ведется только через nav_ / nav-, без использования таблиц CRM «Лидер».</div>
+        </div>
+      </div>
+      <div class="card" style="box-shadow:none">
+        <h3>Что еще проверить вручную</h3>
+        <div class="list">
+          <div class="list-item"><b><span class="pill yellow">UI</span> Создание новой сделки</b>Пройти мастер СПН в браузере от начала до перехода в карточку.</div>
+          <div class="list-item"><b><span class="pill yellow">UI</span> Приглашение сотрудника</b>Проверить отправку приглашения через Edge Function на реальный email.</div>
+          <div class="list-item"><b><span class="pill yellow">UI</span> Роли</b>Проверить видимость сделок для СПН, менеджера, юриста, брокера и наблюдателя.</div>
+          <div class="list-item"><b><span class="pill yellow">UX</span> Мобильный экран</b>Проверить карточку сделки, список и рабочий стол с телефона.</div>
+          <div class="list-item"><b><span class="pill yellow">Бизнес-логика</span> Очереди</b>Решить, когда сделка окончательно выходит из очереди юриста/брокера: по задаче, документу, ревью или отдельному флагу.</div>
+        </div>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-start">
+      <a class="btn primary" href="./spn-v2.html">Пройти мастер СПН</a>
+      <a class="btn light" href="./dashboard-v2.html">Открыть рабочий стол</a>
+      <a class="btn light" href="./deals-v2.html?filter=demo">Открыть демо-сделки</a>
+      <a class="btn light" href="./admin-invite-v2.html">Проверить приглашение</a>
+    </div>
+  </section>`;
+}
+
 function render() {
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>
@@ -133,6 +181,7 @@ function render() {
       </div>
     </section>
     ${demoControls()}
+    ${testingSummary()}
     <section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователей пока нет.</div>'}</div></section>
   </main>`;
   bind();
