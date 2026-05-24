@@ -110,7 +110,7 @@ function localAnalysis(){
   if (state.deal.settlementsAgreed !== true) { if(risk!=='red') risk='yellow'; notes.push('Порядок расчетов не согласован.'); }
   return { risk, notes, children, mortgage };
 }
-function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div><div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${field('spnFinalComment','Комментарий СПН','text','Кратко: что уже понятно, что нужно проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div><div class="status warn">После сохранения система создаст карточку сделки, документы, риски, расходы и задачи. Сохранение может занять до 90 секунд. Не нажимайте кнопку повторно.</div>`; }
+function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div><div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${field('spnFinalComment','Комментарий СПН','text','Кратко: что уже понятно, что нужно проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div><div class="status warn">Сохранение обычно занимает несколько секунд. Если мобильный интернет оборвет ответ, мастер сам проверит, появилась ли сделка в списке.</div>`; }
 
 const renderers = [stepStart, stepRepresentation, stepObject, stepParties, stepBasis, stepMoney, stepSettlements, stepExpenses, stepFinish];
 
@@ -138,20 +138,39 @@ function handleClick(action){
   if(type==='toggle') toggleArr(key,val);
 }
 function setStatus(text,type='info'){ const el=document.getElementById('pageStatus'); if(el){el.className='status '+type;el.textContent=text;} }
+function normalizeText(value) { return String(value || '').trim().toLowerCase(); }
+async function findRecentlyCreatedDeal() {
+  const address = normalizeText(state.deal.address);
+  if (!address) return null;
+  try {
+    const data = await rpc('nav_v2_get_deals_list', { p_limit: 30 }, 12000);
+    const items = data.items || [];
+    return items.find((deal) => normalizeText(deal.address) === address) || null;
+  } catch (_) {
+    return null;
+  }
+}
 async function saveDeal(){
   if (isSaving) return;
   isSaving = true;
   render();
   try{
-    setStatus('Сохраняю сделку в CRM. Это может занять до 90 секунд, особенно с телефона. Не закрывайте страницу и не нажимайте кнопку повторно...', 'info');
+    setStatus('Сохраняю сделку в CRM. Обычно это занимает несколько секунд...', 'info');
     const payload = { deal: { ...state.deal, spn_final: { comment: state.deal.spnFinalComment || '', next_step: state.deal.clientNextStep || '' } } };
-    const saved = await rpc('nav_v2_save_wizard_result', { p_result: payload }, 90000);
+    const saved = await rpc('nav_v2_save_wizard_result', { p_result: payload }, 15000);
     localStorage.removeItem(DRAFT_KEY);
     setStatus('Сделка сохранена. Открываю карточку...', 'ok');
     setTimeout(()=>location.href=`./deal-card-v2.html?id=${saved.id}`, 700);
   }catch(error){
-    const hint = ' Проверьте список сделок: если карточка уже появилась, повторно сохранять не нужно. Черновик пока оставлен в браузере.';
-    setStatus('Ошибка сохранения: '+error.message + hint, 'error');
+    setStatus('Ответ от сохранения не получен быстро. Проверяю, не успела ли сделка создаться...', 'info');
+    const found = await findRecentlyCreatedDeal();
+    if (found?.id) {
+      localStorage.removeItem(DRAFT_KEY);
+      setStatus('Сделка найдена в базе. Открываю карточку...', 'ok');
+      setTimeout(()=>location.href=`./deal-card-v2.html?id=${found.id}`, 700);
+      return;
+    }
+    setStatus('Сделка не появилась в базе. Ошибка: '+error.message+' Черновик сохранен в браузере, можно попробовать еще раз.', 'error');
     isSaving = false;
     const save = document.getElementById('saveDealBtn');
     if (save) { save.disabled = false; save.textContent = 'Сохранить в CRM'; }
