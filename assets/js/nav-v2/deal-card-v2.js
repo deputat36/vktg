@@ -21,6 +21,34 @@ function demoBadge(deal) {
   return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : '';
 }
 
+function confirmDemoAction(actionText) {
+  const deal = currentData?.deal;
+  if (!isDemoDeal(deal)) return true;
+  return confirm(`Это демо-сделка. Подтвердите тестовое действие: ${actionText}. Реальные сделки не будут затронуты.`);
+}
+
+function demoSafetyPanel(deal) {
+  if (!isDemoDeal(deal)) return '';
+  return `<section class="card" style="border:2px solid rgba(37,99,235,.35)">
+    <div class="section-title">
+      <div>
+        <h2><span class="pill blue">ДЕМО</span> Тестовая карточка</h2>
+        <p class="muted">Эта сделка создана для проверки CRM. Изменения в ней безопасны, но перед каждым действием появится подтверждение.</p>
+      </div>
+      <span class="pill blue">не рабочая сделка</span>
+    </div>
+    <div class="list">
+      <div class="list-item"><b>Что можно делать</b>Менять статус, отмечать документы, закрывать задачи и добавлять комментарии для проверки сценариев.</div>
+      <div class="list-item"><b>Как удалить</b>Через админку демо-данных: очистка удаляет только сделки с признаком demo: true или заголовком «ДЕМО:».</div>
+    </div>
+    <div class="actions" style="justify-content:flex-start">
+      <a class="btn light" href="./deals-v2.html?filter=demo">Все демо-сделки</a>
+      <a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a>
+      <a class="btn light" href="./admin-v2.html">Админка демо-данных</a>
+    </div>
+  </section>`;
+}
+
 function statusSelector(deal) {
   const statuses = [
     ['draft','Черновик'],['need_info','Нужно дозаполнить'],['need_lawyer','Юрист'],['need_broker','Брокер'],
@@ -28,7 +56,8 @@ function statusSelector(deal) {
     ['preparing_deal','Подготовка к сделке'],['ready_for_deal','Готова к сделке'],['registration','На регистрации'],
     ['registered','Зарегистрирована'],['closed','Закрыта'],['cancelled','Отменена']
   ];
-  return `<div class="card"><h2>Управление сделкой</h2><div class="field"><label>Статус сделки</label><select id="dealStatus">${statuses.map(([id,title]) => `<option value="${id}" ${deal.status === id ? 'selected' : ''}>${title}</option>`).join('')}</select></div><div id="pageStatus" class="status">Можно изменить статус, отметить документы, закрыть задачи или добавить комментарий.</div><button id="saveStatus" class="btn primary" type="button">Сохранить статус</button></div>`;
+  const demoHint = isDemoDeal(deal) ? '<div class="status ok">Демо-защита включена: перед сохранением статуса потребуется подтверждение.</div>' : '';
+  return `<div class="card"><h2>Управление сделкой</h2>${demoHint}<div class="field"><label>Статус сделки</label><select id="dealStatus">${statuses.map(([id,title]) => `<option value="${id}" ${deal.status === id ? 'selected' : ''}>${title}</option>`).join('')}</select></div><div id="pageStatus" class="status">Можно изменить статус, отметить документы, закрыть задачи или добавить комментарий.</div><button id="saveStatus" class="btn primary" type="button">Сохранить статус</button></div>`;
 }
 
 function renderDocs(items) {
@@ -70,7 +99,7 @@ function renderCard(data) {
   const deal = data.deal;
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>${demoBadge(deal)}${esc(deal.title)}</h1><p>${esc(deal.next_action || 'Проверить карточку и определить следующий шаг.')}</p></section>
-    ${isDemoDeal(deal) ? '<div class="status ok">Это демо-сделка. Ее можно безопасно пересоздать или удалить через админку демо-данных.</div>' : ''}
+    ${demoSafetyPanel(deal)}
     <div class="kpi-row">
       ${metric('К задатку', (deal.readiness_deposit || 0) + '%', deal.readiness_deposit >= 80 ? 'green' : 'yellow')}
       ${metric('К сделке', (deal.readiness_deal || 0) + '%', deal.readiness_deal >= 80 ? 'green' : 'yellow')}
@@ -91,20 +120,25 @@ function renderCard(data) {
 function bindActions() {
   const statusBtn = document.getElementById('saveStatus');
   if (statusBtn) statusBtn.onclick = async () => {
+    if (!confirmDemoAction('изменить статус сделки')) return;
     try { setPageStatus('Сохраняю статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: document.getElementById('dealStatus').value }); await load(); }
     catch (e) { setPageStatus('Ошибка: ' + e.message, 'error'); }
   };
   document.querySelectorAll('[data-doc-id]').forEach((btn) => btn.onclick = async () => {
+    if (!confirmDemoAction('изменить статус документа')) return;
     try { setPageStatus('Обновляю документ...'); await rpc('nav_v2_update_document_status', { p_document_id: btn.dataset.docId, p_status: btn.dataset.docStatus }); await load(); }
     catch (e) { setPageStatus('Ошибка документа: ' + e.message, 'error'); }
   });
   document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick = async () => {
+    if (!confirmDemoAction('изменить статус задачи')) return;
     try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.dataset.taskStatus }); await load(); }
     catch (e) { setPageStatus('Ошибка задачи: ' + e.message, 'error'); }
   });
   const add = document.getElementById('addComment');
   if (add) add.onclick = async () => {
     const body = document.getElementById('newComment').value.trim();
+    if (!body) { setPageStatus('Комментарий пустой.', 'error'); return; }
+    if (!confirmDemoAction('добавить комментарий')) return;
     try { setPageStatus('Добавляю комментарий...'); await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: body, p_visibility: 'team' }); await load(); }
     catch (e) { setPageStatus('Ошибка комментария: ' + e.message, 'error'); }
   };
