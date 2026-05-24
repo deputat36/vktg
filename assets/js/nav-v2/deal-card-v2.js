@@ -33,11 +33,12 @@ function renderRisks(items) {
 
 function renderExpenses(items) {
   if (!items.length) return '<div class="empty">Расходы пока не рассчитаны.</div>';
-  const block = (title, side) => {
-    const filtered = items.filter((e) => e.side === side);
-    return `<div class="card" style="box-shadow:none"><h3>${title}</h3><div class="list">${filtered.map((e) => `<div class="list-item"><b>${esc(e.title)}</b><span class="small">${esc(e.category)} / плательщик: ${esc(e.payer || 'не указан')}</span><p>${money(e.amount)} ${e.is_agreed ? '<span class="pill green">согласовано</span>' : '<span class="pill yellow">не согласовано</span>'}</p>${e.comment ? `<p class="muted">${esc(e.comment)}</p>` : ''}</div>`).join('') || '<div class="empty">Нет расходов</div>'}</div></div>`;
+  const block = (title, sides) => {
+    const allowedSides = Array.isArray(sides) ? sides : [sides];
+    const filtered = items.filter((e) => allowedSides.includes(e.side));
+    return `<div class="card" style="box-shadow:none"><h3>${title}</h3><div class="list">${filtered.map((e) => `<div class="list-item"><b>${esc(e.title)}</b><span class="small">${esc(e.category)} / сторона: ${esc(e.side)} / плательщик: ${esc(e.payer || 'не указан')}</span><p>${money(e.amount)} ${e.is_agreed ? '<span class="pill green">согласовано</span>' : '<span class="pill yellow">не согласовано</span>'}</p>${e.comment ? `<p class="muted">${esc(e.comment)}</p>` : ''}</div>`).join('') || '<div class="empty">Нет расходов</div>'}</div></div>`;
   };
-  return `<div class="side-by-side">${block('Расходы покупателя','buyer')}${block('Расходы продавца','seller')}</div>`;
+  return `<div class="side-by-side">${block('Расходы покупателя','buyer')}${block('Расходы продавца','seller')}</div>${block('Общие и спорные расходы',['both','company','other_agency','external_party'])}`;
 }
 
 function renderTasks(items) {
