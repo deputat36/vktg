@@ -15,17 +15,41 @@ function shortId(id) {
 }
 
 function needsAttention(deal) {
-  return deal.risk_level === 'red' || deal.has_children || !deal.expenses_agreed || !deal.settlements_agreed || Number(deal.red_risks_count || 0) > 0;
+  return deal.risk_level === 'red'
+    || deal.has_children
+    || !deal.expenses_agreed
+    || !deal.settlements_agreed
+    || Number(deal.red_risks_count || 0) > 0;
+}
+
+function needsLawyerQueue(deal) {
+  if (!deal.lawyer_needed) return false;
+  return deal.status === 'need_lawyer'
+    || deal.status === 'need_documents'
+    || deal.has_children
+    || deal.risk_level === 'red'
+    || Number(deal.red_risks_count || 0) > 0;
+}
+
+function needsBrokerQueue(deal) {
+  if (!deal.broker_needed) return false;
+  return deal.status === 'need_broker'
+    || deal.status === 'need_documents'
+    || Number(deal.open_tasks_count || 0) > 0;
+}
+
+function queueBadges(deal) {
+  return `${needsLawyerQueue(deal) ? '<span class="pill yellow">юристу</span> ' : ''}${needsBrokerQueue(deal) ? '<span class="pill blue">брокеру</span> ' : ''}`;
 }
 
 function filterDeal(deal) {
   if (currentFilter === 'attention' && !needsAttention(deal)) return false;
-  if (currentFilter === 'lawyer' && !deal.lawyer_needed) return false;
-  if (currentFilter === 'broker' && !deal.broker_needed) return false;
+  if (currentFilter === 'lawyer' && !needsLawyerQueue(deal)) return false;
+  if (currentFilter === 'broker' && !needsBrokerQueue(deal)) return false;
   if (currentFilter === 'deposit' && Number(deal.readiness_deposit || 0) < 80) return false;
   if (currentFilter === 'deal' && Number(deal.readiness_deal || 0) < 80) return false;
   if (searchQuery.trim()) {
-    const text = [deal.id, deal.title, deal.address, deal.object_type, deal.next_action].join(' ').toLowerCase();
+    const text = [deal.id, deal.title, deal.address, deal.object_type, deal.next_action, statusText(deal.status)].join(' ').toLowerCase();
     return text.includes(searchQuery.trim().toLowerCase());
   }
   return true;
@@ -33,13 +57,13 @@ function filterDeal(deal) {
 
 function renderKpi() {
   const attention = allDeals.filter(needsAttention).length;
-  const lawyer = allDeals.filter((deal) => deal.lawyer_needed).length;
-  const broker = allDeals.filter((deal) => deal.broker_needed).length;
+  const lawyer = allDeals.filter(needsLawyerQueue).length;
+  const broker = allDeals.filter(needsBrokerQueue).length;
   return `<div class="kpi-row">
     <div class="metric"><span>Всего</span><b>${allDeals.length}</b></div>
     <div class="metric red"><span>На контроле</span><b>${attention}</b></div>
-    <div class="metric yellow"><span>Юрист</span><b>${lawyer}</b></div>
-    <div class="metric"><span>Брокер</span><b>${broker}</b></div>
+    <div class="metric yellow"><span>Юристу</span><b>${lawyer}</b></div>
+    <div class="metric"><span>Брокеру</span><b>${broker}</b></div>
   </div>`;
 }
 
@@ -62,8 +86,7 @@ function renderDealCard(deal, index) {
     <p><b>Следующий шаг:</b><br>${esc(deal.next_action || 'Проверить карточку')}</p>
     <div style="margin-bottom:12px">
       ${deal.has_children ? '<span class="pill red">дети</span> ' : ''}
-      ${deal.lawyer_needed ? '<span class="pill yellow">юрист</span> ' : ''}
-      ${deal.broker_needed ? '<span class="pill blue">брокер</span> ' : ''}
+      ${queueBadges(deal)}
       ${!deal.expenses_agreed ? '<span class="pill yellow">расходы</span> ' : ''}
       ${!deal.settlements_agreed ? '<span class="pill yellow">расчеты</span> ' : ''}
       <span class="pill">${statusText(deal.status)}</span>
@@ -76,11 +99,12 @@ function render() {
   const items = allDeals.filter(filterDeal);
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Сделки v2</h1><p>Здесь отображаются все доступные сделки. У каждой карточки свой ID, дата создания и отдельная кнопка открытия.</p></section>
+    <div class="status ok">Фильтры «Юристу» и «Брокеру» учитывают статус сделки, стоп-факторы, красные риски и активность по задачам, а не только флаги lawyer_needed / broker_needed.</div>
     ${renderKpi()}
     <section class="card">
       <div class="section-title"><div><h2>Все сделки</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} / ${esc(profile?.role || 'роль не определена')}</p></div><a class="btn primary" href="./spn-v2.html">Новая сделка</a></div>
-      <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, действию или ID" value="${esc(searchQuery)}"><select id="dealFilter"><option value="all">Все сделки</option><option value="attention">На контроле</option><option value="lawyer">Юристу</option><option value="broker">Брокеру</option><option value="deposit">Готовы к задатку 80%+</option><option value="deal">Готовы к сделке 80%+</option></select><button id="reloadDeals" class="btn light" type="button">Обновить</button></div>
-      <div class="status ok">Показано сделок: ${items.length} из ${allDeals.length}</div>
+      <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, действию, статусу или ID" value="${esc(searchQuery)}"><select id="dealFilter"><option value="all">Все сделки</option><option value="attention">На контроле</option><option value="lawyer">Юристу</option><option value="broker">Брокеру</option><option value="deposit">Готовы к задатку 80%+</option><option value="deal">Готовы к сделке 80%+</option></select><button id="reloadDeals" class="btn light" type="button">Обновить</button></div>
+      <div class="status">Показано сделок: ${items.length} из ${allDeals.length}</div>
       <div class="deal-list">${items.map(renderDealCard).join('') || '<div class="empty">Сделки не найдены. Создайте первую сделку через мастер.</div>'}</div>
     </section>
   </main>`;
