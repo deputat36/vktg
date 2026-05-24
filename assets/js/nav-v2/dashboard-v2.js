@@ -14,6 +14,35 @@ function metric(label, value, cls = '') {
   return `<div class="metric ${cls}"><span>${label}</span><b>${value ?? 0}</b></div>`;
 }
 
+function activeTasksForDeal(dealId) {
+  return (data?.tasks || []).filter((task) => task.deal_id === dealId && ['open', 'in_progress'].includes(task.status));
+}
+
+function hasRoleTask(deal, role) {
+  return activeTasksForDeal(deal.id).some((task) => task.assigned_role === role);
+}
+
+function needsLawyerQueue(deal) {
+  if (!deal.lawyer_needed) return false;
+  return deal.status === 'need_lawyer'
+    || deal.status === 'need_documents'
+    || deal.has_children
+    || deal.risk_level === 'red'
+    || Number(deal.red_risks_count || 0) > 0
+    || hasRoleTask(deal, 'lawyer');
+}
+
+function needsBrokerQueue(deal) {
+  if (!deal.broker_needed) return false;
+  return deal.status === 'need_broker'
+    || deal.status === 'need_documents'
+    || hasRoleTask(deal, 'broker');
+}
+
+function queueBadges(deal) {
+  return `${needsLawyerQueue(deal) ? '<span class="pill yellow">юристу</span> ' : ''}${needsBrokerQueue(deal) ? '<span class="pill blue">брокеру</span> ' : ''}`;
+}
+
 function dealCard(deal) {
   return `<a class="deal-card" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">
     <div class="deal-head">
@@ -30,7 +59,7 @@ function dealCard(deal) {
       <div><span class="small">Задачи</span><b>${deal.open_tasks_count || 0}</b></div>
     </div>
     <p><b>Следующее действие:</b><br>${esc(deal.next_action || 'Проверить карточку')}</p>
-    <div>${deal.has_children ? '<span class="pill red">дети</span> ' : ''}${deal.lawyer_needed ? '<span class="pill yellow">юрист</span> ' : ''}${deal.broker_needed ? '<span class="pill blue">брокер</span> ' : ''}${!deal.expenses_agreed ? '<span class="pill yellow">расходы</span> ' : ''}${!deal.settlements_agreed ? '<span class="pill yellow">расчеты</span> ' : ''}<span class="pill">${statusText(deal.status)}</span></div>
+    <div>${deal.has_children ? '<span class="pill red">дети</span> ' : ''}${queueBadges(deal)}${!deal.expenses_agreed ? '<span class="pill yellow">расходы</span> ' : ''}${!deal.settlements_agreed ? '<span class="pill yellow">расчеты</span> ' : ''}<span class="pill">${statusText(deal.status)}</span></div>
   </a>`;
 }
 
@@ -51,26 +80,27 @@ function render() {
   const summary = data.summary || {};
   const deals = data.deals || [];
   const tasks = data.tasks || [];
-  const attention = deals.filter(d => d.risk_level === 'red' || d.has_children || !d.expenses_agreed || !d.settlements_agreed);
-  const lawyer = deals.filter(d => d.lawyer_needed);
-  const broker = deals.filter(d => d.broker_needed);
+  const attention = deals.filter(d => d.risk_level === 'red' || d.has_children || !d.expenses_agreed || !d.settlements_agreed || Number(d.red_risks_count || 0) > 0);
+  const lawyer = deals.filter(needsLawyerQueue);
+  const broker = deals.filter(needsBrokerQueue);
   const readyDeposit = deals.filter(d => Number(d.readiness_deposit || 0) >= 80);
   const noExpenses = deals.filter(d => !d.expenses_agreed);
   const noSettlements = deals.filter(d => !d.settlements_agreed);
 
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Рабочий стол</h1><p>Главный экран контроля: что требует внимания, что передать юристу или брокеру, где не согласованы расходы и расчеты.</p></section>
+    <div class="status ok">Очереди «Юристу» и «Брокеру» считаются по активным задачам, статусу сделки и стоп-факторам, а не только по флагам lawyer_needed / broker_needed.</div>
     <div class="kpi-row">
       ${metric('Всего сделок', summary.total)}
-      ${metric('На контроле', summary.attention, 'red')}
-      ${metric('Юристу', summary.lawyer, 'yellow')}
-      ${metric('Брокеру', summary.broker)}
+      ${metric('На контроле', attention.length, 'red')}
+      ${metric('Юристу', lawyer.length, 'yellow')}
+      ${metric('Брокеру', broker.length)}
     </div>
     <div class="kpi-row">
       ${metric('Готовы к задатку', summary.ready_for_deposit, 'green')}
       ${metric('Готовы к сделке', summary.ready_for_deal, 'green')}
-      ${metric('Не согласованы расходы', summary.expenses_not_agreed, 'yellow')}
-      ${metric('Не согласованы расчеты', summary.settlements_not_agreed, 'yellow')}
+      ${metric('Не согласованы расходы', noExpenses.length, 'yellow')}
+      ${metric('Не согласованы расчеты', noSettlements.length, 'yellow')}
     </div>
     <section class="grid">
       <div class="card"><h2>Профиль</h2><div class="list"><div class="list-item"><b>${esc(data.profile?.full_name || 'Пользователь')}</b><span class="small">${esc(data.profile?.email || '')}</span></div><div class="list-item"><b>Роль</b>${esc(data.profile?.role || '—')}</div></div></div>
