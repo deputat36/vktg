@@ -2,8 +2,10 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText 
 
 let allDeals = [];
 let profile = null;
-let currentFilter = 'all';
-let searchQuery = '';
+const allowedFilters = new Set(['all', 'real', 'demo', 'attention', 'lawyer', 'broker', 'deposit', 'deal']);
+const urlParams = new URLSearchParams(location.search);
+let currentFilter = allowedFilters.has(urlParams.get('filter')) ? urlParams.get('filter') : 'all';
+let searchQuery = urlParams.get('q') || '';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -12,6 +14,14 @@ function formatDate(value) {
 
 function shortId(id) {
   return String(id || '').slice(0, 8).toUpperCase();
+}
+
+function updateUrl() {
+  const params = new URLSearchParams();
+  if (currentFilter && currentFilter !== 'all') params.set('filter', currentFilter);
+  if (searchQuery.trim()) params.set('q', searchQuery.trim());
+  const next = params.toString() ? `${location.pathname}?${params.toString()}` : location.pathname;
+  history.replaceState(null, '', next);
 }
 
 function isDemoDeal(deal) {
@@ -126,8 +136,8 @@ function render() {
     </section>
   </main>`;
   document.getElementById('dealFilter').value = currentFilter;
-  document.getElementById('dealFilter').onchange = (event) => { currentFilter = event.target.value; render(); };
-  document.getElementById('dealSearch').oninput = (event) => { searchQuery = event.target.value; render(); };
+  document.getElementById('dealFilter').onchange = (event) => { currentFilter = event.target.value; updateUrl(); render(); };
+  document.getElementById('dealSearch').oninput = (event) => { searchQuery = event.target.value; updateUrl(); render(); };
   document.getElementById('reloadDeals').onclick = loadDeals;
 }
 
