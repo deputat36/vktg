@@ -45,6 +45,35 @@ function row(user) {
   </div>`;
 }
 
+function demoControls() {
+  return `<section class="card">
+    <div class="section-title">
+      <div>
+        <h2>Демо-данные v2</h2>
+        <p class="muted">Безопасный тестовый набор создается только в таблицах nav_ и помечается как demo: true. Реальные сделки не удаляются.</p>
+      </div>
+      <span class="pill yellow">owner/admin</span>
+    </div>
+    <div class="list">
+      <div class="list-item">
+        <b>Что создается</b>
+        5 сделок: зеленая, ипотечная, красная с детьми/маткапиталом, сделка с несогласованными расходами и сделка с несогласованными расчетами.
+      </div>
+      <div class="list-item">
+        <b>Что удаляется</b>
+        Только сделки с признаком demo: true или заголовком, начинающимся с «ДЕМО:».
+      </div>
+    </div>
+    <div id="demoStatus" class="status">Готово к работе с демо-набором.</div>
+    <div class="actions" style="justify-content:flex-start">
+      <button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button>
+      <button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button>
+      <a class="btn light" href="./dashboard-v2.html">Проверить рабочий стол</a>
+      <a class="btn light" href="./deals-v2.html">Открыть список сделок</a>
+    </div>
+  </section>`;
+}
+
 function render() {
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>
@@ -71,6 +100,7 @@ function render() {
         </div>
       </div>
     </section>
+    ${demoControls()}
     <section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователей пока нет.</div>'}</div></section>
   </main>`;
   bind();
@@ -81,9 +111,9 @@ function setStatus(text, type='info') {
   if (el) { el.className = 'status ' + type; el.textContent = text; }
 }
 
-function val(selector, id) {
-  const el = document.querySelector(`${selector}="${id}"]`);
-  return el ? el.value : '';
+function setDemoStatus(text, type='info') {
+  const el = document.getElementById('demoStatus');
+  if (el) { el.className = 'status ' + type; el.textContent = text; }
 }
 
 function bind() {
@@ -102,6 +132,28 @@ function bind() {
       await load();
     } catch (e) { setStatus('Ошибка: ' + e.message, 'error'); }
   };
+
+  document.getElementById('seedDemoData').onclick = async () => {
+    try {
+      setDemoStatus('Создаю демо-набор. Старые демо-сделки будут безопасно пересозданы...');
+      const result = await rpc('nav_v2_seed_demo_data', {});
+      setDemoStatus(`Демо-набор создан: ${result.created_deals || 0} сделок.`, 'ok');
+    } catch (e) {
+      setDemoStatus('Ошибка создания демо-набора: ' + e.message, 'error');
+    }
+  };
+
+  document.getElementById('clearDemoData').onclick = async () => {
+    if (!confirm('Удалить только демо-сделки Навигатора v2? Реальные сделки не будут затронуты.')) return;
+    try {
+      setDemoStatus('Очищаю демо-набор...');
+      const result = await rpc('nav_v2_clear_demo_data', {});
+      setDemoStatus(`Демо-набор очищен. Удалено сделок: ${result.deleted_deals || 0}.`, 'ok');
+    } catch (e) {
+      setDemoStatus('Ошибка очистки демо-набора: ' + e.message, 'error');
+    }
+  };
+
   document.querySelectorAll('[data-save-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.saveUser, null));
   document.querySelectorAll('[data-toggle-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.toggleUser, btn.dataset.active === 'true'));
 }
