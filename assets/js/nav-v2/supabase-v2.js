@@ -108,7 +108,7 @@ export async function rpc(name, payload = {}) {
 }
 
 export function navTop(active = '') {
-  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a class="${active==='spn'?'active':''}" href="./spn-v2.html">Новая сделка</a><a class="${active==='deals'?'active':''}" href="./deals-v2.html">Сделки</a><a href="./index.html">Старая версия</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
+  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a class="${active==='dashboard'?'active':''}" href="./dashboard-v2.html">Рабочий стол</a><a class="${active==='spn'?'active':''}" href="./spn-v2.html">Новая сделка</a><a class="${active==='deals'?'active':''}" href="./deals-v2.html">Сделки</a><a class="${active==='admin'?'active':''}" href="./admin-v2.html">Команда</a><a class="${active==='invite'?'active':''}" href="./admin-invite-v2.html">Приглашение</a><a href="./index.html">Старая версия</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
 }
 
 export function setupTop(active) {
