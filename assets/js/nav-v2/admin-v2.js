@@ -1,4 +1,5 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 let users = [];
 let dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
@@ -19,6 +20,10 @@ function roleOptions(selected) {
 function managerOptions(selected) {
   const managers = users.filter((u) => ['owner','admin','manager'].includes(u.role));
   return `<option value="">Без менеджера</option>${managers.map((u) => `<option value="${u.id}" ${selected === u.id ? 'selected' : ''}>${esc(u.full_name || u.email)}</option>`).join('')}`;
+}
+
+function session() {
+  try { return JSON.parse(localStorage.getItem('nav_session_v2') || 'null'); } catch (_) { return null; }
 }
 
 function dateText(value) {
@@ -65,6 +70,7 @@ function row(user) {
     </div>
     <div class="actions" style="justify-content:flex-start">
       <button class="btn primary" data-save-user="${user.id}" type="button">Сохранить</button>
+      <button class="btn light" data-password-link="${user.id}" type="button">Ссылка на пароль</button>
       <button class="btn ${user.is_active ? 'red' : 'green'}" data-toggle-user="${user.id}" data-active="${user.is_active ? 'false' : 'true'}" type="button">${user.is_active ? 'Выключить' : 'Включить'}</button>
     </div>
   </div>`;
@@ -202,6 +208,38 @@ async function reloadDealStats() {
   calcDealStats(data.items || []);
 }
 
+async function sendPasswordLink(id) {
+  const user = users.find((u) => u.id === id);
+  if (!user?.email) return setStatus('У пользователя не указан email.', 'error');
+  const s = session();
+  if (!s?.access_token) return setStatus('Сначала войдите в систему.', 'error');
+
+  try {
+    setStatus(`Отправляю ссылку для установки пароля на ${user.email}...`);
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/nav-invite-user`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${s.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: user.email,
+        full_name: user.full_name || user.email,
+        phone: user.phone || null,
+        role: user.role || 'spn'
+      })
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = { error: text }; }
+    if (!response.ok) throw new Error(data?.error || data?.message || response.statusText);
+    setStatus(data?.message || 'Ссылка для установки пароля отправлена на email.', 'ok');
+  } catch (e) {
+    setStatus('Ошибка отправки ссылки: ' + e.message, 'error');
+  }
+}
+
 function bind() {
   document.getElementById('reloadUsers').onclick = load;
   document.getElementById('addUser').onclick = async () => {
@@ -245,6 +283,7 @@ function bind() {
   };
 
   document.querySelectorAll('[data-save-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.saveUser, null));
+  document.querySelectorAll('[data-password-link]').forEach((btn) => btn.onclick = () => sendPasswordLink(btn.dataset.passwordLink));
   document.querySelectorAll('[data-toggle-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.toggleUser, btn.dataset.active === 'true'));
 }
 
