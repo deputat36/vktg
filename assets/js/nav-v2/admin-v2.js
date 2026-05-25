@@ -24,7 +24,7 @@ function calcDealStats(deals = []) {
   dealStats = { total: deals.length, demo: demoDeals.length, real: deals.length - demoDeals.length, lastDemoAt };
 }
 function statusBox() {
-  if (!loadErrors.length) return '<div class="status ok">Админка загружена. Команда и демо-статистика работают независимо.</div>';
+  if (!loadErrors.length) return '<div class="status ok">Админка загружена. Основной способ доступа: профиль в команде + временный пароль.</div>';
   return `<div class="status warn">Часть данных загружена в запасном режиме: ${esc(loadErrors.join(' / '))}</div>`;
 }
 function setStatus(text, type='info') { const el = document.getElementById('adminStatus'); if (el) { el.className = 'status ' + type; el.textContent = text; } }
@@ -49,73 +49,37 @@ function row(user) {
       <div class="field"><label>Менеджер</label><select data-manager="${user.id}">${managerOptions(user.manager_id)}</select></div>
     </div>
     <div class="actions" style="justify-content:flex-start">
-      <button class="btn primary" data-save-user="${user.id}" type="button">Сохранить</button>
-      <a class="btn light" href="./nav-temp-password-v2.html">Временный пароль</a>
+      <button class="btn primary" data-save-user="${user.id}" type="button">Сохранить роль</button>
+      <a class="btn green" href="./nav-temp-password-v2.html">Создать пароль</a>
       <button class="btn light" data-password-link="${user.id}" type="button">Письмо на пароль</button>
       <button class="btn ${user.is_active ? 'red' : 'green'}" data-toggle-user="${user.id}" data-active="${user.is_active ? 'false' : 'true'}" type="button">${user.is_active ? 'Выключить' : 'Включить'}</button>
     </div>
   </div>`;
 }
 
-function demoControls() {
-  return `<section class="card">
-    <div class="section-title"><div><h2>Демо-данные v2</h2><p class="muted">Демо-набор создается только в таблицах nav_ и не затрагивает CRM «Лидер».</p></div><span class="pill yellow">owner/admin</span></div>
-    <div class="kpi-row">
-      <div class="metric"><span>Всего сделок</span><b>${dealStats.total}</b></div>
-      <div class="metric"><span>Демо</span><b>${dealStats.demo}</b></div>
-      <div class="metric green"><span>Рабочие</span><b>${dealStats.real}</b></div>
-      <div class="metric"><span>Последнее демо</span><b>${dateText(dealStats.lastDemoAt)}</b></div>
+function accessGuide() {
+  return `<section class="card" style="border:2px solid rgba(37,99,235,.2)">
+    <div class="section-title"><div><h2>Как дать доступ сотруднику</h2><p class="muted">Пока Supabase Auth общий и письма работают нестабильно, используем понятный рабочий сценарий.</p></div><span class="pill blue">рекомендуется</span></div>
+    <div class="grid">
+      <div class="list-item"><b>1. Добавить в команду</b>Создайте или обновите профиль сотрудника в Навигаторе: email, ФИО, роль, менеджер.</div>
+      <div class="list-item"><b>2. Создать пароль</b>Нажмите «Создать пароль». Пароль появится на экране один раз, его можно передать сотруднику вручную.</div>
+      <div class="list-item"><b>3. Сотрудник входит</b>Страница входа: <code>nav-v2.html</code>. После входа роль берется только из <code>nav_user_profiles</code>.</div>
+      <div class="list-item"><b>Письмо — запасной вариант</b>Кнопка «Письмо на пароль» может не сработать из-за лимитов/спама, поэтому не считаем ее основным способом.</div>
     </div>
-    <div id="demoStatus" class="status">Готово к работе с демо-набором.</div>
-    <div class="actions" style="justify-content:flex-start">
-      <button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button>
-      <button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button>
-      <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
-      <a class="btn light" href="./deals-v2.html?filter=demo">Демо-сделки</a>
-      <a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a>
-    </div>
+    <div class="actions" style="justify-content:flex-start"><a class="btn primary" href="#new-user-box">Добавить профиль</a><a class="btn green" href="./nav-temp-password-v2.html">Создать временный пароль</a></div>
   </section>`;
+}
+
+function demoControls() {
+  return `<section class="card"><div class="section-title"><div><h2>Демо-данные v2</h2><p class="muted">Демо-набор создается только в таблицах nav_ и не затрагивает CRM «Лидер».</p></div><span class="pill yellow">owner/admin</span></div><div class="kpi-row"><div class="metric"><span>Всего сделок</span><b>${dealStats.total}</b></div><div class="metric"><span>Демо</span><b>${dealStats.demo}</b></div><div class="metric green"><span>Рабочие</span><b>${dealStats.real}</b></div><div class="metric"><span>Последнее демо</span><b>${dateText(dealStats.lastDemoAt)}</b></div></div><div id="demoStatus" class="status">Готово к работе с демо-набором.</div><div class="actions" style="justify-content:flex-start"><button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button><button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html?filter=demo">Демо-сделки</a><a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a></div></section>`;
 }
 
 function testingSummary() {
-  return `<section class="card">
-    <div class="section-title"><div><h2>Сводка тестирования v2</h2><p class="muted">Контроль стабильности текущей версии.</p></div><span class="pill ${dealStats.demo >= 5 ? 'green' : 'yellow'}">${dealStats.demo >= 5 ? 'демо-набор есть' : 'демо-набор не полный'}</span></div>
-    <div class="grid">
-      <div class="card" style="box-shadow:none"><h3>Уже проверено</h3><div class="list">
-        <div class="list-item"><b><span class="pill green">OK</span> Демо-защита</b>Демо-сделки отделены от рабочих.</div>
-        <div class="list-item"><b><span class="pill green">OK</span> Список и карточка</b>Статусы, документы, задачи и комментарии работают.</div>
-        <div class="list-item"><b><span class="pill green">OK</span> Разделение проектов</b>Используются только nav_ / nav-, без leader_.</div>
-      </div></div>
-      <div class="card" style="box-shadow:none"><h3>Нужно довести</h3><div class="list">
-        <div class="list-item"><b><span class="pill yellow">UX</span> Мобильное меню</b>Сейчас меню обрезается и мешает работе с телефона.</div>
-        <div class="list-item"><b><span class="pill yellow">Auth</span> Доступ сотрудников</b>Нужен стабильный сценарий: пароль без зависимости от письма.</div>
-        <div class="list-item"><b><span class="pill yellow">Роли</span> Проверка прав</b>СПН, менеджер, юрист, брокер, наблюдатель.</div>
-      </div></div>
-    </div>
-    <div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Мастер СПН</a><a class="btn light" href="./nav-temp-password-v2.html">Временный пароль</a><a class="btn light" href="./admin-invite-v2.html">Приглашение</a></div>
-  </section>`;
+  return `<section class="card"><div class="section-title"><div><h2>Сводка тестирования v2</h2><p class="muted">Контроль стабильности текущей версии.</p></div><span class="pill ${dealStats.demo >= 5 ? 'green' : 'yellow'}">${dealStats.demo >= 5 ? 'демо-набор есть' : 'демо-набор не полный'}</span></div><div class="grid"><div class="card" style="box-shadow:none"><h3>Уже проверено</h3><div class="list"><div class="list-item"><b><span class="pill green">OK</span> Демо-защита</b>Демо-сделки отделены от рабочих.</div><div class="list-item"><b><span class="pill green">OK</span> Список и карточка</b>Статусы, документы, задачи и комментарии работают.</div><div class="list-item"><b><span class="pill green">OK</span> Разделение проектов</b>Используются только nav_ / nav-, без leader_.</div></div></div><div class="card" style="box-shadow:none"><h3>Нужно довести</h3><div class="list"><div class="list-item"><b><span class="pill yellow">UX</span> Мобильное меню</b>Сейчас меню обрезается и мешает работе с телефона.</div><div class="list-item"><b><span class="pill yellow">Auth</span> Доступ сотрудников</b>Нужен единый серверный сценарий создания Auth + профиля + пароля.</div><div class="list-item"><b><span class="pill yellow">Роли</span> Проверка прав</b>СПН, менеджер, юрист, брокер, наблюдатель.</div></div></div></div><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Мастер СПН</a><a class="btn light" href="./nav-temp-password-v2.html">Временный пароль</a><a class="btn light" href="./admin-invite-v2.html">Приглашение</a></div></section>`;
 }
 
 function render() {
-  document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>
-    ${statusBox()}
-    <section class="grid">
-      <div class="card"><h2>Добавить пользователя</h2><p class="muted">Если email уже есть в Supabase Auth, лучше использовать временный пароль.</p>
-        <div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div>
-        <div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div>
-        <div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div>
-        <div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div>
-        <div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div>
-        <div id="adminStatus" class="status">Готово.</div>
-        <div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Добавить в Навигатор</button><a class="btn light" href="./nav-temp-password-v2.html">Создать временный пароль</a></div>
-      </div>
-      <div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div>
-    </section>
-    ${demoControls()}
-    ${testingSummary()}
-    <section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section>
-  </main>`;
+  document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>${statusBox()}${accessGuide()}<section class="grid"><div class="card" id="new-user-box"><h2>Профиль сотрудника в Навигаторе</h2><p class="muted">Этот блок создает/обновляет роль сотрудника в CRM. Для входа после этого создайте временный пароль.</p><div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div><div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div><div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div><div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div><div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div><div id="adminStatus" class="status">Шаг 1: добавьте профиль. Шаг 2: создайте временный пароль.</div><div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Сохранить профиль</button><a class="btn green" href="./nav-temp-password-v2.html">Создать пароль</a></div></div><div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div></section>${demoControls()}${testingSummary()}<section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section></main>`;
   bind();
 }
 
@@ -135,14 +99,14 @@ async function sendPasswordLink(id) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data?.error || data?.message || response.statusText);
     setStatus(data?.message || 'Письмо отправлено.', 'ok');
-  } catch (e) { setStatus('Ошибка письма: ' + e.message + '. Используйте временный пароль.', 'error'); }
+  } catch (e) { setStatus('Письмо не отправлено: ' + e.message + '. Используйте кнопку «Создать пароль».', 'error'); }
 }
 
 function bind() {
   document.getElementById('reloadUsers').onclick = load;
   document.getElementById('addUser').onclick = async () => {
     try {
-      setStatus('Добавляю пользователя...');
+      setStatus('Сохраняю профиль сотрудника...');
       await rpc('nav_v2_link_user_by_email', {
         p_email: document.getElementById('newEmail').value.trim(),
         p_full_name: document.getElementById('newName').value.trim(),
@@ -150,9 +114,9 @@ function bind() {
         p_manager_id: document.getElementById('newManager').value || null,
         p_phone: document.getElementById('newPhone').value.trim() || null
       }, 15000);
-      setStatus('Пользователь добавлен.', 'ok');
+      setStatus('Профиль сохранен. Теперь нажмите «Создать пароль».', 'ok');
       await load();
-    } catch (e) { setStatus('Ошибка: ' + e.message + '. Если аккаунт уже есть, используйте временный пароль.', 'error'); }
+    } catch (e) { setStatus('Ошибка профиля: ' + e.message + '. Если аккаунта еще нет в Auth, используйте страницу временного пароля после серверного обновления.', 'error'); }
   };
   document.getElementById('seedDemoData').onclick = async () => {
     try { setDemoStatus('Создаю демо-набор...'); const result = await rpc('nav_v2_seed_demo_data', {}, 20000); await reloadDealStats(); render(); setDemoStatus(`Демо-набор создан: ${result.created_deals || 0} сделок.`, 'ok'); }
@@ -191,20 +155,8 @@ async function load() {
   loadErrors = [];
   users = [];
   dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
-
-  try {
-    const userData = await rpc('nav_v2_list_users', {}, 15000);
-    users = userData.items || [];
-  } catch (e) {
-    loadErrors.push('пользователи: ' + e.message);
-  }
-
-  try {
-    await reloadDealStats();
-  } catch (e) {
-    loadErrors.push('статистика: ' + e.message);
-  }
-
+  try { const userData = await rpc('nav_v2_list_users', {}, 15000); users = userData.items || []; } catch (e) { loadErrors.push('пользователи: ' + e.message); }
+  try { await reloadDealStats(); } catch (e) { loadErrors.push('статистика: ' + e.message); }
   render();
 }
 
