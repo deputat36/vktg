@@ -18,10 +18,7 @@ async function refreshSession() {
 
   const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      'Content-Type': 'application/json'
-    },
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: s.refresh_token })
   });
 
@@ -42,12 +39,12 @@ function render() {
   const user = getCachedUser();
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero">
-      <h1>Временный пароль</h1>
-      <p>Резервный способ доступа, если письмо Supabase не приходит. Пароль показывается один раз и не хранится в базе.</p>
+      <h1>Ссылка доступа</h1>
+      <p>Основной способ дать сотруднику доступ без зависимости от почты. Ссылка показывается на экране, ее можно передать вручную.</p>
     </section>
     <section class="card auth-card">
-      <h2>Создать временный пароль</h2>
-      <p class="muted">Доступно только owner/admin Навигатора. После входа сотруднику лучше сменить пароль самостоятельно.</p>
+      <h2>Создать одноразовую ссылку доступа</h2>
+      <p class="muted">Для уже существующего пользователя Supabase Auth. Сотрудник откроет ссылку, задаст пароль и попадет в Навигатор.</p>
       <div class="status ok">Вход выполнен: ${esc(user?.email || '')}</div>
       <div class="field"><label>Email сотрудника</label><input id="email" type="email" placeholder="user@example.ru"></div>
       <div class="field"><label>ФИО</label><input id="fullName" placeholder="ФИО сотрудника"></div>
@@ -56,28 +53,27 @@ function render() {
       <div id="status" class="status">Введите email существующего пользователя.</div>
       <div id="result"></div>
       <div class="actions" style="justify-content:flex-start">
-        <button id="createPassword" class="btn primary" type="button">Создать временный пароль</button>
+        <button id="createAccessLink" class="btn primary" type="button">Создать ссылку доступа</button>
         <a class="btn light" href="./admin-v2.html">Назад к команде</a>
         <button id="refreshLogin" class="btn light" type="button">Обновить вход</button>
       </div>
     </section>
   </main>`;
-  document.getElementById('createPassword').onclick = createPassword;
+  document.getElementById('createAccessLink').onclick = createAccessLink;
   document.getElementById('refreshLogin').onclick = async () => {
     try {
       setStatus('Обновляю сессию...');
       await refreshSession();
-      setStatus('Сессия обновлена. Можно создать временный пароль.', 'ok');
+      setStatus('Сессия обновлена. Можно создать ссылку доступа.', 'ok');
     } catch (e) {
       setStatus('Не удалось обновить сессию: ' + e.message, 'error');
     }
   };
 }
 
-async function callTempPassword(payload) {
+async function callAccessLink(payload) {
   const s = session();
   if (!s?.access_token) throw new Error('Сначала войдите в систему.');
-
   return fetch(`${SUPABASE_URL}/functions/v1/nav-invite-user`, {
     method: 'POST',
     headers: {
@@ -97,9 +93,9 @@ async function parseResponse(response) {
   return data;
 }
 
-async function createPassword() {
+async function createAccessLink() {
   const payload = {
-    action: 'temp_password',
+    action: 'access_link',
     email: document.getElementById('email').value.trim(),
     full_name: document.getElementById('fullName').value.trim(),
     phone: document.getElementById('phone').value.trim() || null,
@@ -107,31 +103,29 @@ async function createPassword() {
   };
 
   try {
-    setStatus('Создаю временный пароль...');
+    setStatus('Создаю одноразовую ссылку доступа...');
     document.getElementById('result').innerHTML = '';
-
-    let response = await callTempPassword(payload);
-
+    let response = await callAccessLink(payload);
     if (response.status === 401 || response.status === 403) {
       setStatus('Сессия устарела. Обновляю вход и повторяю запрос...');
       await refreshSession();
-      response = await callTempPassword(payload);
+      response = await callAccessLink(payload);
     }
-
     const data = await parseResponse(response);
-
-    setStatus('Временный пароль создан. Скопируйте его сейчас — потом он не будет доступен.', 'ok');
+    if (!data.action_link) throw new Error('Supabase не вернул ссылку доступа. Попробуйте отправить обычное приглашение.');
+    setStatus('Ссылка доступа создана. Скопируйте и передайте сотруднику.', 'ok');
     document.getElementById('result').innerHTML = `<div class="card" style="box-shadow:none;margin:14px 0;border:2px solid rgba(22,163,74,.25)">
-      <h3>Данные для входа</h3>
+      <h3>Одноразовая ссылка доступа</h3>
       <div class="list">
         <div class="list-item"><b>Email</b>${esc(data.email || payload.email)}</div>
-        <div class="list-item"><b>Временный пароль</b><code style="font-size:20px;word-break:break-all">${esc(data.temporary_password || '')}</code></div>
-        <div class="list-item"><b>Страница входа</b><a href="./nav-v2.html">Открыть вход</a></div>
+        <div class="list-item"><b>Роль</b>${esc(data.role || payload.role)}</div>
+        <div class="list-item"><b>Ссылка</b><textarea readonly style="min-height:120px">${esc(data.action_link)}</textarea></div>
       </div>
-      <p class="muted">Передайте пароль сотруднику вручную. В базе он не хранится в открытом виде.</p>
+      <div class="actions" style="justify-content:flex-start"><a class="btn primary" href="${esc(data.action_link)}">Открыть ссылку</a></div>
+      <p class="muted">Ссылка одноразовая. Сотрудник откроет ее, задаст пароль и войдет в Навигатор.</p>
     </div>`;
   } catch (error) {
-    setStatus('Ошибка: ' + error.message + ' Если ошибка повторяется, нажмите «Обновить вход» или выйдите и войдите заново.', 'error');
+    setStatus('Ошибка: ' + error.message, 'error');
   }
 }
 
