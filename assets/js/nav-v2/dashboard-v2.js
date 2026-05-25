@@ -1,6 +1,7 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
 
 let data = null;
+let loadWarning = '';
 
 function shortId(id) {
   return String(id || '').slice(0, 8).toUpperCase();
@@ -87,10 +88,24 @@ function queue(title, items, emptyText) {
   return `<section class="card"><div class="section-title"><h2>${title}</h2><span class="pill blue">${items.length}</span></div><div class="deal-list">${items.map(dealCard).join('') || `<div class="empty">${emptyText}</div>`}</div></section>`;
 }
 
+function buildFallbackData(listData) {
+  const deals = listData.items || [];
+  return {
+    profile: listData.profile || {},
+    deals,
+    tasks: [],
+    summary: {
+      total: deals.length,
+      ready_for_deposit: deals.filter(d => Number(d.readiness_deposit || 0) >= 80).length,
+      ready_for_deal: deals.filter(d => Number(d.readiness_deal || 0) >= 80).length
+    }
+  };
+}
+
 function render() {
-  const summary = data.summary || {};
-  const deals = data.deals || [];
-  const tasks = data.tasks || [];
+  const summary = data?.summary || {};
+  const deals = Array.isArray(data?.deals) ? data.deals : [];
+  const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
   const attention = deals.filter(d => d.risk_level === 'red' || d.has_children || !d.expenses_agreed || !d.settlements_agreed || Number(d.red_risks_count || 0) > 0);
   const lawyer = deals.filter(needsLawyerQueue);
   const broker = deals.filter(needsBrokerQueue);
@@ -102,9 +117,9 @@ function render() {
 
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Рабочий стол</h1><p>Главный экран контроля: что требует внимания, что передать юристу или брокеру, где не согласованы расходы и расчеты.</p></section>
-    <div class="status ok">Демо-сделки помечаются бейджем «ДЕМО». Очереди «Юристу» и «Брокеру» считаются по активным задачам, статусу сделки и стоп-факторам.</div>
+    ${loadWarning ? `<div class="status warn">${esc(loadWarning)}</div>` : '<div class="status ok">Демо-сделки помечаются бейджем «ДЕМО». Очереди «Юристу» и «Брокеру» считаются по активным задачам, статусу сделки и стоп-факторам.</div>'}
     <div class="kpi-row">
-      ${metric('Всего сделок', summary.total)}
+      ${metric('Всего сделок', summary.total ?? deals.length)}
       ${metric('На контроле', attention.length, 'red')}
       ${metric('Юристу', lawyer.length, 'yellow')}
       ${metric('Брокеру', broker.length)}
@@ -112,14 +127,14 @@ function render() {
       ${metric('Рабочие', realDeals.length)}
     </div>
     <div class="kpi-row">
-      ${metric('Готовы к задатку', summary.ready_for_deposit, 'green')}
-      ${metric('Готовы к сделке', summary.ready_for_deal, 'green')}
+      ${metric('Готовы к задатку', summary.ready_for_deposit ?? readyDeposit.length, 'green')}
+      ${metric('Готовы к сделке', summary.ready_for_deal ?? 0, 'green')}
       ${metric('Не согласованы расходы', noExpenses.length, 'yellow')}
       ${metric('Не согласованы расчеты', noSettlements.length, 'yellow')}
     </div>
     <section class="grid">
       <div class="card"><h2>Профиль</h2><div class="list"><div class="list-item"><b>${esc(data.profile?.full_name || 'Пользователь')}</b><span class="small">${esc(data.profile?.email || '')}</span></div><div class="list-item"><b>Роль</b>${esc(data.profile?.role || '—')}</div></div></div>
-      <div class="card"><h2>Быстрые действия</h2><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Создать сделку</a><a class="btn light" href="./deals-v2.html">Все сделки</a><a class="btn light" href="./deals-v2.html">Фильтр демо</a><button id="reloadDashboard" class="btn light" type="button">Обновить</button></div></div>
+      <div class="card"><h2>Быстрые действия</h2><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./spn-v2.html">Создать сделку</a><a class="btn light" href="./deals-v2.html">Все сделки</a><a class="btn light" href="./deals-v2.html?filter=demo">Фильтр демо</a><button id="reloadDashboard" class="btn light" type="button">Обновить</button></div></div>
     </section>
     ${queue('На контроле', attention, 'Критичных сделок сейчас нет.')}
     ${queue('Передать юристу', lawyer, 'Очередь юриста пустая.')}
@@ -127,18 +142,26 @@ function render() {
     ${queue('Не согласованы расходы', noExpenses, 'Расходы согласованы во всех видимых сделках.')}
     ${queue('Не согласованы расчеты', noSettlements, 'Расчеты согласованы во всех видимых сделках.')}
     ${queue('Готовы к задатку', readyDeposit, 'Пока нет сделок с готовностью к задатку 80%+.')}
-    <section class="card"><div class="section-title"><h2>Открытые задачи</h2><span class="pill blue">${tasks.length}</span></div><div class="list">${tasks.map(taskItem).join('') || '<div class="empty">Открытых задач нет.</div>'}</div></section>
+    <section class="card"><div class="section-title"><h2>Открытые задачи</h2><span class="pill blue">${tasks.length}</span></div><div class="list">${tasks.map(taskItem).join('') || '<div class="empty">Открытые задачи недоступны в запасном режиме. Откройте карточку сделки для работы с задачами.</div>'}</div></section>
   </main>`;
   document.getElementById('reloadDashboard').onclick = load;
 }
 
 async function load() {
   document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю рабочий стол...</div></main>';
+  loadWarning = '';
   try {
-    data = await rpc('nav_v2_get_dashboard', {});
+    data = await rpc('nav_v2_get_dashboard', {}, 15000);
     render();
-  } catch (error) {
-    document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`;
+  } catch (dashboardError) {
+    try {
+      const listData = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 15000);
+      data = buildFallbackData(listData);
+      loadWarning = 'Полный рабочий стол не загрузился, включен запасной режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме не показываются.';
+      render();
+    } catch (fallbackError) {
+      document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(fallbackError.message || dashboardError.message || 'Supabase')}</div><div class="actions" style="justify-content:flex-start"><a class="btn light" href="./deals-v2.html">Открыть список сделок</a><a class="btn light" href="./spn-v2.html">Новая сделка</a><button class="btn primary" onclick="location.reload()">Обновить страницу</button></div></main>`;
+    }
   }
 }
 
