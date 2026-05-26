@@ -2,10 +2,14 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc, money, riskPill, stat
 
 const dealId = new URLSearchParams(location.search).get('id');
 let currentData = null;
+let activeTab = location.hash ? location.hash.replace('#', '') : 'overview';
 
 function list(data, key) { return Array.isArray(data?.[key]) ? data[key] : []; }
 function dateText(value) { return value ? new Date(value).toLocaleString('ru-RU') : '—'; }
-function metric(label, value, cls = '') { return `<div class="metric ${cls}"><span>${label}</span><b>${value}</b></div>`; }
+function metric(label, value, cls = '') { return `<div class="metric ${cls}"><span>${label}</span><b>${value ?? '—'}</b></div>`; }
+function countOpenTasks(items) { return items.filter((task) => ['open', 'in_progress'].includes(task.status)).length; }
+function countMissingDocs(items) { return items.filter((doc) => doc.is_required && !['received', 'checked'].includes(doc.status)).length; }
+function countRedRisks(items) { return items.filter((risk) => risk.level === 'red' && risk.is_resolved !== true).length; }
 function setPageStatus(text, type = 'info') {
   const el = document.getElementById('pageStatus');
   if (el) { el.className = 'status ' + type; el.textContent = text; }
@@ -29,39 +33,9 @@ function confirmDemoAction(actionText) {
 
 function dealModePanel(deal) {
   if (isDemoDeal(deal)) {
-    return `<section class="card" style="border:2px solid rgba(37,99,235,.35)">
-      <div class="section-title">
-        <div>
-          <h2><span class="pill blue">ДЕМО</span> Тестовая карточка</h2>
-          <p class="muted">Эта сделка создана для проверки CRM. Изменения в ней безопасны, но перед каждым действием появится подтверждение.</p>
-        </div>
-        <span class="pill blue">не рабочая сделка</span>
-      </div>
-      <div class="list">
-        <div class="list-item"><b>Что можно делать</b>Менять статус, отмечать документы, закрывать задачи и добавлять комментарии для проверки сценариев.</div>
-        <div class="list-item"><b>Как удалить</b>Через админку демо-данных: очистка удаляет только сделки с признаком demo: true или заголовком «ДЕМО:».</div>
-      </div>
-      <div class="actions" style="justify-content:flex-start">
-        <a class="btn light" href="./deals-v2.html?filter=demo">Все демо-сделки</a>
-        <a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a>
-        <a class="btn light" href="./admin-v2.html">Админка демо-данных</a>
-      </div>
-    </section>`;
+    return `<div class="status ok"><span class="pill blue">ДЕМО</span> Тестовая карточка. Действия безопасны, но перед сохранением появится подтверждение.</div>`;
   }
-
-  return `<section class="card" style="border:2px solid rgba(22,163,74,.25)">
-    <div class="section-title">
-      <div>
-        <h2><span class="pill green">Рабочая</span> Рабочая сделка</h2>
-        <p class="muted">Это реальные данные Навигатора. Изменения статусов, документов, задач и комментариев сохраняются в CRM.</p>
-      </div>
-      <span class="pill green">реальные данные</span>
-    </div>
-    <div class="actions" style="justify-content:flex-start">
-      <a class="btn light" href="./deals-v2.html?filter=real">Все рабочие сделки</a>
-      <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
-    </div>
-  </section>`;
+  return `<div class="status ok"><span class="pill green">Рабочая</span> Реальная сделка Навигатора. Все изменения сохраняются в CRM.</div>`;
 }
 
 function statusSelector(deal) {
@@ -71,8 +45,31 @@ function statusSelector(deal) {
     ['preparing_deal','Подготовка к сделке'],['ready_for_deal','Готова к сделке'],['registration','На регистрации'],
     ['registered','Зарегистрирована'],['closed','Закрыта'],['cancelled','Отменена']
   ];
-  const demoHint = isDemoDeal(deal) ? '<div class="status ok">Демо-защита включена: перед сохранением статуса потребуется подтверждение.</div>' : '';
-  return `<div class="card"><h2>Управление сделкой</h2>${demoHint}<div class="field"><label>Статус сделки</label><select id="dealStatus">${statuses.map(([id,title]) => `<option value="${id}" ${deal.status === id ? 'selected' : ''}>${title}</option>`).join('')}</select></div><div id="pageStatus" class="status">Можно изменить статус, отметить документы, закрыть задачи или добавить комментарий.</div><button id="saveStatus" class="btn primary" type="button">Сохранить статус</button></div>`;
+  return `<div class="card" style="box-shadow:none">
+    <h3>Статус сделки</h3>
+    <div class="field"><label>Текущий статус</label><select id="dealStatus">${statuses.map(([id,title]) => `<option value="${id}" ${deal.status === id ? 'selected' : ''}>${title}</option>`).join('')}</select></div>
+    <button id="saveStatus" class="btn primary" type="button">Сохранить статус</button>
+  </div>`;
+}
+
+function quickActions(deal) {
+  return `<section class="card">
+    <div class="section-title">
+      <div>
+        <h2>Быстрые действия</h2>
+        <p class="muted">Кнопки меняют статус сделки и помогают быстро передать ее нужному специалисту.</p>
+      </div>
+      ${riskPill(deal.risk_level)}
+    </div>
+    <div id="pageStatus" class="status">Выберите действие или перейдите во вкладку нужного раздела.</div>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn light" data-quick-status="need_lawyer" type="button">Передать юристу</button>
+      <button class="btn light" data-quick-status="need_broker" type="button">Передать брокеру</button>
+      <button class="btn green" data-quick-status="ready_for_deposit" type="button">Готово к задатку</button>
+      <button class="btn green" data-quick-status="ready_for_deal" type="button">Готово к сделке</button>
+      <button class="btn light" data-quick-status="need_documents" type="button">Нужны документы</button>
+    </div>
+  </section>`;
 }
 
 function renderDocs(items) {
@@ -97,7 +94,7 @@ function renderExpenses(items) {
 
 function renderTasks(items) {
   if (!items.length) return '<div class="empty">Задач пока нет.</div>';
-  return `<div class="list">${items.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.status)}</span></div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p><div class="actions" style="justify-content:flex-start"><button class="btn light" data-task-status="in_progress" data-task-id="${task.id}">В работе</button><button class="btn green" data-task-status="done" data-task-id="${task.id}">Готово</button><button class="btn light" data-task-status="open" data-task-id="${task.id}">Открыта</button></div></div>`).join('')}</div>`;
+  return `<div class="list">${items.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.status)}</span> ${task.assigned_role ? `<span class="pill blue">${esc(task.assigned_role)}</span>` : ''}</div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p><div class="actions" style="justify-content:flex-start"><button class="btn light" data-task-status="in_progress" data-task-id="${task.id}">В работе</button><button class="btn green" data-task-status="done" data-task-id="${task.id}">Готово</button><button class="btn light" data-task-status="open" data-task-id="${task.id}">Открыта</button></div></div>`).join('')}</div>`;
 }
 
 function renderComments(items) {
@@ -109,30 +106,87 @@ function renderEvents(items) {
   return `<div class="timeline">${items.map((event) => `<div class="list-item"><b>${esc(event.event_title)}</b><span class="small">${dateText(event.created_at)}</span></div>`).join('')}</div>`;
 }
 
+function overview(data) {
+  const deal = data.deal;
+  const docs = list(data, 'documents');
+  const risks = list(data, 'risks');
+  const tasks = list(data, 'tasks');
+  const expenses = list(data, 'expenses');
+  const missingDocs = countMissingDocs(docs);
+  const redRisks = countRedRisks(risks);
+  const openTasks = countOpenTasks(tasks);
+  return `<section class="grid">
+    <div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div><div class="list-item"><b>Создана</b>${dateText(deal.created_at)}</div></div></div>
+    <div class="card"><h2>Контроль</h2><div class="list"><div class="list-item"><b>Следующий шаг</b>${esc(deal.next_action || 'Проверить карточку')}</div><div class="list-item"><b>Риски</b>${redRisks ? `<span class="pill red">красных: ${redRisks}</span>` : '<span class="pill green">красных нет</span>'}</div><div class="list-item"><b>Документы</b>${missingDocs ? `<span class="pill yellow">не хватает: ${missingDocs}</span>` : '<span class="pill green">критичных долгов нет</span>'}</div><div class="list-item"><b>Задачи</b>${openTasks ? `<span class="pill yellow">открытых: ${openTasks}</span>` : '<span class="pill green">открытых нет</span>'}</div><div class="list-item"><b>Расходы</b>${deal.expenses_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div><div class="list-item"><b>Расчеты</b>${deal.settlements_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div></div></div>
+  </section>
+  <section class="grid"><div>${statusSelector(deal)}</div><div class="card" style="box-shadow:none"><h3>Ответственные очереди</h3><div class="list"><div class="list-item"><b>Юрист</b>${deal.lawyer_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Брокер</b>${deal.broker_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Дети / опека / детские деньги</b>${deal.has_children ? '<span class="pill red">есть</span>' : '<span class="pill green">нет</span>'}</div><div class="list-item"><b>Ипотека</b>${deal.has_mortgage ? '<span class="pill yellow">есть</span>' : '<span class="pill green">нет</span>'}</div></div></div></section>`;
+}
+
+function tabButton(id, title, count = null) {
+  return `<button class="tab ${activeTab === id ? 'active' : ''}" data-tab="${id}" type="button">${title}${count !== null ? ` (${count})` : ''}</button>`;
+}
+
+function renderTabs(data) {
+  const tabs = [
+    tabButton('overview', 'Сводка'),
+    tabButton('risks', 'Риски', list(data,'risks').length),
+    tabButton('docs', 'Документы', list(data,'documents').length),
+    tabButton('tasks', 'Задачи', list(data,'tasks').length),
+    tabButton('expenses', 'Расходы', list(data,'expenses').length),
+    tabButton('comments', 'Комментарии', list(data,'comments').length),
+    tabButton('history', 'История', list(data,'events').length)
+  ].join('');
+  return `<section class="card"><div class="tabs">${tabs}</div>${renderTabContent(data)}</section>`;
+}
+
+function renderTabContent(data) {
+  if (activeTab === 'risks') return `<h2>Риски и рекомендации</h2>${renderRisks(list(data,'risks'))}`;
+  if (activeTab === 'docs') return `<h2>Документы</h2>${renderDocs(list(data,'documents'))}`;
+  if (activeTab === 'tasks') return `<h2>Задачи</h2>${renderTasks(list(data,'tasks'))}`;
+  if (activeTab === 'expenses') return `<h2>Расходы</h2>${renderExpenses(list(data,'expenses'))}`;
+  if (activeTab === 'comments') return `<h2>Комментарии</h2>${renderComments(list(data,'comments'))}`;
+  if (activeTab === 'history') return `<h2>История</h2>${renderEvents(list(data,'events'))}`;
+  return `<h2>Сводка</h2>${overview(data)}`;
+}
+
 function renderCard(data) {
   currentData = data;
   const deal = data.deal;
+  const docs = list(data, 'documents');
+  const tasks = list(data, 'tasks');
+  const risks = list(data, 'risks');
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>${demoBadge(deal)}${esc(deal.title)}</h1><p>${esc(deal.next_action || 'Проверить карточку и определить следующий шаг.')}</p></section>
     ${dealModePanel(deal)}
     <div class="kpi-row">
       ${metric('К задатку', (deal.readiness_deposit || 0) + '%', deal.readiness_deposit >= 80 ? 'green' : 'yellow')}
       ${metric('К сделке', (deal.readiness_deal || 0) + '%', deal.readiness_deal >= 80 ? 'green' : 'yellow')}
+      ${metric('Документы', countMissingDocs(docs), countMissingDocs(docs) ? 'yellow' : 'green')}
+      ${metric('Задачи', countOpenTasks(tasks), countOpenTasks(tasks) ? 'yellow' : 'green')}
+    </div>
+    <div class="kpi-row">
       ${metric('Статус', statusText(deal.status))}
       ${metric('Риск', riskPill(deal.risk_level))}
+      ${metric('Красные риски', countRedRisks(risks), countRedRisks(risks) ? 'red' : 'green')}
+      ${metric('Цена', money(deal.price_total))}
     </div>
-    <section class="grid"><div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div></div></div>${statusSelector(deal)}</section>
-    <section class="card"><h2>Риски и рекомендации</h2>${renderRisks(list(data,'risks'))}</section>
-    <section class="card"><h2>Документы</h2>${renderDocs(list(data,'documents'))}</section>
-    <section class="card"><h2>Расходы</h2>${renderExpenses(list(data,'expenses'))}</section>
-    <section class="card"><h2>Задачи</h2>${renderTasks(list(data,'tasks'))}</section>
-    <section class="card"><h2>Комментарии</h2>${renderComments(list(data,'comments'))}</section>
-    <section class="card"><h2>История</h2>${renderEvents(list(data,'events'))}</section>
+    ${quickActions(deal)}
+    ${renderTabs(data)}
   </main>`;
   bindActions();
 }
 
 function bindActions() {
+  document.querySelectorAll('[data-tab]').forEach((btn) => btn.onclick = () => {
+    activeTab = btn.dataset.tab;
+    history.replaceState(null, '', `${location.pathname}${location.search}#${activeTab}`);
+    renderCard(currentData);
+  });
+  document.querySelectorAll('[data-quick-status]').forEach((btn) => btn.onclick = async () => {
+    if (!confirmDemoAction('изменить статус сделки')) return;
+    try { setPageStatus('Сохраняю быстрый статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: btn.dataset.quickStatus }); await load(); }
+    catch (e) { setPageStatus('Ошибка быстрого действия: ' + e.message, 'error'); }
+  });
   const statusBtn = document.getElementById('saveStatus');
   if (statusBtn) statusBtn.onclick = async () => {
     if (!confirmDemoAction('изменить статус сделки')) return;
