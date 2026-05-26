@@ -3,6 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase
 
 const SESSION_KEY = 'nav_session_v2';
 let checks = [];
+let currentProfile = null;
 
 function session() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
@@ -29,11 +30,6 @@ function statusText(status) {
   if (status === 'warn') return 'Внимание';
   if (status === 'error') return 'Ошибка';
   return 'Проверка';
-}
-
-function addCheck(title, status, details = '', meta = '') {
-  checks.push({ title, status, details, meta });
-  render();
 }
 
 function updateCheck(title, status, details = '', meta = '') {
@@ -77,7 +73,7 @@ function render() {
       <div class="section-title">
         <div>
           <h2>Результаты</h2>
-          <p class="muted">Проверки выполняются независимо. Если один блок не загрузился, остальные продолжают работать.</p>
+          <p class="muted">Проверки выполняются с учетом роли пользователя. Для СПН закрытая админка не считается ошибкой.</p>
         </div>
         <button id="runCheck" class="btn primary" type="button">Запустить проверку</button>
       </div>
@@ -89,8 +85,8 @@ function render() {
         <div class="actions" style="justify-content:flex-start">
           <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
           <a class="btn light" href="./deals-v2.html">Сделки</a>
-          <a class="btn light" href="./admin-v2.html">Команда</a>
-          <a class="btn light" href="./nav-temp-password-v2.html">Ссылка доступа</a>
+          <a class="btn light" href="./spn-v2.html">Новая сделка</a>
+          <a class="btn light" href="./nav-access-v2.html">Ссылка доступа</a>
         </div>
       </div>
       <div class="card">
@@ -98,8 +94,8 @@ function render() {
         <div class="list">
           <div class="list-item"><b>Auth</b>Есть ли сессия и не истек ли токен.</div>
           <div class="list-item"><b>Профиль</b>Есть ли пользователь в nav_user_profiles и какая роль назначена.</div>
-          <div class="list-item"><b>CRM</b>Загрузка сделок, рабочего стола и команды.</div>
-          <div class="list-item"><b>Доступ</b>Доступна ли Edge Function nav-invite-user.</div>
+          <div class="list-item"><b>CRM</b>Загрузка сделок и рабочего стола по текущей роли.</div>
+          <div class="list-item"><b>Админка</b>Команда и доступы проверяются только для owner/admin.</div>
         </div>
       </div>
     </section>
@@ -147,16 +143,15 @@ async function checkAuth() {
 }
 
 async function checkProfile() {
-  updateCheck('Профиль и роль', 'info', 'Проверяю nav_user_profiles...');
+  updateCheck('Профиль и роль', 'info', 'Проверяю текущий профиль...');
   try {
-    const data = await rpc('nav_v2_list_users', {}, 15000);
-    const user = getCachedUser();
-    const profile = (data.items || []).find((item) => item.id === user?.id || item.email === user?.email);
-    if (!profile) {
-      updateCheck('Профиль и роль', 'error', 'Текущий пользователь не найден в nav_user_profiles.', user?.email || '');
+    const data = await rpc('nav_v2_get_my_profile', {}, 15000);
+    currentProfile = data.profile || null;
+    if (!currentProfile) {
+      updateCheck('Профиль и роль', 'error', 'Профиль не найден.');
       return;
     }
-    updateCheck('Профиль и роль', profile.is_active ? 'ok' : 'warn', `Роль: ${profile.role}. Статус: ${profile.is_active ? 'активен' : 'выключен'}.`, profile.email);
+    updateCheck('Профиль и роль', currentProfile.is_active ? 'ok' : 'warn', `Роль: ${currentProfile.role}. Статус: ${currentProfile.is_active ? 'активен' : 'выключен'}.`, currentProfile.email);
   } catch (e) {
     updateCheck('Профиль и роль', 'error', e.message);
   }
@@ -166,7 +161,7 @@ async function checkDeals() {
   updateCheck('Список сделок', 'info', 'Проверяю nav_v2_get_deals_list...');
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 15000);
-    updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${data.profile?.role || '—'}`);
+    updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
   } catch (e) {
     updateCheck('Список сделок', 'error', e.message);
   }
@@ -176,13 +171,17 @@ async function checkDashboard() {
   updateCheck('Рабочий стол', 'info', 'Проверяю nav_v2_get_dashboard...');
   try {
     const data = await rpc('nav_v2_get_dashboard', {}, 15000);
-    updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${data.profile?.role || '—'}`);
+    updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
   } catch (e) {
     updateCheck('Рабочий стол', 'error', e.message);
   }
 }
 
 async function checkTeam() {
+  if (!['owner', 'admin'].includes(currentProfile?.role)) {
+    updateCheck('Команда', 'warn', 'Раздел команды закрыт для этой роли. Это нормально: управлять пользователями может только owner/admin.', `Текущая роль: ${currentProfile?.role || '—'}`);
+    return;
+  }
   updateCheck('Команда', 'info', 'Проверяю список пользователей Навигатора...');
   try {
     const data = await rpc('nav_v2_list_users', {}, 15000);
@@ -193,6 +192,10 @@ async function checkTeam() {
 }
 
 async function checkEdgeFunction() {
+  if (!['owner', 'admin'].includes(currentProfile?.role)) {
+    updateCheck('Edge Function доступа', 'warn', 'Создание ссылок доступа закрыто для этой роли. Это нормально.', `Текущая роль: ${currentProfile?.role || '—'}`);
+    return;
+  }
   updateCheck('Edge Function доступа', 'info', 'Проверяю доступность nav-invite-user без создания пользователя...');
   const s = session();
   if (!s?.access_token) {
@@ -202,11 +205,7 @@ async function checkEdgeFunction() {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/nav-invite-user`, {
       method: 'OPTIONS',
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${s.access_token}`,
-        'Content-Type': 'application/json'
-      }
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error(response.statusText || 'Edge Function недоступна');
     updateCheck('Edge Function доступа', 'ok', 'Функция отвечает на OPTIONS-запрос. Создание ссылки доступа проверяется отдельно на странице доступа.');
@@ -217,8 +216,9 @@ async function checkEdgeFunction() {
 
 async function runAllChecks() {
   checks = [];
+  currentProfile = null;
   render();
-  addCheck('Старт проверки', 'ok', 'Проверка запущена.');
+  updateCheck('Старт проверки', 'ok', 'Проверка запущена.');
   const user = await checkAuth();
   if (!user?.id) return;
   await checkProfile();
