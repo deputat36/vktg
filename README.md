@@ -1,35 +1,50 @@
-# Навигатор сделки СПН
+# Патч ролевого меню для CRM «Навигатор сделок v2»
 
-Репозиторий полностью переведен под проект подготовки сделок специалистов по недвижимости.
+Архив содержит готовые файлы и скрипт автоматического применения патча.
 
-## Структура
+## Что изменится
 
-```text
-index.html
-assets/css/style.css
-assets/js/app.js
-data/*.json
-config/supabase.js
-supabase/schema.sql
+Юрист будет видеть только:
+- Рабочий стол
+- Юридическая очередь
+- Проверка
+- Выйти
+
+СПН будет видеть:
+- Рабочий стол
+- Новая сделка
+- Мои сделки
+- Проверка
+- Выйти
+
+Брокер будет видеть:
+- Рабочий стол
+- Брокерская очередь
+- Проверка
+- Выйти
+
+Owner/Admin будет видеть полное меню.
+
+Админские страницы будут закрыты для всех, кроме owner/admin.
+
+## Как применить локально
+
+1. Распаковать архив в корень репозитория `deputat36/vktg`.
+2. Выполнить:
+
+```bash
+python tools/patch_vktg_nav_roles.py
+git add .
+git commit -m "Fix nav v2 role based menu and admin guard"
+git push
 ```
 
-## Что редактировать без изменения кода
+## Что проверять после публикации
 
-- `data/office_settings.json` — офис, тарифы, юрист, менеджер, брокер.
-- `data/staff.json` — сотрудники.
-- `data/scenarios.json` — быстрые сценарии.
-- `data/dictionaries.json` — справочники полей.
-- `data/rules.json` — стоп-факторы и предупреждения.
-- `data/client_messages.json` — сообщения клиентам.
-- `data/local_borisoglebsk.json` — локальная специфика Борисоглебска.
+Под юристом открыть:
 
-## GitHub Pages
+- https://deputat36.github.io/vktg/dashboard-v2.html
+- https://deputat36.github.io/vktg/deals-v2.html?filter=lawyer
+- https://deputat36.github.io/vktg/nav-system-check-v2.html
 
-Включить: `Settings → Pages → Deploy from branch → main / root`.
-
-## Supabase
-
-1. Создать проект Supabase.
-2. Выполнить `supabase/schema.sql` в SQL Editor.
-3. Заполнить `config/supabase.js` публичными ключами.
-4. Secret key и service_role key в браузерный код не вставлять.
+У юриста не должно быть пунктов: Новая сделка, Команда, Создать доступ, Аудит, Старая версия.
