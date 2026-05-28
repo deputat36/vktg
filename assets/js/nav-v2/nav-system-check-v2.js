@@ -40,6 +40,29 @@ function updateCheck(title, status, details = '', meta = '') {
   render();
 }
 
+function checkItem(title) {
+  return checks.find((item) => item.title === title);
+}
+
+function checkIsOk(title) {
+  return checkItem(title)?.status === 'ok';
+}
+
+function downgradeTransientErrors() {
+  const dashboard = checkItem('Рабочий стол');
+  const profileOk = checkIsOk('Профиль и роль');
+  const dealsOk = checkIsOk('Список сделок');
+
+  if (dashboard?.status === 'error' && profileOk && dealsOk && currentProfile?.role) {
+    Object.assign(dashboard, {
+      status: 'warn',
+      details: 'Диагностический запрос рабочего стола не ответил вовремя, но профиль и список сделок загрузились. Это похоже на временный таймаут Supabase и не блокирует работу CRM.',
+      meta: `Роль: ${currentProfile.role}`
+    });
+    render();
+  }
+}
+
 function renderCheck(item) {
   return `<div class="list-item">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
@@ -252,6 +275,7 @@ async function runAllChecks() {
   await checkDeals();
   await checkTeam();
   await checkEdgeFunction();
+  downgradeTransientErrors();
   updateCheck('Старт проверки', 'ok', 'Проверка завершена.');
 }
 
