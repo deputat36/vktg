@@ -12,7 +12,7 @@ function fetchWithTimeout(url, options = {}, timeout = 6000) {
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-async function getProfile() {
+async function getProfile(timeout = 6000) {
   const s = session();
   if (!s?.access_token) return null;
 
@@ -24,7 +24,7 @@ async function getProfile() {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({})
-  }, 6000);
+  }, timeout);
 
   if (!response.ok) return null;
   const data = await response.json();
@@ -128,24 +128,28 @@ async function waitForMenu(timeout = 6000) {
   });
 }
 
+async function applyRoleMenu(menu, attempt = 1) {
+  try {
+    const profile = await getProfile(attempt < 3 ? 6000 : 12000);
+    if (!profile?.role) throw new Error('role not found');
+    menu.innerHTML = buildMenu(profile.role);
+    setBadge(profile);
+    bindLogout();
+    document.body.dataset.navRole = profile.role;
+  } catch (_) {
+    if (attempt < 4) {
+      setTimeout(() => applyRoleMenu(menu, attempt + 1), attempt * 2500);
+    }
+  }
+}
+
 async function init() {
   const menu = await waitForMenu();
   if (!menu) return;
 
   menu.innerHTML = safeMenu();
   bindLogout();
-
-  try {
-    const profile = await getProfile();
-    if (!profile?.role) return;
-    menu.innerHTML = buildMenu(profile.role);
-    setBadge(profile);
-    bindLogout();
-    document.body.dataset.navRole = profile.role;
-  } catch (_) {
-    menu.innerHTML = safeMenu();
-    bindLogout();
-  }
+  applyRoleMenu(menu, 1);
 }
 
 init();
