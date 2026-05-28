@@ -1,15 +1,25 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
+const PROFILE_CACHE_KEY = 'nav_profile_v2';
+const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;
+let profileRequest = null;
 
 function readSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
 }
 
 function writeSession(session) {
-  if (!session) localStorage.removeItem(SESSION_KEY);
+  if (!session) { localStorage.removeItem(SESSION_KEY); clearProfileCache(); }
   else localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
+
+function clearProfileCache() {
+  try {
+    Object.keys(sessionStorage).filter((key) => key.startsWith(PROFILE_CACHE_PREFIX)).forEach((key) => sessionStorage.removeItem(key));
+  } catch (_) {}
+}
+
 
 function decodeJwt(token) {
   try {
@@ -28,6 +38,25 @@ export function getCachedUser() {
   return { id: user.id || payload?.sub, email: user.email || payload?.email };
 }
 
+function profileCacheKey() {
+  const user = getCachedUser();
+  return `${PROFILE_CACHE_KEY}:${user?.id || user?.email || 'anonymous'}`;
+}
+
+export function getCachedProfile() {
+  try { return JSON.parse(sessionStorage.getItem(profileCacheKey()) || 'null'); } catch (_) { return null; }
+}
+
+export function saveCachedProfile(profile) {
+  if (!profile?.role) return;
+  sessionStorage.setItem(profileCacheKey(), JSON.stringify({ ...profile, cached_at: Date.now() }));
+}
+
+export function clearCachedProfiles() {
+  clearProfileCache();
+}
+
+
 function headers() {
   const session = readSession();
   return {
@@ -37,12 +66,12 @@ function headers() {
   };
 }
 
-async function safeFetch(url, options = {}, timeout = 25000) {
+async function safeFetch(url, options = {}, timeout = 20000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   catch (error) {
-    if (error.name === 'AbortError') throw new Error(`Запрос к Supabase выполнялся дольше ${Math.round(timeout / 1000)} сек. Если это было сохранение сделки, она могла успеть создаться. Проверьте список сделок и не нажимайте сохранение повторно сразу.`);
+    if (error.name === 'AbortError') throw new Error(`Supabase не ответил за ${Math.round(timeout / 1000)} сек. Проверьте соединение и повторите действие. Если это было сохранение сделки, проверьте список перед повторным нажатием.`);
     throw new Error('Не удалось подключиться к Supabase: ' + error.message);
   } finally { clearTimeout(timer); }
 }
@@ -51,7 +80,7 @@ async function parse(response) {
   const text = await response.text();
   let payload = null;
   try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = text; }
-  if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.error_description || response.statusText || 'Ошибка Supabase');
+  if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.error_description || `Ошибка Supabase ${response.status}: ${response.statusText || 'запрос не выполнен'}`);
   return payload;
 }
 
@@ -62,7 +91,7 @@ async function refreshSession() {
     method: 'POST',
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: session.refresh_token })
-  }, 18000);
+  }, 12000);
   const payload = await parse(response);
   writeSession(payload);
   return payload;
@@ -93,22 +122,43 @@ export function requireUser() {
   return user;
 }
 
-export async function rpc(name, payload = {}, timeout = 25000) {
+export async function rpc(name, payload = {}, timeout = 20000) {
   requireUser();
-  let response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-    method: 'POST', headers: headers(), body: JSON.stringify(payload)
-  }, timeout);
-  if (response.status === 401 || response.status === 403) {
-    await refreshSession();
-    response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+  const started = performance.now();
+  let refreshed = false;
+  try {
+    let response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST', headers: headers(), body: JSON.stringify(payload)
     }, timeout);
+    if (response.status === 401 || response.status === 403) {
+      refreshed = true;
+      await refreshSession();
+      response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST', headers: headers(), body: JSON.stringify(payload)
+      }, timeout);
+    }
+    const data = await parse(response);
+    if (name === 'nav_v2_get_my_profile') saveCachedProfile(data?.profile || null);
+    return data;
+  } finally {
+    console.info(`[nav-v2] RPC ${name}: ${Math.round(performance.now() - started)} ms${refreshed ? ' (после refresh)' : ''}`);
   }
-  return parse(response);
 }
 
-export function navTop(active = '') {
-  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a class="${active==='dashboard'?'active':''}" href="./dashboard-v2.html">Рабочий стол</a><a class="${active==='spn'?'active':''}" href="./spn-v2.html">Новая сделка</a><a class="${active==='deals'?'active':''}" href="./deals-v2.html">Сделки</a><a class="${active==='admin'?'active':''}" href="./admin-v2.html">Команда</a><a class="${active==='invite'?'active':''}" href="./admin-invite-v2.html">Приглашение</a><a href="./index.html">Старая версия</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
+export async function getMyProfile({ refresh = false, timeout = 6000 } = {}) {
+  if (!refresh) {
+    const cached = getCachedProfile();
+    if (cached?.role) return cached;
+  }
+  if (profileRequest) return profileRequest;
+  profileRequest = rpc('nav_v2_get_my_profile', {}, timeout)
+    .then((data) => data?.profile || null)
+    .finally(() => { profileRequest = null; });
+  return profileRequest;
+}
+
+export function navTop() {
+  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a href="./dashboard-v2.html">Рабочий стол</a><a href="./deals-v2.html">Сделки</a><a href="./nav-system-check-v2.html">Проверка</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
 }
 
 export function setupTop(active) {

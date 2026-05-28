@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
+import { setupTop, getCachedUser, getMyProfile, renderAuthBox, rpc, esc, saveCachedProfile } from './supabase-v2.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
@@ -183,7 +183,7 @@ async function checkDashboard() {
   try {
     const data = await rpc('nav_v2_get_dashboard', {}, 18000);
     dashboardOk = true;
-    if (data.profile) currentProfile = data.profile;
+    if (data.profile) { currentProfile = data.profile; saveCachedProfile(currentProfile); }
     updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
   } catch (e) {
     dashboardOk = false;
@@ -194,16 +194,15 @@ async function checkDashboard() {
 async function checkProfile() {
   updateCheck('Профиль и роль', 'info', 'Проверяю текущий профиль...');
   try {
-    const data = await rpc('nav_v2_get_my_profile', {}, 8000);
-    currentProfile = data.profile || currentProfile || null;
+    currentProfile = currentProfile || await getMyProfile({ timeout: 8000 }) || null;
     if (!currentProfile) {
-      updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', 'Профиль не найден прямым запросом.', dashboardOk ? 'Рабочий стол уже подтвердил доступ.' : '');
+      updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', 'Профиль не найден в кэше или через nav_v2_get_my_profile.', dashboardOk ? 'Рабочий стол уже подтвердил доступ.' : '');
       return;
     }
     updateCheck('Профиль и роль', currentProfile.is_active ? 'ok' : 'warn', `Роль: ${currentProfile.role}. Статус: ${currentProfile.is_active ? 'активен' : 'выключен'}.`, currentProfile.email);
   } catch (e) {
     if (currentProfile?.role) {
-      updateCheck('Профиль и роль', 'warn', 'Прямой запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${currentProfile.role}`);
+      updateCheck('Профиль и роль', 'warn', 'Запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${currentProfile.role}`);
     } else {
       updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', e.message, dashboardOk ? 'Рабочий стол загрузился, проверьте страницу позже.' : '');
     }
@@ -214,7 +213,7 @@ async function checkDeals() {
   updateCheck('Список сделок', 'info', 'Проверяю nav_v2_get_deals_list...');
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 18000);
-    if (data.profile) currentProfile = data.profile;
+    if (data.profile) { currentProfile = data.profile; saveCachedProfile(currentProfile); }
     updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
   } catch (e) {
     const status = dashboardOk ? 'warn' : 'error';

@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
 
 let data = null;
 let loadWarning = '';
@@ -212,11 +212,13 @@ async function load() {
   loadWarning = '';
   try {
     data = await rpc('nav_v2_get_dashboard', {}, 15000);
+    saveCachedProfile(data.profile);
     render();
   } catch (dashboardError) {
     try {
       const listData = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 15000);
       data = buildFallbackData(listData);
+      saveCachedProfile(data.profile);
       loadWarning = 'Полный рабочий стол не загрузился, включен запасной режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме не показываются.';
       render();
     } catch (fallbackError) {

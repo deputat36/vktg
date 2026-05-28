@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
 
 let allDeals = [];
 let profile = null;
@@ -123,6 +123,7 @@ async function loadDeals() {
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 });
     profile = data.profile;
+    saveCachedProfile(profile);
     allDeals = data.items || [];
     applyDefaultFilterByRole();
     render();

@@ -1,39 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
-
-const SESSION_KEY = 'nav_session_v2';
-
-function session() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
-}
-
-async function getProfile() {
-  const s = session();
-  if (!s?.access_token) return null;
-
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/nav_v2_get_my_profile`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${s.access_token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({})
-  });
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data?.profile || null;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[ch]));
-}
+import { esc, getMyProfile } from './supabase-v2.js';
 
 function renderNoAccess(profile) {
   const app = document.getElementById('app');
@@ -49,7 +14,7 @@ function renderNoAccess(profile) {
       <section class="card">
         <h2>Текущий профиль</h2>
         <div class="status warn">
-          ${escapeHtml(profile?.email || 'Пользователь')} · роль: ${escapeHtml(profile?.role || 'не определена')}
+          ${esc(profile?.email || 'Пользователь')} · роль: ${esc(profile?.role || 'не определена')}
         </div>
 
         <p class="muted">
@@ -66,9 +31,13 @@ function renderNoAccess(profile) {
 }
 
 async function init() {
-  const profile = await getProfile();
-  if (!profile || !['owner', 'admin'].includes(profile.role)) {
-    renderNoAccess(profile);
+  try {
+    const profile = await getMyProfile({ refresh: true, timeout: 12000 });
+    if (!profile || !['owner', 'admin'].includes(profile.role)) {
+      renderNoAccess(profile);
+    }
+  } catch (_) {
+    renderNoAccess(null);
   }
 }
 
