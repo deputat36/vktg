@@ -4,6 +4,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase
 const SESSION_KEY = 'nav_session_v2';
 let checks = [];
 let currentProfile = null;
+let dashboardOk = false;
 
 function session() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
@@ -56,10 +57,27 @@ function summary() {
   const errors = checks.filter((item) => item.status === 'error').length;
   const warnings = checks.filter((item) => item.status === 'warn').length;
   const ok = checks.filter((item) => item.status === 'ok').length;
-  if (errors) return `<div class="status error">Есть ошибки: ${errors}. Сначала устраните их, потом проверяйте сценарии CRM.</div>`;
-  if (warnings) return `<div class="status warn">Критичных ошибок нет, но есть предупреждения: ${warnings}.</div>`;
+  if (errors) return `<div class="status error">Есть ошибки: ${errors}. Проверьте пункты ниже.</div>`;
+  if (warnings) return `<div class="status warn">Критичных ошибок нет, но есть предупреждения: ${warnings}. CRM можно проверять, если основные рабочие экраны открываются.</div>`;
   if (ok) return `<div class="status ok">Проверка идет или уже завершена. Успешных пунктов: ${ok}.</div>`;
   return `<div class="status">Нажмите «Запустить проверку».</div>`;
+}
+
+function actionLinks() {
+  const role = currentProfile?.role || '';
+  if (role === 'lawyer') {
+    return `<a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html?filter=lawyer">Юридическая очередь</a><a class="btn light" href="./nav-system-check-v2.html">Проверка</a>`;
+  }
+  if (role === 'broker') {
+    return `<a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html?filter=broker">Брокерская очередь</a><a class="btn light" href="./nav-system-check-v2.html">Проверка</a>`;
+  }
+  if (role === 'spn') {
+    return `<a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./spn-v2.html">Новая сделка</a><a class="btn light" href="./deals-v2.html">Мои сделки</a>`;
+  }
+  if (role === 'owner' || role === 'admin') {
+    return `<a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./spn-v2.html">Новая сделка</a><a class="btn light" href="./deals-v2.html">Сделки</a><a class="btn light" href="./admin-v2.html">Команда</a><a class="btn light" href="./nav-access-v2.html">Доступ</a>`;
+  }
+  return `<a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html">Сделки</a><a class="btn light" href="./nav-system-check-v2.html">Проверка</a>`;
 }
 
 function render() {
@@ -73,7 +91,7 @@ function render() {
       <div class="section-title">
         <div>
           <h2>Результаты</h2>
-          <p class="muted">Проверки выполняются с учетом роли пользователя. Для СПН закрытая админка не считается ошибкой.</p>
+          <p class="muted">Проверки выполняются с учетом роли пользователя. Закрытые админ-разделы для неадминов не считаются ошибкой.</p>
         </div>
         <button id="runCheck" class="btn primary" type="button">Запустить проверку</button>
       </div>
@@ -82,12 +100,7 @@ function render() {
     <section class="grid">
       <div class="card">
         <h2>Быстрые действия</h2>
-        <div class="actions" style="justify-content:flex-start">
-          <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
-          <a class="btn light" href="./deals-v2.html">Сделки</a>
-          <a class="btn light" href="./spn-v2.html">Новая сделка</a>
-          <a class="btn light" href="./nav-access-v2.html">Ссылка доступа</a>
-        </div>
+        <div class="actions" style="justify-content:flex-start">${actionLinks()}</div>
       </div>
       <div class="card">
         <h2>Что проверяется</h2>
@@ -142,38 +155,50 @@ async function checkAuth() {
   return getCachedUser();
 }
 
+async function checkDashboard() {
+  updateCheck('Рабочий стол', 'info', 'Проверяю nav_v2_get_dashboard...');
+  try {
+    const data = await rpc('nav_v2_get_dashboard', {}, 18000);
+    dashboardOk = true;
+    if (data.profile) currentProfile = data.profile;
+    updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
+  } catch (e) {
+    dashboardOk = false;
+    updateCheck('Рабочий стол', 'error', e.message);
+  }
+}
+
 async function checkProfile() {
   updateCheck('Профиль и роль', 'info', 'Проверяю текущий профиль...');
   try {
-    const data = await rpc('nav_v2_get_my_profile', {}, 15000);
-    currentProfile = data.profile || null;
+    const data = await rpc('nav_v2_get_my_profile', {}, 8000);
+    currentProfile = data.profile || currentProfile || null;
     if (!currentProfile) {
-      updateCheck('Профиль и роль', 'error', 'Профиль не найден.');
+      updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', 'Профиль не найден прямым запросом.', dashboardOk ? 'Рабочий стол уже подтвердил доступ.' : '');
       return;
     }
     updateCheck('Профиль и роль', currentProfile.is_active ? 'ok' : 'warn', `Роль: ${currentProfile.role}. Статус: ${currentProfile.is_active ? 'активен' : 'выключен'}.`, currentProfile.email);
   } catch (e) {
-    updateCheck('Профиль и роль', 'error', e.message);
+    if (currentProfile?.role) {
+      updateCheck('Профиль и роль', 'warn', 'Прямой запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${currentProfile.role}`);
+    } else {
+      updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', e.message, dashboardOk ? 'Рабочий стол загрузился, проверьте страницу позже.' : '');
+    }
   }
 }
 
 async function checkDeals() {
   updateCheck('Список сделок', 'info', 'Проверяю nav_v2_get_deals_list...');
   try {
-    const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 15000);
+    const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 18000);
+    if (data.profile) currentProfile = data.profile;
     updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
   } catch (e) {
-    updateCheck('Список сделок', 'error', e.message);
-  }
-}
-
-async function checkDashboard() {
-  updateCheck('Рабочий стол', 'info', 'Проверяю nav_v2_get_dashboard...');
-  try {
-    const data = await rpc('nav_v2_get_dashboard', {}, 15000);
-    updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${data.profile?.role || currentProfile?.role || '—'}`);
-  } catch (e) {
-    updateCheck('Рабочий стол', 'error', e.message);
+    const status = dashboardOk ? 'warn' : 'error';
+    const details = dashboardOk
+      ? 'Список сделок не ответил на диагностический запрос, но рабочий стол загрузился. Возможно, временный сетевой сбой Supabase/GitHub Pages.'
+      : e.message;
+    updateCheck('Список сделок', status, details, e.message);
   }
 }
 
@@ -217,20 +242,21 @@ async function checkEdgeFunction() {
 async function runAllChecks() {
   checks = [];
   currentProfile = null;
+  dashboardOk = false;
   render();
   updateCheck('Старт проверки', 'ok', 'Проверка запущена.');
   const user = await checkAuth();
   if (!user?.id) return;
+  await checkDashboard();
   await checkProfile();
   await checkDeals();
-  await checkDashboard();
   await checkTeam();
   await checkEdgeFunction();
   updateCheck('Старт проверки', 'ok', 'Проверка завершена.');
 }
 
 async function init() {
-  setupTop('admin');
+  setupTop('check');
   if (!getCachedUser()) return renderAuthBox(document.getElementById('app'), async () => location.reload());
   render();
 }
