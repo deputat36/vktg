@@ -6,11 +6,17 @@ function session() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
 }
 
+function fetchWithTimeout(url, options = {}, timeout = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 async function getProfile() {
   const s = session();
   if (!s?.access_token) return null;
 
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/nav_v2_get_my_profile`, {
+  const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/nav_v2_get_my_profile`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -18,7 +24,7 @@ async function getProfile() {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({})
-  });
+  }, 6000);
 
   if (!response.ok) return null;
   const data = await response.json();
@@ -31,17 +37,24 @@ function makeLink(active, id, href, title) {
 
 function getActivePage() {
   const path = location.pathname;
-
   if (path.includes('dashboard-v2')) return 'dashboard';
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
-  if (path.includes('admin-v2')) return 'admin';
-  if (path.includes('admin-invite-v2')) return 'admin';
+  if (path.includes('admin-v2') || path.includes('admin-invite-v2')) return 'admin';
   if (path.includes('nav-access-audit-v2')) return 'audit';
   if (path.includes('nav-access-v2')) return 'access';
   if (path.includes('nav-system-check-v2')) return 'check';
-
   return '';
+}
+
+function safeMenu() {
+  const active = getActivePage();
+  return [
+    makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'),
+    makeLink(active, 'deals', './deals-v2.html', 'Сделки'),
+    makeLink(active, 'check', './nav-system-check-v2.html', 'Проверка'),
+    '<button id="navLogout" type="button">Выйти</button>'
+  ].join('');
 }
 
 function buildMenu(role) {
@@ -78,9 +91,7 @@ function buildMenu(role) {
     links.push(makeLink(active, 'audit', './nav-access-audit-v2.html', 'Аудит'));
     links.push(makeLink(active, 'check', './nav-system-check-v2.html', 'Проверка'));
   } else {
-    links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
-    links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки'));
-    links.push(makeLink(active, 'check', './nav-system-check-v2.html', 'Проверка'));
+    return safeMenu();
   }
 
   links.push('<button id="navLogout" type="button">Выйти</button>');
@@ -90,7 +101,6 @@ function buildMenu(role) {
 function bindLogout() {
   const logout = document.getElementById('navLogout');
   if (!logout) return;
-
   logout.onclick = () => {
     localStorage.removeItem(SESSION_KEY);
     location.href = './nav-v2.html';
@@ -101,16 +111,7 @@ function setBadge(profile) {
   const badge = document.getElementById('navUserBadge');
   if (!badge || !profile) return;
 
-  const roleNames = {
-    owner: 'владелец',
-    admin: 'админ',
-    manager: 'менеджер',
-    spn: 'СПН',
-    lawyer: 'юрист',
-    broker: 'брокер',
-    viewer: 'наблюдатель'
-  };
-
+  const roleNames = { owner: 'владелец', admin: 'админ', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' };
   badge.textContent = `${profile.email || ''} · ${roleNames[profile.role] || profile.role || ''}`;
 }
 
@@ -123,7 +124,7 @@ async function waitForMenu(timeout = 6000) {
         clearInterval(timer);
         resolve(menu);
       }
-    }, 100);
+    }, 50);
   });
 }
 
@@ -131,16 +132,20 @@ async function init() {
   const menu = await waitForMenu();
   if (!menu) return;
 
-  const profile = await getProfile();
-  if (!profile?.role) {
-    bindLogout();
-    return;
-  }
-
-  menu.innerHTML = buildMenu(profile.role);
-  setBadge(profile);
+  menu.innerHTML = safeMenu();
   bindLogout();
-  document.body.dataset.navRole = profile.role;
+
+  try {
+    const profile = await getProfile();
+    if (!profile?.role) return;
+    menu.innerHTML = buildMenu(profile.role);
+    setBadge(profile);
+    bindLogout();
+    document.body.dataset.navRole = profile.role;
+  } catch (_) {
+    menu.innerHTML = safeMenu();
+    bindLogout();
+  }
 }
 
 init();
