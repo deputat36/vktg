@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
+import { setupTop, getCachedUser, getCachedProfile, getMyProfile, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
 
 let data = null;
 let loadWarning = '';
@@ -86,17 +86,26 @@ function roleIntro(role) {
 function quickActions(role) {
   const common = ['<a class="btn light" href="./deals-v2.html">Список сделок</a>', '<button id="reloadDashboard" class="btn light" type="button">Обновить</button>'];
   if (role === 'spn') return [`<a class="btn primary" href="./spn-v2.html">Создать сделку</a>`, ...common].join('');
-  if (role === 'lawyer') return [`<a class="btn primary" href="./deals-v2.html">Открыть очередь</a>`, ...common].join('');
-  if (role === 'broker') return [`<a class="btn primary" href="./deals-v2.html">Открыть очередь</a>`, ...common].join('');
+  if (role === 'lawyer') return [`<a class="btn primary" href="./deals-v2.html?filter=lawyer">Открыть очередь</a>`, ...common].join('');
+  if (role === 'broker') return [`<a class="btn primary" href="./deals-v2.html?filter=broker">Открыть очередь</a>`, ...common].join('');
   if (['owner','admin'].includes(role)) return [`<a class="btn primary" href="./spn-v2.html">Создать сделку</a>`, `<a class="btn light" href="./admin-v2.html">Команда</a>`, `<a class="btn light" href="./nav-access-audit-v2.html">Аудит доступов</a>`, `<a class="btn light" href="./nav-access-v2.html">Создать доступ</a>`, ...common].join('');
   if (role === 'manager') return [`<a class="btn primary" href="./deals-v2.html">Сделки команды</a>`, `<a class="btn light" href="./nav-access-audit-v2.html">Аудит доступов</a>`, ...common].join('');
   return common.join('');
 }
 
+function emptyData(profile = {}) {
+  return {
+    profile: profile || {},
+    deals: [],
+    tasks: [],
+    summary: { total: 0, ready_for_deposit: 0, ready_for_deal: 0, missing_documents: 0, open_tasks: 0 }
+  };
+}
+
 function buildFallbackData(listData) {
   const deals = listData.items || [];
   return {
-    profile: listData.profile || {},
+    profile: listData.profile || data?.profile || {},
     deals,
     tasks: [],
     summary: {
@@ -201,21 +210,52 @@ function render() {
   if (reload) reload.onclick = load;
 }
 
+async function prepareLightProfile() {
+  const cached = getCachedProfile();
+  if (cached?.role) {
+    data = emptyData(cached);
+    loadWarning = 'Открыт быстрый режим: профиль взят из кэша, данные сделок загружаются.';
+    render();
+    return cached;
+  }
+  try {
+    const profile = await getMyProfile({ refresh: true, timeout: 8000 });
+    if (profile?.role) {
+      saveCachedProfile(profile);
+      data = emptyData(profile);
+      loadWarning = 'Открыт быстрый режим: роль определена, данные сделок загружаются.';
+      render();
+      return profile;
+    }
+  } catch (_) {}
+  return null;
+}
+
 async function load() {
   document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю рабочий стол...</div></main>';
   loadWarning = '';
+  await prepareLightProfile();
+
   try {
-    data = await rpc('nav_v2_get_dashboard', {}, 15000);
+    data = await rpc('nav_v2_get_dashboard', {}, 30000);
     saveCachedProfile(data.profile);
+    loadWarning = '';
     render();
   } catch (dashboardError) {
     try {
-      const listData = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 15000);
+      loadWarning = 'Полный рабочий стол не ответил вовремя. Загружаю облегчённый список сделок.';
+      render();
+      const listData = await rpc('nav_v2_get_deals_list', { p_limit: 40 }, 25000);
       data = buildFallbackData(listData);
       saveCachedProfile(data.profile);
-      loadWarning = 'Полный рабочий стол не загрузился, включен запасной режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме не показываются.';
+      loadWarning = 'Полный рабочий стол не загрузился, включен облегчённый режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме могут отображаться не полностью.';
       render();
     } catch (fallbackError) {
+      if (data?.profile?.role) {
+        loadWarning = `Данные сделок временно не загрузились: ${fallbackError.message || dashboardError.message || 'Supabase'}. Можно перейти в список сделок или попробовать обновить страницу.`;
+        render();
+        return;
+      }
       document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(fallbackError.message || dashboardError.message || 'Supabase')}</div><div class="actions" style="justify-content:flex-start"><a class="btn light" href="./deals-v2.html">Открыть список сделок</a><a class="btn light" href="./spn-v2.html">Новая сделка</a><button class="btn primary" onclick="location.reload()">Обновить страницу</button></div></main>`;
     }
   }
