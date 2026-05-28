@@ -107,8 +107,8 @@ export async function rpc(name, payload = {}, timeout = 25000) {
   return parse(response);
 }
 
-export function navTop(active = '') {
-  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a class="${active==='dashboard'?'active':''}" href="./dashboard-v2.html">Рабочий стол</a><a class="${active==='spn'?'active':''}" href="./spn-v2.html">Новая сделка</a><a class="${active==='deals'?'active':''}" href="./deals-v2.html">Сделки</a><a class="${active==='admin'?'active':''}" href="./admin-v2.html">Команда</a><a class="${active==='invite'?'active':''}" href="./admin-invite-v2.html">Приглашение</a><a href="./index.html">Старая версия</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
+export function navTop() {
+  return `<header class="nav-v2-top"><div class="nav-v2-top-inner"><div class="nav-v2-brand"><b>CRM Навигатор сделок v2</b><span id="navUserBadge">Загрузка...</span></div><nav class="nav-v2-menu"><a href="./dashboard-v2.html">Рабочий стол</a><a href="./deals-v2.html">Сделки</a><a href="./nav-system-check-v2.html">Проверка</a><button id="navLogout" type="button">Выйти</button></nav></div></header>`;
 }
 
 export function setupTop(active) {
