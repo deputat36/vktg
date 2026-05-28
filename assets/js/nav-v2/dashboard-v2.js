@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
 
 let data = null;
 let loadWarning = '';
@@ -179,24 +179,18 @@ function render() {
   const openTaskDeals = deals.filter(d => openTasks(d) > 0);
   const demoDeals = deals.filter(isDemoDeal);
   const realDeals = deals.filter(d => !isDemoDeal(d));
-  const roleTasks = tasks.filter(t => t.assigned_role === role);
+  const roleTasks = tasks.filter(t => !t.assigned_role || t.assigned_role === role);
   const groups = { attention, lawyer, broker, readyDeposit, noExpenses, noSettlements, docsMissing, openTaskDeals, tasks, roleTasks, demoDeals, realDeals };
-
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>Рабочий стол: ${esc(roleName(role))}</h1><p>${esc(roleIntro(role))}</p></section>
-    ${loadWarning ? `<div class="status warn">${esc(loadWarning)}</div>` : '<div class="status ok">Рабочий стол показывает только те сделки, которые доступны текущей роли Навигатора.</div>'}
-    <div class="kpi-row">
-      ${metric('Видимых сделок', summary.total ?? deals.length)}
-      ${metric('На контроле', attention.length, attention.length ? 'red' : 'green')}
-      ${metric('Документы', summary.missing_documents ?? docsMissing.reduce((sum, d) => sum + missingDocs(d), 0), docsMissing.length ? 'yellow' : 'green')}
-      ${metric('Открытые задачи', summary.open_tasks ?? tasks.length, tasks.length ? 'yellow' : 'green')}
-    </div>
-    <div class="kpi-row">
-      ${metric('Юристу', lawyer.length, lawyer.length ? 'yellow' : '')}
-      ${metric('Брокеру', broker.length, broker.length ? 'yellow' : '')}
-      ${metric('Готовы к задатку', summary.ready_for_deposit ?? readyDeposit.length, 'green')}
-      ${metric('Рабочие / демо', `${realDeals.length} / ${demoDeals.length}`)}
-    </div>
+    <section class="hero"><h1>Рабочий стол v2</h1><p>${roleIntro(role)}</p></section>
+    ${loadWarning ? `<div class="status warn">${esc(loadWarning)}</div>` : ''}
+    <section class="kpi-row">
+      ${metric('Всего сделок', summary.total)}
+      ${metric('Готовы к задатку', summary.ready_for_deposit)}
+      ${metric('Готовы к сделке', summary.ready_for_deal)}
+      ${metric('Документы', summary.missing_documents, summary.missing_documents ? 'yellow' : 'green')}
+      ${metric('Открытые задачи', summary.open_tasks, summary.open_tasks ? 'yellow' : 'green')}
+    </section>
     <section class="grid">
       <div class="card"><h2>Профиль</h2><div class="list"><div class="list-item"><b>${esc(profile.full_name || 'Пользователь')}</b><span class="small">${esc(profile.email || '')}</span></div><div class="list-item"><b>Роль</b>${esc(roleName(role))}</div></div></div>
       <div class="card"><h2>Быстрые действия</h2><div class="actions" style="justify-content:flex-start">${quickActions(role)}</div></div>
@@ -212,11 +206,13 @@ async function load() {
   loadWarning = '';
   try {
     data = await rpc('nav_v2_get_dashboard', {}, 15000);
+    saveCachedProfile(data.profile);
     render();
   } catch (dashboardError) {
     try {
       const listData = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 15000);
       data = buildFallbackData(listData);
+      saveCachedProfile(data.profile);
       loadWarning = 'Полный рабочий стол не загрузился, включен запасной режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме не показываются.';
       render();
     } catch (fallbackError) {
