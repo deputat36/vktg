@@ -25,6 +25,34 @@ function isDemoDeal(deal) {
 
 function demoBadge(deal) { return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : ''; }
 
+function norm(value) {
+  return String(value || '').trim();
+}
+
+function findPersonNames(deal, side) {
+  const summary = deal?.deal_summary || {};
+  const snapshot = deal?.wizard_snapshot || {};
+  const sideData = snapshot?.[side] || snapshot?.[`${side}Info`] || {};
+  const keys = side === 'seller'
+    ? ['seller_last_name','seller_name','seller_fio','seller_full_name','seller']
+    : ['buyer_last_name','buyer_name','buyer_fio','buyer_full_name','buyer'];
+  const values = [];
+  for (const key of keys) {
+    values.push(deal?.[key], summary?.[key], sideData?.[key], snapshot?.[key]);
+  }
+  const first = values.map(norm).find(Boolean);
+  return first || '—';
+}
+
+function dealHeadline(deal) {
+  const address = norm(deal?.address) || 'Адрес не указан';
+  const seller = findPersonNames(deal, 'seller');
+  const buyer = findPersonNames(deal, 'buyer');
+  if (isLawyer()) return `Юридическая проверка: ${address} — ${seller} / ${buyer}`;
+  return `${address} — ${seller} / ${buyer}`;
+}
+
+
 function confirmDemoAction(actionText) {
   const deal = currentData?.deal;
   if (!isDemoDeal(deal)) return true;
@@ -201,7 +229,7 @@ function renderCard(data) {
   const tasks = list(data, 'tasks');
   const risks = list(data, 'risks');
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>${demoBadge(deal)}${isLawyer() ? 'Юридическая проверка: ' : ''}${esc(deal.title)}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
+    <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(deal))}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
     ${dealModePanel(deal)}
     ${isLawyer() ? legalPanel(data) : ''}
     <div class="kpi-row">
