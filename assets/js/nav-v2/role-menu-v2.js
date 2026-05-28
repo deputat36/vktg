@@ -1,35 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
-
-const SESSION_KEY = 'nav_session_v2';
-
-function session() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
-}
-
-function fetchWithTimeout(url, options = {}, timeout = 6000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
-}
-
-async function getProfile(timeout = 6000) {
-  const s = session();
-  if (!s?.access_token) return null;
-
-  const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/nav_v2_get_my_profile`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${s.access_token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({})
-  }, timeout);
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data?.profile || null;
-}
+import { clearCachedProfiles, getCachedProfile, getMyProfile, signOut } from './supabase-v2.js';
 
 function makeLink(active, id, href, title) {
   return `<a class="${active === id ? 'active' : ''}" href="${href}">${title}</a>`;
@@ -101,8 +70,9 @@ function buildMenu(role) {
 function bindLogout() {
   const logout = document.getElementById('navLogout');
   if (!logout) return;
-  logout.onclick = () => {
-    localStorage.removeItem(SESSION_KEY);
+  logout.onclick = async () => {
+    clearCachedProfiles();
+    await signOut();
     location.href = './nav-v2.html';
   };
 }
@@ -128,17 +98,22 @@ async function waitForMenu(timeout = 6000) {
   });
 }
 
-async function applyRoleMenu(menu, attempt = 1) {
+function renderProfileMenu(menu, profile) {
+  if (!profile?.role) return false;
+  menu.innerHTML = buildMenu(profile.role);
+  setBadge(profile);
+  bindLogout();
+  document.body.dataset.navRole = profile.role;
+  return true;
+}
+
+async function refreshRoleMenu(menu, attempt = 1) {
   try {
-    const profile = await getProfile(attempt < 3 ? 6000 : 12000);
-    if (!profile?.role) throw new Error('role not found');
-    menu.innerHTML = buildMenu(profile.role);
-    setBadge(profile);
-    bindLogout();
-    document.body.dataset.navRole = profile.role;
+    const profile = await getMyProfile({ refresh: true, timeout: attempt < 3 ? 6000 : 12000 });
+    if (!renderProfileMenu(menu, profile)) throw new Error('role not found');
   } catch (_) {
     if (attempt < 4) {
-      setTimeout(() => applyRoleMenu(menu, attempt + 1), attempt * 2500);
+      setTimeout(() => refreshRoleMenu(menu, attempt + 1), attempt * 2500);
     }
   }
 }
@@ -147,9 +122,12 @@ async function init() {
   const menu = await waitForMenu();
   if (!menu) return;
 
-  menu.innerHTML = safeMenu();
-  bindLogout();
-  applyRoleMenu(menu, 1);
+  const profile = getCachedProfile();
+  if (!renderProfileMenu(menu, profile)) {
+    menu.innerHTML = safeMenu();
+    bindLogout();
+  }
+  refreshRoleMenu(menu, 1);
 }
 
 init();

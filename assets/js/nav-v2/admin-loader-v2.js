@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
+import { setupTop, getCachedUser, getMyProfile, renderAuthBox, esc } from './supabase-v2.js';
 
 const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
@@ -51,8 +51,7 @@ async function init() {
   `;
 
   try {
-    const data = await rpc('nav_v2_get_my_profile', {}, 12000);
-    const profile = data?.profile || null;
+    const profile = await getMyProfile({ refresh: true, timeout: 12000 });
 
     if (!['owner', 'admin'].includes(profile?.role)) {
       return noAccess(profile);
