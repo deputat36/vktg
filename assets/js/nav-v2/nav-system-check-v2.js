@@ -114,7 +114,7 @@ function render() {
       <div class="section-title">
         <div>
           <h2>Результаты</h2>
-          <p class="muted">Проверки выполняются с учетом роли пользователя. Закрытые админ-разделы для неадминов не считаются ошибкой.</p>
+          <p class="muted">Проверки выполняются с учетом роли пользователя. Закрытые админ-разделы для неадминов считаются нормой.</p>
         </div>
         <button id="runCheck" class="btn primary" type="button">Запустить проверку</button>
       </div>
@@ -227,7 +227,7 @@ async function checkDeals() {
 
 async function checkTeam() {
   if (!['owner', 'admin'].includes(currentProfile?.role)) {
-    updateCheck('Команда', 'warn', 'Раздел команды закрыт для этой роли. Это нормально: управлять пользователями может только owner/admin.', `Текущая роль: ${currentProfile?.role || '—'}`);
+    updateCheck('Команда', 'ok', 'Раздел команды закрыт для этой роли. Это корректно: управлять пользователями может только owner/admin.', `Текущая роль: ${currentProfile?.role || '—'}`);
     return;
   }
   updateCheck('Команда', 'info', 'Проверяю список пользователей Навигатора...');
@@ -241,7 +241,7 @@ async function checkTeam() {
 
 async function checkEdgeFunction() {
   if (!['owner', 'admin'].includes(currentProfile?.role)) {
-    updateCheck('Edge Function доступа', 'warn', 'Создание ссылок доступа закрыто для этой роли. Это нормально.', `Текущая роль: ${currentProfile?.role || '—'}`);
+    updateCheck('Edge Function доступа', 'ok', 'Создание ссылок доступа закрыто для этой роли. Это корректно.', `Текущая роль: ${currentProfile?.role || '—'}`);
     return;
   }
   updateCheck('Edge Function доступа', 'info', 'Проверяю доступность nav-invite-user без создания пользователя...');
