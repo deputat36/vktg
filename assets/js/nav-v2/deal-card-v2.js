@@ -1,8 +1,10 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, money, riskPill, statusText } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, money, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let currentData = null;
 let currentProfile = null;
+let cardRequest = null;
+let reloadRequest = null;
 let activeTab = location.hash ? location.hash.replace('#', '') : 'overview';
 
 function list(data, key) { return Array.isArray(data?.[key]) ? data[key] : []; }
@@ -24,6 +26,96 @@ function isDemoDeal(deal) {
 }
 
 function demoBadge(deal) { return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : ''; }
+
+function norm(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function firstWord(value) {
+  const text = norm(value);
+  return text ? text.split(' ')[0].replace(/[.,;:]+$/g, '') : '';
+}
+
+function arr(value) { return Array.isArray(value) ? value : []; }
+
+function participantSources(data) {
+  const deal = data?.deal || {};
+  return [
+    data?.participants,
+    data?.deal_participants,
+    data?.dealParticipants,
+    deal.participants,
+    deal.deal_participants,
+    deal.dealParticipants,
+    deal.deal_summary?.participants,
+    deal.wizard_snapshot?.participants,
+    deal.deal_summary?.parties,
+    deal.wizard_snapshot?.parties
+  ];
+}
+
+function personName(item) {
+  if (typeof item === 'string') return item;
+  return item?.full_name || item?.fio || item?.name || item?.client_name || item?.participant_name || item?.title || '';
+}
+
+function side(item) {
+  return norm(item?.side || item?.role || item?.type || item?.participant_role).toLowerCase();
+}
+
+function participantRank(item) {
+  const s = side(item);
+  if (s.includes('seller') || s.includes('продав') || s.includes('owner') || s.includes('собствен')) return 1;
+  if (s.includes('buyer') || s.includes('покуп')) return 2;
+  return 3;
+}
+
+function participantSurnames(data) {
+  let people = [];
+  for (const source of participantSources(data)) {
+    if (arr(source).length) { people = arr(source); break; }
+  }
+  const seen = new Set();
+  return people
+    .slice()
+    .sort((a, b) => participantRank(a) - participantRank(b))
+    .map((item) => firstWord(personName(item)))
+    .filter((name) => {
+      const key = name.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function findPersonName(deal, sideName) {
+  const summary = deal?.deal_summary || {};
+  const snapshot = deal?.wizard_snapshot || {};
+  const sideData = snapshot?.[sideName] || snapshot?.[`${sideName}Info`] || {};
+  const keys = sideName === 'seller'
+    ? ['seller_last_name','seller_name','seller_fio','seller_full_name','seller']
+    : ['buyer_last_name','buyer_name','buyer_fio','buyer_full_name','buyer'];
+  for (const key of keys) {
+    const value = norm(deal?.[key] || summary?.[key] || sideData?.[key] || snapshot?.[key]);
+    if (value) return firstWord(value) || value;
+  }
+  return '';
+}
+
+function headlineAddress(data) {
+  const deal = data?.deal || {};
+  return norm(deal.address || deal.object_address || deal.property_address || deal.deal_summary?.address || deal.wizard_snapshot?.address) || 'Адрес не указан';
+}
+
+function dealHeadline(data) {
+  const deal = data?.deal || {};
+  const names = participantSurnames(data);
+  const seller = names[0] || findPersonName(deal, 'seller') || 'продавец';
+  const buyer = names[1] || findPersonName(deal, 'buyer') || 'покупатель';
+  const base = `${headlineAddress(data)} — ${seller} / ${buyer}`;
+  return isLawyer() ? `Юридическая проверка: ${base}` : base;
+}
+
 
 function confirmDemoAction(actionText) {
   const deal = currentData?.deal;
@@ -118,9 +210,13 @@ function legalPanel(data) {
   </section>`;
 }
 
+function docStatusClass(status) {
+  return status === 'received' || status === 'checked' ? 'green' : 'yellow';
+}
+
 function renderDocs(items) {
   if (!items.length) return '<div class="empty">Документы пока не сформированы.</div>';
-  return `<div class="list">${items.map((doc) => `<div class="list-item"><div class="doc-status"><div><b>${esc(doc.title)}</b><span class="small">${esc(doc.category)} / ${esc(doc.side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span></div><span class="pill ${doc.status === 'received' || doc.status === 'checked' ? 'green' : 'yellow'}">${esc(doc.status || 'needed')}</span></div><div class="actions" style="justify-content:flex-start"><button class="btn light" data-doc-status="received" data-doc-id="${doc.id}">Получен</button><button class="btn light" data-doc-status="checked" data-doc-id="${doc.id}">Проверен</button><button class="btn light" data-doc-status="needed" data-doc-id="${doc.id}">Нужен</button></div></div>`).join('')}</div>`;
+  return `<div class="list">${items.map((doc) => `<div class="list-item" data-doc-row="${esc(doc.id)}"><div class="doc-status"><div><b>${esc(doc.title)}</b><span class="small">${esc(doc.category)} / ${esc(doc.side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span></div><span class="pill ${docStatusClass(doc.status)}" data-doc-status-pill>${esc(doc.status || 'needed')}</span></div><div class="actions" style="justify-content:flex-start"><button class="btn light" type="button" data-doc-status="received" data-doc-id="${esc(doc.id)}">Получен</button><button class="btn light" type="button" data-doc-status="checked" data-doc-id="${esc(doc.id)}">Проверен</button><button class="btn light" type="button" data-doc-status="needed" data-doc-id="${esc(doc.id)}">Нужен</button><span class="small" data-doc-save-status aria-live="polite"></span></div></div>`).join('')}</div>`;
 }
 
 function renderRisks(items) {
@@ -201,7 +297,7 @@ function renderCard(data) {
   const tasks = list(data, 'tasks');
   const risks = list(data, 'risks');
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>${demoBadge(deal)}${isLawyer() ? 'Юридическая проверка: ' : ''}${esc(deal.title)}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
+    <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(data))}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
     ${dealModePanel(deal)}
     ${isLawyer() ? legalPanel(data) : ''}
     <div class="kpi-row">
@@ -222,6 +318,57 @@ function renderCard(data) {
   bindActions();
 }
 
+async function reloadAfterMutation() {
+  if (reloadRequest) return reloadRequest;
+  cardRequest = null;
+  currentData = null;
+  reloadRequest = load().finally(() => { reloadRequest = null; });
+  return reloadRequest;
+}
+
+function updateDocumentStatusLocal(docId, status, button) {
+  const doc = list(currentData, 'documents').find((item) => String(item.id) === String(docId));
+  if (doc) doc.status = status;
+
+  const row = button.closest('[data-doc-row]') || button.closest('.list-item');
+  const pill = row?.querySelector('[data-doc-status-pill]');
+  if (pill) {
+    pill.className = `pill ${docStatusClass(status)}`;
+    pill.textContent = status || 'needed';
+  }
+
+  const statusText = row?.querySelector('[data-doc-save-status]');
+  if (statusText) {
+    statusText.textContent = 'Сохранено';
+    window.setTimeout(() => {
+      if (statusText.textContent === 'Сохранено') statusText.textContent = '';
+    }, 1800);
+  }
+}
+
+async function saveDocumentStatus(button) {
+  const docId = button.dataset.docId;
+  const status = button.dataset.docStatus;
+  if (!docId || !status) return;
+  if (!confirmDemoAction('изменить статус документа')) return;
+
+  const row = button.closest('[data-doc-row]') || button.closest('.list-item');
+  const statusText = row?.querySelector('[data-doc-save-status]');
+  const buttons = row ? Array.from(row.querySelectorAll('[data-doc-id][data-doc-status]')) : [button];
+  buttons.forEach((item) => { item.disabled = true; });
+  if (statusText) statusText.textContent = 'Сохраняю...';
+
+  try {
+    await rpc('nav_v2_update_document_status', { p_document_id: docId, p_status: status });
+    updateDocumentStatusLocal(docId, status, button);
+  } catch (e) {
+    if (statusText) statusText.textContent = 'Ошибка: ' + e.message;
+    else setPageStatus('Ошибка документа: ' + e.message, 'error');
+  } finally {
+    buttons.forEach((item) => { item.disabled = false; });
+  }
+}
+
 async function runLegalAction(action) {
   const config = {
     checked: ['preparing_deal', 'Юрист: первичная юридическая проверка выполнена. Критичных замечаний по текущей информации нет. Можно продолжать подготовку сделки.'],
@@ -235,7 +382,7 @@ async function runLegalAction(action) {
     setPageStatus('Фиксирую юридическое действие...');
     await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: config[1], p_visibility: 'team' });
     await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: config[0] });
-    await load();
+    await reloadAfterMutation();
   } catch (e) { setPageStatus('Ошибка юридического действия: ' + e.message, 'error'); }
 }
 
@@ -245,23 +392,22 @@ function bindActions() {
   document.querySelectorAll('[data-legal-action]').forEach((btn) => btn.onclick = () => runLegalAction(btn.dataset.legalAction));
   document.querySelectorAll('[data-quick-status]').forEach((btn) => btn.onclick = async () => {
     if (!confirmDemoAction('изменить статус сделки')) return;
-    try { setPageStatus('Сохраняю быстрый статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: btn.dataset.quickStatus }); await load(); }
+    try { setPageStatus('Сохраняю быстрый статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: btn.dataset.quickStatus }); await reloadAfterMutation(); }
     catch (e) { setPageStatus('Ошибка быстрого действия: ' + e.message, 'error'); }
   });
   const statusBtn = document.getElementById('saveStatus');
   if (statusBtn) statusBtn.onclick = async () => {
     if (!confirmDemoAction('изменить статус сделки')) return;
-    try { setPageStatus('Сохраняю статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: document.getElementById('dealStatus').value }); await load(); }
+    try { setPageStatus('Сохраняю статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: document.getElementById('dealStatus').value }); await reloadAfterMutation(); }
     catch (e) { setPageStatus('Ошибка: ' + e.message, 'error'); }
   };
-  document.querySelectorAll('[data-doc-id]').forEach((btn) => btn.onclick = async () => {
-    if (!confirmDemoAction('изменить статус документа')) return;
-    try { setPageStatus('Обновляю документ...'); await rpc('nav_v2_update_document_status', { p_document_id: btn.dataset.docId, p_status: btn.dataset.docStatus }); await load(); }
-    catch (e) { setPageStatus('Ошибка документа: ' + e.message, 'error'); }
+  document.querySelectorAll('[data-doc-id][data-doc-status]').forEach((btn) => btn.onclick = (event) => {
+    event.preventDefault();
+    saveDocumentStatus(btn);
   });
   document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick = async () => {
     if (!confirmDemoAction('изменить статус задачи')) return;
-    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.dataset.taskStatus }); await load(); }
+    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.dataset.taskStatus }); await reloadAfterMutation(); }
     catch (e) { setPageStatus('Ошибка задачи: ' + e.message, 'error'); }
   });
   const add = document.getElementById('addComment');
@@ -269,7 +415,7 @@ function bindActions() {
     const body = document.getElementById('newComment').value.trim();
     if (!body) { setPageStatus('Комментарий пустой.', 'error'); return; }
     if (!confirmDemoAction('добавить комментарий')) return;
-    try { setPageStatus('Добавляю комментарий...'); await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: body, p_visibility: 'team' }); await load(); }
+    try { setPageStatus('Добавляю комментарий...'); await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: body, p_visibility: 'team' }); await reloadAfterMutation(); }
     catch (e) { setPageStatus('Ошибка комментария: ' + e.message, 'error'); }
   };
 }
@@ -278,15 +424,21 @@ async function load() {
   if (!dealId) { document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status error">Не указан id сделки.</div></main>'; return; }
   document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю карточку сделки...</div></main>';
   try {
-    const cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
-    if (!currentProfile) {
-      try { const profileData = await rpc('nav_v2_get_my_profile', {}, 12000); currentProfile = profileData.profile || null; } catch (_) { currentProfile = cardData.profile || null; }
-    }
+    if (!cardRequest) cardRequest = rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
+    const cardData = await cardRequest;
+    currentProfile = cardData.profile || currentProfile;
+    saveCachedProfile(currentProfile);
     if (isLawyer() && !location.hash && activeTab === 'overview') activeTab = 'risks';
     renderCard(cardData);
   }
-  catch (error) { document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`; }
+  catch (error) { cardRequest = null; document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`; }
 }
+
+
+window.addEventListener('hashchange', () => {
+  activeTab = location.hash ? location.hash.replace('#', '') : 'overview';
+  if (currentData) renderCard(currentData);
+});
 
 async function init() { setupTop('deals'); if (!getCachedUser()) return renderAuthBox(document.getElementById('app'), async () => location.reload()); await load(); }
 init();
