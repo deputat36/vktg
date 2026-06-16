@@ -105,6 +105,10 @@ async function parse(response) {
   return payload;
 }
 
+function accessPageUrl() {
+  return new URL('./nav-accept-invite-v2.html', window.location.href).href;
+}
+
 async function refreshSession() {
   const session = readSession();
   if (!session?.refresh_token) { writeSession(null); return null; }
@@ -128,6 +132,18 @@ export async function signIn(email, password) {
   const session = await parse(response);
   writeSession(session);
   return session.user;
+}
+
+export async function requestPasswordReset(email) {
+  const cleanEmail = String(email || '').trim();
+  if (!cleanEmail) throw new Error('Введите email, для которого нужно восстановить пароль.');
+  const response = await safeFetch(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(accessPageUrl())}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: cleanEmail })
+  }, 12000);
+  await parse(response);
+  return true;
 }
 
 export async function signOut() {
@@ -192,7 +208,7 @@ export function setupTop(active) {
 }
 
 export function renderAuthBox(target, onLogin) {
-  target.innerHTML = `<section class="card auth-card"><h2>Вход в Навигатор сделок</h2><p class="muted">Используется общий Supabase Auth, но роли проекта хранятся отдельно в nav_user_profiles.</p><div class="field"><label>Email</label><input id="navEmail" type="email" autocomplete="email" value="deputat36@gmail.com"></div><div class="field"><label>Пароль</label><input id="navPassword" type="password" autocomplete="current-password"></div><div id="authStatus" class="status">Введите логин и пароль.</div><button id="navLogin" class="btn primary" type="button">Войти</button></section>`;
+  target.innerHTML = `<section class="card auth-card"><h2>Вход в Навигатор сделок</h2><p class="muted">Используется общий Supabase Auth, но роли проекта хранятся отдельно в nav_user_profiles.</p><div class="field"><label>Email</label><input id="navEmail" type="email" autocomplete="email" value="deputat36@gmail.com"></div><div class="field"><label>Пароль</label><input id="navPassword" type="password" autocomplete="current-password"></div><div id="authStatus" class="status">Введите логин и пароль.</div><button id="navLogin" class="btn primary" type="button">Войти</button><button id="navForgot" class="btn light" type="button" style="margin-left:8px">Восстановить пароль</button></section>`;
   document.getElementById('navLogin').onclick = async () => {
     const status = document.getElementById('authStatus');
     try {
@@ -203,6 +219,19 @@ export function renderAuthBox(target, onLogin) {
     } catch (error) {
       const friendly = authErrorText(error);
       status.className = 'status error'; status.textContent = friendly.startsWith('Неверный') ? friendly : 'Ошибка входа: ' + friendly;
+    }
+  };
+  document.getElementById('navForgot').onclick = async () => {
+    const status = document.getElementById('authStatus');
+    const email = document.getElementById('navEmail').value.trim();
+    try {
+      status.className = 'status'; status.textContent = 'Отправляю ссылку для восстановления...';
+      await requestPasswordReset(email);
+      status.className = 'status ok';
+      status.textContent = 'Если этот email есть в системе, на него отправлена ссылка для установки нового пароля.';
+    } catch (error) {
+      status.className = 'status error';
+      status.textContent = 'Не удалось отправить ссылку: ' + authErrorText(error);
     }
   };
 }
