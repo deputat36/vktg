@@ -31,7 +31,7 @@ function decodeJwt(token) {
     const part = String(token || '').split('.')[1];
     if (!part) return null;
     const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+    return JSON.parse(deURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
   } catch (_) { return null; }
 }
 
@@ -166,12 +166,23 @@ export function navTop() {
 }
 
 export function setupTop(active) {
-  document.body.insertAdjacentHTML('afterbegin', navTop(active));
+  let top = document.querySelector('.nav-v2-top');
+  if (!top) {
+    document.body.insertAdjacentHTML('afterbegin', navTop(active));
+    top = document.querySelector('.nav-v2-top');
+  }
+
   const user = getCachedUser();
   const badge = document.getElementById('navUserBadge');
-  if (badge) badge.textContent = user?.email ? `Вход: ${user.email}` : 'Не авторизован';
+  if (badge && !document.body.dataset.navRole) {
+    badge.textContent = user?.email ? `Вход: ${user.email}` : 'Не авторизован';
+  }
+
   const out = document.getElementById('navLogout');
-  if (out) out.onclick = async () => { await signOut(); location.href = './nav-v2.html'; };
+  if (out && !out.dataset.bound) {
+    out.dataset.bound = '1';
+    out.onclick = async () => { await signOut(); location.href = './nav-v2.html'; };
+  }
 }
 
 export function renderAuthBox(target, onLogin) {
