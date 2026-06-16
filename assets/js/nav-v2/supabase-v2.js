@@ -31,7 +31,7 @@ function decodeJwt(token) {
     const part = String(token || '').split('.')[1];
     if (!part) return null;
     const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(deURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+    return JSON.parse(decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
   } catch (_) { return null; }
 }
 
