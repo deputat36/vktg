@@ -2,130 +2,133 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Навигатор сделки СПН</title>
-  <link rel="stylesheet" href="./assets/css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Генератор расклеек СПН — Этажи</title>
+  <meta name="description" content="Генератор печатных макетов для специалистов по недвижимости: куплю, продам, услуги, новостройки, аренда, личный бренд.">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/print.css" media="print">
 </head>
 <body>
-  <div class="wrap">
-    <header class="topbar">
-      <div>
-        <h1>Навигатор сделки СПН v7.4 stable</h1>
-        <p>Рабочая стабильная версия для подготовки сделок, Supabase, решений и задач.</p>
-        <div id="status" class="status">Загрузка...</div>
-      </div>
-      <div class="actions">
-        <button id="btnGenerate">Сформировать</button>
-        <button id="btnSelfCheck" class="orange">Самопроверка</button>
-        <button id="btnCopyLawyer" class="light">Копировать юристу</button>
-        <button id="btnExport" class="light">Скачать JSON</button>
-        <button id="btnRestore" class="light">Восстановить</button>
-      </div>
-    </header>
-    <main class="grid">
-      <aside class="panel left">
-        <section>
-          <h2>Быстрые сценарии</h2>
-          <div id="scenarios" class="scenario-grid"></div>
-          <p class="small">Если подходящего сценария нет — выберите ручное заполнение и заполните поля вручную.</p>
-        </section>
-        <section class="section">
-          <h2>Основное</h2>
-          <div class="row"><label>Режим<select id="mode"><option>Новичок</option><option>Опытный СПН</option></select></label><label>Этап<select id="stage"><option>Первичная подготовка до задатка</option><option>Задаток планируется</option><option>Задаток уже внесен</option><option>Сделка назначена</option><option>Сделка проблемная / нужен срочный разбор</option></select></label></div>
-          <div class="row"><label>Юрист<input id="lawyer"></label><label>Менеджер<select id="manager"></select></label></div>
-          <div class="row"><label>СПН продавца<select id="sellerSpn"></select></label><label>СПН покупателя<select id="buyerSpn"></select></label></div>
-          <div class="row"><label>Телефон продавца<input id="sellerPhone"></label><label>Телефон покупателя<input id="buyerPhone"></label></div>
-        </section>
-        <section class="section" id="partiesSection">
-          <h2>Стороны сделки</h2>
-          <div class="row">
-            <label>Количество продавцов<input id="sellerCount" placeholder="например: 1"></label>
-            <label>Количество покупателей<input id="buyerCount" placeholder="например: 1"></label>
-          </div>
-          <div class="row">
-            <label>Основной продавец / представитель<input id="sellerMainName" placeholder="ФИО или коротко"></label>
-            <label>Основной покупатель / представитель<input id="buyerMainName" placeholder="ФИО или коротко"></label>
-          </div>
-          <div class="row">
-            <label>Комментарий по стороне продавца<textarea id="sellerSideComment" placeholder="несовершеннолетние, доверенность, супруг, наследники, доли..."></textarea></label>
-            <label>Комментарий по стороне покупателя<textarea id="buyerSideComment" placeholder="ипотека, сертификаты, несколько покупателей, маткапитал..."></textarea></label>
-          </div>
-        </section>
-        <section class="section">
-          <h2>Объект</h2>
-          <label>Тип объекта<select id="objectType"><option>Квартира в многоквартирном доме</option><option>Квартира в частном секторе / часть дома по документам квартира</option><option>Комната</option><option>Жилой дом</option><option>Жилой дом + земельный участок</option><option>Часть жилого дома</option><option>Земельный участок без дома</option><option>Дача / садовый дом / СНТ</option><option>Коммерческая недвижимость</option><option>Новостройка / ДДУ</option><option>Уступка права требования</option></select></label>
-          <label>Форма права<select id="rightForm"><option>Весь объект целиком</option><option>Доля в праве на квартиру</option><option>Доля в праве на комнату</option><option>Доля в праве на жилой дом</option><option>Доля в праве на земельный участок</option><option>Доля в праве на дом и доля в праве на участок</option><option>Несколько объектов одним пакетом</option></select></label>
-          <label>Адрес<input id="address" placeholder="Борисоглебск, адрес объекта"></label>
-          <div class="row"><label>КН объекта<input id="cadObject"></label><label>КН земли<input id="cadLand"></label></div>
-          <div class="row"><label>Фактическая цена<input id="priceFact"></label><label>Цена в договоре<input id="priceContract"></label></div>
-          <label>Комментарий по цене<textarea id="priceComment"></textarea></label>
-          <label>Что остается<textarea id="included"></textarea></label>
-          <div class="row"><label>Что забирают<textarea id="excluded"></textarea></label><label>Освобождение / ключи<textarea id="releaseInfo"></textarea></label></div>
-        </section>
-        <section class="section" id="financeSection">
-          <h2>Финансы / комиссии / расходы</h2>
-          <h3>Комиссии</h3>
-          <div class="row">
-            <label>Комиссия со стороны продавца<input id="sellerRealtorCommission" placeholder="например: 59 000"></label>
-            <label>Комиссия со стороны покупателя<input id="buyerRealtorCommission" placeholder="например: 0 / 50 000"></label>
-          </div>
-          <div class="row">
-            <label>Комментарий по комиссии продавца<textarea id="sellerCommissionComment" placeholder="кто платит, когда, по какому договору"></textarea></label>
-            <label>Комментарий по комиссии покупателя<textarea id="buyerCommissionComment" placeholder="кто платит, когда, по какому договору"></textarea></label>
-          </div>
-          <div class="row">
-            <label>Общая комиссия офиса<input id="totalOfficeCommission" placeholder="сумма или формула"></label>
-            <label>Распределение комиссии<textarea id="commissionDistribution" placeholder="между СПН продавца/покупателя, офисом, партнерами"></textarea></label>
-          </div>
-          <h3>Расходы сделки</h3>
-          <div class="row">
-            <label>Кто оплачивает госпошлину<select id="registrationFeePayer"><option>Не указано</option><option>Покупатель</option><option>Продавец</option><option>50/50</option><option>По договоренности</option></select></label>
-            <label>Госпошлина за регистрацию права<input id="registrationFeeAmount" placeholder="4000"></label>
-          </div>
-          <div class="row">
-            <label>Госпошлина по земле<input id="landRegistrationFeeAmount" placeholder="700"></label>
-            <label>Оценка объекта<input id="evaluationCost" placeholder="квартира 3000–5000, дом 6000–9000"></label>
-          </div>
-          <div class="row">
-            <label>СБР / безопасные расчеты<input id="sbrCost" placeholder="Сбер сейчас 3400"></label>
-            <label>Нотариус<input id="notaryCost" placeholder="если требуется"></label>
-          </div>
-          <div class="row">
-            <label>Страховка / услуги банка<input id="bankInsuranceCost" placeholder="если ипотека"></label>
-            <label>Прочие расходы<input id="otherCosts" placeholder="курьер, доверенность, выписки..."></label>
-          </div>
-          <label>Комментарий по расходам<textarea id="costsComment" placeholder="что обязательно, от чего можно отказаться, что согласовать с клиентом"></textarea></label>
-        </section>
-        <section class="section">
-          <h2>Основания, расчет, особенности</h2>
-          <h3>Основания</h3><div id="basisBox"></div>
-          <h3>Расчет</h3><div id="paymentsBox"></div>
-          <h3>Сертификаты</h3><div id="certificatesBox"></div>
-          <label>Банк<select id="bankType"><option>Не выбран / не требуется</option><option>Сбер / Домклик</option><option>Другой банк</option><option>Наличный / безналичный расчет без банка</option></select></label>
-          <label>Комментарий банка / расчетов<textarea id="bankInfo"></textarea></label>
-          <h3>Особенности</h3><div id="flagsBox"></div>
-        </section>
-        <section class="section">
-          <h2>Документы</h2>
-          <label>ЕГРН с ЭЦП<select id="stEgrn"><option>не запрошено</option><option>запрошено</option><option>получено</option><option>проверено</option><option>не подходит / нужно исправить</option></select></label>
-          <label>Справка о зарегистрированных<select id="stRegistered"><option>не запрошено</option><option>запрошено</option><option>получено</option><option>проверено</option><option>не подходит / нужно исправить</option></select></label>
-          <label>Папка Яндекс Диска<textarea id="folderLink"></textarea></label>
-          <label>Вопросы юристу<textarea id="questions"></textarea></label>
-        </section>
-      </aside>
-      <section class="panel result">
-        <nav class="tabs"><button class="tab active" data-tab="summary">Сводка</button><button class="tab" data-tab="now">Что сейчас</button><button class="tab" data-tab="lawyerTab">Юристу</button><button class="tab" data-tab="broker">Брокеру</button><button class="tab" data-tab="docs">Документы</button><button class="tab" data-tab="client">Клиенту</button><button class="tab" data-tab="local">Борисоглебск</button></nav>
-        <div id="summary" class="tabpage active"></div><div id="now" class="tabpage"></div><div id="lawyerTab" class="tabpage"></div><div id="broker" class="tabpage"></div><div id="docs" class="tabpage"></div><div id="client" class="tabpage"></div><div id="local" class="tabpage"></div>
+  <div class="app" id="app">
+    <aside class="sidebar" aria-label="Настройки макета">
+      <header class="app-header">
+        <div class="logo-mark">Э</div>
+        <div>
+          <h1>Генератор расклеек</h1>
+          <p>Задача → шаблон → данные → печать</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="step-title"><span>1</span>Выберите задачу</div>
+        <div class="goal-grid" id="goalGrid"></div>
       </section>
+
+      <section class="card">
+        <div class="step-title"><span>2</span>Выберите шаблон</div>
+        <div class="toolbar-row">
+          <input id="templateSearch" type="search" placeholder="Поиск: куплю, дом, новостройка...">
+          <select id="templateDensityFilter">
+            <option value="all">Все</option>
+            <option value="airy">Полупустые</option>
+            <option value="normal">Обычные</option>
+            <option value="dense">Плотные</option>
+          </select>
+        </div>
+        <div class="template-list" id="templateList"></div>
+      </section>
+
+      <section class="card">
+        <div class="step-title"><span>3</span>Замените данные</div>
+        <div class="field-grid two">
+          <label>Имя СПН<input id="agentName" type="text" placeholder="Например: Алексей"></label>
+          <label>Телефон<input id="agentPhone" type="tel" placeholder="+7 ..."></label>
+        </div>
+        <label>Район / адрес / ЖК<input id="area" type="text" placeholder="Например: район Аэродромная, ЖК, улица"></label>
+        <div class="field-grid two">
+          <label>Тип объекта<input id="propertyType" type="text" placeholder="квартира, дом, участок"></label>
+          <label>Цена / бюджет<input id="price" type="text" placeholder="до 4 млн / 3 200 000 ₽"></label>
+        </div>
+        <label>Параметры<input id="params" type="text" placeholder="2-комн., 48 м², 3/5 эт."></label>
+        <label>Заголовок<textarea id="headline" rows="2"></textarea></label>
+        <label>Описание<textarea id="description" rows="4"></textarea></label>
+        <label>Преимущества<textarea id="benefits" rows="3" placeholder="Каждое преимущество с новой строки"></textarea></label>
+        <div class="quick-actions">
+          <button id="makeShortBtn" type="button">Сделать короче</button>
+          <button id="makeStrongerBtn" type="button">Усилить текст</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="step-title"><span>4</span>Фото и QR</div>
+        <div class="photo-mode-row" id="photoModeRow"></div>
+        <div class="field-grid two">
+          <label>Фото 1<input id="photoOne" type="file" accept="image/*"></label>
+          <label>Фото 2<input id="photoTwo" type="file" accept="image/*"></label>
+        </div>
+        <label>Ссылка для QR<input id="qrLink" type="url" placeholder="https://..."></label>
+        <label>Подпись QR<input id="qrCaption" type="text" placeholder="Смотреть объект / Написать"></label>
+      </section>
+
+      <section class="card">
+        <div class="step-title"><span>5</span>Печать</div>
+        <div class="preset-row" id="printPresetRow"></div>
+        <div class="field-grid two">
+          <label>Деление листа<select id="splitMode"><option value="auto">Автоматически</option><option value="horizontal">Горизонтально</option><option value="vertical">Вертикально</option><option value="grid">Сетка</option></select></label>
+          <label>Цветность<select id="colorMode"><option value="brand">Фирменный цвет</option><option value="economy">Экономный цвет</option><option value="bw">Чёрно-белый</option><option value="private">Частное без бренда</option></select></label>
+        </div>
+        <label class="check"><input id="tearOffs" type="checkbox"> Отрывные телефоны</label>
+        <div class="main-actions"><button class="primary" id="qualityBtn" type="button">Проверить</button><button class="primary dark" id="printBtn" type="button">Печать / PDF</button></div>
+      </section>
+
+      <details class="card advanced">
+        <summary>Гибкая настройка для опытных</summary>
+        <div class="field-grid two">
+          <label>Поля, мм<input id="pageMargin" type="number" min="2" max="18" step="1"></label>
+          <label>Зазор, мм<input id="pageGap" type="number" min="1" max="12" step="1"></label>
+          <label>Отступ, мм<input id="flyerPadding" type="number" min="2" max="12" step="1"></label>
+          <label>Скругление<input id="radius" type="number" min="0" max="30" step="1"></label>
+          <label>Заголовок<input id="headlineScale" type="range" min="0.75" max="1.45" step="0.05"></label>
+          <label>Телефон<input id="phoneScale" type="range" min="0.8" max="1.8" step="0.05"></label>
+        </div>
+        <div class="field-grid two">
+          <label>Плотность<select id="layoutDensity"><option value="auto">Авто</option><option value="airy">Больше воздуха</option><option value="normal">Обычная</option><option value="dense">Плотнее</option></select></label>
+          <label>Фото<select id="photoFit"><option value="cover">Обрезать красиво</option><option value="contain">Показать целиком</option></select></label>
+        </div>
+        <label class="check"><input id="showBrand" type="checkbox"> Логотип</label>
+        <label class="check"><input id="showBenefits" type="checkbox"> Преимущества</label>
+        <label class="check"><input id="showMeta" type="checkbox"> Параметры</label>
+      </details>
+
+      <section class="card">
+        <div class="quality-head"><div class="step-title"><span>✓</span>Контроль качества</div><strong id="qualityScore">—</strong></div>
+        <div id="qualityList" class="quality-list"></div>
+      </section>
+
+      <section class="card">
+        <div class="step-title"><span>↓</span>Сохранение</div>
+        <div class="quick-actions"><button id="saveLocalBtn" type="button">Сохранить</button><button id="loadLocalBtn" type="button">Загрузить</button><button id="downloadBtn" type="button">Скачать файл</button><button id="uploadBtn" type="button">Открыть файл</button></div>
+        <input id="uploadFile" type="file" accept="application/json" hidden>
+        <p class="muted">Сохранение в браузере — для этого компьютера. JSON — для переноса.</p>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <div class="preview-top">
+        <div><h2>Предпросмотр А4</h2><div id="previewStatus" class="preview-status"></div></div>
+        <div class="zoom-control"><button id="fitPreviewBtn" type="button">Вписать</button><input id="zoom" type="range" min="35" max="100" value="64"></div>
+      </div>
+      <div class="sheet-wrap"><div id="sheetScale" class="sheet-scale"><div id="printSheet" class="sheet"></div></div></div>
+      <div id="statusLine" class="status-line">Загрузка...</div>
     </main>
   </div>
-  <script type="module" src="./assets/js/app.js"></script>
-  <script type="module" src="./assets/js/integrations/financeRestore.js"></script>
-  <script type="module" src="./assets/js/integrations/auditAndPatches.js"></script>
-  <script type="module" src="./assets/js/integrations/cloudAutoPatch.js"></script>
-  <script type="module" src="./assets/js/integrations/reviewPanel.js"></script>
-  <script type="module" src="./assets/js/integrations/taskPanel.js"></script>
-  <script type="module" src="./assets/js/integrations/loginFix.js"></script>
-  <script type="module" src="./assets/js/integrations/testSuite.js"></script>
+
+  <dialog id="printDialog">
+    <h3>Перед печатью</h3>
+    <p>Выберите А4, масштаб 100%, поля минимальные или нет, фоновые изображения включить.</p>
+    <div class="main-actions"><button id="cancelPrintBtn" type="button">Вернуться</button><button class="primary dark" id="confirmPrintBtn" type="button">Печатать</button></div>
+  </dialog>
+
+  <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
