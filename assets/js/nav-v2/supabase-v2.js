@@ -3,6 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase
 const SESSION_KEY = 'nav_session_v2';
 const PROFILE_CACHE_KEY = 'nav_profile_v2';
 const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;
+const LAST_EMAIL_KEY = 'nav_last_email_v2';
 let profileRequest = null;
 
 function readSession() {
@@ -24,6 +25,11 @@ function writeSession(session) {
   } else {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
+}
+
+function rememberEmail(email) {
+  const clean = String(email || '').trim();
+  if (clean) localStorage.setItem(LAST_EMAIL_KEY, clean);
 }
 
 function decodeJwt(token) {
@@ -130,6 +136,7 @@ export async function signIn(email, password) {
     body: JSON.stringify({ email, password })
   });
   const session = await parse(response);
+  rememberEmail(email);
   writeSession(session);
   return session.user;
 }
@@ -143,6 +150,7 @@ export async function requestPasswordReset(email) {
     body: JSON.stringify({ email: cleanEmail })
   }, 12000);
   await parse(response);
+  rememberEmail(cleanEmail);
   return true;
 }
 
@@ -208,7 +216,8 @@ export function setupTop(active) {
 }
 
 export function renderAuthBox(target, onLogin) {
-  target.innerHTML = `<section class="card auth-card"><h2>Вход в Навигатор сделок</h2><p class="muted">Используется общий Supabase Auth, но роли проекта хранятся отдельно в nav_user_profiles.</p><div class="field"><label>Email</label><input id="navEmail" type="email" autocomplete="email" value="deputat36@gmail.com"></div><div class="field"><label>Пароль</label><input id="navPassword" type="password" autocomplete="current-password"></div><div id="authStatus" class="status">Введите логин и пароль.</div><button id="navLogin" class="btn primary" type="button">Войти</button><button id="navForgot" class="btn light" type="button" style="margin-left:8px">Восстановить пароль</button></section>`;
+  const lastEmail = esc(localStorage.getItem(LAST_EMAIL_KEY) || '');
+  target.innerHTML = `<section class="card auth-card"><h2>Вход в Навигатор сделок</h2><p class="muted">Используется общий Supabase Auth, но роли проекта хранятся отдельно в nav_user_profiles.</p><div class="field"><label>Email</label><input id="navEmail" type="email" autocomplete="email" value="${lastEmail}"></div><div class="field"><label>Пароль</label><input id="navPassword" type="password" autocomplete="current-password"></div><div id="authStatus" class="status">Введите логин и пароль.</div><button id="navLogin" class="btn primary" type="button">Войти</button><button id="navForgot" class="btn light" type="button" style="margin-left:8px">Восстановить пароль</button></section>`;
   document.getElementById('navLogin').onclick = async () => {
     const status = document.getElementById('authStatus');
     try {
