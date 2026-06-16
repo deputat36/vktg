@@ -70,6 +70,23 @@ function headers() {
   };
 }
 
+function authErrorText(error) {
+  const message = String(error?.message || error || '').trim();
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('invalid login credentials') ||
+    normalized.includes('invalid_credentials') ||
+    normalized.includes('invalid grant') ||
+    normalized.includes('invalid_grant')
+  ) {
+    return 'Неверный email или пароль.';
+  }
+  if (normalized.includes('email not confirmed')) {
+    return 'Email ещё не подтверждён. Откройте ссылку приглашения или восстановления пароля.';
+  }
+  return message || 'Не удалось войти. Проверьте email и пароль.';
+}
+
 async function safeFetch(url, options = {}, timeout = 20000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
@@ -84,7 +101,7 @@ async function parse(response) {
   const text = await response.text();
   let payload = null;
   try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = text; }
-  if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.error_description || `Ошибка Supabase ${response.status}: ${response.statusText || 'запрос не выполнен'}`);
+  if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.error_description || payload?.error || `Ошибка Supabase ${response.status}: ${response.statusText || 'запрос не выполнен'}`);
   return payload;
 }
 
@@ -184,7 +201,8 @@ export function renderAuthBox(target, onLogin) {
       status.className = 'status ok'; status.textContent = 'Вход выполнен.';
       await onLogin();
     } catch (error) {
-      status.className = 'status error'; status.textContent = 'Ошибка входа: ' + error.message;
+      const friendly = authErrorText(error);
+      status.className = 'status error'; status.textContent = friendly.startsWith('Неверный') ? friendly : 'Ошибка входа: ' + friendly;
     }
   };
 }
