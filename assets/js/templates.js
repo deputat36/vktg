@@ -1,0 +1,2 @@
+export async function loadTemplates(){const r=await fetch('data/templates.json',{cache:'no-store'});if(!r.ok)throw new Error('Не удалось загрузить шаблоны');return await r.json()}
+export function filterTemplates(templates,goal,query='',density='all'){const q=query.trim().toLowerCase();return templates.filter(t=>{const goalOk=t.goal===goal||t.goal==='all';const densityOk=density==='all'||t.density===density;const text=`${t.title} ${t.note} ${(t.tags||[]).join(' ')}`.toLowerCase();return goalOk&&densityOk&&(!q||text.includes(q))})}
