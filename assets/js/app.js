@@ -1,230 +1,25 @@
-import { $, downloadJson, copyText } from './core/utils.js';
-import { loadData, makeLabels } from './core/data.js';
-import { analyzeDeal } from './core/engine.js';
-import { saveDealLocal, restoreDealLocal } from './core/storage.js';
-import { renderInputs, getDeal, applyDealPatch, bindTabs } from './ui/form.js';
-import { createRenderer } from './ui/render.js';
-import {
-  isSupabaseConfigured,
-  getCurrentUser,
-  signInWithPassword,
-  signOut,
-  saveDealToSupabase,
-  listMyDeals
-} from './integrations/supabase.js';
-
-const state = {
-  data: null,
-  labels: {},
-  renderer: null,
-  cloudUser: null
-};
-
-function analyzeAndRender() {
-  const deal = getDeal();
-  const result = analyzeDeal(deal, state.data);
-  state.renderer.renderAll(result);
-  saveDealLocal(deal);
-  return result;
-}
-
-function buildLawyerText(result) {
-  const d = result.deal;
-  return `КАРТОЧКА СДЕЛКИ ДЛЯ ЮРИСТА\n\nЮрист: ${d.lawyer}\nМенеджер: ${d.manager}\nСПН продавца: ${d.sellerSpn} / ${d.sellerPhone || '—'}\nСПН покупателя: ${d.buyerSpn} / ${d.buyerPhone || '—'}\n\nОбъект: ${d.objectType} / ${d.rightForm}\nАдрес: ${d.address || '—'}\nКН объекта: ${d.cadObject || '—'}\nКН земли: ${d.cadLand || '—'}\n\nЦена факт: ${d.priceFact || '—'}\nЦена в договоре: ${d.priceContract || '—'}\n\nБанк: ${d.bankType}\nПапка: ${d.folderLink || '—'}\n\nСтоп-факторы:\n${result.stop.map((x) => '- ' + x).join('\n') || '—'}\n\nПредупреждения:\n${result.warn.map((x) => '- ' + x).join('\n') || '—'}\n\nВопросы СПН:\n${d.questions || '—'}`;
-}
-
-function buildCloudPanel() {
-  const header = document.querySelector('.topbar');
-  const actions = document.querySelector('.actions');
-  const panel = document.createElement('section');
-  panel.id = 'cloudPanel';
-  panel.className = 'panel';
-  panel.style.marginBottom = '14px';
-  panel.innerHTML = `
-    <div class="row">
-      <div>
-        <h2>Supabase</h2>
-        <div id="cloudStatus" class="status">Supabase не настроен. Локальный режим активен.</div>
-      </div>
-      <div>
-        <label>Email<input id="cloudEmail" type="email" autocomplete="username"></label>
-        <label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label>
-        <div class="actions" style="justify-content:flex-start;margin-top:8px">
-          <button id="btnCloudSignIn" class="green">Войти</button>
-          <button id="btnCloudSignOut" class="light" style="display:none">Выйти</button>
-        </div>
-      </div>
-    </div>
-  `;
-  header.insertAdjacentElement('afterend', panel);
-
-  const saveButton = document.createElement('button');
-  saveButton.id = 'btnSaveCloud';
-  saveButton.className = 'green';
-  saveButton.textContent = 'Сохранить в Supabase';
-  actions.appendChild(saveButton);
-
-  const listButton = document.createElement('button');
-  listButton.id = 'btnListCloud';
-  listButton.className = 'light';
-  listButton.textContent = 'Мои сделки';
-  actions.appendChild(listButton);
-
-  const cloudTabButton = document.createElement('button');
-  cloudTabButton.className = 'tab';
-  cloudTabButton.dataset.tab = 'cloudDeals';
-  cloudTabButton.textContent = 'Supabase';
-  document.querySelector('.tabs').appendChild(cloudTabButton);
-
-  const cloudPage = document.createElement('div');
-  cloudPage.id = 'cloudDeals';
-  cloudPage.className = 'tabpage';
-  cloudPage.innerHTML = '<h2>Supabase</h2><div class="box blue">После входа здесь появятся последние сохраненные сделки.</div><div id="cloudDealsList"></div>';
-  document.querySelector('.result').appendChild(cloudPage);
-}
-
-async function refreshCloudState() {
-  if (!isSupabaseConfigured()) return;
-  state.cloudUser = await getCurrentUser();
-  const status = $('cloudStatus');
-  const signedIn = Boolean(state.cloudUser);
-  status.textContent = signedIn ? `Вход выполнен: ${state.cloudUser.email}` : 'Supabase настроен. Войдите, чтобы сохранять сделки в базу.';
-  $('btnCloudSignIn').style.display = signedIn ? 'none' : '';
-  $('btnCloudSignOut').style.display = signedIn ? '' : 'none';
-}
-
-function renderCloudDeals(items) {
-  const target = $('cloudDealsList');
-  if (!target) return;
-  if (!items.length) {
-    target.innerHTML = '<div class="box grayBox">Сохраненных сделок пока нет.</div>';
-    return;
-  }
-  target.innerHTML = `
-    <div class="box blue">
-      <h3>Последние сделки</h3>
-      <table>
-        <tr><th>Дата</th><th>Название</th><th>Статус</th><th>Готовность</th></tr>
-        ${items.map((item) => `
-          <tr>
-            <td>${new Date(item.created_at).toLocaleString('ru-RU')}</td>
-            <td>${item.title || '—'}</td>
-            <td>${item.status || '—'}</td>
-            <td>${item.readiness_deposit || 0}%</td>
-          </tr>
-        `).join('')}
-      </table>
-    </div>
-  `;
-}
-
-function bindCloudEvents() {
-  if (!isSupabaseConfigured()) return;
-  buildCloudPanel();
-
-  $('btnCloudSignIn').onclick = async () => {
-    try {
-      await signInWithPassword($('cloudEmail').value.trim(), $('cloudPassword').value);
-      await refreshCloudState();
-      alert('Вход выполнен');
-    } catch (error) {
-      alert('Ошибка входа: ' + error.message);
-    }
-  };
-
-  $('btnCloudSignOut').onclick = async () => {
-    try {
-      await signOut();
-      await refreshCloudState();
-      alert('Вы вышли из Supabase');
-    } catch (error) {
-      alert('Ошибка выхода: ' + error.message);
-    }
-  };
-
-  $('btnSaveCloud').onclick = async () => {
-    try {
-      const saved = await saveDealToSupabase(analyzeAndRender());
-      alert('Сделка сохранена: ' + saved.title);
-    } catch (error) {
-      alert('Ошибка сохранения: ' + error.message);
-    }
-  };
-
-  $('btnListCloud').onclick = async () => {
-    try {
-      renderCloudDeals(await listMyDeals());
-      document.querySelector('[data-tab="cloudDeals"]').click();
-    } catch (error) {
-      alert('Ошибка загрузки сделок: ' + error.message);
-    }
-  };
-}
-
-function bindEvents() {
-  document.querySelectorAll('input,select,textarea').forEach((element) => {
-    element.addEventListener('input', analyzeAndRender);
-    element.addEventListener('change', analyzeAndRender);
-  });
-
-  bindTabs();
-
-  $('scenarios').onclick = (event) => {
-    const button = event.target.closest('[data-scenario]');
-    if (!button) return;
-    const scenario = state.data.scenarios.find((item) => item.id === button.dataset.scenario);
-    if (!scenario) return;
-    if (scenario.id === 'manual') {
-      $('status').textContent = 'Ручное заполнение: все поля доступны.';
-      return;
-    }
-    applyDealPatch(scenario.patch || {});
-    $('status').textContent = 'Загружена заготовка: ' + scenario.title;
-    analyzeAndRender();
-  };
-
-  $('btnGenerate').onclick = analyzeAndRender;
-
-  $('btnSelfCheck').onclick = () => {
-    const scenario = state.data.scenarios.find((item) => item.id === 'share_house_land') || state.data.scenarios[1];
-    applyDealPatch(scenario.patch || {});
-    analyzeAndRender();
-    $('status').textContent = 'Самопроверка выполнена.';
-  };
-
-  $('btnCopyLawyer').onclick = () => copyText(buildLawyerText(analyzeAndRender()));
-
-  $('btnExport').onclick = () => downloadJson('deal_export_v7.json', getDeal());
-
-  $('btnRestore').onclick = () => {
-    const saved = restoreDealLocal();
-    if (!saved) {
-      alert('Сохранение не найдено');
-      return;
-    }
-    applyDealPatch(saved);
-    analyzeAndRender();
-    $('status').textContent = 'Локальное сохранение восстановлено.';
-  };
-}
-
-async function boot() {
-  state.data = await loadData();
-  state.labels = makeLabels(state.data);
-  state.renderer = createRenderer(state.labels, state.data.client_messages, state.data.local_borisoglebsk);
-
-  renderInputs(state.data);
-  bindEvents();
-  bindCloudEvents();
-  bindTabs();
-  analyzeAndRender();
-  await refreshCloudState();
-  $('status').textContent = isSupabaseConfigured()
-    ? 'Готов к работе. Модульная версия v7.2, Supabase подключаемый.'
-    : 'Готов к работе. Модульная версия v7.2, локальный режим.';
-}
-
-boot().catch((error) => {
-  console.error(error);
-  $('status').textContent = 'Ошибка: ' + error.message;
-});
+import{goals,photoModes,printPresets,cloneDefaultState}from'./state.js';import{$,esc,readFileAsDataURL,downloadText,debounce}from'./utils.js';import{loadTemplates,filterTemplates}from'./templates.js';import{applyCss,renderSheet,getGrid}from'./render.js';import{checkQuality}from'./quality.js';import{autoSave,saveNamed,loadNamed,loadAutoSave}from'./storage.js';
+let state=cloneDefaultState(),templates=[],lastQuality=null;const debouncedSave=debounce(()=>autoSave(state),500);const fields=['agentName','agentPhone','area','propertyType','price','params','headline','description','benefits','qrLink','qrCaption','splitMode','colorMode','pageMargin','pageGap','flyerPadding','radius','headlineScale','phoneScale','layoutDensity','photoFit'];const checks=['tearOffs','showBrand','showBenefits','showMeta'];
+async function init(){bind();renderGoals();renderPhotoModes();renderPrintPresets();templates=await loadTemplates();const saved=loadAutoSave();if(saved&&saved.version===state.version)state={...state,...saved};if(!state.templateId){const first=templates.find(t=>t.goal===state.goal)||templates[0];applyTemplate(first)}else syncForm();renderAll();status('Готово. Выберите задачу и шаблон.')}
+function bind(){fields.forEach(id=>{$(id).addEventListener('input',readFormAndRender);$(id).addEventListener('change',readFormAndRender)});checks.forEach(id=>$(id).addEventListener('change',readFormAndRender));$('templateSearch').addEventListener('input',renderTemplates);$('templateDensityFilter').addEventListener('change',renderTemplates);$('photoOne').addEventListener('change',async e=>{state.photoOne=await readFileAsDataURL(e.target.files[0]);if(state.photoMode==='none')state.photoMode='one';syncForm();renderAll()});$('photoTwo').addEventListener('change',async e=>{state.photoTwo=await readFileAsDataURL(e.target.files[0]);state.photoMode='two';syncForm();renderAll()});$('qualityBtn').onclick=()=>runQuality(true);$('printBtn').onclick=printFlow;$('cancelPrintBtn').onclick=()=>$('printDialog').close();$('confirmPrintBtn').onclick=()=>{$('printDialog').close();setTimeout(()=>window.print(),80)};$('fitPreviewBtn').onclick=()=>{$('zoom').value=64;zoom()};$('zoom').oninput=zoom;$('makeShortBtn').onclick=()=>{state.description=shorten(state.description,190);syncForm();renderAll()};$('makeStrongerBtn').onclick=strengthen;$('saveLocalBtn').onclick=()=>{saveNamed(state);status('Макет сохранён в этом браузере.')};$('loadLocalBtn').onclick=()=>{const s=loadNamed();if(s){state={...state,...s};syncForm();renderAll();status('Макет загружен.')}else status('Сохранённый макет не найден.')};$('downloadBtn').onclick=()=>downloadText(`etagi-raskleyka-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(state,null,2));$('uploadBtn').onclick=()=>$('uploadFile').click();$('uploadFile').onchange=loadFromFile}
+function renderGoals(){$('goalGrid').innerHTML=goals.map(g=>`<button type="button" class="goal-btn" data-goal="${g.id}"><b>${esc(g.title)}</b><span>${esc(g.hint)}</span></button>`).join('');$('goalGrid').querySelectorAll('[data-goal]').forEach(b=>b.onclick=()=>{state.goal=b.dataset.goal;const t=filterTemplates(templates,state.goal)[0];if(t)applyTemplate(t);renderAll()})}
+function renderPhotoModes(){$('photoModeRow').innerHTML=photoModes.map(m=>`<button type="button" data-photo="${m.id}">${esc(m.title)}</button>`).join('');$('photoModeRow').querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{state.photoMode=b.dataset.photo;if(state.photoMode==='none'){state.photoOne='';state.photoTwo=''}renderAll()})}
+function renderPrintPresets(){$('printPresetRow').innerHTML=printPresets.map(p=>`<button type="button" data-count="${p.count}">${esc(p.title)}</button>`).join('');$('printPresetRow').querySelectorAll('[data-count]').forEach(b=>b.onclick=()=>{state.printCount=+b.dataset.count;renderAll()})}
+function renderTemplates(){const list=filterTemplates(templates,state.goal,$('templateSearch').value,$('templateDensityFilter').value);$('templateList').innerHTML=list.length?list.map(card).join(''):'<div class="empty">Под эту задачу ничего не найдено</div>';$('templateList').querySelectorAll('[data-template]').forEach(el=>el.onclick=()=>{applyTemplate(templates.find(x=>x.id===el.dataset.template));renderAll()})}
+function card(t){const cls=t.photo==='two'?'two-photo':(t.photo&&t.photo!=='none'?'has-photo':'');return`<div class="tpl-card ${state.templateId===t.id?'active':''}" data-template="${t.id}"><div class="tpl-mini ${cls}"><div class="mh"></div><div class="ml"></div><div class="ml"></div><div class="mp"></div></div><div><b>${esc(t.title)}</b><p>${esc(t.note||'')}</p><div class="badges">${(t.tags||[]).slice(0,5).map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div></div></div>`}
+function applyTemplate(t){if(!t)return;state={...state,...t.data,goal:t.goal,templateId:t.id};state.photoMode=t.photo||state.photoMode||'none';if(t.printCount)state.printCount=t.printCount;if(t.density)state.layoutDensity=t.density;syncForm()}
+function syncForm(){fields.forEach(id=>{if($(id))$(id).value=state[id]??''});checks.forEach(id=>{if($(id))$(id).checked=!!state[id]});document.querySelectorAll('[data-goal]').forEach(b=>b.classList.toggle('active',b.dataset.goal===state.goal));document.querySelectorAll('[data-photo]').forEach(b=>b.classList.toggle('active',b.dataset.photo===state.photoMode));document.querySelectorAll('[data-count]').forEach(b=>b.classList.toggle('active',+b.dataset.count===+state.printCount))}
+function readFormAndRender(){fields.forEach(id=>state[id]=($(id).type==='number'||$(id).type==='range')?+$(id).value:$(id).value);checks.forEach(id=>state[id]=$(id).checked);renderAll()}
+function renderAll(){syncForm();applyCss(state);renderTemplates();const grid=renderSheet($('printSheet'),state);preview(grid);debouncedSave();setTimeout(()=>runQuality(false),90);zoom()}
+function preview(grid=getGrid(state.printCount,state.splitMode)){const photo=state.photoMode==='none'?'без фото':state.photoMode==='two'?'2 фото':'с фото';const color=state.colorMode==='private'?'частное':state.colorMode==='bw'?'ч/б':'цвет';const sc=lastQuality?.score;$('previewStatus').innerHTML=`<span class="stat">${state.printCount} на А4</span><span class="stat">${grid.label}</span><span class="stat">${photo}</span><span class="stat">${color}</span>${sc?`<span class="stat ${sc>=80?'good':sc<60?'warn':''}">качество ${sc}/100</span>`:''}`}
+function runQuality(show){lastQuality=checkQuality(state,$('printSheet'));$('qualityScore').textContent=`${lastQuality.score}/100`;$('qualityScore').className=lastQuality.score>=80?'score-good':lastQuality.score>=60?'score-mid':'score-bad';$('qualityList').innerHTML=lastQuality.issues.length?lastQuality.issues.map(issueHtml).join(''):'<div class="qitem tip"><b>Макет готов</b>Критичных замечаний нет. Проверьте телефон и печатайте.</div>';$('qualityList').querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>fix(b.dataset.fix));preview();if(show)status(lastQuality.issues.length?'Есть замечания. Исправьте важные перед печатью.':'Проверка пройдена.');return lastQuality}
+function issueHtml(i){const l={phone:'Ввести телефон',bigPhone:'Увеличить телефон',shortHeadline:'Сократить заголовок',shortDesc:'Сократить описание',noPhoto:'Убрать фото',onePhoto:'Оставить 1 фото',twoOnPage:'Сделать 2 на А4',autoFix:'Исправить автоматически'};return`<div class="qitem ${i.level}"><b>${esc(i.title)}</b>${esc(i.text)}${l[i.action]?`<br><button type="button" data-fix="${i.action}">${l[i.action]}</button>`:''}</div>`}
+function fix(a){if(a==='phone')$('agentPhone').focus();if(a==='bigPhone')state.phoneScale=1.45;if(a==='shortHeadline')state.headline=shorten(state.headline,44);if(a==='shortDesc')state.description=shorten(state.description,190);if(a==='noPhoto')state.photoMode='none';if(a==='onePhoto')state.photoMode='one';if(a==='twoOnPage')state.printCount=2;if(a==='autoFix')autoFix();renderAll()}
+function autoFix(){if(+state.printCount>=4&&state.description.length>220)state.description=shorten(state.description,190);if(+state.printCount>=6&&state.photoMode!=='none')state.printCount=2;if(state.phoneScale<1.3)state.phoneScale=1.35}
+function strengthen(){if(!state.description)return;if(!/позвон|напишите|подскажу/i.test(state.description))state.description+=' Позвоните — подскажу детали и помогу разобраться.';if(!state.benefits)state.benefits='Безопасное сопровождение\nПомощь с документами\nКонсультация по цене';syncForm();renderAll()}
+function shorten(t,max){const s=String(t||'').trim();return s.length<=max?s:s.slice(0,max-3).replace(/[\s,.;:!-]+$/,'')+'...'}
+function printFlow(){const q=runQuality(true);if(q.issues.some(i=>i.level==='error')){status('Есть критичные ошибки. Исправьте перед печатью.');return}$('printDialog').showModal()}
+function zoom(){$('sheetScale').style.transform=`scale(${$('zoom').value/100})`}
+function status(t){$('statusLine').textContent=t}
+function loadFromFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state={...state,...JSON.parse(r.result)};syncForm();renderAll();status('Файл макета открыт.')}catch(e){status('Не удалось открыть файл.')}};r.readAsText(f)}
+document.addEventListener('DOMContentLoaded',init);
