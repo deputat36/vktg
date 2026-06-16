@@ -38,7 +38,8 @@ function noAccess(profile) {
 }
 
 async function init() {
-  setupTop('admin');
+  // The access page module renders its own top bar. Avoid drawing it twice there.
+  if (page !== 'access') setupTop('admin');
 
   if (!getCachedUser()) {
     return renderAuthBox(app, async () => location.reload());
