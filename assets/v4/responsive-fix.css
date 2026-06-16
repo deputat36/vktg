@@ -1,7 +1,4 @@
-/*
-  CRM v4 responsive-fix
-  Цель: остановить растягивание экрана широкими таблицами и сделать CRM удобной на ноутбуке/планшете/телефоне.
-*/
+/* CRM v4 responsive-fix: убирает горизонтальное расползание и делает широкие таблицы прокручиваемыми внутри карточек. */
 
 html,
 body{
@@ -144,39 +141,6 @@ button{
   border-radius:16px;
 }
 
-.v4-catalog-section:not(.is-open) .v4-catalog-inner,
-.v4-catalog-section:not(.is-open) .v4-catalog-filters,
-.v4-catalog-section:not(.is-open) .v4-catalog-create,
-.v4-catalog-section:not(.is-open) .v4-catalog-history,
-.v4-catalog-section:not(.is-open) .v4-catalog-table-wrap,
-.v4-catalog-section:not(.is-open) .v4-lead-stats{
-  display:none !important;
-}
-
-.v4-section-toggle{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  border:1px solid var(--line,#cbd5e1);
-  border-radius:12px;
-  background:#fff;
-  color:#0f172a;
-  padding:10px 12px;
-  font-weight:900;
-  cursor:pointer;
-}
-
-.v4-catalog-section.is-open .v4-section-toggle::after{
-  content:'▲';
-  font-size:11px;
-}
-
-.v4-catalog-section:not(.is-open) .v4-section-toggle::after{
-  content:'▼';
-  font-size:11px;
-}
-
 .v4-saved-calc-card{
   min-width:0;
 }
@@ -306,13 +270,5 @@ button{
     font-size:12px;
     font-weight:900;
     border-bottom:1px solid var(--line,#e2e8f0);
-  }
-
-  .v4-catalog-section:not(.is-open){
-    padding:12px !important;
-  }
-
-  .v4-section-toggle{
-    width:100%;
   }
 }
