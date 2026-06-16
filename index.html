@@ -3,132 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Генератор расклеек СПН — Этажи</title>
-  <meta name="description" content="Генератор печатных макетов для специалистов по недвижимости: куплю, продам, услуги, новостройки, аренда, личный бренд.">
-  <link rel="stylesheet" href="assets/css/app.css">
-  <link rel="stylesheet" href="assets/css/print.css" media="print">
+  <title>CRM Навигатор сделок v2</title>
+  <meta name="description" content="CRM Навигатор сделок v2">
+  <script>
+    (function () {
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+      var authPayload = (search + hash).indexOf('access_token=') !== -1
+        || (search + hash).indexOf('refresh_token=') !== -1
+        || (search + hash).indexOf('token_hash=') !== -1
+        || (search + hash).indexOf('token=') !== -1
+        || (search + hash).indexOf('type=recovery') !== -1
+        || (search + hash).indexOf('type=invite') !== -1;
+      var page = authPayload ? 'nav-accept-invite-v2.html' : 'nav-v2.html';
+      window.location.replace('./' + page + search + hash);
+    })();
+  </script>
 </head>
 <body>
-  <div class="app" id="app">
-    <aside class="sidebar" aria-label="Настройки макета">
-      <header class="app-header">
-        <div class="logo-mark">Э</div>
-        <div>
-          <h1>Генератор расклеек</h1>
-          <p>Задача → шаблон → данные → печать</p>
-        </div>
-      </header>
-
-      <section class="card">
-        <div class="step-title"><span>1</span>Выберите задачу</div>
-        <div class="goal-grid" id="goalGrid"></div>
-      </section>
-
-      <section class="card">
-        <div class="step-title"><span>2</span>Выберите шаблон</div>
-        <div class="toolbar-row">
-          <input id="templateSearch" type="search" placeholder="Поиск: куплю, дом, новостройка...">
-          <select id="templateDensityFilter">
-            <option value="all">Все</option>
-            <option value="airy">Полупустые</option>
-            <option value="normal">Обычные</option>
-            <option value="dense">Плотные</option>
-          </select>
-        </div>
-        <div class="template-list" id="templateList"></div>
-      </section>
-
-      <section class="card">
-        <div class="step-title"><span>3</span>Замените данные</div>
-        <div class="field-grid two">
-          <label>Имя СПН<input id="agentName" type="text" placeholder="Например: Алексей"></label>
-          <label>Телефон<input id="agentPhone" type="tel" placeholder="+7 ..."></label>
-        </div>
-        <label>Район / адрес / ЖК<input id="area" type="text" placeholder="Например: район Аэродромная, ЖК, улица"></label>
-        <div class="field-grid two">
-          <label>Тип объекта<input id="propertyType" type="text" placeholder="квартира, дом, участок"></label>
-          <label>Цена / бюджет<input id="price" type="text" placeholder="до 4 млн / 3 200 000 ₽"></label>
-        </div>
-        <label>Параметры<input id="params" type="text" placeholder="2-комн., 48 м², 3/5 эт."></label>
-        <label>Заголовок<textarea id="headline" rows="2"></textarea></label>
-        <label>Описание<textarea id="description" rows="4"></textarea></label>
-        <label>Преимущества<textarea id="benefits" rows="3" placeholder="Каждое преимущество с новой строки"></textarea></label>
-        <div class="quick-actions">
-          <button id="makeShortBtn" type="button">Сделать короче</button>
-          <button id="makeStrongerBtn" type="button">Усилить текст</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="step-title"><span>4</span>Фото и QR</div>
-        <div class="photo-mode-row" id="photoModeRow"></div>
-        <div class="field-grid two">
-          <label>Фото 1<input id="photoOne" type="file" accept="image/*"></label>
-          <label>Фото 2<input id="photoTwo" type="file" accept="image/*"></label>
-        </div>
-        <label>Ссылка для QR<input id="qrLink" type="url" placeholder="https://..."></label>
-        <label>Подпись QR<input id="qrCaption" type="text" placeholder="Смотреть объект / Написать"></label>
-      </section>
-
-      <section class="card">
-        <div class="step-title"><span>5</span>Печать</div>
-        <div class="preset-row" id="printPresetRow"></div>
-        <div class="field-grid two">
-          <label>Деление листа<select id="splitMode"><option value="auto">Автоматически</option><option value="horizontal">Горизонтально</option><option value="vertical">Вертикально</option><option value="grid">Сетка</option></select></label>
-          <label>Цветность<select id="colorMode"><option value="brand">Фирменный цвет</option><option value="economy">Экономный цвет</option><option value="bw">Чёрно-белый</option><option value="private">Частное без бренда</option></select></label>
-        </div>
-        <label class="check"><input id="tearOffs" type="checkbox"> Отрывные телефоны</label>
-        <div class="main-actions"><button class="primary" id="qualityBtn" type="button">Проверить</button><button class="primary dark" id="printBtn" type="button">Печать / PDF</button></div>
-      </section>
-
-      <details class="card advanced">
-        <summary>Гибкая настройка для опытных</summary>
-        <div class="field-grid two">
-          <label>Поля, мм<input id="pageMargin" type="number" min="2" max="18" step="1"></label>
-          <label>Зазор, мм<input id="pageGap" type="number" min="1" max="12" step="1"></label>
-          <label>Отступ, мм<input id="flyerPadding" type="number" min="2" max="12" step="1"></label>
-          <label>Скругление<input id="radius" type="number" min="0" max="30" step="1"></label>
-          <label>Заголовок<input id="headlineScale" type="range" min="0.75" max="1.45" step="0.05"></label>
-          <label>Телефон<input id="phoneScale" type="range" min="0.8" max="1.8" step="0.05"></label>
-        </div>
-        <div class="field-grid two">
-          <label>Плотность<select id="layoutDensity"><option value="auto">Авто</option><option value="airy">Больше воздуха</option><option value="normal">Обычная</option><option value="dense">Плотнее</option></select></label>
-          <label>Фото<select id="photoFit"><option value="cover">Обрезать красиво</option><option value="contain">Показать целиком</option></select></label>
-        </div>
-        <label class="check"><input id="showBrand" type="checkbox"> Логотип</label>
-        <label class="check"><input id="showBenefits" type="checkbox"> Преимущества</label>
-        <label class="check"><input id="showMeta" type="checkbox"> Параметры</label>
-      </details>
-
-      <section class="card">
-        <div class="quality-head"><div class="step-title"><span>✓</span>Контроль качества</div><strong id="qualityScore">—</strong></div>
-        <div id="qualityList" class="quality-list"></div>
-      </section>
-
-      <section class="card">
-        <div class="step-title"><span>↓</span>Сохранение</div>
-        <div class="quick-actions"><button id="saveLocalBtn" type="button">Сохранить</button><button id="loadLocalBtn" type="button">Загрузить</button><button id="downloadBtn" type="button">Скачать файл</button><button id="uploadBtn" type="button">Открыть файл</button></div>
-        <input id="uploadFile" type="file" accept="application/json" hidden>
-        <p class="muted">Сохранение в браузере — для этого компьютера. JSON — для переноса.</p>
-      </section>
-    </aside>
-
-    <main class="workspace">
-      <div class="preview-top">
-        <div><h2>Предпросмотр А4</h2><div id="previewStatus" class="preview-status"></div></div>
-        <div class="zoom-control"><button id="fitPreviewBtn" type="button">Вписать</button><input id="zoom" type="range" min="35" max="100" value="64"></div>
-      </div>
-      <div class="sheet-wrap"><div id="sheetScale" class="sheet-scale"><div id="printSheet" class="sheet"></div></div></div>
-      <div id="statusLine" class="status-line">Загрузка...</div>
-    </main>
-  </div>
-
-  <dialog id="printDialog">
-    <h3>Перед печатью</h3>
-    <p>Выберите А4, масштаб 100%, поля минимальные или нет, фоновые изображения включить.</p>
-    <div class="main-actions"><button id="cancelPrintBtn" type="button">Вернуться</button><button class="primary dark" id="confirmPrintBtn" type="button">Печатать</button></div>
-  </dialog>
-
-  <script type="module" src="assets/js/app.js"></script>
+  <p>Открываю CRM Навигатор сделок...</p>
+  <p><a href="./nav-v2.html">Перейти ко входу</a></p>
 </body>
 </html>
