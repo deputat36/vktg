@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260616-5';
+const CHECK_VERSION = '20260616-6';
 let checks = [];
 let currentProfile = null;
 let dashboardOk = false;
@@ -63,6 +63,21 @@ function checkIsOk(title) {
 
 function roleName(role) {
   return ({ owner: 'Владелец', admin: 'Администратор', manager: 'Менеджер', spn: 'СПН', lawyer: 'Юрист', broker: 'Брокер' })[role] || role || 'не определена';
+}
+
+function profileActivityText(profile, capital = false) {
+  if (profile?.is_active === true) return capital ? 'Активен' : 'активен';
+  if (profile?.is_active === false) return capital ? 'Выключен' : 'выключен';
+  return capital ? 'Статус не указан' : 'статус не указан';
+}
+
+function mergeProfile(profile) {
+  if (!profile) return currentProfile;
+  const cleanProfile = Object.fromEntries(
+    Object.entries(profile).filter(([, value]) => value !== undefined && value !== null)
+  );
+  currentProfile = { ...(currentProfile || {}), ...cleanProfile };
+  return currentProfile;
 }
 
 function roleActions() {
@@ -131,7 +146,7 @@ function renderManualSteps() {
 
 function reportText() {
   const profile = currentProfile
-    ? `${currentProfile.email || 'без email'} · ${roleName(currentProfile.role)} · ${currentProfile.is_active ? 'активен' : 'выключен'}`
+    ? `${currentProfile.email || 'без email'} · ${roleName(currentProfile.role)} · ${profileActivityText(currentProfile)}`
     : 'профиль не определён';
   const lines = [
     'CRM Навигатор сделок v2 — отчет диагностики',
@@ -199,7 +214,7 @@ function renderProfileCard() {
   return `<div class="list">
     <div class="list-item"><b>Email</b><p class="muted">${esc(currentProfile.email || '—')}</p></div>
     <div class="list-item"><b>Роль</b><p class="muted">${esc(roleName(currentProfile.role))} (${esc(currentProfile.role || '—')})</p></div>
-    <div class="list-item"><b>Статус</b><p class="muted">${currentProfile.is_active ? 'Активен' : 'Выключен'}</p></div>
+    <div class="list-item"><b>Статус</b><p class="muted">${profileActivityText(currentProfile, true)}</p></div>
   </div>`;
 }
 
@@ -311,7 +326,7 @@ async function checkAuth() {
   }
   const expMs = Number(jwt?.exp || 0) * 1000;
   const minutesLeft = Math.round((expMs - Date.now()) / 60000);
-  if (expMs && minutesLeft < 5) {
+  if (expMs && minutesLeft <= 5) {
     updateCheck('Вход в систему', 'warn', `Токен скоро истечет или уже истек. Осталось минут: ${minutesLeft}. Пробую обновить сессию.`, user.email || user.id);
     try {
       await refreshSessionIfNeeded();
@@ -330,7 +345,7 @@ async function checkDashboard() {
   try {
     const data = await rpc('nav_v2_get_dashboard', {}, 18000);
     dashboardOk = true;
-    if (data.profile) currentProfile = data.profile;
+    if (data.profile) mergeProfile(data.profile);
     updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
     dashboardOk = false;
@@ -342,12 +357,13 @@ async function checkProfile() {
   updateCheck('Профиль и роль', 'info', 'Проверяю текущий профиль...');
   try {
     const data = await rpc('nav_v2_get_my_profile', {}, 8000);
-    currentProfile = data.profile || currentProfile || null;
+    if (data.profile) mergeProfile(data.profile);
     if (!currentProfile) {
       updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', 'Профиль не найден прямым запросом.', dashboardOk ? 'Рабочий стол уже подтвердил доступ.' : '');
       return;
     }
-    updateCheck('Профиль и роль', currentProfile.is_active ? 'ok' : 'warn', `Роль: ${roleName(currentProfile.role)}. Статус: ${currentProfile.is_active ? 'активен' : 'выключен'}.`, currentProfile.email);
+    const isDisabled = currentProfile.is_active === false;
+    updateCheck('Профиль и роль', isDisabled ? 'warn' : 'ok', `Роль: ${roleName(currentProfile.role)}. Статус: ${profileActivityText(currentProfile)}.`, currentProfile.email);
   } catch (e) {
     if (currentProfile?.role) {
       updateCheck('Профиль и роль', 'warn', 'Прямой запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${roleName(currentProfile.role)}`);
@@ -361,7 +377,7 @@ async function checkDeals() {
   updateCheck('Список сделок', 'info', 'Проверяю nav_v2_get_deals_list...');
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 18000);
-    if (data.profile) currentProfile = data.profile;
+    if (data.profile) mergeProfile(data.profile);
     updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
     const status = dashboardOk ? 'warn' : 'error';
