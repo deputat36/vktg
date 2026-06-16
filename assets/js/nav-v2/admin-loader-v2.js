@@ -4,10 +4,10 @@ const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
 
 const scripts = {
-  admin: './admin-v2.js?v=20260526-8',
-  invite: './admin-invite-v2.js?v=20260526-8',
-  access: './nav-temp-password-v2.js?v=20260526-8',
-  audit: './nav-access-audit-v2.js?v=20260526-8'
+  admin: './admin-v2.js?v=20260616-4',
+  invite: './admin-invite-v2.js?v=20260616-4',
+  access: './nav-temp-password-v2.js?v=20260616-4',
+  audit: './nav-access-audit-v2.js?v=20260616-4'
 };
 
 function noAccess(profile) {
