@@ -1,4 +1,7 @@
-import { clearCachedProfiles, getCachedProfile, getMyProfile, signOut } from './supabase-v2.js';
+import { clearCachedProfiles, getCachedProfile, getCachedUser, getMyProfile, signOut } from './supabase-v2.js';
+
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+const USER_WAIT_TIMEOUT_MS = 15000;
 
 function makeLink(active, id, href, title) {
   return `<a class="${active === id ? 'active' : ''}" href="${href}">${title}</a>`;
@@ -80,22 +83,40 @@ function bindLogout() {
 function setBadge(profile) {
   const badge = document.getElementById('navUserBadge');
   if (!badge || !profile) return;
-
   const roleNames = { owner: 'владелец', admin: 'админ', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' };
   badge.textContent = `${profile.email || ''} · ${roleNames[profile.role] || profile.role || ''}`;
 }
 
-async function waitForMenu(timeout = 6000) {
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const timer = setInterval(() => {
-      const menu = document.querySelector('.nav-v2-menu');
-      if (menu || Date.now() - started > timeout) {
-        clearInterval(timer);
-        resolve(menu);
-      }
-    }, 50);
-  });
+function profileIsFresh(profile) {
+  return Boolean(
+    profile?.role &&
+    Number(profile.cached_at) > 0 &&
+    Date.now() - Number(profile.cached_at) < PROFILE_CACHE_TTL_MS
+  );
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForMenu(timeout = 2000) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    const menu = document.querySelector('.nav-v2-menu');
+    if (menu) return menu;
+    await sleep(50);
+  }
+  return document.querySelector('.nav-v2-menu');
+}
+
+async function waitForUser(timeout = USER_WAIT_TIMEOUT_MS) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    const user = getCachedUser();
+    if (user?.id) return user;
+    await sleep(100);
+  }
+  return null;
 }
 
 function renderProfileMenu(menu, profile) {
@@ -107,14 +128,13 @@ function renderProfileMenu(menu, profile) {
   return true;
 }
 
-async function refreshRoleMenu(menu, attempt = 1) {
+async function refreshRoleMenu(menu) {
+  if (!getCachedUser()?.id) return;
   try {
-    const profile = await getMyProfile({ refresh: true, timeout: attempt < 3 ? 6000 : 12000 });
-    if (!renderProfileMenu(menu, profile)) throw new Error('role not found');
+    const profile = await getMyProfile({ refresh: true, timeout: 5000 });
+    renderProfileMenu(menu, profile);
   } catch (_) {
-    if (attempt < 4) {
-      setTimeout(() => refreshRoleMenu(menu, attempt + 1), attempt * 2500);
-    }
+    // Без циклических повторов: основной экран продолжает работать с кешем.
   }
 }
 
@@ -122,13 +142,23 @@ async function init() {
   const menu = await waitForMenu();
   if (!menu) return;
 
-  const cachedProfile = getCachedProfile();
+  let cachedProfile = getCachedProfile();
   if (!renderProfileMenu(menu, cachedProfile)) {
     menu.innerHTML = safeMenu();
     bindLogout();
   }
 
-  refreshRoleMenu(menu, 1);
+  let user = getCachedUser();
+  if (!user?.id) user = await waitForUser();
+  if (!user?.id) return;
+
+  // Основной модуль страницы после входа обычно сам получает профиль.
+  // Даём ему короткое время заполнить общий кеш и не создаём второй запрос.
+  await sleep(100);
+  cachedProfile = getCachedProfile();
+
+  if (renderProfileMenu(menu, cachedProfile) && profileIsFresh(cachedProfile)) return;
+  await refreshRoleMenu(menu);
 }
 
 init();
