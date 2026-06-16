@@ -1,0 +1,318 @@
+/*
+  CRM v4 responsive-fix
+  Цель: остановить растягивание экрана широкими таблицами и сделать CRM удобной на ноутбуке/планшете/телефоне.
+*/
+
+html,
+body{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+.v4-shell{
+  width:100%;
+  max-width:1320px;
+  margin:0 auto;
+  padding-left:clamp(10px,2vw,24px);
+  padding-right:clamp(10px,2vw,24px);
+}
+
+.v4-workspace,
+.v4-card,
+.v4-subcard,
+.v4-lead-card-view,
+.v4-calculations-host,
+.v4-offers-host,
+.v4-orders-host,
+.v4-saved-calc-host,
+.v4-catalog-section{
+  min-width:0;
+  max-width:100%;
+}
+
+.v4-card,
+.v4-subcard{
+  overflow:hidden;
+}
+
+.v4-hero{
+  width:100%;
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(320px,420px);
+  gap:18px;
+}
+
+.v4-section-head,
+.v4-subcard-head,
+.v4-card-view-head,
+.v4-calc-wizard-head{
+  min-width:0;
+}
+
+.v4-section-head > div,
+.v4-subcard-head > div,
+.v4-card-view-head > div,
+.v4-calc-wizard-head > div{
+  min-width:0;
+}
+
+.v4-section-head h2,
+.v4-subcard-head h3,
+.v4-card-view-head h2,
+.v4-calc-wizard-head h4,
+.v4-saved-calc-title h4,
+.v4-calc-title-row h4{
+  overflow-wrap:anywhere;
+}
+
+.v4-form-grid,
+.v4-filters,
+.v4-detail-grid,
+.v4-profile-grid,
+.v4-lead-stats,
+.v4-catalog-create-grid,
+.v4-saved-calc-version-form{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+  gap:10px;
+  min-width:0;
+}
+
+.v4-form-grid label,
+.v4-filters label,
+.v4-catalog-create-grid label{
+  min-width:0;
+}
+
+input,
+select,
+textarea,
+button{
+  max-width:100%;
+}
+
+.v4-table-wrap,
+.v4-catalog-table-wrap{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+}
+
+.v4-table,
+.v4-catalog-table,
+.v4-saved-calc-table,
+.v4-saved-calc-edit-table,
+.v4-catalog-history-table{
+  width:max-content;
+  max-width:none;
+}
+
+.v4-table th,
+.v4-table td{
+  white-space:normal;
+}
+
+.v4-catalog-table th,
+.v4-catalog-table td,
+.v4-saved-calc-edit-table th,
+.v4-saved-calc-edit-table td{
+  white-space:nowrap;
+}
+
+.v4-catalog-table input,
+.v4-catalog-table select,
+.v4-saved-calc-edit-table input,
+.v4-saved-calc-edit-table select{
+  max-width:260px;
+}
+
+.v4-catalog-section,
+.v4-next-card{
+  margin-top:18px;
+}
+
+.v4-catalog-section .v4-table-wrap{
+  border-radius:16px;
+}
+
+.v4-catalog-section:not(.is-open) .v4-catalog-inner,
+.v4-catalog-section:not(.is-open) .v4-catalog-filters,
+.v4-catalog-section:not(.is-open) .v4-catalog-create,
+.v4-catalog-section:not(.is-open) .v4-catalog-history,
+.v4-catalog-section:not(.is-open) .v4-catalog-table-wrap,
+.v4-catalog-section:not(.is-open) .v4-lead-stats{
+  display:none !important;
+}
+
+.v4-section-toggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px solid var(--line,#cbd5e1);
+  border-radius:12px;
+  background:#fff;
+  color:#0f172a;
+  padding:10px 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.v4-catalog-section.is-open .v4-section-toggle::after{
+  content:'▲';
+  font-size:11px;
+}
+
+.v4-catalog-section:not(.is-open) .v4-section-toggle::after{
+  content:'▼';
+  font-size:11px;
+}
+
+.v4-saved-calc-card{
+  min-width:0;
+}
+
+.v4-saved-calc-actions,
+.v4-catalog-actions,
+.v4-card-view-actions,
+.v4-form-actions,
+.v4-quick-actions,
+.v4-mode-buttons,
+.v4-option-row{
+  min-width:0;
+  flex-wrap:wrap;
+}
+
+.v4-saved-calc-actions button,
+.v4-catalog-actions button,
+.v4-card-view-actions button,
+.v4-card-view-actions a,
+.v4-form-actions button,
+.v4-quick-actions button,
+.v4-mode-buttons button{
+  min-width:0;
+}
+
+.v4-estimate-lines,
+.v4-estimate-lines div,
+.v4-calc-live,
+.v4-calc-total-panel{
+  min-width:0;
+  max-width:100%;
+}
+
+.v4-estimate-lines b,
+.v4-estimate-lines span{
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:980px){
+  .v4-shell{
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  .v4-hero{
+    grid-template-columns:1fr;
+  }
+
+  .v4-auth-card{
+    max-width:100%;
+  }
+
+  .v4-section-head,
+  .v4-subcard-head,
+  .v4-card-view-head,
+  .v4-calc-wizard-head,
+  .v4-saved-calc-card{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:10px;
+  }
+
+  .v4-card-view-actions,
+  .v4-form-actions,
+  .v4-saved-calc-actions,
+  .v4-catalog-actions{
+    justify-content:stretch;
+  }
+
+  .v4-card-view-actions > *,
+  .v4-form-actions > *,
+  .v4-saved-calc-actions > *,
+  .v4-catalog-actions > *{
+    flex:1 1 auto;
+  }
+
+  .v4-workflow-guide{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+}
+
+@media(max-width:640px){
+  .v4-shell{
+    padding-left:8px;
+    padding-right:8px;
+  }
+
+  .v4-card,
+  .v4-subcard,
+  .v4-calc-form,
+  .v4-calc-auto-box,
+  .v4-catalog-history,
+  .v4-saved-calc-details{
+    border-radius:14px !important;
+    padding:12px !important;
+  }
+
+  .v4-hero h1,
+  .v4-card-view-head h2{
+    font-size:clamp(24px,8vw,34px);
+    line-height:1.05;
+  }
+
+  .v4-lead-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .v4-detail-grid,
+  .v4-profile-grid{
+    grid-template-columns:1fr;
+  }
+
+  .v4-workflow-guide{
+    grid-template-columns:1fr;
+  }
+
+  .v4-table-wrap::before{
+    content:'Таблицу можно прокрутить в сторону';
+    display:block;
+    position:sticky;
+    left:0;
+    padding:7px 10px;
+    background:#f8fafc;
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+    border-bottom:1px solid var(--line,#e2e8f0);
+  }
+
+  .v4-catalog-section:not(.is-open){
+    padding:12px !important;
+  }
+
+  .v4-section-toggle{
+    width:100%;
+  }
+}
