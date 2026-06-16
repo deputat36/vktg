@@ -2,9 +2,10 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260616-6';
+const CHECK_VERSION = '20260616-7';
 let checks = [];
 let currentProfile = null;
+let profileSources = {};
 let dashboardOk = false;
 let lastRunAt = null;
 
@@ -21,6 +22,50 @@ const STATIC_PAGES = [
 
 function session() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj || {}, key);
+}
+
+function mergeProfile(profile, source = '') {
+  if (!profile) return currentProfile;
+  const incoming = { ...profile };
+  if (source) profileSources[source] = incoming;
+
+  const previous = currentProfile || {};
+  const merged = { ...previous };
+  for (const [key, value] of Object.entries(incoming)) {
+    if (value !== undefined && value !== null) merged[key] = value;
+    else if (!hasOwn(merged, key)) merged[key] = value;
+  }
+
+  // Dashboard/deals RPC intentionally return a short profile without is_active.
+  // Do not let that partial profile overwrite the full access state from nav_v2_get_my_profile.
+  if (!hasOwn(incoming, 'is_active') && hasOwn(previous, 'is_active')) {
+    merged.is_active = previous.is_active;
+  }
+
+  currentProfile = merged;
+  return currentProfile;
+}
+
+function profileActivityText(profile = currentProfile, capital = false) {
+  if (!profile) return capital ? 'Не определён' : 'не определён';
+  if (profile.is_active === true) return capital ? 'Активен' : 'активен';
+  if (profile.is_active === false) return capital ? 'Выключен' : 'выключен';
+  return capital ? 'Статус активности не передан этим RPC' : 'статус активности не передан этим RPC';
+}
+
+function profileActivityStatus(profile = currentProfile) {
+  if (!profile) return 'error';
+  if (profile.is_active === true) return 'ok';
+  if (profile.is_active === false) return 'error';
+  return 'warn';
+}
+
+function sourceProfileLine([source, profile]) {
+  return `${source}: ${profile.email || 'без email'} · ${roleName(profile.role)} · ${profileActivityText(profile)}`;
 }
 
 function decodeJwt(token) {
@@ -63,21 +108,6 @@ function checkIsOk(title) {
 
 function roleName(role) {
   return ({ owner: 'Владелец', admin: 'Администратор', manager: 'Менеджер', spn: 'СПН', lawyer: 'Юрист', broker: 'Брокер' })[role] || role || 'не определена';
-}
-
-function profileActivityText(profile, capital = false) {
-  if (profile?.is_active === true) return capital ? 'Активен' : 'активен';
-  if (profile?.is_active === false) return capital ? 'Выключен' : 'выключен';
-  return capital ? 'Статус не указан' : 'статус не указан';
-}
-
-function mergeProfile(profile) {
-  if (!profile) return currentProfile;
-  const cleanProfile = Object.fromEntries(
-    Object.entries(profile).filter(([, value]) => value !== undefined && value !== null)
-  );
-  currentProfile = { ...(currentProfile || {}), ...cleanProfile };
-  return currentProfile;
 }
 
 function roleActions() {
@@ -148,11 +178,13 @@ function reportText() {
   const profile = currentProfile
     ? `${currentProfile.email || 'без email'} · ${roleName(currentProfile.role)} · ${profileActivityText(currentProfile)}`
     : 'профиль не определён';
+  const sourceLines = Object.entries(profileSources).map(sourceProfileLine);
   const lines = [
     'CRM Навигатор сделок v2 — отчет диагностики',
     `Версия проверки: ${CHECK_VERSION}`,
     `Время проверки: ${lastRunAt || 'не запускалась'}`,
     `Профиль: ${profile}`,
+    ...(sourceLines.length ? ['', 'Источники профиля:', ...sourceLines] : []),
     '',
     ...checks.map((item) => `${statusText(item.status)} — ${item.title}: ${item.details || ''}${item.meta ? ` (${item.meta})` : ''}`)
   ];
@@ -214,7 +246,7 @@ function renderProfileCard() {
   return `<div class="list">
     <div class="list-item"><b>Email</b><p class="muted">${esc(currentProfile.email || '—')}</p></div>
     <div class="list-item"><b>Роль</b><p class="muted">${esc(roleName(currentProfile.role))} (${esc(currentProfile.role || '—')})</p></div>
-    <div class="list-item"><b>Статус</b><p class="muted">${profileActivityText(currentProfile, true)}</p></div>
+    <div class="list-item"><b>Статус</b><p class="muted">${esc(profileActivityText(currentProfile, true))}</p></div>
   </div>`;
 }
 
@@ -345,7 +377,7 @@ async function checkDashboard() {
   try {
     const data = await rpc('nav_v2_get_dashboard', {}, 18000);
     dashboardOk = true;
-    if (data.profile) mergeProfile(data.profile);
+    mergeProfile(data.profile, 'nav_v2_get_dashboard');
     updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
     dashboardOk = false;
@@ -357,13 +389,13 @@ async function checkProfile() {
   updateCheck('Профиль и роль', 'info', 'Проверяю текущий профиль...');
   try {
     const data = await rpc('nav_v2_get_my_profile', {}, 8000);
-    if (data.profile) mergeProfile(data.profile);
+    mergeProfile(data.profile, 'nav_v2_get_my_profile');
     if (!currentProfile) {
       updateCheck('Профиль и роль', dashboardOk ? 'warn' : 'error', 'Профиль не найден прямым запросом.', dashboardOk ? 'Рабочий стол уже подтвердил доступ.' : '');
       return;
     }
-    const isDisabled = currentProfile.is_active === false;
-    updateCheck('Профиль и роль', isDisabled ? 'warn' : 'ok', `Роль: ${roleName(currentProfile.role)}. Статус: ${profileActivityText(currentProfile)}.`, currentProfile.email);
+    const status = profileActivityStatus(currentProfile);
+    updateCheck('Профиль и роль', status, `Роль: ${roleName(currentProfile.role)}. Статус: ${profileActivityText(currentProfile)}.`, currentProfile.email);
   } catch (e) {
     if (currentProfile?.role) {
       updateCheck('Профиль и роль', 'warn', 'Прямой запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${roleName(currentProfile.role)}`);
@@ -377,7 +409,7 @@ async function checkDeals() {
   updateCheck('Список сделок', 'info', 'Проверяю nav_v2_get_deals_list...');
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 20 }, 18000);
-    if (data.profile) mergeProfile(data.profile);
+    mergeProfile(data.profile, 'nav_v2_get_deals_list');
     updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
     const status = dashboardOk ? 'warn' : 'error';
@@ -386,6 +418,37 @@ async function checkDeals() {
       : e.message;
     updateCheck('Список сделок', status, details, e.message);
   }
+}
+
+function checkProfileConsistency() {
+  const sources = Object.entries(profileSources);
+  if (!sources.length) {
+    updateCheck('Согласованность профиля', 'error', 'Ни один RPC не вернул профиль пользователя.');
+    return;
+  }
+
+  const ids = new Set(sources.map(([, profile]) => profile.id).filter(Boolean));
+  const roles = new Set(sources.map(([, profile]) => profile.role).filter(Boolean));
+  const activeValues = sources
+    .filter(([, profile]) => hasOwn(profile, 'is_active'))
+    .map(([, profile]) => profile.is_active);
+
+  if (ids.size > 1 || roles.size > 1) {
+    updateCheck('Согласованность профиля', 'error', 'Разные RPC вернули разные id или роли профиля.', sources.map(sourceProfileLine).join('; '));
+    return;
+  }
+
+  if (activeValues.includes(false)) {
+    updateCheck('Согласованность профиля', 'error', 'Один из источников вернул выключенный профиль. Работу нужно остановить до проверки nav_user_profiles.', sources.map(sourceProfileLine).join('; '));
+    return;
+  }
+
+  if (!activeValues.length) {
+    updateCheck('Согласованность профиля', 'warn', 'Рабочие RPC вернули краткий профиль без is_active. Нужен nav_v2_get_my_profile для точной проверки активности.', sources.map(sourceProfileLine).join('; '));
+    return;
+  }
+
+  updateCheck('Согласованность профиля', 'ok', 'Профиль из разных RPC согласован. Статус активности взят из полного профиля nav_v2_get_my_profile.', sources.map(sourceProfileLine).join('; '));
 }
 
 async function checkStaticPages() {
@@ -446,6 +509,7 @@ async function checkEdgeFunction() {
 async function runAllChecks() {
   checks = [];
   currentProfile = null;
+  profileSources = {};
   dashboardOk = false;
   lastRunAt = new Date().toLocaleString('ru-RU');
   render();
@@ -457,6 +521,7 @@ async function runAllChecks() {
   await checkDashboard();
   await checkProfile();
   await checkDeals();
+  checkProfileConsistency();
   await checkStaticPages();
   await checkTeam();
   await checkEdgeFunction();
