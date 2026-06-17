@@ -74,6 +74,7 @@ function readinessHtml() {
       <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
       <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
       <button id="sendCardReworkComment" class="btn light" type="button">Сразу добавить комментарий</button>
+      <button id="returnSpnWithRework" class="btn red" type="button">Вернуть СПН на доработку</button>
     </div>
   </div>`;
 }
@@ -140,6 +141,25 @@ async function addReworkComment(button) {
   }
 }
 
+async function returnSpnToRework(button) {
+  const text = reworkText();
+  if (!text.trim()) return;
+  if (!confirm('Добавить список доработок в комментарии и перевести сделку в статус «Нужно дозаполнить»?')) return;
+  const defaultText = button.textContent;
+  try {
+    button.disabled = true;
+    button.textContent = 'Возвращаю...';
+    await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: text, p_visibility: 'team' }, 12000);
+    await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: 'need_info' }, 12000);
+    button.textContent = 'Возвращено СПН';
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    button.disabled = false;
+    button.textContent = defaultText;
+    alert('Не удалось вернуть на доработку: ' + e.message);
+  }
+}
+
 async function copyToClipboard(text, button, defaultText) {
   try {
     await navigator.clipboard.writeText(text);
@@ -186,6 +206,12 @@ function bindPanelActions() {
   if (sendRework && !sendRework.dataset.bound) {
     sendRework.dataset.bound = '1';
     sendRework.onclick = () => addReworkComment(sendRework);
+  }
+
+  const returnRework = document.getElementById('returnSpnWithRework');
+  if (returnRework && !returnRework.dataset.bound) {
+    returnRework.dataset.bound = '1';
+    returnRework.onclick = () => returnSpnToRework(returnRework);
   }
 
   const comments = document.getElementById('openCardComments');
