@@ -25,9 +25,45 @@ function panelHtml(text) {
     <textarea id="cardHandoffText" readonly style="min-height:220px">${esc(text)}</textarea>
     <div class="actions" style="justify-content:flex-start">
       <button id="copyCardHandoffText" class="btn primary" type="button">Скопировать текст</button>
-      <button class="btn light" data-tab-shortcut="comments" type="button">Открыть комментарии</button>
+      <button id="openCardComments" class="btn light" type="button">Открыть комментарии</button>
     </div>
   </section>`;
+}
+
+function openCommentsTab() {
+  const tab = document.querySelector('[data-tab="comments"]');
+  if (tab) {
+    tab.click();
+    setTimeout(() => document.querySelector('#addComment, #newComment')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    return;
+  }
+  location.hash = 'comments';
+  location.reload();
+}
+
+function bindPanelActions() {
+  const copy = document.getElementById('copyCardHandoffText');
+  if (copy && !copy.dataset.bound) {
+    copy.dataset.bound = '1';
+    copy.onclick = async () => {
+      const field = document.getElementById('cardHandoffText');
+      try {
+        await navigator.clipboard.writeText(handoffText);
+        copy.textContent = 'Скопировано';
+        setTimeout(() => copy.textContent = 'Скопировать текст', 1500);
+      } catch (_) {
+        if (field) { field.focus(); field.select(); }
+        copy.textContent = 'Выделено для копирования';
+        setTimeout(() => copy.textContent = 'Скопировать текст', 1800);
+      }
+    };
+  }
+
+  const comments = document.getElementById('openCardComments');
+  if (comments && !comments.dataset.bound) {
+    comments.dataset.bound = '1';
+    comments.onclick = openCommentsTab;
+  }
 }
 
 function placePanel() {
@@ -35,26 +71,16 @@ function placePanel() {
   const main = document.querySelector('main.nav-v2-shell');
   if (!main) return;
   const existing = document.getElementById('handoffTextPanel');
-  if (existing) return;
+  if (existing) {
+    bindPanelActions();
+    return;
+  }
 
   const rows = main.querySelectorAll(':scope > .kpi-row');
   const anchor = rows.length ? rows[rows.length - 1] : main.querySelector('.hero');
   if (!anchor) return;
   anchor.insertAdjacentHTML('afterend', panelHtml(handoffText));
-
-  const copy = document.getElementById('copyCardHandoffText');
-  if (copy) copy.onclick = async () => {
-    const field = document.getElementById('cardHandoffText');
-    try {
-      await navigator.clipboard.writeText(handoffText);
-      copy.textContent = 'Скопировано';
-      setTimeout(() => copy.textContent = 'Скопировать текст', 1500);
-    } catch (_) {
-      if (field) { field.focus(); field.select(); }
-      copy.textContent = 'Выделено для копирования';
-      setTimeout(() => copy.textContent = 'Скопировать текст', 1800);
-    }
-  };
+  bindPanelActions();
 }
 
 async function loadHandoffText() {
