@@ -3,12 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Приглашение сотрудника — Навигатор v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260616-4">
+  <meta http-equiv="refresh" content="0; url=./nav-access-v2.html">
+  <title>Переход к созданию доступа — CRM Навигатор сделок v2</title>
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-4">
 </head>
-<body class="nav-v2" data-admin-page="invite">
-  <div id="app"></div>
-  <script type="module" src="./assets/js/nav-v2/admin-loader-v2.js?v=20260616-4"></script>
-  <script type="module" src="./assets/js/nav-v2/role-menu-v2.js?v=20260616-4"></script>
+<body class="nav-v2">
+  <main class="nav-v2-shell">
+    <section class="hero">
+      <h1>Страница приглашения обновлена</h1>
+      <p>Теперь создание доступа сотруднику находится на единой странице «Создать доступ».</p>
+    </section>
+    <section class="card">
+      <p class="muted">Если переход не произошел автоматически, нажмите кнопку ниже.</p>
+      <div class="actions" style="justify-content:flex-start">
+        <a class="btn primary" href="./nav-access-v2.html">Перейти к созданию доступа</a>
+        <a class="btn light" href="./nav-v2.html">На стартовую</a>
+      </div>
+    </section>
+  </main>
+  <script>location.replace('./nav-access-v2.html');</script>
 </body>
 </html>
