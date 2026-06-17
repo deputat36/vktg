@@ -29,6 +29,10 @@ function readReadiness(cardData) {
   };
 }
 
+function hasRework() {
+  return Boolean(readiness && (readiness.blockers.length || readiness.missing.length));
+}
+
 function reworkText() {
   if (!readiness) return '';
   const lines = [
@@ -48,12 +52,25 @@ function reworkText() {
     readiness.missing.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
   }
 
-  if (!readiness.blockers.length && !readiness.missing.length) {
+  if (!hasRework()) {
     lines.push('', 'Ключевых пробелов по анкете СПН не найдено.');
+    return lines.join('\n');
   }
 
   lines.push('', 'После доработки обнови карточку и добавь комментарий, что именно исправлено.');
   return lines.join('\n');
+}
+
+function readinessActionsHtml() {
+  if (!hasRework()) {
+    return '<div class="status ok">По сохраненной анкете СПН нет пробелов для возврата на доработку.</div>';
+  }
+  return `<div class="actions" style="justify-content:flex-start">
+    <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
+    <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
+    <button id="sendCardReworkComment" class="btn light" type="button">Сразу добавить комментарий</button>
+    <button id="returnSpnWithRework" class="btn red" type="button">Вернуть СПН на доработку</button>
+  </div>`;
 }
 
 function readinessHtml() {
@@ -70,12 +87,7 @@ function readinessHtml() {
     </div>
     ${readiness.blockers.length ? `<div class="status error"><b>Стоп-вопросы:</b><br>${readiness.blockers.map((item) => `• ${esc(item)}`).join('<br>')}</div>` : '<div class="status ok">Стоп-вопросов по анкете СПН при сохранении не было.</div>'}
     ${readiness.missing.length ? `<div class="list"><div class="list-item"><b>Что СПН не дозаполнил:</b><p class="muted">${esc(readiness.missing.join(' / '))}</p></div></div>` : '<div class="list"><div class="list-item"><b>Ключевые поля анкеты были заполнены</b></div></div>'}
-    <div class="actions" style="justify-content:flex-start">
-      <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
-      <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
-      <button id="sendCardReworkComment" class="btn light" type="button">Сразу добавить комментарий</button>
-      <button id="returnSpnWithRework" class="btn red" type="button">Вернуть СПН на доработку</button>
-    </div>
+    ${readinessActionsHtml()}
   </div>`;
 }
 
@@ -125,7 +137,7 @@ function setCommentText(text) {
 
 async function addReworkComment(button) {
   const text = reworkText();
-  if (!text.trim()) return;
+  if (!hasRework() || !text.trim()) return;
   if (!confirm('Сразу добавить список доработок в комментарии к сделке?')) return;
   const defaultText = button.textContent;
   try {
@@ -143,7 +155,7 @@ async function addReworkComment(button) {
 
 async function returnSpnToRework(button) {
   const text = reworkText();
-  if (!text.trim()) return;
+  if (!hasRework() || !text.trim()) return;
   if (!confirm('Добавить список доработок в комментарии и перевести сделку в статус «Нужно дозаполнить»?')) return;
   const defaultText = button.textContent;
   try {
