@@ -1,8 +1,9 @@
-import { rpc, esc, getCachedUser } from './supabase-v2.js';
+import { rpc, esc, getCachedUser, getMyProfile } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let handoffText = '';
 let readiness = null;
+let userRole = '';
 let loaded = false;
 
 function snapshotOf(cardData) {
@@ -31,6 +32,10 @@ function readReadiness(cardData) {
 
 function hasRework() {
   return Boolean(readiness && (readiness.blockers.length || readiness.missing.length));
+}
+
+function canManageRework() {
+  return ['owner', 'admin', 'manager', 'lawyer'].includes(String(userRole || '').toLowerCase());
 }
 
 function reworkText() {
@@ -65,11 +70,14 @@ function readinessActionsHtml() {
   if (!hasRework()) {
     return '<div class="status ok">По сохраненной анкете СПН нет пробелов для возврата на доработку.</div>';
   }
-  return `<div class="actions" style="justify-content:flex-start">
-    <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
+  const managerActions = canManageRework() ? `
     <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
     <button id="sendCardReworkComment" class="btn light" type="button">Сразу добавить комментарий</button>
-    <button id="returnSpnWithRework" class="btn red" type="button">Вернуть СПН на доработку</button>
+    <button id="returnSpnWithRework" class="btn red" type="button">Вернуть СПН на доработку</button>` : '';
+  const roleNote = canManageRework() ? '' : '<div class="status warn">У вас есть список пробелов, но возврат СПН на доработку доступен только юристу, менеджеру, админу или владельцу.</div>';
+  return `${roleNote}<div class="actions" style="justify-content:flex-start">
+    <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
+    ${managerActions}
   </div>`;
 }
 
@@ -123,6 +131,7 @@ function openCommentsTab() {
 }
 
 function setCommentText(text) {
+  if (!canManageRework()) return;
   openCommentsTab();
   setTimeout(() => {
     const field = document.getElementById('newComment');
@@ -137,7 +146,7 @@ function setCommentText(text) {
 
 async function addReworkComment(button) {
   const text = reworkText();
-  if (!hasRework() || !text.trim()) return;
+  if (!canManageRework() || !hasRework() || !text.trim()) return;
   if (!confirm('Сразу добавить список доработок в комментарии к сделке?')) return;
   const defaultText = button.textContent;
   try {
@@ -155,7 +164,7 @@ async function addReworkComment(button) {
 
 async function returnSpnToRework(button) {
   const text = reworkText();
-  if (!hasRework() || !text.trim()) return;
+  if (!canManageRework() || !hasRework() || !text.trim()) return;
   if (!confirm('Добавить список доработок в комментарии и перевести сделку в статус «Нужно дозаполнить»?')) return;
   const defaultText = button.textContent;
   try {
@@ -254,7 +263,11 @@ async function loadHandoffText() {
   if (loaded || !dealId || !getCachedUser()) return;
   loaded = true;
   try {
-    const cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000);
+    const [cardData, profile] = await Promise.all([
+      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000),
+      getMyProfile({ timeout: 6000 }).catch(() => null)
+    ]);
+    userRole = profile?.role || '';
     handoffText = readHandoffText(cardData);
     readiness = readReadiness(cardData);
     placePanel();
