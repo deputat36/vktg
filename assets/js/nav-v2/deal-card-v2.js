@@ -372,7 +372,7 @@ function bindActions() {
   });
   document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick = async () => {
     if (!confirmDemoAction('изменить статус задачи')) return;
-    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.datasetTaskId, p_status: btn.dataset.taskStatus }); await load(); }
+    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.dataset.taskStatus }); await load(); }
     catch (e) { setPageStatus('Ошибка задачи: ' + e.message, 'error'); }
   });
   const add = document.getElementById('addComment');
