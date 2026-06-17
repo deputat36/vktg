@@ -13,16 +13,28 @@ function canSeeRecheckAlert() {
   return ['owner', 'admin', 'manager', 'lawyer'].includes(String(userRole || '').toLowerCase());
 }
 
-function latestSubmitEvent() {
-  return list(cardData, 'events')
-    .filter((event) => event.event_type === 'spn_rework_submitted')
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
+function timeOf(item) {
+  return new Date(item?.created_at || 0).getTime() || 0;
 }
 
-function latestSubmitComment() {
+function importantCycleEvents() {
+  return list(cardData, 'events')
+    .filter((event) => ['spn_rework_submitted', 'returned_to_spn_rework', 'status_changed'].includes(event.event_type))
+    .sort((a, b) => timeOf(b) - timeOf(a));
+}
+
+function latestSubmitEvent() {
+  const latestCycleEvent = importantCycleEvents()[0] || null;
+  if (latestCycleEvent?.event_type !== 'spn_rework_submitted') return null;
+  return latestCycleEvent;
+}
+
+function latestSubmitComment(event) {
+  const eventTime = timeOf(event);
   return list(cardData, 'comments')
-    .filter((comment) => /повторно проверить|доработан|доработана|исправлен|исправлено/i.test(String(comment.body || '')))
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
+    .filter((comment) => timeOf(comment) >= eventTime)
+    .filter((comment) => /повторно проверить|доработан|доработана|исправлен|исправлено|заявка доработана/i.test(String(comment.body || '')))
+    .sort((a, b) => timeOf(b) - timeOf(a))[0] || null;
 }
 
 function openTab(tabName) {
@@ -48,7 +60,7 @@ function alertHtml(event, comment) {
       <span class="pill green">повторная проверка</span>
     </div>
     ${eventDate ? `<div class="status ok">Событие зафиксировано: ${esc(eventDate)}</div>` : ''}
-    ${commentText ? `<div class="list"><div class="list-item"><b>Комментарий СПН:</b><p class="muted">${esc(commentText)}</p></div></div>` : '<div class="status warn">Комментарий СПН не найден в последних комментариях. Проверьте вкладку «Комментарии».</div>'}
+    ${commentText ? `<div class="list"><div class="list-item"><b>Комментарий СПН:</b><p class="muted">${esc(commentText)}</p></div></div>` : '<div class="status warn">Комментарий СПН не найден после события повторной отправки. Проверьте вкладку «Комментарии».</div>'}
     <div class="actions" style="justify-content:flex-start">
       <button id="openRecheckComments" class="btn light" type="button">Открыть комментарии</button>
       <button id="openRecheckHistory" class="btn light" type="button">Открыть историю</button>
@@ -74,7 +86,8 @@ function bindAlertActions() {
   if (copy && !copy.dataset.bound) {
     copy.dataset.bound = '1';
     copy.onclick = async () => {
-      const text = String(latestSubmitComment()?.body || '').trim() || 'Заявка доработана. Прошу повторно проверить.';
+      const event = latestSubmitEvent();
+      const text = String(latestSubmitComment(event)?.body || '').trim() || 'Заявка доработана. Прошу повторно проверить.';
       try {
         await navigator.clipboard.writeText(text);
         copy.textContent = 'Скопировано';
@@ -96,7 +109,7 @@ function placeAlert() {
   if (!main) return;
   if (!document.getElementById('spnRecheckAlert')) {
     const anchor = document.getElementById('spnReworkTopAlert') || main.querySelector('.hero') || main.firstElementChild;
-    if (anchor) anchor.insertAdjacentHTML('afterend', alertHtml(event, latestSubmitComment()));
+    if (anchor) anchor.insertAdjacentHTML('afterend', alertHtml(event, latestSubmitComment(event)));
   }
   bindAlertActions();
 }
