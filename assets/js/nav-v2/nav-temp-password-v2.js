@@ -51,6 +51,20 @@ function setStatus(text, type = 'info') {
   if (el) { el.className = 'status ' + type; el.textContent = text; }
 }
 
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    setStatus('Ссылка скопирована. Откройте ее в инкогнито или отправьте сотруднику.', 'ok');
+  } catch (_) {
+    const field = document.getElementById('safeAccessLink');
+    if (field) {
+      field.focus();
+      field.select();
+    }
+    setStatus('Не удалось скопировать автоматически. Ссылка выделена — скопируйте ее вручную.', 'warn');
+  }
+}
+
 function render() {
   const user = getCachedUser();
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
@@ -59,7 +73,7 @@ function render() {
       <p>Основной способ дать сотруднику доступ без зависимости от почты. CRM покажет безопасную ссылку на GitHub Pages, а не сырую ссылку Supabase.</p>
     </section>
     <section class="card auth-card">
-      <h2>Одноразовая ссылка доступа</h2>
+      <h2>Ссылка доступа</h2>
       <p class="muted">Сотрудник откроет ссылку, задаст пароль и попадет в Навигатор. Роль хранится только в nav_user_profiles.</p>
       <div class="status ok">Вход выполнен: ${esc(user?.email || '')}</div>
       <div class="field"><label>Email сотрудника</label><input id="email" type="email" placeholder="user@example.ru"></div>
@@ -119,7 +133,7 @@ async function createAccessLink() {
   };
 
   try {
-    setStatus('Создаю одноразовую ссылку доступа...');
+    setStatus('Создаю ссылку доступа...');
     document.getElementById('result').innerHTML = '';
     let response = await callAccessLink(payload);
     if (response.status === 401 || response.status === 403) {
@@ -128,19 +142,23 @@ async function createAccessLink() {
       response = await callAccessLink(payload);
     }
     const data = await parseResponse(response);
-    if (!data.action_link) throw new Error('Supabase не вернул ссылку доступа. Попробуйте отправить обычное приглашение.');
+    if (!data.action_link) throw new Error('Supabase не вернул ссылку доступа. Попробуйте создать новую ссылку позже.');
     const safeLink = makeSafeAccessLink(data.action_link);
-    setStatus('Ссылка доступа создана. Скопируйте безопасную ссылку и передайте сотруднику.', 'ok');
+    setStatus('Ссылка доступа создана. Скопируйте ее и откройте в инкогнито для теста.', 'ok');
     document.getElementById('result').innerHTML = `<div class="card" style="box-shadow:none;margin:14px 0;border:2px solid rgba(22,163,74,.25)">
-      <h3>Одноразовая ссылка доступа</h3>
+      <h3>Ссылка доступа</h3>
       <div class="list">
         <div class="list-item"><b>Email</b>${esc(data.email || payload.email)}</div>
         <div class="list-item"><b>Роль</b>${esc(data.role || payload.role)}</div>
-        <div class="list-item"><b>Безопасная ссылка для сотрудника</b><textarea readonly style="min-height:120px">${esc(safeLink)}</textarea></div>
+        <div class="list-item"><b>Безопасная ссылка для сотрудника</b><textarea id="safeAccessLink" readonly style="min-height:120px">${esc(safeLink)}</textarea></div>
       </div>
-      <div class="actions" style="justify-content:flex-start"><a class="btn primary" href="${esc(safeLink)}">Открыть безопасную ссылку</a></div>
-      <p class="muted">Эта ссылка ведет на страницу Навигатора. Сырая Supabase-ссылка скрыта, потому что может содержать localhost в redirect_to.</p>
+      <div class="status warn">Для теста не открывайте ссылку в обычной вкладке владельца. Скопируйте ее и откройте в инкогнито.</div>
+      <div class="actions" style="justify-content:flex-start">
+        <button id="copyAccessLink" class="btn primary" type="button">Скопировать ссылку</button>
+        <a class="btn light" href="${esc(safeLink)}" target="_blank" rel="noopener">Открыть в новой вкладке</a>
+      </div>
     </div>`;
+    document.getElementById('copyAccessLink').onclick = () => copyText(safeLink);
   } catch (error) {
     setStatus('Ошибка: ' + error.message, 'error');
   }
