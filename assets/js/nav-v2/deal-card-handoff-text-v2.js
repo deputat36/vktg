@@ -29,6 +29,33 @@ function readReadiness(cardData) {
   };
 }
 
+function reworkText() {
+  if (!readiness) return '';
+  const lines = [
+    'Что нужно доработать по заявке перед юристом/задатком',
+    '',
+    `Готовность к юристу: ${readiness.lawyer}%`,
+    `Готовность к задатку: ${readiness.deposit}%`
+  ];
+
+  if (readiness.blockers.length) {
+    lines.push('', 'Стоп-вопросы:');
+    readiness.blockers.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
+  }
+
+  if (readiness.missing.length) {
+    lines.push('', 'Что нужно дозаполнить:');
+    readiness.missing.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
+  }
+
+  if (!readiness.blockers.length && !readiness.missing.length) {
+    lines.push('', 'Ключевых пробелов по анкете СПН не найдено.');
+  }
+
+  lines.push('', 'После доработки обнови карточку и добавь комментарий, что именно исправлено.');
+  return lines.join('\n');
+}
+
 function readinessHtml() {
   if (!readiness) return '';
   const lawyerCls = readiness.lawyer >= 70 ? 'green' : 'yellow';
@@ -43,6 +70,9 @@ function readinessHtml() {
     </div>
     ${readiness.blockers.length ? `<div class="status error"><b>Стоп-вопросы:</b><br>${readiness.blockers.map((item) => `• ${esc(item)}`).join('<br>')}</div>` : '<div class="status ok">Стоп-вопросов по анкете СПН при сохранении не было.</div>'}
     ${readiness.missing.length ? `<div class="list"><div class="list-item"><b>Что СПН не дозаполнил:</b><p class="muted">${esc(readiness.missing.join(' / '))}</p></div></div>` : '<div class="list"><div class="list-item"><b>Ключевые поля анкеты были заполнены</b></div></div>'}
+    <div class="actions" style="justify-content:flex-start">
+      <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
+    </div>
   </div>`;
 }
 
@@ -77,12 +107,24 @@ function openCommentsTab() {
   location.reload();
 }
 
+async function copyToClipboard(text, button, defaultText) {
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = 'Скопировано';
+    setTimeout(() => button.textContent = defaultText, 1500);
+  } catch (_) {
+    button.textContent = 'Не удалось скопировать';
+    setTimeout(() => button.textContent = defaultText, 1800);
+  }
+}
+
 function bindPanelActions() {
   const copy = document.getElementById('copyCardHandoffText');
   if (copy && !copy.dataset.bound) {
     copy.dataset.bound = '1';
     copy.onclick = async () => {
       const field = document.getElementById('cardHandoffText');
+      if (!handoffText && field) handoffText = field.value;
       try {
         await navigator.clipboard.writeText(handoffText);
         copy.textContent = 'Скопировано';
@@ -93,6 +135,12 @@ function bindPanelActions() {
         setTimeout(() => copy.textContent = 'Скопировать текст', 1800);
       }
     };
+  }
+
+  const copyRework = document.getElementById('copyCardReworkList');
+  if (copyRework && !copyRework.dataset.bound) {
+    copyRework.dataset.bound = '1';
+    copyRework.onclick = () => copyToClipboard(reworkText(), copyRework, 'Скопировать список доработок');
   }
 
   const comments = document.getElementById('openCardComments');
