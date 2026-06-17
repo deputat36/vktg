@@ -140,6 +140,19 @@ function lawyerHandoffIssues(data) {
   return { issues, missingDocs, redRisks, urgentTasks, ok: issues.length === 0 };
 }
 
+function lawyerReturnText() {
+  const h = lawyerHandoffIssues(currentData);
+  const lines = ['Юрист: карточка возвращена СПН на доработку. Нужно уточнить данные, документы или условия сделки.'];
+  if (h.issues.length) {
+    lines.push('', 'Что доработать:');
+    h.issues.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
+  } else {
+    lines.push('', 'Комментарий юриста: требуется уточнить детали перед продолжением подготовки сделки.');
+  }
+  lines.push('', 'После исправления нажмите «Отправить на повторную проверку» в верхнем блоке карточки.');
+  return lines.join('\n');
+}
+
 function spnBeforeLawyerPanel(data) {
   if (isLawyer()) return '';
   const deal = data.deal;
@@ -306,9 +319,19 @@ async function runLegalAction(action) {
   const config = {
     checked: ['preparing_deal', 'Юрист: первичная юридическая проверка выполнена. Критичных замечаний по текущей информации нет. Можно продолжать подготовку сделки.'],
     need_documents: ['need_documents', 'Юрист: для продолжения проверки нужны дополнительные документы. СПН необходимо дозапросить пакет документов и обновить карточку сделки.'],
-    stop_factor: ['need_lawyer', 'Юрист: выявлен юридический стоп-фактор. До устранения замечаний нельзя переводить сделку к задатку/основной сделке.'],
-    return_spn: ['need_info', 'Юрист: карточка возвращена СПН на доработку. Нужно уточнить данные, документы или условия сделки.']
+    stop_factor: ['need_lawyer', 'Юрист: выявлен юридический стоп-фактор. До устранения замечаний нельзя переводить сделку к задатку/основной сделке.']
   }[action];
+
+  if (action === 'return_spn') {
+    if (!confirmDemoAction('вернуть СПН на доработку')) return;
+    try {
+      setPageStatus('Возвращаю СПН на доработку...');
+      await rpc('nav_v2_return_spn_rework', { p_deal_id: dealId, p_body: lawyerReturnText() }, 12000);
+      await load();
+    } catch (e) { setPageStatus('Ошибка возврата СПН: ' + e.message, 'error'); }
+    return;
+  }
+
   if (!config) return;
   if (!confirmDemoAction('зафиксировать юридическое действие')) return;
   try {
