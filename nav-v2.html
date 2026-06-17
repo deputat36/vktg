@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CRM Навигатор сделок v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-2">
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
@@ -13,7 +13,9 @@
       <p>Стартовая страница для тестирования новой версии. Здесь собраны основные разделы без лишних переходов.</p>
     </section>
 
-    <section class="grid three">
+    <div id="startAuthHost"></div>
+
+    <section class="grid three" style="margin-top:18px">
       <a class="deal-card" href="./dashboard-v2.html">
         <div class="deal-title">Рабочий стол</div>
         <p class="muted">Контроль сделок, задач, рисков, юриста, брокера, расходов и расчетов.</p>
@@ -38,29 +40,30 @@
         <span class="btn primary">Управлять</span>
       </a>
 
-      <a class="deal-card" href="./admin-invite-v2.html">
-        <div class="deal-title">Пригласить сотрудника</div>
-        <p class="muted">Безопасное приглашение по email через nav-invite-user без хранения паролей на сайте.</p>
-        <span class="btn green">Пригласить</span>
+      <a class="deal-card" href="./nav-access-v2.html">
+        <div class="deal-title">Создать доступ</div>
+        <p class="muted">Создание ссылки доступа или письма для нового сотрудника через nav-invite-user.</p>
+        <span class="btn green">Создать</span>
       </a>
 
-      <a class="deal-card" href="./index.html">
-        <div class="deal-title">Старая версия</div>
-        <p class="muted">Переход к прежней версии для сравнения интерфейса и логики.</p>
-        <span class="btn light">Открыть</span>
+      <a class="deal-card" href="./nav-system-check-v2.html">
+        <div class="deal-title">Проверка системы</div>
+        <p class="muted">Диагностика входа, роли, Supabase, страниц и Edge Function доступа.</p>
+        <span class="btn light">Проверить</span>
       </a>
     </section>
 
     <section class="card" style="margin-top:18px">
       <h2>Что проверять сейчас</h2>
       <div class="list">
-        <div class="list-item"><b>1. Создание сделки</b>Открыть “Новая сделка”, пройти мастер и сохранить карточку.</div>
-        <div class="list-item"><b>2. Список сделок</b>Проверить, что каждая сделка отображается отдельно и открывается по своей кнопке.</div>
-        <div class="list-item"><b>3. Карточка сделки</b>Поменять статус, отметить документ, закрыть задачу, добавить комментарий.</div>
-        <div class="list-item"><b>4. Рабочий стол</b>Проверить очереди: юрист, брокер, расходы, расчеты, готовность к задатку.</div>
-        <div class="list-item"><b>5. Команда</b>Проверить роли и приглашение нового сотрудника по email.</div>
+        <div class="list-item"><b>1. Вход и выход</b>На этой странице должен быть виден статус авторизации, email, роль и кнопка выхода.</div>
+        <div class="list-item"><b>2. Создание доступа</b>Открыть “Создать доступ”, создать тестового СПН и скопировать ссылку.</div>
+        <div class="list-item"><b>3. Вход СПН</b>Открыть ссылку в инкогнито, задать пароль и войти под тестовым СПН.</div>
+        <div class="list-item"><b>4. Ограничения роли</b>Проверить, что СПН видит рабочие разделы, но не видит админку и создание доступов.</div>
+        <div class="list-item"><b>5. Системная проверка</b>После входа под нужной ролью открыть диагностику и скопировать отчет.</div>
       </div>
     </section>
   </main>
+  <script type="module" src="./assets/js/nav-v2/start-v2.js?v=20260617-2"></script>
 </body>
 </html>
