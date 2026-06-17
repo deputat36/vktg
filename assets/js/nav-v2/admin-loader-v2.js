@@ -4,13 +4,18 @@ const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
 
 const scripts = {
-  admin: './admin-v2.js?v=20260616-4',
-  invite: './admin-invite-v2.js?v=20260616-4',
-  access: './nav-temp-password-v2.js?v=20260616-4',
-  audit: './nav-access-audit-v2.js?v=20260616-4'
+  admin: './admin-v2.js?v=20260617-5',
+  invite: './admin-invite-v2.js?v=20260617-5',
+  access: './nav-temp-password-v2.js?v=20260617-5',
+  audit: './nav-access-audit-v2.js?v=20260617-5'
 };
 
+function ensureTop() {
+  if (!document.querySelector('.nav-v2-top')) setupTop('admin');
+}
+
 function noAccess(profile) {
+  ensureTop();
   app.innerHTML = `
     <main class="nav-v2-shell">
       <section class="hero">
@@ -38,9 +43,6 @@ function noAccess(profile) {
 }
 
 async function init() {
-  // The access page module renders its own top bar. Avoid drawing it twice there.
-  if (page !== 'access') setupTop('admin');
-
   if (!getCachedUser()) {
     return renderAuthBox(app, async () => location.reload());
   }
