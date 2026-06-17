@@ -170,8 +170,7 @@ async function returnSpnToRework(button) {
   try {
     button.disabled = true;
     button.textContent = 'Возвращаю...';
-    await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: text, p_visibility: 'team' }, 12000);
-    await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: 'need_info' }, 12000);
+    await rpc('nav_v2_return_spn_rework', { p_deal_id: dealId, p_body: text }, 12000);
     button.textContent = 'Возвращено СПН';
     setTimeout(() => location.reload(), 800);
   } catch (e) {
