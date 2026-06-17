@@ -102,6 +102,21 @@ serve(async (req: Request) => {
 
     const existing = await findAuthUser(adminClient, email);
 
+    if (action === "dry_run") {
+      return out({
+        ok: true,
+        mode: "dry_run",
+        email,
+        role,
+        invited_by: invitedBy,
+        existing_user: Boolean(existing?.id),
+        would_create_auth_user: !existing?.id,
+        would_update_profile: true,
+        would_create_recovery_link: true,
+        message: "Проверка прошла без создания пользователя, профиля, письма или ссылки доступа.",
+      });
+    }
+
     if (action === "invite_email") {
       if (existing?.id) {
         await saveProfile(adminClient, existing.id, email, fullName || existing.user_metadata?.full_name || email, phone, role, invitedBy);
