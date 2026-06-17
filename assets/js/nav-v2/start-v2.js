@@ -14,34 +14,30 @@ function roleName(role) {
 
 function authCard(profile = null) {
   const user = getCachedUser();
-  const activeText = profile?.is_active === false ? 'выключен' : 'активен';
+  const isActive = profile?.is_active !== false;
   const role = roleName(profile?.role);
   const email = profile?.email || user?.email || 'email не определён';
-  const isAdmin = ['owner', 'admin'].includes(profile?.role);
 
-  return `<section class="card" style="margin-top:18px">
-    <div class="section-title">
-      <div>
-        <h2>Статус входа</h2>
-        <p class="muted">Вы вошли в Навигатор. Можно продолжать тестирование или выйти перед проверкой другого пользователя.</p>
+  return `<section class="start-auth-panel">
+    <div>
+      <span class="start-eyebrow">Текущая сессия</span>
+      <h2>${esc(role)} в системе</h2>
+      <div class="start-auth-meta">
+        <span>${esc(email)}</span>
+        <span>роль: ${esc(profile?.role || '—')}</span>
+        <span>${isActive ? 'доступ активен' : 'доступ выключен'}</span>
       </div>
-      <span class="pill ${profile?.is_active === false ? 'red' : 'green'}">${esc(activeText)}</span>
     </div>
-    <div class="list">
-      <div class="list-item"><b>Email</b><p class="muted">${esc(email)}</p></div>
-      <div class="list-item"><b>Роль</b><p class="muted">${esc(role)}${profile?.role ? ` (${esc(profile.role)})` : ''}</p></div>
-    </div>
-    <div class="actions" style="justify-content:flex-start;margin-top:14px">
+    <div class="start-auth-actions">
       <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
-      <a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a>
-      ${isAdmin ? '<a class="btn light" href="./nav-access-v2.html">Создать доступ</a>' : ''}
+      <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
       <button id="startLogout" class="btn light" type="button">Выйти</button>
     </div>
   </section>`;
 }
 
 function guestCard() {
-  return `<section id="startAuth" style="margin-top:18px"></section>`;
+  return `<section class="start-login-wrap"><div id="startAuth"></div></section>`;
 }
 
 async function renderStartAuth() {
@@ -55,17 +51,19 @@ async function renderStartAuth() {
     return;
   }
 
-  host.innerHTML = `<section class="card" style="margin-top:18px"><h2>Статус входа</h2><div class="status">Проверяю профиль пользователя...</div></section>`;
+  host.innerHTML = `<section class="start-muted-card"><h2>Проверяю вход...</h2><div class="status">Загружаю профиль пользователя.</div></section>`;
   try {
     const profile = await getMyProfile({ refresh: true, timeout: 9000 });
     host.innerHTML = authCard(profile);
   } catch (error) {
-    host.innerHTML = `<section class="card" style="margin-top:18px">
-      <h2>Статус входа</h2>
-      <div class="status warn">Сессия найдена, но профиль не загрузился: ${esc(error.message || error)}</div>
-      <p class="muted">Можно выйти и войти заново или открыть проверку системы.</p>
-      <div class="actions" style="justify-content:flex-start;margin-top:14px">
-        <a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a>
+    host.innerHTML = `<section class="start-auth-panel">
+      <div>
+        <span class="start-eyebrow">Текущая сессия</span>
+        <h2>Вход найден, профиль не загрузился</h2>
+        <p class="muted">${esc(error.message || error)}</p>
+      </div>
+      <div class="start-auth-actions">
+        <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
         <button id="startLogout" class="btn light" type="button">Выйти</button>
       </div>
     </section>`;
