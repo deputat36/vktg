@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260616-7';
+const CHECK_VERSION = '20260617-1';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -294,6 +294,7 @@ function render() {
           <div class="list-item"><b>CRM</b><p class="muted">Загрузка рабочего стола и списка сделок по текущей роли.</p></div>
           <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных HTML-страниц на GitHub Pages.</p></div>
           <div class="list-item"><b>Админка</b><p class="muted">Команда и доступы проверяются только для owner/admin.</p></div>
+          <div class="list-item"><b>Доступы</b><p class="muted">Edge Function проверяется через безопасный POST dry_run без создания пользователя.</p></div>
         </div>
       </div>
     </section>
@@ -488,7 +489,7 @@ async function checkEdgeFunction() {
     updateCheck('Edge Function доступа', 'ok', 'Создание ссылок доступа закрыто для этой роли. Это корректно.', `Текущая роль: ${roleName(currentProfile?.role)}`);
     return;
   }
-  updateCheck('Edge Function доступа', 'info', 'Проверяю доступность nav-invite-user без создания пользователя...');
+  updateCheck('Edge Function доступа', 'info', 'Проверяю nav-invite-user через безопасный POST dry_run...');
   const s = session();
   if (!s?.access_token) {
     updateCheck('Edge Function доступа', 'error', 'Нет access_token.');
@@ -496,11 +497,24 @@ async function checkEdgeFunction() {
   }
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/nav-invite-user`, {
-      method: 'OPTIONS',
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' }
+      method: 'POST',
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'dry_run',
+        email: 'nav-dry-run-check@example.test',
+        full_name: 'Проверка диагностики Навигатора',
+        role: 'spn'
+      })
     });
-    if (!response.ok) throw new Error(response.statusText || 'Edge Function недоступна');
-    updateCheck('Edge Function доступа', 'ok', 'Функция отвечает на OPTIONS-запрос. Создание ссылки доступа проверяется отдельно на странице доступа.');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || data.message || response.statusText || 'dry_run не прошел');
+    if (data.mode !== 'dry_run') throw new Error('Edge Function вернула неожиданный режим: ' + (data.mode || '—'));
+    updateCheck(
+      'Edge Function доступа',
+      'ok',
+      'POST dry_run прошел. Пользователь не создан, профиль не изменен, письмо и ссылка доступа не создавались.',
+      `existing_user: ${data.existing_user ? 'да' : 'нет'}; would_create_auth_user: ${data.would_create_auth_user ? 'да' : 'нет'}`
+    );
   } catch (e) {
     updateCheck('Edge Function доступа', 'error', e.message);
   }
