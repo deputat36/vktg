@@ -72,6 +72,7 @@ function readinessHtml() {
     ${readiness.missing.length ? `<div class="list"><div class="list-item"><b>Что СПН не дозаполнил:</b><p class="muted">${esc(readiness.missing.join(' / '))}</p></div></div>` : '<div class="list"><div class="list-item"><b>Ключевые поля анкеты были заполнены</b></div></div>'}
     <div class="actions" style="justify-content:flex-start">
       <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
+      <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
     </div>
   </div>`;
 }
@@ -105,6 +106,19 @@ function openCommentsTab() {
   }
   location.hash = 'comments';
   location.reload();
+}
+
+function setCommentText(text) {
+  openCommentsTab();
+  setTimeout(() => {
+    const field = document.getElementById('newComment');
+    if (!field) return;
+    const current = field.value.trim();
+    field.value = current ? `${current}\n\n${text}` : text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.focus();
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 180);
 }
 
 async function copyToClipboard(text, button, defaultText) {
@@ -141,6 +155,12 @@ function bindPanelActions() {
   if (copyRework && !copyRework.dataset.bound) {
     copyRework.dataset.bound = '1';
     copyRework.onclick = () => copyToClipboard(reworkText(), copyRework, 'Скопировать список доработок');
+  }
+
+  const insertRework = document.getElementById('insertCardReworkComment');
+  if (insertRework && !insertRework.dataset.bound) {
+    insertRework.dataset.bound = '1';
+    insertRework.onclick = () => setCommentText(reworkText());
   }
 
   const comments = document.getElementById('openCardComments');
