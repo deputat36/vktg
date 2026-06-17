@@ -39,6 +39,10 @@ function canManageRework() {
   return ['owner', 'admin', 'manager', 'lawyer'].includes(String(userRole || '').toLowerCase());
 }
 
+function canSubmitRework() {
+  return dealStatus === 'need_info' && ['owner', 'admin', 'manager', 'spn'].includes(String(userRole || '').toLowerCase());
+}
+
 function reworkText() {
   if (!readiness) return '';
   const lines = [
@@ -102,6 +106,9 @@ function readinessHtml() {
 
 function reworkTopAlertHtml() {
   if (dealStatus !== 'need_info' || !hasRework()) return '';
+  const submitAction = canSubmitRework()
+    ? '<button id="submitSpnRework" class="btn green" type="button">Отправить на повторную проверку</button>'
+    : '';
   return `<section id="spnReworkTopAlert" class="card" style="border:2px solid rgba(220,38,38,.28);background:#fff7f7">
     <div class="section-title">
       <div>
@@ -115,6 +122,7 @@ function reworkTopAlertHtml() {
     <div class="actions" style="justify-content:flex-start">
       <button id="copyTopReworkList" class="btn light" type="button">Скопировать список доработок</button>
       <button id="scrollToHandoffPanel" class="btn primary" type="button">Перейти к подробностям</button>
+      ${submitAction}
     </div>
   </section>`;
 }
@@ -200,6 +208,24 @@ async function returnSpnToRework(button) {
   }
 }
 
+async function submitSpnRework(button) {
+  if (!canSubmitRework()) return;
+  const comment = prompt('Кратко напишите, что исправлено. Этот комментарий увидит команда.', 'Заявка доработана. Прошу повторно проверить.');
+  if (comment === null) return;
+  const defaultText = button.textContent;
+  try {
+    button.disabled = true;
+    button.textContent = 'Отправляю...';
+    await rpc('nav_v2_submit_spn_rework', { p_deal_id: dealId, p_body: comment }, 12000);
+    button.textContent = 'Отправлено на проверку';
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    button.disabled = false;
+    button.textContent = defaultText;
+    alert('Не удалось отправить на повторную проверку: ' + e.message);
+  }
+}
+
 async function copyToClipboard(text, button, defaultText) {
   try {
     await navigator.clipboard.writeText(text);
@@ -246,6 +272,12 @@ function bindPanelActions() {
   if (scrollDetails && !scrollDetails.dataset.bound) {
     scrollDetails.dataset.bound = '1';
     scrollDetails.onclick = () => document.getElementById('handoffTextPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const submit = document.getElementById('submitSpnRework');
+  if (submit && !submit.dataset.bound) {
+    submit.dataset.bound = '1';
+    submit.onclick = () => submitSpnRework(submit);
   }
 
   const insertRework = document.getElementById('insertCardReworkComment');
