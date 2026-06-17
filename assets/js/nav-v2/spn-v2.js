@@ -21,6 +21,17 @@ const steps = [
   { key:'finish', title:'Итог', hint:'Готовность, риски, передача юристу' }
 ];
 
+const labelMaps = {
+  preparationMode: { deposit:'задаток', deal:'сделка', consult:'консультация', unknown:'пока не ясно' },
+  representation: { seller:'представляем продавца', buyer:'представляем покупателя', one_spn_both:'обе стороны, один СПН', both:'обе стороны, два СПН', partner_agency:'партнерская сделка', external_party:'одна сторона без представителя' },
+  objectType: { flat:'квартира', house_land:'дом + земля', land:'земельный участок', share_room:'комната / доля', new_building:'новостройка / ДДУ', commercial:'коммерция' },
+  flags: { oneAdultSeller:'один взрослый собственник', manySellers:'несколько собственников', minorSeller:'ребенок-собственник', minorBuyer:'ребенок-покупатель', minorRegistered:'зарегистрированы дети', spouse:'есть супруг/супруга', powerOfAttorney:'доверенность', shares:'доли' },
+  basis: { sale:'ДКП', gift:'дарение', inheritLaw:'наследство по закону', inheritWill:'наследство по завещанию', privat:'приватизация', ddu:'ДДУ / уступка', court:'решение суда', other:'мена / рента / иное' },
+  payments: { cash:'собственные средства', mortgage:'ипотека', matcap:'материнский капитал', certificate:'сертификат / субсидия', militaryMortgage:'военная ипотека / НИС', nominalChild:'детский номинальный счет', svoChildAccount:'деньги детей / СВО', installment:'рассрочка / остаток долга' },
+  settlements: { beforeDeal:'перед сделкой', onDeal:'на сделке', sbr:'СБР', accreditive:'аккредитив', cell:'ячейка', notaryDeposit:'депозит нотариуса', afterRegistration:'после регистрации', pensionFund:'СФР / сертификат после регистрации' },
+  notaryPayer: { buyer:'нотариус — покупатель', seller:'нотариус — продавец', split:'нотариус пополам', unknown:'нотариус не нужен/не ясно' }
+};
+
 function saveDraft(){ localStorage.setItem(DRAFT_KEY, JSON.stringify(state.deal)); }
 function set(key,val){ state.deal[key]=val; saveDraft(); render(); }
 function toggleArr(key,val){ const arr = Array.isArray(state.deal[key]) ? state.deal[key] : []; const next = arr.includes(val) ? arr.filter(x=>x!==val) : [...arr,val]; state.deal[key]=next; saveDraft(); render(); }
@@ -32,6 +43,9 @@ function textarea(key,label,placeholder=''){ return `<div class="field"><label>$
 function arr(key){ return Array.isArray(state.deal[key]) ? state.deal[key] : []; }
 function filled(value){ return String(value ?? '').trim().length > 0; }
 function moneyFilled(value){ return Number(String(value || '').replace(',', '.')) > 0; }
+function titleOf(map, value){ return labelMaps[map]?.[value] || value || '—'; }
+function listText(key){ const values = arr(key).map(x => labelMaps[key]?.[x] || x); return values.length ? values.join(', ') : 'не указано'; }
+function yesNo(value){ return value === true ? 'да' : value === false ? 'нет' : 'не указано'; }
 
 function checkItem(title, done, help, level = 'yellow', group = 'lawyer') {
   return { title, done: Boolean(done), help, level, group };
@@ -139,6 +153,62 @@ function readinessFullReport() {
   </div>`;
 }
 
+function handoffText(){
+  const d = state.deal;
+  const r = readiness();
+  const lines = [
+    'Передача заявки юристу',
+    '',
+    `Цель подготовки: ${titleOf('preparationMode', d.preparationMode)}`,
+    `Представительство: ${titleOf('representation', d.representation)}`,
+    `Объект: ${titleOf('objectType', d.objectType)}`,
+    `Адрес: ${d.address || 'не указан'}`,
+    `Кадастровый номер: ${d.cadastralNumber || 'не указан'}`,
+    `Цена объекта: ${d.priceTotal || 'не указана'}`,
+    `Планируемый задаток/аванс: ${d.depositAmount || 'не указан'}`,
+    '',
+    `Участники/особенности: ${listText('flags')}`,
+    `Телефон продавца: ${d.sellerPhone || 'не указан'}`,
+    `Телефон покупателя: ${d.buyerPhone || 'не указан'}`,
+    '',
+    `Основание права: ${listText('basis')}`,
+    `Комментарий по документам: ${d.basisComment || 'не указан'}`,
+    '',
+    `Деньги покупателя: ${listText('payments')}`,
+    `Цена в договоре: ${d.priceContract || 'не указана'}`,
+    '',
+    `Расчеты: ${listText('settlements')}`,
+    `Порядок расчетов согласован: ${yesNo(d.settlementsAgreed)}`,
+    `Комментарий по расчетам: ${d.settlementsComment || 'не указан'}`,
+    '',
+    `Расходы согласованы: ${yesNo(d.expensesAgreed)}`,
+    `Комиссия покупателя: ${d.buyerCompanyFee || 'не указана'}`,
+    `Комиссия продавца: ${d.sellerCompanyFee || 'не указана'}`,
+    `Нотариус: ${titleOf('notaryPayer', d.notaryPayer)}`,
+    `Комментарий по расходам: ${d.expensesComment || 'не указан'}`,
+    '',
+    `Готовность к юристу: ${r.lawyerPercent}%`,
+    `Готовность к задатку: ${r.depositPercent}%`,
+    `Риск по анкете: ${r.risk === 'red' ? 'стоп' : r.risk === 'yellow' ? 'внимание' : 'обычная'}`,
+    '',
+    `Стоп-вопросы: ${r.blockers.length ? r.blockers.join(' / ') : 'не выявлены по заполненной информации'}`,
+    `Чего не хватает: ${r.missing.length ? r.missing.map(x => x.title).join(' / ') : 'ключевых пробелов нет'}`,
+    '',
+    `Комментарий СПН: ${d.spnFinalComment || 'не указан'}`,
+    `Следующий шаг с клиентом: ${d.clientNextStep || 'не указан'}`
+  ];
+  return lines.join('\n');
+}
+
+function handoffBox(){
+  return `<div class="card" style="box-shadow:none;margin-top:12px;border:2px solid rgba(37,99,235,.16)">
+    <h3>Текст для передачи юристу</h3>
+    <p class="muted">Скопируйте этот текст в комментарий/CRM или используйте как основу разговора с юристом. Он собирается автоматически из заполненных полей.</p>
+    <textarea id="handoffText" readonly style="min-height:260px">${esc(handoffText())}</textarea>
+    <div class="actions" style="justify-content:flex-start"><button id="copyHandoff" class="btn primary" type="button">Скопировать текст передачи</button></div>
+  </div>`;
+}
+
 function stepStart(){ return `<h2>Что сейчас нужно подготовить?</h2><p class="muted">От этого зависит глубина вопросов. Для задатка важны условия и запреты, для сделки — полный пакет документов и порядок регистрации.</p><div class="option-grid">
 ${option('Задаток', 'Проверить, можно ли брать задаток и какие условия обязательно согласовать.', "set:preparationMode:deposit", cls('preparationMode','deposit'))}
 ${option('Сделка', 'Подготовить полный маршрут сделки, документы, расходы, расчеты и роли.', "set:preparationMode:deal", cls('preparationMode','deal'))}
@@ -207,7 +277,7 @@ ${option('Нотариус — продавец', '', "set:notaryPayer:seller", 
 ${option('Нотариус пополам', '', "set:notaryPayer:split", cls('notaryPayer','split'))}
 ${option('Нотариус не нужен/не ясно', '', "set:notaryPayer:unknown", cls('notaryPayer','unknown'))}
 </div>${textarea('expensesComment','Комментарий по расходам','Кто платит СБР/аккредитив/ячейку, госпошлину, справки, оценку, страховку, доверенности, согласия.')}`; }
-function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div>${readinessFullReport()}<div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${textarea('spnFinalComment','Комментарий СПН для юриста','Кратко: что уже понятно, что вызывает сомнения, что просите проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div><div class="status warn">После сохранения откроется карточка сделки. Перед передачей юристу проверьте блоки: риски, документы, задачи, расходы и комментарий СПН.</div>`; }
+function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div>${readinessFullReport()}<div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${textarea('spnFinalComment','Комментарий СПН для юриста','Кратко: что уже понятно, что вызывает сомнения, что просите проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div>${handoffBox()}<div class="status warn">После сохранения откроется карточка сделки. Перед передачей юристу проверьте блоки: риски, документы, задачи, расходы и комментарий СПН.</div>`; }
 
 const renderers = [stepStart, stepRepresentation, stepObject, stepParties, stepBasis, stepMoney, stepSettlements, stepExpenses, stepFinish];
 
@@ -220,12 +290,25 @@ function render(){
 function bind(){
   document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ if(isSaving) return; state.step=Number(b.dataset.step);render();});
   document.querySelectorAll('[data-click]').forEach(el=>el.onclick=()=>{ if(isSaving) return; handleClick(el.dataset.click); });
-  document.querySelectorAll('[data-field]').forEach(el=>el.oninput=()=>{ if(isSaving) return; state.deal[el.dataset.field]=el.value;saveDraft();});
+  document.querySelectorAll('[data-field]').forEach(el=>el.oninput=()=>{ if(isSaving) return; state.deal[el.dataset.field]=el.value;saveDraft(); const handoff=document.getElementById('handoffText'); if(handoff) handoff.value=handoffText(); });
   document.getElementById('prevBtn').onclick=()=>{ if(!isSaving && state.step>0){state.step--;render();} };
   const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>{ if(!isSaving && state.step<steps.length-1){state.step++;render();} };
   document.getElementById('saveDraftBtn').onclick=()=>setStatus('Черновик сохранен в браузере.', 'ok');
   document.getElementById('clearDraft').onclick=()=>{ if(!isSaving && confirm('Очистить черновик?')){localStorage.removeItem(DRAFT_KEY);state.deal={};state.step=0;render();} };
+  const copy=document.getElementById('copyHandoff'); if(copy) copy.onclick=copyHandoffText;
   const save=document.getElementById('saveDealBtn'); if(save) save.onclick=saveDeal;
+}
+async function copyHandoffText(){
+  const text = handoffText();
+  const field = document.getElementById('handoffText');
+  if (field) field.value = text;
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus('Текст передачи юристу скопирован.', 'ok');
+  } catch (_) {
+    if (field) { field.focus(); field.select(); }
+    setStatus('Не удалось скопировать автоматически. Текст выделен, скопируйте вручную.', 'warn');
+  }
 }
 function handleClick(action){
   const [type,key,raw]=action.split(':');
@@ -255,7 +338,7 @@ async function saveDeal(){
   render();
   try{
     setStatus('Сохраняю сделку в CRM. Обычно это занимает несколько секунд...', 'info');
-    const payload = { deal: { ...state.deal, readiness_local: { lawyer: r.lawyerPercent, deposit: r.depositPercent, missing: r.missing.map(x=>x.title), blockers: r.blockers }, spn_final: { comment: state.deal.spnFinalComment || '', next_step: state.deal.clientNextStep || '' } } };
+    const payload = { deal: { ...state.deal, readiness_local: { lawyer: r.lawyerPercent, deposit: r.depositPercent, missing: r.missing.map(x=>x.title), blockers: r.blockers }, spn_final: { comment: state.deal.spnFinalComment || '', next_step: state.deal.clientNextStep || '', handoff_text: handoffText() } } };
     const saved = await rpc('nav_v2_save_wizard_result', { p_result: payload }, 15000);
     localStorage.removeItem(DRAFT_KEY);
     setStatus('Сделка сохранена. Открываю карточку...', 'ok');
