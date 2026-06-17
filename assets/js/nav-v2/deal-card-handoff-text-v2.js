@@ -4,6 +4,7 @@ const dealId = new URLSearchParams(location.search).get('id');
 let handoffText = '';
 let readiness = null;
 let userRole = '';
+let dealStatus = '';
 let loaded = false;
 
 function snapshotOf(cardData) {
@@ -97,6 +98,25 @@ function readinessHtml() {
     ${readiness.missing.length ? `<div class="list"><div class="list-item"><b>Что СПН не дозаполнил:</b><p class="muted">${esc(readiness.missing.join(' / '))}</p></div></div>` : '<div class="list"><div class="list-item"><b>Ключевые поля анкеты были заполнены</b></div></div>'}
     ${readinessActionsHtml()}
   </div>`;
+}
+
+function reworkTopAlertHtml() {
+  if (dealStatus !== 'need_info' || !hasRework()) return '';
+  return `<section id="spnReworkTopAlert" class="card" style="border:2px solid rgba(220,38,38,.28);background:#fff7f7">
+    <div class="section-title">
+      <div>
+        <h2>Сделка возвращена на доработку</h2>
+        <p class="muted">Карточка находится в статусе «Нужно дозаполнить». Исправьте пробелы ниже, затем добавьте комментарий, что именно доработано.</p>
+      </div>
+      <span class="pill red">нужно дозаполнить</span>
+    </div>
+    ${readiness.blockers.length ? `<div class="status error"><b>Стоп-вопросы:</b><br>${readiness.blockers.map((item) => `• ${esc(item)}`).join('<br>')}</div>` : ''}
+    ${readiness.missing.length ? `<div class="list"><div class="list-item"><b>Что исправить:</b><p class="muted">${esc(readiness.missing.join(' / '))}</p></div></div>` : ''}
+    <div class="actions" style="justify-content:flex-start">
+      <button id="copyTopReworkList" class="btn light" type="button">Скопировать список доработок</button>
+      <button id="scrollToHandoffPanel" class="btn primary" type="button">Перейти к подробностям</button>
+    </div>
+  </section>`;
 }
 
 function panelHtml(text) {
@@ -216,6 +236,18 @@ function bindPanelActions() {
     copyRework.onclick = () => copyToClipboard(reworkText(), copyRework, 'Скопировать список доработок');
   }
 
+  const copyTop = document.getElementById('copyTopReworkList');
+  if (copyTop && !copyTop.dataset.bound) {
+    copyTop.dataset.bound = '1';
+    copyTop.onclick = () => copyToClipboard(reworkText(), copyTop, 'Скопировать список доработок');
+  }
+
+  const scrollDetails = document.getElementById('scrollToHandoffPanel');
+  if (scrollDetails && !scrollDetails.dataset.bound) {
+    scrollDetails.dataset.bound = '1';
+    scrollDetails.onclick = () => document.getElementById('handoffTextPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   const insertRework = document.getElementById('insertCardReworkComment');
   if (insertRework && !insertRework.dataset.bound) {
     insertRework.dataset.bound = '1';
@@ -241,10 +273,19 @@ function bindPanelActions() {
   }
 }
 
+function placeTopAlert(main) {
+  if (document.getElementById('spnReworkTopAlert')) return;
+  const html = reworkTopAlertHtml();
+  if (!html) return;
+  const anchor = main.querySelector('.hero') || main.firstElementChild;
+  if (anchor) anchor.insertAdjacentHTML('afterend', html);
+}
+
 function placePanel() {
   if (!handoffText && !readiness) return;
   const main = document.querySelector('main.nav-v2-shell');
   if (!main) return;
+  placeTopAlert(main);
   const existing = document.getElementById('handoffTextPanel');
   if (existing) {
     bindPanelActions();
@@ -267,6 +308,7 @@ async function loadHandoffText() {
       getMyProfile({ timeout: 6000 }).catch(() => null)
     ]);
     userRole = profile?.role || '';
+    dealStatus = cardData?.deal?.status || '';
     handoffText = readHandoffText(cardData);
     readiness = readReadiness(cardData);
     placePanel();
