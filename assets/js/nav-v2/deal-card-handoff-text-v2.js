@@ -73,6 +73,7 @@ function readinessHtml() {
     <div class="actions" style="justify-content:flex-start">
       <button id="copyCardReworkList" class="btn light" type="button">Скопировать список доработок</button>
       <button id="insertCardReworkComment" class="btn light" type="button">Вставить доработки в комментарий</button>
+      <button id="sendCardReworkComment" class="btn light" type="button">Сразу добавить комментарий</button>
     </div>
   </div>`;
 }
@@ -121,6 +122,24 @@ function setCommentText(text) {
   }, 180);
 }
 
+async function addReworkComment(button) {
+  const text = reworkText();
+  if (!text.trim()) return;
+  if (!confirm('Сразу добавить список доработок в комментарии к сделке?')) return;
+  const defaultText = button.textContent;
+  try {
+    button.disabled = true;
+    button.textContent = 'Добавляю...';
+    await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: text, p_visibility: 'team' }, 12000);
+    button.textContent = 'Комментарий добавлен';
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    button.disabled = false;
+    button.textContent = defaultText;
+    alert('Не удалось добавить комментарий: ' + e.message);
+  }
+}
+
 async function copyToClipboard(text, button, defaultText) {
   try {
     await navigator.clipboard.writeText(text);
@@ -161,6 +180,12 @@ function bindPanelActions() {
   if (insertRework && !insertRework.dataset.bound) {
     insertRework.dataset.bound = '1';
     insertRework.onclick = () => setCommentText(reworkText());
+  }
+
+  const sendRework = document.getElementById('sendCardReworkComment');
+  if (sendRework && !sendRework.dataset.bound) {
+    sendRework.dataset.bound = '1';
+    sendRework.onclick = () => addReworkComment(sendRework);
   }
 
   const comments = document.getElementById('openCardComments');
