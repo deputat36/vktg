@@ -1,4 +1,5 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
+let currentHints = [];
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}') || {}; } catch (_) { return {}; }
@@ -98,21 +99,37 @@ function hintsForStep(index, d) {
   return [];
 }
 
+function copyText() {
+  const index = activeStepIndex();
+  const title = document.querySelector('.stepper > section.card h2')?.textContent?.trim() || 'Текущий шаг';
+  const text = [`Вопросы и уточнения по шагу: ${title}`, '', ...currentHints.map((hint, i) => `${i + 1}. ${hint}`)].join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copySpnStepHints');
+    if (!btn) return;
+    btn.textContent = 'Скопировано';
+    setTimeout(() => btn.textContent = 'Скопировать вопросы', 1500);
+  }).catch(() => {
+    alert('Не удалось скопировать автоматически. Выделите текст подсказок вручную.');
+  });
+}
+
 function renderHints() {
   const mainCard = document.querySelector('.stepper > section.card');
   if (!mainCard) return;
   const index = activeStepIndex();
   if (index < 0) return;
   const hints = hintsForStep(index, readDraft()).filter(Boolean);
+  currentHints = hints;
   const old = document.getElementById('spnStepHints');
   if (old) old.remove();
   if (!hints.length) return;
   const box = document.createElement('div');
   box.id = 'spnStepHints';
   box.className = 'status warn';
-  box.innerHTML = `<b>Подсказка перед передачей юристу</b><br>${hints.map((hint) => `• ${esc(hint)}`).join('<br>')}`;
+  box.innerHTML = `<b>Подсказка перед передачей юристу</b><br>${hints.map((hint) => `• ${esc(hint)}`).join('<br>')}<div class="actions" style="justify-content:flex-start;margin-top:10px"><button id="copySpnStepHints" class="btn light" type="button">Скопировать вопросы</button></div>`;
   const title = mainCard.querySelector('h2');
   if (title) title.insertAdjacentElement('afterend', box);
+  document.getElementById('copySpnStepHints')?.addEventListener('click', copyText);
 }
 
 function scheduleRender() {
