@@ -52,7 +52,6 @@ function dealHeadline(deal) {
   return `${address} — ${seller} / ${buyer}`;
 }
 
-
 function confirmDemoAction(actionText) {
   const deal = currentData?.deal;
   if (!isDemoDeal(deal)) return true;
@@ -116,6 +115,58 @@ function quickActions(deal) {
       <button class="btn green" data-quick-status="ready_for_deposit" type="button">Готово к задатку</button>
       <button class="btn green" data-quick-status="ready_for_deal" type="button">Готово к сделке</button>
       <button class="btn light" data-quick-status="need_documents" type="button">Нужны документы</button>
+    </div>
+  </section>`;
+}
+
+function lawyerHandoffIssues(data) {
+  const deal = data?.deal || {};
+  const docs = list(data, 'documents');
+  const tasks = list(data, 'tasks');
+  const risks = list(data, 'risks');
+  const issues = [];
+  const missingDocs = countMissingDocs(docs);
+  const redRisks = countRedRisks(risks);
+  const urgentTasks = tasks.filter((task) => ['urgent', 'high'].includes(task.priority) && ['open','in_progress'].includes(task.status)).length;
+
+  if (missingDocs) issues.push(`Не хватает обязательных документов: ${missingDocs}.`);
+  if (redRisks) issues.push(`Есть красные риски: ${redRisks}.`);
+  if (urgentTasks) issues.push(`Есть срочные/важные открытые задачи: ${urgentTasks}.`);
+  if (!deal.expenses_agreed) issues.push('Расходы между сторонами не согласованы.');
+  if (!deal.settlements_agreed) issues.push('Порядок расчетов не согласован.');
+  if ((deal.readiness_deposit || 0) < 70) issues.push(`Готовность к задатку низкая: ${deal.readiness_deposit || 0}%.`);
+  if ((deal.readiness_deal || 0) < 60) issues.push(`Готовность к сделке низкая: ${deal.readiness_deal || 0}%.`);
+
+  return { issues, missingDocs, redRisks, urgentTasks, ok: issues.length === 0 };
+}
+
+function spnBeforeLawyerPanel(data) {
+  if (isLawyer()) return '';
+  const deal = data.deal;
+  const h = lawyerHandoffIssues(data);
+  return `<section class="card" style="border:2px solid ${h.ok ? 'rgba(22,163,74,.22)' : 'rgba(245,158,11,.28)'}">
+    <div class="section-title">
+      <div>
+        <h2>Перед передачей юристу</h2>
+        <p class="muted">Это контроль качества заявки для СПН. Задача — передать юристу не поток вопросов, а собранную карточку с понятными пробелами.</p>
+      </div>
+      <span class="pill ${h.ok ? 'green' : 'yellow'}">${h.ok ? 'можно передавать' : 'есть пробелы'}</span>
+    </div>
+    <div class="kpi-row">
+      ${metric('К задатку', (deal.readiness_deposit || 0) + '%', deal.readiness_deposit >= 80 ? 'green' : 'yellow')}
+      ${metric('К сделке', (deal.readiness_deal || 0) + '%', deal.readiness_deal >= 80 ? 'green' : 'yellow')}
+      ${metric('Документы', h.missingDocs, h.missingDocs ? 'yellow' : 'green')}
+      ${metric('Красные риски', h.redRisks, h.redRisks ? 'red' : 'green')}
+    </div>
+    <div class="status ${h.ok ? 'ok' : 'warn'}">${h.ok ? 'Ключевые пробелы не обнаружены. Передайте юристу и добавьте короткий комментарий, если есть нюансы.' : 'Перед передачей юристу желательно привести карточку в порядок или явно написать, чего не хватает.'}</div>
+    <div class="list">
+      ${h.issues.length ? h.issues.map((item) => `<div class="list-item">${esc(item)}</div>`).join('') : '<div class="list-item">Ключевые документы, риски, расходы и расчеты выглядят достаточно собранными.</div>'}
+    </div>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn light" data-tab-shortcut="docs" type="button">Проверить документы</button>
+      <button class="btn light" data-tab-shortcut="risks" type="button">Проверить риски</button>
+      <button class="btn light" data-tab-shortcut="expenses" type="button">Проверить расходы</button>
+      <button class="btn light" data-tab-shortcut="comments" type="button">Написать комментарий</button>
     </div>
   </section>`;
 }
@@ -244,6 +295,7 @@ function renderCard(data) {
       ${metric('Красные риски', countRedRisks(risks), countRedRisks(risks) ? 'red' : 'green')}
       ${metric('Цена', money(deal.price_total))}
     </div>
+    ${spnBeforeLawyerPanel(data)}
     ${quickActions(deal)}
     ${renderTabs(data)}
   </main>`;
@@ -267,11 +319,19 @@ async function runLegalAction(action) {
   } catch (e) { setPageStatus('Ошибка юридического действия: ' + e.message, 'error'); }
 }
 
+function confirmLawyerHandoff() {
+  const h = lawyerHandoffIssues(currentData);
+  if (!h.issues.length) return true;
+  const text = `В карточке есть незакрытые пункты перед передачей юристу:\n\n${h.issues.join('\n')}\n\nПередать юристу всё равно?`;
+  return confirm(text);
+}
+
 function bindActions() {
   document.querySelectorAll('[data-tab]').forEach((btn) => btn.onclick = () => { activeTab = btn.dataset.tab; history.replaceState(null, '', `${location.pathname}${location.search}#${activeTab}`); renderCard(currentData); });
   document.querySelectorAll('[data-tab-shortcut]').forEach((btn) => btn.onclick = () => { activeTab = btn.dataset.tabShortcut; history.replaceState(null, '', `${location.pathname}${location.search}#${activeTab}`); renderCard(currentData); });
   document.querySelectorAll('[data-legal-action]').forEach((btn) => btn.onclick = () => runLegalAction(btn.dataset.legalAction));
   document.querySelectorAll('[data-quick-status]').forEach((btn) => btn.onclick = async () => {
+    if (btn.dataset.quickStatus === 'need_lawyer' && !confirmLawyerHandoff()) return;
     if (!confirmDemoAction('изменить статус сделки')) return;
     try { setPageStatus('Сохраняю быстрый статус...'); await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: btn.dataset.quickStatus }); await load(); }
     catch (e) { setPageStatus('Ошибка быстрого действия: ' + e.message, 'error'); }
@@ -289,7 +349,7 @@ function bindActions() {
   });
   document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick = async () => {
     if (!confirmDemoAction('изменить статус задачи')) return;
-    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.dataset.taskStatus }); await load(); }
+    try { setPageStatus('Обновляю задачу...'); await rpc('nav_v2_update_task_status', { p_task_id: btn.dataset.taskId, p_status: btn.datasetTaskStatus }); await load(); }
     catch (e) { setPageStatus('Ошибка задачи: ' + e.message, 'error'); }
   });
   const add = document.getElementById('addComment');
