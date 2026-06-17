@@ -22,19 +22,32 @@ function stepStates(d) {
   ];
 }
 
+function updateTag(button, state) {
+  if (!state) return;
+  let tag = button.querySelector('.step-state');
+  if (!tag) {
+    tag = document.createElement('span');
+    tag.className = 'step-state pill';
+    tag.style.marginTop = '6px';
+    button.appendChild(tag);
+  }
+  const cls = state.done ? 'green' : state.warn ? 'yellow' : 'blue';
+  tag.className = 'step-state pill ' + cls;
+  tag.textContent = state.done ? 'готово' : 'заполнить';
+}
+
 function applyStepStates() {
   const draft = readDraft();
   const states = stepStates(draft);
-  document.querySelectorAll('.step-pill').forEach((button, index) => {
-    const state = states[index];
-    if (!state || button.querySelector('.step-state')) return;
-    const tag = document.createElement('span');
-    tag.className = 'step-state pill ' + (state.done ? 'green' : state.warn ? 'yellow' : 'blue');
-    tag.textContent = state.done ? 'готово' : 'заполнить';
-    tag.style.marginTop = '6px';
-    button.appendChild(tag);
-  });
+  document.querySelectorAll('.step-pill').forEach((button, index) => updateTag(button, states[index]));
 }
 
-new MutationObserver(applyStepStates).observe(document.body, { childList: true, subtree: true });
+function scheduleApply() {
+  window.requestAnimationFrame(applyStepStates);
+}
+
+new MutationObserver(scheduleApply).observe(document.body, { childList: true, subtree: true });
+document.addEventListener('input', scheduleApply, true);
+document.addEventListener('click', () => setTimeout(applyStepStates, 0), true);
+window.addEventListener('storage', applyStepStates);
 applyStepStates();
