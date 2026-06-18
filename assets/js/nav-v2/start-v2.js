@@ -1,5 +1,20 @@
 import { getCachedUser, getMyProfile, renderAuthBox, signOut, esc } from './supabase-v2.js';
 
+function clearLocalNavigatorState() {
+  try { localStorage.removeItem('nav_session_v2'); } catch (_) {}
+  try { localStorage.removeItem('nav_last_email_v2'); } catch (_) {}
+  try {
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith('nav_profile_v2:'))
+      .forEach((key) => sessionStorage.removeItem(key));
+  } catch (_) {}
+}
+
+if (new URLSearchParams(location.search).get('clean') === '1') {
+  clearLocalNavigatorState();
+  history.replaceState(null, '', './nav-v2.html');
+}
+
 function roleName(role) {
   return ({
     owner: 'Владелец',
@@ -19,8 +34,7 @@ function linkCard(item) {
     <span>${esc(item.text)}</span>
     <strong>${esc(item.action)}</strong>
   </a>`;
-}
-
+}\n
 function focusForRole(role) {
   if (role === 'owner' || role === 'admin') {
     return {
@@ -189,13 +203,14 @@ function authCard(profile = null) {
     <div class="start-auth-actions">
       <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
       <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
+      <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
       <button id="startLogout" class="btn light" type="button">Выйти</button>
     </div>
   </section>`;
 }
 
 function guestCard() {
-  return `<section class="start-login-wrap"><div id="startAuth"></div></section>`;
+  return `<section class="start-login-wrap"><div class="status warn">Для проверки СПН лучше открыть эту страницу с параметром clean=1 или в инкогнито. Это убирает старые локальные сессии и автокеш профиля.</div><div id="startAuth"></div></section>`;
 }
 
 function goToDashboardAfterLogin() {
@@ -238,6 +253,7 @@ async function renderStartAuth() {
       <div class="start-auth-actions">
         <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
         <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
+        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
         <button id="startLogout" class="btn light" type="button">Выйти</button>
       </div>
     </section>`;
@@ -248,7 +264,8 @@ async function renderStartAuth() {
     logout.disabled = true;
     logout.textContent = 'Выхожу...';
     await signOut();
-    location.reload();
+    clearLocalNavigatorState();
+    location.href = './nav-v2.html?clean=1';
   };
 }
 
