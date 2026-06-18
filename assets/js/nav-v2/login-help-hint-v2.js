@@ -7,8 +7,8 @@ function shouldShowLoginHelp(text) {
 
 function addLoginHelp() {
   const status = document.getElementById('authStatus');
-  if (!status || !shouldShowLoginHelp(status.textContent)) return;
-  if (document.getElementById('loginHelpHint')) return;
+  if (!status || !shouldShowLoginHelp(status.textContent)) return false;
+  if (document.getElementById('loginHelpHint')) return true;
 
   const hint = document.createElement('div');
   hint.id = 'loginHelpHint';
@@ -18,7 +18,14 @@ function addLoginHelp() {
 
   const forgot = document.getElementById('navForgot');
   if (forgot) forgot.classList.add('primary');
+  return true;
 }
 
-new MutationObserver(addLoginHelp).observe(document.body, { childList: true, subtree: true, characterData: true });
+let attempts = 0;
+const timer = setInterval(() => {
+  attempts += 1;
+  const done = addLoginHelp();
+  if (done || attempts >= 40) clearInterval(timer);
+}, 250);
+
 addLoginHelp();
