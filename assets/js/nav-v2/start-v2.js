@@ -198,6 +198,15 @@ function guestCard() {
   return `<section class="start-login-wrap"><div id="startAuth"></div></section>`;
 }
 
+function goToDashboardAfterLogin() {
+  const status = document.getElementById('authStatus');
+  if (status) {
+    status.className = 'status ok';
+    status.textContent = 'Вход выполнен. Открываю рабочий стол...';
+  }
+  window.location.assign('./dashboard-v2.html');
+}
+
 async function renderStartAuth() {
   const host = document.getElementById('startAuthHost');
   if (!host) return;
@@ -207,7 +216,7 @@ async function renderStartAuth() {
     renderFocus(null);
     renderLinks(null);
     host.innerHTML = guestCard();
-    renderAuthBox(document.getElementById('startAuth'), () => location.reload());
+    renderAuthBox(document.getElementById('startAuth'), goToDashboardAfterLogin);
     return;
   }
 
@@ -227,6 +236,7 @@ async function renderStartAuth() {
         <p class="muted">${esc(error.message || error)}</p>
       </div>
       <div class="start-auth-actions">
+        <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
         <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
         <button id="startLogout" class="btn light" type="button">Выйти</button>
       </div>
