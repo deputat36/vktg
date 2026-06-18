@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill } from './supabase-v2.js';
+import { getCachedUser, renderAuthBox, rpc, esc, riskPill } from './supabase-v2.js';
 
 const DRAFT_KEY = 'nav_deal_draft_v2';
 
@@ -125,158 +125,63 @@ function readinessPanel() {
       ${readinessMetric('К юристу', r.lawyerPercent, r.lawyerPercent >= 70 ? 'green' : 'yellow')}
       ${readinessMetric('К задатку', r.depositPercent, r.readyForDeposit ? 'green' : 'yellow')}
     </div>
-    <div class="status ${r.blockers.length ? 'error' : r.readyForLawyer ? 'ok' : 'warn'}">
-      ${r.blockers.length ? 'Есть стоп-вопросы до задатка.' : r.readyForLawyer ? 'Заявка выглядит достаточно собранной для передачи на проверку.' : 'Есть пробелы. Заполните ключевые пункты до передачи юристу.'}
-    </div>
-    <div class="list">
-      ${topMissing.length ? topMissing.map(x => `<div class="list-item"><b>Не хватает:</b> ${esc(x.title)}<p class="muted">${esc(x.help)}</p></div>`).join('') : '<div class="list-item"><b>Ключевые поля заполнены</b><p class="muted">Проверьте комментарий СПН и откройте карточку после сохранения.</p></div>'}
-    </div>
+    ${r.blockers.length ? `<div class="status error"><b>Стоп-вопросы:</b><br>${r.blockers.map(esc).join('<br>')}</div>` : ''}
+    ${topMissing.length ? `<div class="status warn"><b>Что дозаполнить:</b><br>${topMissing.map(x => '• ' + esc(x.title)).join('<br>')}</div>` : `<div class="status ok">Базовые поля заполнены хорошо.</div>`}
   </div>`;
 }
 
 function readinessFullReport() {
   const r = readiness();
-  const done = r.items.filter(x => x.done);
-  const missing = r.items.filter(x => !x.done);
   return `<div class="card" style="box-shadow:none;margin-top:12px">
-    <h3>Проверка перед сохранением</h3>
-    <div class="kpi-row">
-      ${readinessMetric('К юристу', r.lawyerPercent, r.lawyerPercent >= 70 ? 'green' : 'yellow')}
-      ${readinessMetric('К задатку', r.depositPercent, r.readyForDeposit ? 'green' : 'yellow')}
-      <div class="metric ${r.blockers.length ? 'red' : 'green'}"><span>Стоп-вопросы</span><b>${r.blockers.length}</b></div>
-    </div>
-    ${r.blockers.length ? `<div class="status error">Перед задатком обязательно разберите: ${esc(r.blockers.join(' / '))}</div>` : '<div class="status ok">Явных стоп-вопросов до задатка по заполненной информации нет.</div>'}
-    <div class="side-by-side">
-      <div><h4>Уже есть</h4><div class="list">${done.map(x => `<div class="list-item">${esc(x.title)}</div>`).join('') || '<div class="empty">Пока ничего не заполнено.</div>'}</div></div>
-      <div><h4>Дозаполнить</h4><div class="list">${missing.map(x => `<div class="list-item"><b>${esc(x.title)}</b><p class="muted">${esc(x.help)}</p></div>`).join('') || '<div class="empty">Ключевых пробелов нет.</div>'}</div></div>
-    </div>
+    <h3>Проверка перед передачей</h3>
+    <div class="list">${r.items.map(x => `<div class="list-item"><b>${x.done ? '✅' : '⚠️'} ${esc(x.title)}</b><span class="small">${esc(x.done ? 'готово' : x.help)}</span></div>`).join('')}</div>
   </div>`;
 }
 
-function handoffText(){
-  const d = state.deal;
+function handoffText() {
   const r = readiness();
   const lines = [
-    'Передача заявки юристу',
-    '',
-    `Цель подготовки: ${titleOf('preparationMode', d.preparationMode)}`,
-    `Представительство: ${titleOf('representation', d.representation)}`,
-    `Объект: ${titleOf('objectType', d.objectType)}`,
-    `Адрес: ${d.address || 'не указан'}`,
-    `Кадастровый номер: ${d.cadastralNumber || 'не указан'}`,
-    `Цена объекта: ${d.priceTotal || 'не указана'}`,
-    `Планируемый задаток/аванс: ${d.depositAmount || 'не указан'}`,
-    '',
-    `Участники/особенности: ${listText('flags')}`,
-    `Телефон продавца: ${d.sellerPhone || 'не указан'}`,
-    `Телефон покупателя: ${d.buyerPhone || 'не указан'}`,
-    '',
-    `Основание права: ${listText('basis')}`,
-    `Комментарий по документам: ${d.basisComment || 'не указан'}`,
-    '',
-    `Деньги покупателя: ${listText('payments')}`,
-    `Цена в договоре: ${d.priceContract || 'не указана'}`,
-    '',
-    `Расчеты: ${listText('settlements')}`,
-    `Порядок расчетов согласован: ${yesNo(d.settlementsAgreed)}`,
-    `Комментарий по расчетам: ${d.settlementsComment || 'не указан'}`,
-    '',
-    `Расходы согласованы: ${yesNo(d.expensesAgreed)}`,
-    `Комиссия покупателя: ${d.buyerCompanyFee || 'не указана'}`,
-    `Комиссия продавца: ${d.sellerCompanyFee || 'не указана'}`,
-    `Нотариус: ${titleOf('notaryPayer', d.notaryPayer)}`,
-    `Комментарий по расходам: ${d.expensesComment || 'не указан'}`,
+    'Передача заявки от СПН юристу',
     '',
     `Готовность к юристу: ${r.lawyerPercent}%`,
     `Готовность к задатку: ${r.depositPercent}%`,
-    `Риск по анкете: ${r.risk === 'red' ? 'стоп' : r.risk === 'yellow' ? 'внимание' : 'обычная'}`,
+    `Риск: ${r.risk}`,
     '',
-    `Стоп-вопросы: ${r.blockers.length ? r.blockers.join(' / ') : 'не выявлены по заполненной информации'}`,
-    `Чего не хватает: ${r.missing.length ? r.missing.map(x => x.title).join(' / ') : 'ключевых пробелов нет'}`,
+    `Объект: ${titleOf('objectType', state.deal.objectType)}`,
+    `Адрес: ${state.deal.address || 'не указан'}`,
+    `Цена: ${state.deal.priceTotal || 'не указана'}`,
+    `Задаток/аванс: ${state.deal.depositAmount || 'не указан'}`,
     '',
-    `Комментарий СПН: ${d.spnFinalComment || 'не указан'}`,
-    `Следующий шаг с клиентом: ${d.clientNextStep || 'не указан'}`
+    `Кого представляем: ${titleOf('representation', state.deal.representation)}`,
+    `Особые лица/условия: ${listText('flags')}`,
+    `Основание права: ${listText('basis')}`,
+    `Источник денег: ${listText('payments')}`,
+    `Расчеты: ${listText('settlements')}`,
+    '',
+    `Порядок расчетов согласован: ${yesNo(state.deal.settlementsAgreed)}`,
+    `Расходы согласованы: ${yesNo(state.deal.expensesAgreed)}`,
+    `Нотариус: ${titleOf('notaryPayer', state.deal.notaryPayer)}`,
+    '',
+    `Комментарий СПН: ${state.deal.spnFinalComment || 'не указан'}`,
+    `Следующий шаг с клиентом: ${state.deal.clientNextStep || 'не указан'}`
   ];
+  if (r.blockers.length) lines.push('', 'Стоп-вопросы:', ...r.blockers.map(x => '- ' + x));
+  if (r.missing.length) lines.push('', 'Что нужно дозаполнить:', ...r.missing.map(x => '- ' + x.title));
   return lines.join('\n');
 }
 
-function handoffBox(){
-  return `<div class="card" style="box-shadow:none;margin-top:12px;border:2px solid rgba(37,99,235,.16)">
-    <h3>Текст для передачи юристу</h3>
-    <p class="muted">Скопируйте этот текст в комментарий/CRM или используйте как основу разговора с юристом. Он собирается автоматически из заполненных полей.</p>
-    <textarea id="handoffText" readonly style="min-height:260px">${esc(handoffText())}</textarea>
-    <div class="actions" style="justify-content:flex-start"><button id="copyHandoff" class="btn primary" type="button">Скопировать текст передачи</button></div>
-  </div>`;
+function handoffBox() {
+  return `<div class="card" style="box-shadow:none;margin-top:12px"><h3>Текст для передачи юристу</h3><textarea id="handoffText" readonly style="min-height:260px">${esc(handoffText())}</textarea><div class="actions" style="justify-content:flex-start"><button class="btn light" id="copyHandoff" type="button">Скопировать текст</button></div></div>`;
 }
 
-function stepStart(){ return `<h2>Что сейчас нужно подготовить?</h2><p class="muted">От этого зависит глубина вопросов. Для задатка важны условия и запреты, для сделки — полный пакет документов и порядок регистрации.</p><div class="option-grid">
-${option('Задаток', 'Проверить, можно ли брать задаток и какие условия обязательно согласовать.', "set:preparationMode:deposit", cls('preparationMode','deposit'))}
-${option('Сделка', 'Подготовить полный маршрут сделки, документы, расходы, расчеты и роли.', "set:preparationMode:deal", cls('preparationMode','deal'))}
-${option('Консультация', 'Быстро разобрать ситуацию клиента и понять, какие есть риски.', "set:preparationMode:consult", cls('preparationMode','consult'))}
-${option('Пока не знаю', 'Начать с универсального сценария и уточнить по ходу.', "set:preparationMode:unknown", cls('preparationMode','unknown'))}
-</div>`; }
-function stepRepresentation(){ return `<h2>Кого мы представляем в сделке?</h2><p class="muted">Это влияет на права доступа, задачи СПН и распределение ответственности.</p><div class="option-grid">
-${option('Только продавца', 'Наш клиент — продавец. Документы продавца в нашей зоне контроля.', "set:representation:seller", cls('representation','seller'))}
-${option('Только покупателя', 'Наш клиент — покупатель. Особое внимание безопасности и проверке объекта.', "set:representation:buyer", cls('representation','buyer'))}
-${option('Обе стороны, один СПН', 'Один специалист ведет продавца и покупателя.', "set:representation:one_spn_both", cls('representation','one_spn_both'))}
-${option('Обе стороны, два СПН', 'Один СПН со стороны продавца, второй — покупателя.', "set:representation:both", cls('representation','both'))}
-${option('Партнерская сделка', 'Вторая сторона от другого агентства.', "set:representation:partner_agency", cls('representation','partner_agency'))}
-${option('Одна сторона без представителя', 'Вторая сторона отказывается от сопровождения.', "set:representation:external_party", cls('representation','external_party'))}
-</div>${textarea('representationComment','Комментарий по взаимодействию сторон','Например: продавец наш, покупатель от другого АН; второй СПН будет назначен позже.')}`; }
-function stepObject(){ return `<h2>Что продается?</h2><p class="muted">Сначала выбираем очевидный тип объекта, чтобы система не задавала лишних вопросов.</p><div class="option-grid">
-${option('Квартира', 'Вторичная недвижимость, обычная квартира.', "set:objectType:flat", cls('objectType','flat'))}
-${option('Дом + земля', 'Жилой дом, участок, коммуникации, границы.', "set:objectType:house_land", cls('objectType','house_land'))}
-${option('Земельный участок', 'Участок без дома или основной объект — земля.', "set:objectType:land", cls('objectType','land'))}
-${option('Комната / доля', 'Комната, доля в праве, коммунальная квартира.', "set:objectType:share_room", cls('objectType','share_room'))}
-${option('Новостройка / ДДУ', 'Переуступка, ДДУ, новостройка.', "set:objectType:new_building", cls('objectType','new_building'))}
-${option('Коммерция', 'Нежилое помещение, офис, торговая площадь.', "set:objectType:commercial", cls('objectType','commercial'))}
-</div><div class="grid"><div>${field('address','Адрес объекта','text','Например: Борисоглебск, ул. ...')}</div><div>${field('cadastralNumber','Кадастровый номер, если есть','text','Можно заполнить позже')}</div></div><div class="grid"><div>${field('priceTotal','Цена объекта','number','')}</div><div>${field('depositAmount','Планируемый задаток','number','')}</div></div>`; }
-function stepParties(){ return `<h2>Кто участвует в сделке?</h2><p class="muted">Здесь отмечаем только то, что реально влияет на риски и документы. Если ничего не выбрано — юристу будет непонятно, простой это сценарий или СПН просто не уточнил.</p><div class="option-grid">
-${option('Один взрослый собственник', 'Самый простой сценарий.', "toggle:flags:oneAdultSeller", cls('flags','oneAdultSeller'))}
-${option('Несколько собственников', 'Нужно проверить всех продавцов и согласие каждого.', "toggle:flags:manySellers", cls('flags','manySellers'))}
-${option('Есть ребенок-собственник', 'Без опеки нельзя двигаться дальше.', "toggle:flags:minorSeller", cls('flags','minorSeller'))}
-${option('Ребенок-покупатель', 'Нужны документы ребенка и родителей.', "toggle:flags:minorBuyer", cls('flags','minorBuyer'))}
-${option('Зарегистрированы дети', 'Нужна проверка выписки и интересов детей.', "toggle:flags:minorRegistered", cls('flags','minorRegistered'))}
-${option('Есть супруг/супруга', 'Может потребоваться согласие или брачный договор.', "toggle:flags:spouse", cls('flags','spouse'))}
-${option('Доверенность', 'Нужна расширенная проверка полномочий.', "toggle:flags:powerOfAttorney", cls('flags','powerOfAttorney'))}
-${option('Доли', 'Возможна нотариальная форма и уведомления.', "toggle:flags:shares", cls('flags','shares'))}
-</div><div class="grid"><div>${field('sellerPhone','Телефон продавца','text','')}</div><div>${field('buyerPhone','Телефон покупателя','text','')}</div></div>`; }
-function stepBasis(){ return `<h2>Документы основания</h2><p class="muted">Отметьте документы, на основании которых возникло право собственности. Не уверены — напишите в комментарии, что именно видел СПН.</p><div class="option-grid">
-${option('ДКП', 'Договор купли-продажи.', "toggle:basis:sale", cls('basis','sale'))}
-${option('Дарение', 'Договор дарения.', "toggle:basis:gift", cls('basis','gift'))}
-${option('Наследство по закону', 'Проверить круг наследников и сроки.', "toggle:basis:inheritLaw", cls('basis','inheritLaw'))}
-${option('Наследство по завещанию', 'Проверить завещание, наследников, сроки.', "toggle:basis:inheritWill", cls('basis','inheritWill'))}
-${option('Приватизация', 'Проверить отказников и зарегистрированных.', "toggle:basis:privat", cls('basis','privat'))}
-${option('ДДУ / уступка', 'Новостройка, уступка права требования.', "toggle:basis:ddu", cls('basis','ddu'))}
-${option('Решение суда', 'Обязательно юристу.', "toggle:basis:court", cls('basis','court'))}
-${option('Мена / рента / иное', 'Нужна дополнительная проверка.', "toggle:basis:other", cls('basis','other'))}
-</div>${textarea('basisComment','Комментарий по документам','Что уже видели, чего нет, есть ли сомнения.')}`; }
-function stepMoney(){ return `<h2>За какие средства покупают?</h2><p class="muted">Можно выбрать несколько вариантов. Система сама подключит брокера/юриста, если нужно.</p><div class="option-grid">
-${option('Собственные средства', 'Деньги покупателя без банка.', "toggle:payments:cash", cls('payments','cash'))}
-${option('Ипотека', 'Банк, оценка, страховка, требования банка.', "toggle:payments:mortgage", cls('payments','mortgage'))}
-${option('Материнский капитал', 'СФР, дети, порядок перечисления.', "toggle:payments:matcap", cls('payments','matcap'))}
-${option('Сертификат / субсидия', 'Госпрограмма, сроки, условия оплаты.', "toggle:payments:certificate", cls('payments','certificate'))}
-${option('Военная ипотека / НИС', 'Особый порядок банка и документов.', "toggle:payments:militaryMortgage", cls('payments','militaryMortgage'))}
-${option('Детский номинальный счет', 'Обязательно проверить порядок использования.', "toggle:payments:nominalChild", cls('payments','nominalChild'))}
-${option('Деньги детей / СВО', 'Нужна осторожная проверка основания и разрешений.', "toggle:payments:svoChildAccount", cls('payments','svoChildAccount'))}
-${option('Рассрочка / остаток долга', 'Нужно согласовать безопасный механизм.', "toggle:payments:installment", cls('payments','installment'))}
-</div>${field('priceContract','Цена в договоре, если отличается','number','')}`; }
-function stepSettlements(){ return `<h2>Порядок расчетов</h2><p class="muted">На практике чаще всего деньги передаются перед сделкой или на сделке, а если расчет после регистрации — сделка обычно с обременением. Поэтому важно согласовать порядок заранее.</p><div class="option-grid">
-${option('Перед сделкой', 'Договор подписан, расписка, расчет до подачи.', "toggle:settlements:beforeDeal", cls('settlements','beforeDeal'))}
-${option('На сделке', 'Расчет и расписка в день сделки.', "toggle:settlements:onDeal", cls('settlements','onDeal'))}
-${option('СБР', 'Сервис безопасных расчетов.', "toggle:settlements:sbr", cls('settlements','sbr'))}
-${option('Аккредитив', 'Банковский аккредитив.', "toggle:settlements:accreditive", cls('settlements','accreditive'))}
-${option('Ячейка', 'Банковская ячейка.', "toggle:settlements:cell", cls('settlements','cell'))}
-${option('Депозит нотариуса', 'Для нотариальных сделок и особых условий.', "toggle:settlements:notaryDeposit", cls('settlements','notaryDeposit'))}
-${option('После регистрации', 'Только с пониманием обременения и рисков.', "toggle:settlements:afterRegistration", cls('settlements','afterRegistration'))}
-${option('СФР / сертификат после регистрации', 'Часть оплаты приходит позже.', "toggle:settlements:pensionFund", cls('settlements','pensionFund'))}
-</div><div class="option-grid">${option('Порядок расчетов согласован', 'Можно фиксировать в задатке/условиях сделки.', "set:settlementsAgreed:true", state.deal.settlementsAgreed===true?'active':'')}${option('Порядок расчетов НЕ согласован', 'Система поставит задачу до задатка.', "set:settlementsAgreed:false", state.deal.settlementsAgreed===false?'active':'')}</div>${textarea('settlementsComment','Комментарий по расчетам','Когда передаются деньги, кто пишет расписку, какой банк/сервис, есть ли обременение.')}`; }
-function stepExpenses(){ return `<h2>Расходы покупателя и продавца</h2><p class="muted">Этот блок нужен, чтобы заранее убрать конфликт: кто платит нотариуса, госпошлину, банк, справки, комиссию и документы.</p><div class="option-grid">${option('Расходы согласованы', 'Стороны понимают, кто и что оплачивает.', "set:expensesAgreed:true", state.deal.expensesAgreed===true?'active':'')}${option('Расходы НЕ согласованы', 'Нужно согласовать до задатка.', "set:expensesAgreed:false", state.deal.expensesAgreed===false?'active':'')}</div><div class="grid"><div>${field('buyerCompanyFee','Комиссия покупателя','number','')}</div><div>${field('sellerCompanyFee','Комиссия продавца','number','')}</div></div><div class="option-grid">
-${option('Нотариус — покупатель', '', "set:notaryPayer:buyer", cls('notaryPayer','buyer'))}
-${option('Нотариус — продавец', '', "set:notaryPayer:seller", cls('notaryPayer','seller'))}
-${option('Нотариус пополам', '', "set:notaryPayer:split", cls('notaryPayer','split'))}
-${option('Нотариус не нужен/не ясно', '', "set:notaryPayer:unknown", cls('notaryPayer','unknown'))}
-</div>${textarea('expensesComment','Комментарий по расходам','Кто платит СБР/аккредитив/ячейку, госпошлину, справки, оценку, страховку, доверенности, согласия.')}`; }
+function stepStart(){ return `<h2>Что сейчас готовим?</h2><p class="muted">Выберите реальную задачу. От этого зависит, насколько жестко система будет требовать данные до сохранения.</p><div class="option-grid">${option('Задаток', 'Нужно проверить стоп-факторы до встречи.', "set:preparationMode:deposit", cls('preparationMode','deposit'))}${option('Сделку', 'Готовим полную сделку и документы.', "set:preparationMode:deal", cls('preparationMode','deal'))}${option('Консультацию', 'Клиент пока уточняет условия.', "set:preparationMode:consult", cls('preparationMode','consult'))}${option('Пока не ясно', 'Создать черновик и дозаполнить позже.', "set:preparationMode:unknown", cls('preparationMode','unknown'))}</div>${textarea('situation','Кратко опишите ситуацию','Что хочет клиент, что уже известно, где есть сомнения?')}`; }
+function stepRepresentation(){ return `<h2>Кого представляет компания?</h2><p class="muted">Это помогает сразу понять конфликт интересов и кто отвечает за коммуникацию.</p><div class="option-grid">${option('Продавца', 'Мы защищаем сторону продавца.', "set:representation:seller", cls('representation','seller'))}${option('Покупателя', 'Мы защищаем сторону покупателя.', "set:representation:buyer", cls('representation','buyer'))}${option('Обе стороны, один СПН', 'Нужна прозрачность договоренностей.', "set:representation:one_spn_both", cls('representation','one_spn_both'))}${option('Обе стороны, два СПН', 'Укажите коллегу/стороны в комментарии.', "set:representation:both", cls('representation','both'))}${option('Партнерская сделка', 'Есть внешний представитель.', "set:representation:partner_agency", cls('representation','partner_agency'))}${option('Одна сторона без представителя', 'Важно согласовать коммуникацию.', "set:representation:external_party", cls('representation','external_party'))}</div><div class="grid"><div>${field('sellerPhone','Телефон продавца','text','')}</div><div>${field('buyerPhone','Телефон покупателя','text','')}</div></div>${textarea('representationComment','Комментарий по сторонам','Кто с кем общается, кто принимает решения?')}`; }
+function stepObject(){ return `<h2>Объект</h2><div class="option-grid">${option('Квартира', '', "set:objectType:flat", cls('objectType','flat'))}${option('Дом + земля', '', "set:objectType:house_land", cls('objectType','house_land'))}${option('Земельный участок', '', "set:objectType:land", cls('objectType','land'))}${option('Комната / доля', '', "set:objectType:share_room", cls('objectType','share_room'))}${option('Новостройка / ДДУ', '', "set:objectType:new_building", cls('objectType','new_building'))}${option('Коммерция', '', "set:objectType:commercial", cls('objectType','commercial'))}</div><div class="grid"><div>${field('address','Адрес объекта','text','город, улица, дом')}</div><div>${field('priceTotal','Цена объекта','number','')}</div></div><div class="grid"><div>${field('depositAmount','Сумма задатка/аванса','number','')}</div><div>${field('cadastralNumber','Кадастровый номер','text','если есть')}</div></div>${textarea('objectComment','Комментарий по объекту','Особенности объекта, перепланировка, доли, земля, состояние документов.')}`; }
+function stepParties(){ return `<h2>Участники и особые лица</h2><p class="muted">Отметьте всё, что может влиять на документы и согласования.</p><div class="option-grid">${option('Один взрослый собственник', '', "toggle:flags:oneAdultSeller", cls('flags','oneAdultSeller'))}${option('Несколько собственников', '', "toggle:flags:manySellers", cls('flags','manySellers'))}${option('Ребенок-собственник', 'Стоп-фактор до юриста.', "toggle:flags:minorSeller", cls('flags','minorSeller'))}${option('Ребенок-покупатель', 'Может быть маткапитал/доля.', "toggle:flags:minorBuyer", cls('flags','minorBuyer'))}${option('Зарегистрированы дети', 'Проверить выписку и сроки.', "toggle:flags:minorRegistered", cls('flags','minorRegistered'))}${option('Есть супруг/супруга', 'Нужно согласие или брачный режим.', "toggle:flags:spouse", cls('flags','spouse'))}${option('Доверенность', 'Проверить полномочия.', "toggle:flags:powerOfAttorney", cls('flags','powerOfAttorney'))}${option('Доли', 'Возможен нотариус.', "toggle:flags:shares", cls('flags','shares'))}</div>${textarea('partiesComment','Комментарий по участникам','ФИО сторон, кто собственник, кто платит, кто принимает решение.')}`; }
+function stepBasis(){ return `<h2>Основание права и документы</h2><div class="option-grid">${option('ДКП', '', "toggle:basis:sale", cls('basis','sale'))}${option('Дарение', '', "toggle:basis:gift", cls('basis','gift'))}${option('Наследство по закону', '', "toggle:basis:inheritLaw", cls('basis','inheritLaw'))}${option('Наследство по завещанию', '', "toggle:basis:inheritWill", cls('basis','inheritWill'))}${option('Приватизация', '', "toggle:basis:privat", cls('basis','privat'))}${option('ДДУ / уступка', '', "toggle:basis:ddu", cls('basis','ddu'))}${option('Решение суда', 'Передать юристу до задатка.', "toggle:basis:court", cls('basis','court'))}${option('Иное', 'Опишите в комментарии.', "toggle:basis:other", cls('basis','other'))}</div>${textarea('basisComment','Комментарий по документам','Что на руках, чего нет, что вызывает вопросы.')}`; }
+function stepMoney(){ return `<h2>Деньги покупателя</h2><div class="option-grid">${option('Собственные средства', '', "toggle:payments:cash", cls('payments','cash'))}${option('Ипотека', 'Подключить брокера.', "toggle:payments:mortgage", cls('payments','mortgage'))}${option('Маткапитал', 'Дети/доли/СФР.', "toggle:payments:matcap", cls('payments','matcap'))}${option('Сертификат / субсидия', 'Проверить условия.', "toggle:payments:certificate", cls('payments','certificate'))}${option('Военная ипотека / НИС', 'Проверить банк и сроки.', "toggle:payments:militaryMortgage", cls('payments','militaryMortgage'))}${option('Детский номинальный счет', 'Обязательно проверить порядок использования.', "toggle:payments:nominalChild", cls('payments','nominalChild'))}${option('Деньги детей / СВО', 'Нужна осторожная проверка основания и разрешений.', "toggle:payments:svoChildAccount", cls('payments','svoChildAccount'))}${option('Рассрочка / остаток долга', 'Нужно согласовать безопасный механизм.', "toggle:payments:installment", cls('payments','installment'))}</div>${field('priceContract','Цена в договоре, если отличается','number','')}`; }
+function stepSettlements(){ return `<h2>Порядок расчетов</h2><p class="muted">На практике чаще всего деньги передаются перед сделкой или на сделке, а если расчет после регистрации — сделка обычно с обременением. Поэтому важно согласовать порядок заранее.</p><div class="option-grid">${option('Перед сделкой', 'Договор подписан, расписка, расчет до подачи.', "toggle:settlements:beforeDeal", cls('settlements','beforeDeal'))}${option('На сделке', 'Расчет и расписка в день сделки.', "toggle:settlements:onDeal", cls('settlements','onDeal'))}${option('СБР', 'Сервис безопасных расчетов.', "toggle:settlements:sbr", cls('settlements','sbr'))}${option('Аккредитив', 'Банковский аккредитив.', "toggle:settlements:accreditive", cls('settlements','accreditive'))}${option('Ячейка', 'Банковская ячейка.', "toggle:settlements:cell", cls('settlements','cell'))}${option('Депозит нотариуса', 'Для нотариальных сделок и особых условий.', "toggle:settlements:notaryDeposit", cls('settlements','notaryDeposit'))}${option('После регистрации', 'Только с пониманием обременения и рисков.', "toggle:settlements:afterRegistration", cls('settlements','afterRegistration'))}${option('СФР / сертификат после регистрации', 'Часть оплаты приходит позже.', "toggle:settlements:pensionFund", cls('settlements','pensionFund'))}</div><div class="option-grid">${option('Порядок расчетов согласован', 'Можно фиксировать в задатке/условиях сделки.', "set:settlementsAgreed:true", state.deal.settlementsAgreed===true?'active':'')}${option('Порядок расчетов НЕ согласован', 'Система поставит задачу до задатка.', "set:settlementsAgreed:false", state.deal.settlementsAgreed===false?'active':'')}</div>${textarea('settlementsComment','Комментарий по расчетам','Когда передаются деньги, кто пишет расписку, какой банк/сервис, есть ли обременение.')}`; }
+function stepExpenses(){ return `<h2>Расходы покупателя и продавца</h2><p class="muted">Этот блок нужен, чтобы заранее убрать конфликт: кто платит нотариуса, госпошлину, банк, справки, комиссию и документы.</p><div class="option-grid">${option('Расходы согласованы', 'Стороны понимают, кто и что оплачивает.', "set:expensesAgreed:true", state.deal.expensesAgreed===true?'active':'')}${option('Расходы НЕ согласованы', 'Нужно согласовать до задатка.', "set:expensesAgreed:false", state.deal.expensesAgreed===false?'active':'')}</div><div class="grid"><div>${field('buyerCompanyFee','Комиссия покупателя','number','')}</div><div>${field('sellerCompanyFee','Комиссия продавца','number','')}</div></div><div class="option-grid">${option('Нотариус — покупатель', '', "set:notaryPayer:buyer", cls('notaryPayer','buyer'))}${option('Нотариус — продавец', '', "set:notaryPayer:seller", cls('notaryPayer','seller'))}${option('Нотариус пополам', '', "set:notaryPayer:split", cls('notaryPayer','split'))}${option('Нотариус не нужен/не ясно', '', "set:notaryPayer:unknown", cls('notaryPayer','unknown'))}</div>${textarea('expensesComment','Комментарий по расходам','Кто платит СБР/аккредитив/ячейку, госпошлину, справки, оценку, страховку, доверенности, согласия.')}`; }
 function stepFinish(){ const a=localAnalysis(); return `<h2>Итог перед сохранением</h2><div class="summary-grid"><div class="metric ${a.risk==='red'?'red':a.risk==='yellow'?'yellow':'green'}"><span>Риск</span><b>${a.risk==='red'?'Стоп':a.risk==='yellow'?'Внимание':'Обычная'}</b>${riskPill(a.risk)}</div><div class="metric"><span>Кому передать</span><b>${a.children?'Юристу':a.mortgage?'Брокеру':'СПН'}</b></div></div>${readinessFullReport()}<div class="card" style="box-shadow:none;margin-top:12px"><h3>Что важно сейчас</h3><div class="list">${(a.notes.length?a.notes:['Проверить базовые документы, расходы и порядок расчетов.']).map(n=>`<div class="list-item">${esc(n)}</div>`).join('')}</div></div><div class="grid"><div>${textarea('spnFinalComment','Комментарий СПН для юриста','Кратко: что уже понятно, что вызывает сомнения, что просите проверить')}</div><div>${field('clientNextStep','Следующий шаг с клиентом','text','Например: собрать документы, назначить задаток')}</div></div>${handoffBox()}<div class="status warn">После сохранения откроется карточка сделки. Перед передачей юристу проверьте блоки: риски, документы, задачи, расходы и комментарий СПН.</div>`; }
 
 const renderers = [stepStart, stepRepresentation, stepObject, stepParties, stepBasis, stepMoney, stepSettlements, stepExpenses, stepFinish];
@@ -360,7 +265,6 @@ async function saveDeal(){
 }
 
 async function init(){
-  setupTop('spn');
   if(!getCachedUser()) return renderAuthBox(document.getElementById('app'), async()=>location.reload());
   render();
 }
