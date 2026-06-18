@@ -44,16 +44,7 @@ function dealCard(deal) {
   </a>`;
 }
 
-function taskItem(task) {
-  return `<div class="list-item">
-    <div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority || 'обычная')}</span></div>
-    <b>${esc(task.title || 'Задача')}</b>
-    <p class="muted">${esc(task.description || '')}</p>
-    <a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(task.deal_id)}">Открыть сделку</a>
-  </div>`;
-}
-
-function renderShell(profile, bodyHtml, warning = '') {
+function renderShell(profile, bodyHtml) {
   const role = profile?.role || '';
   const email = profile?.email || getCachedUser()?.email || '';
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
@@ -61,7 +52,6 @@ function renderShell(profile, bodyHtml, warning = '') {
       <h1>Рабочий стол v2</h1>
       <p>Профиль: <b>${esc(profile?.full_name || 'Пользователь')}</b> · ${esc(email)} · роль: ${esc(roleName(role))}</p>
     </section>
-    ${warning ? `<div class="status warn">${esc(warning)}</div>` : ''}
     <section class="card">
       <div class="actions" style="justify-content:flex-start">
         <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
@@ -88,16 +78,19 @@ function renderShell(profile, bodyHtml, warning = '') {
 
 function renderDashboard(data) {
   const profile = data?.profile || {};
-  const summary = data?.summary || {};
-  const deals = Array.isArray(data?.deals) ? data.deals : [];
-  const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+  const deals = Array.isArray(data?.items) ? data.items : [];
+
+  const readyDeposit = deals.filter((deal) => Number(deal.readiness_deposit || 0) >= 80).length;
+  const readyDeal = deals.filter((deal) => Number(deal.readiness_deal || 0) >= 80).length;
+  const missingDocuments = deals.reduce((sum, deal) => sum + Number(deal.missing_documents_count || 0), 0);
+  const openTasks = deals.reduce((sum, deal) => sum + Number(deal.open_tasks_count || 0), 0);
 
   const body = `<section class="kpi-row">
-      ${metric('Всего сделок', summary.total || deals.length)}
-      ${metric('Готовы к задатку', summary.ready_for_deposit || 0)}
-      ${metric('Готовы к сделке', summary.ready_for_deal || 0)}
-      ${metric('Документы', summary.missing_documents || 0, Number(summary.missing_documents || 0) ? 'yellow' : 'green')}
-      ${metric('Открытые задачи', summary.open_tasks || 0, Number(summary.open_tasks || 0) ? 'yellow' : 'green')}
+      ${metric('Всего сделок', deals.length)}
+      ${metric('Готовы к задатку', readyDeposit)}
+      ${metric('Готовы к сделке', readyDeal)}
+      ${metric('Документы', missingDocuments, missingDocuments ? 'yellow' : 'green')}
+      ${metric('Открытые задачи', openTasks, openTasks ? 'yellow' : 'green')}
     </section>
     <section class="grid">
       <div class="card">
@@ -120,10 +113,6 @@ function renderDashboard(data) {
     <section class="card">
       <div class="section-title"><h2>${profile.role === 'spn' ? 'Мои сделки' : 'Видимые сделки'}</h2><span class="pill blue">${deals.length}</span></div>
       <div class="deal-list">${deals.map(dealCard).join('') || '<div class="empty">Сделок нет.</div>'}</div>
-    </section>
-    <section class="card">
-      <div class="section-title"><h2>Открытые задачи</h2><span class="pill blue">${tasks.length}</span></div>
-      <div class="list">${tasks.map(taskItem).join('') || '<div class="empty">Открытых задач нет.</div>'}</div>
     </section>`;
 
   renderShell(profile, body);
@@ -145,7 +134,14 @@ function renderLogin(message = '') {
 
 async function load() {
   const app = document.getElementById('app');
-  app.innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю рабочий стол...</div></main>';
+  app.innerHTML = `<main class="nav-v2-shell">
+    <section class="hero"><h1>Рабочий стол v2</h1><p>Загружаю лёгкий рабочий стол...</p></section>
+    <div class="status">Загружаю список видимых сделок.</div>
+    <div class="actions" style="justify-content:flex-start">
+      <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+      <a class="btn light" href="./deals-v2.html">Список сделок</a>
+    </div>
+  </main>`;
 
   if (!getCachedUser()?.id) {
     renderLogin('Сначала войдите в Навигатор.');
@@ -153,15 +149,16 @@ async function load() {
   }
 
   try {
-    const data = await rpc('nav_v2_get_dashboard', {}, 30000);
+    const data = await rpc('nav_v2_get_deals_list', { p_limit: 50 }, 15000);
     renderDashboard(data);
   } catch (error) {
     app.innerHTML = `<main class="nav-v2-shell">
-      <section class="hero"><h1>Рабочий стол v2</h1><p>Не удалось загрузить данные.</p></section>
+      <section class="hero"><h1>Рабочий стол v2</h1><p>Не удалось загрузить список сделок.</p></section>
       <div class="status error">${esc(error.message || error || 'Ошибка загрузки')}</div>
       <div class="actions" style="justify-content:flex-start">
         <a class="btn primary" href="./dashboard-v2.html">Повторить</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+        <a class="btn light" href="./deals-v2.html">Список сделок</a>
       </div>
     </main>`;
   }
