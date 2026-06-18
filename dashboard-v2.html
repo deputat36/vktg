@@ -4,19 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Рабочий стол — Навигатор v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-55">
-  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-55">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-56">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-56">
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
     <section class="hero">
       <h1>Рабочий стол v2</h1>
-      <p>Быстрые кнопки доступны сразу. Данные сделок подгружаются ниже.</p>
+      <p>Кнопки доступны сразу. Данные сделок подгружаются ниже.</p>
     </section>
 
     <section class="card">
       <div class="actions" style="justify-content:flex-start">
         <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
+        <a class="btn light" href="./dashboard-fast-v2.html">Быстрая версия</a>
         <a class="btn green" href="./spn-v2.html">Новая сделка</a>
         <a class="btn light" href="./deals-v2.html">Сделки</a>
         <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
@@ -25,11 +26,10 @@
     </section>
 
     <div id="app">
-      <div class="status">Загружаю данные рабочего стола. Кнопки выше уже должны нажиматься без ожидания.</div>
+      <div class="status">Загружаю данные рабочего стола. Если переходы сверху работают быстро, проблема была в загрузке данных ниже.</div>
     </div>
   </main>
 
-  <script type="module" src="./assets/js/nav-v2/fast-nav-v2.js?v=20260617-55"></script>
-  <script type="module" src="./assets/js/nav-v2/dashboard-v2.js?v=20260617-55"></script>
+  <script type="module" src="./assets/js/nav-v2/dashboard-v2.js?v=20260617-56"></script>
 </body>
 </html>
