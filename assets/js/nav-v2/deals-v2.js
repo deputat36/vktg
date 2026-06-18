@@ -270,6 +270,28 @@ function render() {
   }
 }
 
+function isAuthLoadError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return text.includes('сначала войдите')
+    || text.includes('ошибка supabase 400')
+    || text.includes('ошибка supabase 401')
+    || text.includes('jwt expired')
+    || text.includes('unauthorized')
+    || text.includes('refresh');
+}
+
+function renderLoginAfterLoadError() {
+  const root = document.getElementById('app');
+  root.innerHTML = '<main class="nav-v2-shell"><div id="dealsAuthHost"></div></main>';
+  const host = document.getElementById('dealsAuthHost');
+  renderAuthBox(host, async () => location.reload());
+  const status = document.getElementById('authStatus');
+  if (status) {
+    status.className = 'status warn';
+    status.textContent = 'Сессия истекла или была повреждена. Войдите снова.';
+  }
+}
+
 async function loadDeals() {
   document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю сделки...</div></main>';
   try {
@@ -280,6 +302,10 @@ async function loadDeals() {
     applyDefaultFilterByRole();
     render();
   } catch (error) {
+    if (isAuthLoadError(error)) {
+      renderLoginAfterLoadError();
+      return;
+    }
     document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`;
   }
 }
