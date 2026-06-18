@@ -4,10 +4,10 @@ const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
 
 const scripts = {
-  admin: './admin-v2.js?v=20260617-5',
-  invite: './admin-invite-v2.js?v=20260617-5',
-  access: './nav-temp-password-v2.js?v=20260617-5',
-  audit: './nav-access-audit-v2.js?v=20260617-5'
+  admin: './admin-v2.js?v=20260617-40',
+  invite: './admin-invite-v2.js?v=20260617-40',
+  access: './nav-temp-password-v2.js?v=20260617-40',
+  audit: './nav-access-audit-v2.js?v=20260617-40'
 };
 
 function ensureTop() {
@@ -42,6 +42,26 @@ function noAccess(profile) {
   `;
 }
 
+function isLoadFallbackError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return text.includes('сначала войдите')
+    || text.includes('ошибка supabase 400')
+    || text.includes('ошибка supabase 401')
+    || text.includes('jwt expired')
+    || text.includes('unauthorized')
+    || text.includes('refresh');
+}
+
+function renderLoginAfterAdminError() {
+  app.innerHTML = '<main class="nav-v2-shell"><div id="adminAuthHost"></div></main>';
+  renderAuthBox(document.getElementById('adminAuthHost'), async () => location.reload());
+  const status = document.getElementById('authStatus');
+  if (status) {
+    status.className = 'status warn';
+    status.textContent = 'Нужно войти снова, чтобы открыть административный раздел.';
+  }
+}
+
 async function init() {
   if (!getCachedUser()) {
     return renderAuthBox(app, async () => location.reload());
@@ -63,6 +83,10 @@ async function init() {
 
     await import(scripts[page] || scripts.admin);
   } catch (e) {
+    if (isLoadFallbackError(e)) {
+      renderLoginAfterAdminError();
+      return;
+    }
     noAccess({ role: 'не определена', email: '' });
   }
 }
