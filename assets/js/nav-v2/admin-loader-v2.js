@@ -4,10 +4,10 @@ const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
 
 const scripts = {
-  admin: './admin-v2.js?v=20260617-40',
-  invite: './admin-invite-v2.js?v=20260617-40',
-  access: './nav-temp-password-v2.js?v=20260617-40',
-  audit: './nav-access-audit-v2.js?v=20260617-40'
+  admin: './admin-v2.js?v=20260617-43',
+  invite: './admin-invite-v2.js?v=20260617-43',
+  access: './nav-temp-password-v2.js?v=20260617-43',
+  audit: './nav-access-audit-v2.js?v=20260617-43'
 };
 
 function ensureTop() {
