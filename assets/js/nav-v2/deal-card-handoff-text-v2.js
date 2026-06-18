@@ -71,6 +71,32 @@ function reworkText() {
   return lines.join('\n');
 }
 
+function fullHandoffText() {
+  const lines = [
+    'Полный лист передачи заявки от СПН юристу',
+    '',
+    readiness ? `Готовность к юристу: ${readiness.lawyer}%` : 'Готовность к юристу: не сохранена',
+    readiness ? `Готовность к задатку: ${readiness.deposit}%` : 'Готовность к задатку: не сохранена'
+  ];
+
+  if (readiness?.blockers?.length) {
+    lines.push('', 'Стоп-вопросы:');
+    readiness.blockers.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
+  } else {
+    lines.push('', 'Стоп-вопросы: не выявлены по сохраненной анкете.');
+  }
+
+  if (readiness?.missing?.length) {
+    lines.push('', 'Что нужно дозаполнить:');
+    readiness.missing.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
+  } else {
+    lines.push('', 'Что нужно дозаполнить: ключевых пробелов нет или они не сохранены.');
+  }
+
+  lines.push('', 'Текст передачи СПН:', handoffText || 'Текст передачи не сохранен.');
+  return lines.join('\n');
+}
+
 function readinessActionsHtml() {
   if (!hasRework()) {
     return '<div class="status ok">По сохраненной анкете СПН нет пробелов для возврата на доработку.</div>';
@@ -131,8 +157,13 @@ function panelHtml(text) {
   const textBlock = text ? `<textarea id="cardHandoffText" readonly style="min-height:220px">${esc(text)}</textarea>
     <div class="actions" style="justify-content:flex-start">
       <button id="copyCardHandoffText" class="btn primary" type="button">Скопировать текст</button>
+      <button id="copyCardFullHandoff" class="btn light" type="button">Скопировать полный лист передачи</button>
       <button id="openCardComments" class="btn light" type="button">Открыть комментарии</button>
-    </div>` : '<div class="status warn">Текст передачи не найден. Возможно, сделка создана до появления финального текста в мастере.</div>';
+    </div>` : `<div class="status warn">Текст передачи не найден. Возможно, сделка создана до появления финального текста в мастере.</div>
+    <div class="actions" style="justify-content:flex-start">
+      <button id="copyCardFullHandoff" class="btn light" type="button">Скопировать полный лист передачи</button>
+      <button id="openCardComments" class="btn light" type="button">Открыть комментарии</button>
+    </div>`;
   return `<section id="handoffTextPanel" class="card" style="border:2px solid rgba(37,99,235,.16)">
     <div class="section-title">
       <div>
@@ -254,6 +285,12 @@ function bindPanelActions() {
         setTimeout(() => copy.textContent = 'Скопировать текст', 1800);
       }
     };
+  }
+
+  const copyFull = document.getElementById('copyCardFullHandoff');
+  if (copyFull && !copyFull.dataset.bound) {
+    copyFull.dataset.bound = '1';
+    copyFull.onclick = () => copyToClipboard(fullHandoffText(), copyFull, 'Скопировать полный лист передачи');
   }
 
   const copyRework = document.getElementById('copyCardReworkList');
