@@ -4,28 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CRM Навигатор сделок v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-50">
-  <link rel="stylesheet" href="./assets/css/nav-start-v2.css?v=20260617-50">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-51">
+  <link rel="stylesheet" href="./assets/css/nav-start-v2.css?v=20260617-51">
 </head>
 <body class="nav-v2">
   <main id="app" class="nav-v2-shell">
     <section class="hero start-hero">
       <h1>CRM Навигатор сделок v2</h1>
-      <p>Стартовая страница для входа, выхода и финальной проверки роли СПН. Основной сценарий сейчас — создать тестовый доступ и проверить его в инкогнито.</p>
+      <p>Стартовая страница для чистого входа, проверки роли и перехода в рабочие разделы.</p>
     </section>
 
     <div id="startAuthHost"></div>
 
     <section class="start-layout">
       <div class="card start-focus">
-        <span class="start-eyebrow">Главная задача сейчас</span>
-        <h2>Проверить доступ СПН</h2>
-        <p class="muted">Нужно убедиться, что новый специалист может задать пароль, войти в систему и увидеть только свои рабочие разделы.</p>
+        <span class="start-eyebrow">Если тестируем СПН</span>
+        <h2>Используйте чистый вход</h2>
+        <p class="muted">Чистый вход сбрасывает старую локальную сессию и кэш профиля в этом браузере.</p>
         <div class="actions" style="justify-content:flex-start">
-          <a class="btn green" href="./nav-access-v2.html">Создать тестовый доступ</a>
+          <a class="btn primary" href="./nav-v2.html?clean=1">Чистый вход</a>
           <a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a>
         </div>
-        <div class="start-note">Ссылку доступа открываем только в инкогнито, чтобы не смешать сессию владельца и тестового СПН.</div>
+        <div class="start-note">Для проверки сотрудника лучше использовать инкогнито или другой браузер, чтобы не смешивать сессии.</div>
       </div>
 
       <div class="card">
@@ -36,10 +36,10 @@
           </div>
         </div>
         <div class="start-steps">
-          <div class="start-step"><b>Создать доступ</b><span>Открыть страницу доступа и создать тестового СПН на отдельный email.</span></div>
-          <div class="start-step"><b>Открыть ссылку в инкогнито</b><span>Задать пароль без основной сессии владельца.</span></div>
-          <div class="start-step"><b>Войти как СПН</b><span>Проверить рабочий стол, сделки и форму новой сделки.</span></div>
-          <div class="start-step"><b>Проверить ограничения</b><span>Админка и создание доступов должны быть закрыты.</span></div>
+          <div class="start-step"><b>Открыть чистый вход</b><span>Удалить старую сессию Навигатора из браузера.</span></div>
+          <div class="start-step"><b>Ввести email вручную</b><span>Не использовать автоподстановку браузера.</span></div>
+          <div class="start-step"><b>Войти</b><span>После входа откроется рабочий стол.</span></div>
+          <div class="start-step"><b>Проверить профиль</b><span>На рабочем столе должен быть email нужного сотрудника.</span></div>
         </div>
       </div>
     </section>
@@ -50,13 +50,16 @@
           <span class="start-eyebrow">Разделы</span>
           <h2>Куда перейти</h2>
         </div>
-        <p class="muted" style="margin:0">Список подстраивается под вашу роль.</p>
+        <p class="muted" style="margin:0">Основные разделы Навигатора.</p>
       </div>
-      <div id="startLinksHost" class="start-link-grid"></div>
+      <div class="start-link-grid">
+        <a class="start-link primary" href="./dashboard-v2.html"><b>Рабочий стол</b><span>Сводка и видимые сделки.</span><strong>Открыть</strong></a>
+        <a class="start-link" href="./deals-v2.html"><b>Сделки</b><span>Список доступных сделок.</span><strong>Смотреть</strong></a>
+        <a class="start-link green" href="./spn-v2.html"><b>Новая сделка</b><span>Форма СПН.</span><strong>Создать</strong></a>
+        <a class="start-link" href="./nav-system-check-v2.html"><b>Проверка</b><span>Диагностика входа и роли.</span><strong>Проверить</strong></a>
+      </div>
     </section>
   </main>
-  <script type="module" src="./assets/js/nav-v2/start-v2.js?v=20260617-50"></script>
-  <script type="module" src="./assets/js/nav-v2/expired-session-helper-v2.js?v=20260617-50"></script>
-  <script type="module" src="./assets/js/nav-v2/login-help-hint-v2.js?v=20260617-50"></script>
+  <script type="module" src="./assets/js/nav-v2/start-v2.js?v=20260617-51"></script>
 </body>
 </html>
