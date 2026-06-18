@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Быстрый рабочий стол — Навигатор v2</title>
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-56">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-56">
+</head>
+<body class="nav-v2">
+  <main class="nav-v2-shell">
+    <section class="hero">
+      <h1>Быстрый рабочий стол</h1>
+      <p>Эта страница работает без JavaScript и без запросов к базе. Если кнопки здесь нажимаются быстро, проблема была в загрузке модулей или данных на обычной странице.</p>
+    </section>
+
+    <section class="card">
+      <h2>Быстрые переходы</h2>
+      <div class="actions" style="justify-content:flex-start">
+        <a class="btn primary" href="./dashboard-fast-v2.html">Быстрая версия</a>
+        <a class="btn light" href="./dashboard-v2.html">Обычный рабочий стол</a>
+        <a class="btn green" href="./spn-v2.html">Новая сделка</a>
+        <a class="btn light" href="./deals-v2.html">Сделки</a>
+        <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
+        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Для проверки</h2>
+        <div class="list">
+          <div class="list-item"><b>Кнопки должны реагировать сразу</b><span class="small">На этой странице нет JS, Supabase-запросов и динамической отрисовки.</span></div>
+          <div class="list-item"><b>Если здесь всё быстро</b><span class="small">Значит тормозит обычная загрузка данных/модулей.</span></div>
+          <div class="list-item"><b>Если здесь тоже медленно</b><span class="small">Проблема вне кода CRM: браузер, расширения, сеть, устройство или кеш GitHub Pages.</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Что открыть СПН</h2>
+        <div class="list">
+          <div class="list-item"><b>Сделки</b><a class="btn light" href="./deals-v2.html">Открыть список сделок</a></div>
+          <div class="list-item"><b>Новая сделка</b><a class="btn green" href="./spn-v2.html">Создать сделку</a></div>
+          <div class="list-item"><b>Чистый вход</b><a class="btn light" href="./nav-v2.html?clean=1">Сбросить локальную сессию</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
