@@ -106,7 +106,7 @@ function renderDashboard(data) {
         <div class="actions" style="justify-content:flex-start">
           ${profile.role === 'spn' ? '<a class="btn primary" href="./spn-v2.html">Создать сделку</a>' : ''}
           <a class="btn light" href="./deals-v2.html">Открыть список сделок</a>
-          <button id="reloadDashboard" class="btn light" type="button">Обновить</button>
+          <a class="btn light" href="./dashboard-v2.html">Обновить</a>
         </div>
       </div>
     </section>
@@ -116,9 +116,6 @@ function renderDashboard(data) {
     </section>`;
 
   renderShell(profile, body);
-
-  const reload = document.getElementById('reloadDashboard');
-  if (reload) reload.onclick = load;
 }
 
 function renderLogin(message = '') {
