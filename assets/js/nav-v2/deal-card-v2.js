@@ -385,6 +385,28 @@ function bindActions() {
   };
 }
 
+function isCardLoadFallbackError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return text.includes('сначала войдите')
+    || text.includes('ошибка supabase 400')
+    || text.includes('ошибка supabase 401')
+    || text.includes('jwt expired')
+    || text.includes('unauthorized')
+    || text.includes('refresh');
+}
+
+function renderLoginAfterCardError() {
+  const root = document.getElementById('app');
+  root.innerHTML = '<main class="nav-v2-shell"><div id="dealCardAuthHost"></div></main>';
+  const host = document.getElementById('dealCardAuthHost');
+  renderAuthBox(host, async () => location.reload());
+  const status = document.getElementById('authStatus');
+  if (status) {
+    status.className = 'status warn';
+    status.textContent = 'Сессия истекла или была повреждена. Войдите снова.';
+  }
+}
+
 async function load() {
   if (!dealId) { document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status error">Не указан id сделки.</div></main>'; return; }
   document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю карточку сделки...</div></main>';
@@ -396,7 +418,13 @@ async function load() {
     if (isLawyer() && !location.hash && activeTab === 'overview') activeTab = 'risks';
     renderCard(cardData);
   }
-  catch (error) { document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`; }
+  catch (error) {
+    if (isCardLoadFallbackError(error)) {
+      renderLoginAfterCardError();
+      return;
+    }
+    document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`;
+  }
 }
 
 async function init() { setupTop('deals'); if (!getCachedUser()) return renderAuthBox(document.getElementById('app'), async () => location.reload()); await load(); }
