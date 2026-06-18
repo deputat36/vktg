@@ -210,6 +210,28 @@ function render() {
   if (reload) reload.onclick = load;
 }
 
+function isLoadFallbackError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return text.includes('сначала войдите')
+    || text.includes('ошибка supabase 400')
+    || text.includes('ошибка supabase 401')
+    || text.includes('jwt expired')
+    || text.includes('unauthorized')
+    || text.includes('refresh');
+}
+
+function renderLoginAfterDashboardError() {
+  const root = document.getElementById('app');
+  root.innerHTML = '<main class="nav-v2-shell"><div id="dashboardAuthHost"></div></main>';
+  const host = document.getElementById('dashboardAuthHost');
+  renderAuthBox(host, async () => location.reload());
+  const status = document.getElementById('authStatus');
+  if (status) {
+    status.className = 'status warn';
+    status.textContent = 'Сессия истекла или была повреждена. Войдите снова.';
+  }
+}
+
 async function prepareLightProfile() {
   const cached = getCachedProfile();
   if (cached?.role) {
@@ -251,6 +273,10 @@ async function load() {
       loadWarning = 'Полный рабочий стол не загрузился, включен облегчённый режим по списку сделок. Карточки сделок доступны, но открытые задачи в этом режиме могут отображаться не полностью.';
       render();
     } catch (fallbackError) {
+      if (isLoadFallbackError(fallbackError) || isLoadFallbackError(dashboardError)) {
+        renderLoginAfterDashboardError();
+        return;
+      }
       if (data?.profile?.role) {
         loadWarning = `Данные сделок временно не загрузились: ${fallbackError.message || dashboardError.message || 'Supabase'}. Можно перейти в список сделок или попробовать обновить страницу.`;
         render();
