@@ -1,6 +1,7 @@
 import { rpc, esc, getCachedUser, getMyProfile } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
+const PENDING_COMMENT_KEY = `nav_v2_pending_rework_comment:${dealId || 'no-deal'}`;
 let handoffText = '';
 let readiness = null;
 let userRole = '';
@@ -189,18 +190,47 @@ function openCommentsTab() {
   location.reload();
 }
 
-function setCommentText(text) {
-  if (!canManageRework()) return;
-  openCommentsTab();
-  setTimeout(() => {
-    const field = document.getElementById('newComment');
-    if (!field) return;
-    const current = field.value.trim();
+function findCommentField() {
+  return document.getElementById('newComment')
+    || document.querySelector('textarea[name="comment"]')
+    || document.querySelector('textarea#comment')
+    || document.querySelector('textarea');
+}
+
+function appendTextToCommentField(text) {
+  const field = findCommentField();
+  if (!field || !text.trim()) return false;
+  const current = field.value.trim();
+  if (!current.includes(text.trim())) {
     field.value = current ? `${current}\n\n${text}` : text;
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.focus();
-    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 180);
+  }
+  try { sessionStorage.removeItem(PENDING_COMMENT_KEY); } catch (_) {}
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.focus();
+  field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+function waitForCommentField(text, attempt = 0) {
+  const delay = attempt === 0 ? 180 : 220;
+  setTimeout(() => {
+    if (appendTextToCommentField(text)) return;
+    if (attempt < 12) waitForCommentField(text, attempt + 1);
+  }, delay);
+}
+
+function restorePendingComment() {
+  try {
+    const text = sessionStorage.getItem(PENDING_COMMENT_KEY);
+    if (text) waitForCommentField(text);
+  } catch (_) {}
+}
+
+function setCommentText(text) {
+  if (!canManageRework() || !text.trim()) return;
+  try { sessionStorage.setItem(PENDING_COMMENT_KEY, text); } catch (_) {}
+  openCommentsTab();
+  waitForCommentField(text);
 }
 
 async function addReworkComment(button) {
@@ -269,6 +299,8 @@ async function copyToClipboard(text, button, defaultText) {
 }
 
 function bindPanelActions() {
+  restorePendingComment();
+
   const copy = document.getElementById('copyCardHandoffText');
   if (copy && !copy.dataset.bound) {
     copy.dataset.bound = '1';
