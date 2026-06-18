@@ -152,10 +152,10 @@ async function createAccessLink() {
         <div class="list-item"><b>Роль</b>${esc(data.role || payload.role)}</div>
         <div class="list-item"><b>Безопасная ссылка для сотрудника</b><textarea id="safeAccessLink" readonly style="min-height:120px">${esc(safeLink)}</textarea></div>
       </div>
-      <div class="status warn">Для теста не открывайте ссылку в обычной вкладке владельца. Скопируйте ее и откройте в инкогнито.</div>
+      <div class="status warn">Не открывайте ссылку в обычной вкладке владельца. Для теста скопируйте ее и откройте в инкогнито или в другом браузере.</div>
       <div class="actions" style="justify-content:flex-start">
         <button id="copyAccessLink" class="btn primary" type="button">Скопировать ссылку</button>
-        <a class="btn light" href="${esc(safeLink)}" target="_blank" rel="noopener">Открыть в новой вкладке</a>
+        <a class="btn light" href="./nav-access-audit-v2.html">Открыть аудит доступов</a>
       </div>
     </div>`;
     document.getElementById('copyAccessLink').onclick = () => copyText(safeLink);
