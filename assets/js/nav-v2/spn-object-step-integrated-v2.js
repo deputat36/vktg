@@ -1,4 +1,5 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
+const RESUME_OBJECT_STEP_KEY = 'nav_spn_resume_object_step_v2';
 let scheduled = false;
 
 function readDraft() {
@@ -13,8 +14,16 @@ function flagsOf(deal) {
   return Array.isArray(deal.flags) ? deal.flags : [];
 }
 
+function isLegacyShareObject(deal) {
+  return deal.objectType === 'share' || deal.objectCategory === 'share';
+}
+
 function shareMarked(deal) {
-  return flagsOf(deal).includes('shares') || deal.legalForm === 'share' || deal.objectType === 'share' || deal.objectCategory === 'share';
+  return flagsOf(deal).includes('shares') || deal.legalForm === 'share' || isLegacyShareObject(deal);
+}
+
+function physicalObjectSelected(deal) {
+  return Boolean(deal.objectType && deal.objectType !== 'share');
 }
 
 function option(value, label, current) {
@@ -35,7 +44,7 @@ function textareaField(name, label, current, placeholder = '') {
 
 function normalizeLegacyShare() {
   const deal = readDraft();
-  if (deal.objectType !== 'share' && deal.objectCategory !== 'share') return false;
+  if (!isLegacyShareObject(deal)) return false;
 
   const flags = flagsOf(deal);
   const next = {
@@ -47,7 +56,45 @@ function normalizeLegacyShare() {
   delete next.objectCategory;
   delete next.apartmentKind;
   writeDraft(next);
+  sessionStorage.setItem(RESUME_OBJECT_STEP_KEY, '1');
   return true;
+}
+
+function setShareMode(mode) {
+  const deal = readDraft();
+  const flags = new Set(flagsOf(deal));
+
+  if (mode === 'share') {
+    flags.add('shares');
+    deal.legalForm = 'share';
+    deal.shareSale = true;
+    if (physicalObjectSelected(deal) && !deal.shareBaseObject) deal.shareBaseObject = deal.objectType;
+  } else {
+    flags.delete('shares');
+    deal.shareSale = false;
+    delete deal.legalForm;
+    delete deal.shareBaseObject;
+    delete deal.shareSize;
+    delete deal.shareSeparateEntrance;
+    delete deal.shareSeparateYard;
+    delete deal.shareUseOrder;
+    delete deal.shareConflict;
+    delete deal.shareRealUseComment;
+  }
+
+  deal.flags = [...flags];
+  writeDraft(deal);
+  sessionStorage.setItem(RESUME_OBJECT_STEP_KEY, '1');
+  location.reload();
+}
+
+function resumeObjectStepIfNeeded() {
+  if (sessionStorage.getItem(RESUME_OBJECT_STEP_KEY) !== '1') return;
+  const buttons = [...document.querySelectorAll('[data-action^="step:"]')];
+  const objectButton = buttons.find((button) => button.textContent.includes('Объект'));
+  if (!objectButton) return;
+  sessionStorage.removeItem(RESUME_OBJECT_STEP_KEY);
+  objectButton.click();
 }
 
 function findObjectCard() {
@@ -60,12 +107,24 @@ function removeLegacyShareChoice(card) {
   card.querySelectorAll('[data-action="set:objectCategory:share"]').forEach((button) => button.remove());
 }
 
-function buildInlineShareBlock(deal) {
-  const marked = shareMarked(deal);
-  const baseObject = deal.shareBaseObject || (deal.objectType !== 'share' ? deal.objectType : '');
-  const extra = marked ? `<div class="grid" style="margin-top:12px">
+function buildShareModeButtons(marked) {
+  return `<div class="option-grid" style="margin-top:8px">
+    <button class="option ${!marked ? 'active' : ''}" type="button" data-share-mode="whole">
+      <b>Целый объект</b>
+      <span>Обычная продажа всего объекта. Уточнения по доле не нужны.</span>
+    </button>
+    <button class="option ${marked ? 'active' : ''}" type="button" data-share-mode="share">
+      <b>Доля / часть объекта</b>
+      <span>Половина дома, доля в квартире, доля в земле или другом объекте.</span>
+    </button>
+  </div>`;
+}
+
+function buildShareFields(deal) {
+  const baseObject = deal.shareBaseObject || (physicalObjectSelected(deal) ? deal.objectType : '');
+  return `<div class="grid" style="margin-top:12px">
     <div>${selectField('shareBaseObject', 'Доля в чём?', baseObject, [
-      ['', 'Выберите, если не совпадает с типом объекта'],
+      ['', 'Совпадает с выбранным объектом'],
       ['flat_mkd', 'в квартире в МКД'],
       ['flat_ground', 'в квартире на земле'],
       ['room', 'в комнате / коммунальном объекте'],
@@ -109,19 +168,27 @@ function buildInlineShareBlock(deal) {
       ['unknown', 'пока неизвестно']
     ])}</div>
   </div>
-  ${textareaField('shareRealUseComment', 'Коротко о фактическом пользовании', deal.shareRealUseComment, 'Например: отдельный вход, свой двор, общая кухня, кто живёт, есть ли конфликт.')}` : '';
+  ${textareaField('shareRealUseComment', 'Коротко о фактическом пользовании', deal.shareRealUseComment, 'Например: отдельный вход, свой двор, общая кухня, кто живёт, есть ли конфликт.')}`;
+}
 
+function buildInlineShareBlock(deal) {
+  if (!physicalObjectSelected(deal) && !shareMarked(deal)) {
+    return `<div id="inlineShareObjectBlock" class="status" style="margin-top:12px">
+      <b>Доля / часть объекта</b>
+      <p class="muted" style="margin:6px 0 0">Сначала выберите физический тип недвижимости. После этого появится выбор: целый объект или доля / часть объекта.</p>
+    </div>`;
+  }
+
+  const marked = shareMarked(deal);
   const hint = marked
-    ? 'Заполните только то, что уже известно. Если это половина дома — особенно важны вход, двор, коммуникации и порядок пользования. Если доля в квартире — важно объяснить риски покупателю.'
-    : 'Если продаётся целый объект, ничего отмечать не нужно. Если продаётся доля, половина дома или часть объекта — нажмите кнопку ниже.';
+    ? 'Уточняйте только известные факты. Для половины дома особенно важны вход, двор, коммуникации и порядок пользования. Для доли в квартире важно объяснить риски покупателю.'
+    : 'Выбран физический тип недвижимости. Теперь уточните юридическую форму: продаётся весь объект или доля / часть объекта.';
 
   return `<div id="inlineShareObjectBlock" class="status" style="margin-top:12px">
-    <b>Доля / часть объекта</b>
+    <b>Юридическая форма объекта</b>
     <p class="muted" style="margin:6px 0 10px">${hint}</p>
-    <div class="actions" style="justify-content:flex-start;margin-bottom:8px">
-      <button class="btn ${marked ? 'primary' : 'light'}" type="button" data-action="sellerFlag:shares">${marked ? 'Признак “доля / часть объекта” отмечен' : 'Продаётся доля / часть объекта'}</button>
-    </div>
-    ${extra}
+    ${buildShareModeButtons(marked)}
+    ${marked ? buildShareFields(deal) : ''}
   </div>`;
 }
 
@@ -144,6 +211,8 @@ function cleanTopHelpers() {
 }
 
 function apply() {
+  resumeObjectStepIfNeeded();
+
   if (normalizeLegacyShare()) {
     setTimeout(() => location.reload(), 80);
     return;
@@ -172,6 +241,15 @@ const timer = setInterval(() => {
   if (attempts >= 30) clearInterval(timer);
 }, 150);
 
-document.addEventListener('click', schedule, true);
+document.addEventListener('click', (event) => {
+  const modeButton = event.target?.closest?.('[data-share-mode]');
+  if (modeButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    setShareMode(modeButton.dataset.shareMode);
+    return;
+  }
+  schedule();
+}, true);
 document.addEventListener('input', schedule, true);
 window.addEventListener('storage', schedule);
