@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка мастера СПН — Навигатор v2</title>
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-87">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-87">
+</head>
+<body class="nav-v2">
+  <main class="nav-v2-shell">
+    <section class="hero">
+      <h1>Проверка мастера СПН</h1>
+      <p>Эта страница нужна для быстрого ручного теста новой сделки после адаптации шагов. Прогоняем реальные сценарии и отмечаем, где мастер помогает, а где мешает.</p>
+    </section>
+
+    <section class="card">
+      <div class="actions" style="justify-content:flex-start">
+        <a class="btn primary" href="./spn-v2.html?test=20260617-87">Открыть новую сделку</a>
+        <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
+        <a class="btn light" href="./deals-v2.html">Сделки</a>
+        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Как проверять</h2>
+        <div class="list">
+          <div class="list-item"><b>1. Открыть чистый вход</b><span class="small">Лучше в инкогнито или после Ctrl+F5.</span></div>
+          <div class="list-item"><b>2. Создать тестовую сделку</b><span class="small">Использовать один из сценариев ниже.</span></div>
+          <div class="list-item"><b>3. Не заполнять лишнее</b><span class="small">Проверить, что мастер сам не заставляет вводить ненужные данные.</span></div>
+          <div class="list-item"><b>4. Дойти до итога</b><span class="small">Финальный экран должен подсказать маршрут и кого подключить.</span></div>
+          <div class="list-item"><b>5. Сохранить черновик</b><span class="small">После сохранения сделка должна появиться в списке и открыться.</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Критерии качества</h2>
+        <div class="list">
+          <div class="list-item"><b>Нет дублей</b><span class="small">Один и тот же вопрос не должен появляться в разных местах без смысла.</span></div>
+          <div class="list-item"><b>Сначала важное</b><span class="small">В начале шага только то, что влияет на маршрут сделки.</span></div>
+          <div class="list-item"><b>Техническое ниже</b><span class="small">Кадастровые номера, реквизиты и организационные детали — в конце или в раскрывающихся блоках.</span></div>
+          <div class="list-item"><b>Уточнения по ситуации</b><span class="small">Если выбран риск, появляются его вопросы. Если риска нет — лишнего блока нет.</span></div>
+          <div class="list-item"><b>Понятный итог</b><span class="small">В конце ясно: можно двигаться, кого подключить и что делать первым.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <h2>Сценарии проверки</h2>
+        <span class="pill blue">5 сценариев</span>
+      </div>
+      <div class="deal-list">
+        <article class="deal-card">
+          <div class="deal-title">Сценарий 1. Простая квартира, продавец и покупатель есть</div>
+          <p><b>Цель:</b> проверить, что мастер не перегружает обычную сделку.</p>
+          <div class="list">
+            <div class="list-item"><b>Что готовим</b>Подготовка к задатку</div>
+            <div class="list-item"><b>Сторона</b>Обе стороны, один СПН</div>
+            <div class="list-item"><b>Объект</b>Квартира в МКД, целый объект</div>
+            <div class="list-item"><b>Продавец</b>Один взрослый, ДКП, без рисков</div>
+            <div class="list-item"><b>Покупатель</b>Один взрослый, собственные средства</div>
+          </div>
+          <div class="status ok">Ожидаемый результат: юрист/брокер не навязываются, итог говорит “можно двигаться дальше” или “можно сохранить черновик”.</div>
+        </article>
+
+        <article class="deal-card">
+          <div class="deal-title">Сценарий 2. Дом с участком</div>
+          <p><b>Цель:</b> проверить, что нет дубля кадастрового номера и дом/земля разведены правильно.</p>
+          <div class="list">
+            <div class="list-item"><b>Объект</b>Дом с участком</div>
+            <div class="list-item"><b>Детали</b>В начале адрес, цена, площадь, земля, ВРИ, коммуникации</div>
+            <div class="list-item"><b>Для юриста</b>Кадастровый номер дома и кадастровый номер земли в нижнем блоке</div>
+          </div>
+          <div class="status ok">Ожидаемый результат: общего поля “Кадастровый номер” для дома с участком нет.</div>
+        </article>
+
+        <article class="deal-card">
+          <div class="deal-title">Сценарий 3. Доля / часть дома</div>
+          <p><b>Цель:</b> проверить, что доля не является типом недвижимости, а работает как юридическая форма.</p>
+          <div class="list">
+            <div class="list-item"><b>Объект</b>Дом с участком</div>
+            <div class="list-item"><b>Юридическая форма</b>Доля / часть объекта</div>
+            <div class="list-item"><b>Уточнения</b>Размер доли, отдельный вход, двор/участок, порядок пользования, конфликт</div>
+          </div>
+          <div class="status warn">Ожидаемый результат: мастер просит уточнения по доле, но не заставляет повторно выбирать тип объекта.</div>
+        </article>
+
+        <article class="deal-card">
+          <div class="deal-title">Сценарий 4. Маткапитал / ребёнок-покупатель</div>
+          <p><b>Цель:</b> проверить автоматическое подключение юридического и брокерского маршрута.</p>
+          <div class="list">
+            <div class="list-item"><b>Покупатель</b>Есть ребёнок-покупатель</div>
+            <div class="list-item"><b>Деньги</b>Маткапитал + ипотека или маткапитал без ипотеки</div>
+            <div class="list-item"><b>Задаток</b>Должно быть предупреждение перед задатком</div>
+          </div>
+          <div class="status warn">Ожидаемый результат: в итоговом экране появляется юрист, а при ипотеке — брокер.</div>
+        </article>
+
+        <article class="deal-card">
+          <div class="deal-title">Сценарий 5. Расчёт после регистрации</div>
+          <p><b>Цель:</b> проверить, что опасная схема расчётов не теряется в форме.</p>
+          <div class="list">
+            <div class="list-item"><b>Расчёты</b>После регистрации или СФР / сертификат после регистрации</div>
+            <div class="list-item"><b>Уточнения</b>Сумма после регистрации, срок перечисления, как защищаем продавца</div>
+            <div class="list-item"><b>Итог</b>Финальный экран должен показать вопрос проверки расчётов</div>
+          </div>
+          <div class="status warn">Ожидаемый результат: мастер не даёт спокойно забыть, что часть оплаты будет позже.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Что фиксировать после теста</h2>
+      <div class="grid">
+        <div>
+          <h3>Если всё хорошо</h3>
+          <div class="status ok">Отметить сценарий как рабочий и перейти к следующему.</div>
+        </div>
+        <div>
+          <h3>Если есть проблема</h3>
+          <div class="status warn">Записать: сценарий, шаг, что выбрано, что лишнее/непонятно/не появилось.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Шаблон заметки по ошибке</label>
+        <textarea readonly style="min-height:150px">Сценарий:
+Шаг:
+Что выбрано:
+Что ожидали:
+Что увидели:
+Что нужно изменить:</textarea>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
