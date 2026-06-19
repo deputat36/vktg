@@ -1,52 +1,16 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
 const RESUME_OBJECT_STEP_KEY = 'nav_spn_resume_object_step_v2';
 let scheduled = false;
+let observerStarted = false;
 
 const OBJECT_TYPES = [
-  {
-    type: 'flat_mkd',
-    category: 'flat',
-    apartmentKind: 'flat_mkd',
-    title: 'Квартира в МКД',
-    text: 'Обычная квартира в многоквартирном доме.'
-  },
-  {
-    type: 'flat_ground',
-    category: 'flat',
-    apartmentKind: 'flat_ground',
-    title: 'Квартира на земле',
-    text: 'Квартира с вопросами по земле, входу, коммуникациям и статусу дома.'
-  },
-  {
-    type: 'room',
-    category: 'room',
-    title: 'Комната',
-    text: 'Комната, коммуналка, общежитие — отдельный объект, не доля.'
-  },
-  {
-    type: 'house_land',
-    category: 'house_land',
-    title: 'Дом с участком',
-    text: 'Дом и земля проверяются вместе.'
-  },
-  {
-    type: 'land',
-    category: 'land',
-    title: 'Земельный участок',
-    text: 'Категория, ВРИ, межевание, ограничения.'
-  },
-  {
-    type: 'new_building',
-    category: 'new_building',
-    title: 'Новостройка / ДДУ / уступка',
-    text: 'Застройщик, ДДУ, уступка, эскроу.'
-  },
-  {
-    type: 'commercial',
-    category: 'commercial',
-    title: 'Коммерция',
-    text: 'Юрлица, назначение, арендатор, НДС.'
-  }
+  { type: 'flat_mkd', category: 'flat', apartmentKind: 'flat_mkd', title: 'Квартира в МКД', text: 'Обычная квартира в многоквартирном доме.' },
+  { type: 'flat_ground', category: 'flat', apartmentKind: 'flat_ground', title: 'Квартира на земле', text: 'Квартира с вопросами по земле, входу, коммуникациям и статусу дома.' },
+  { type: 'room', category: 'room', title: 'Комната', text: 'Комната, коммуналка, общежитие — отдельный объект, не доля.' },
+  { type: 'house_land', category: 'house_land', title: 'Дом с участком', text: 'Дом и земля проверяются вместе.' },
+  { type: 'land', category: 'land', title: 'Земельный участок', text: 'Категория, ВРИ, межевание, ограничения.' },
+  { type: 'new_building', category: 'new_building', title: 'Новостройка / ДДУ / уступка', text: 'Застройщик, ДДУ, уступка, эскроу.' },
+  { type: 'commercial', category: 'commercial', title: 'Коммерция', text: 'Юрлица, назначение, арендатор, НДС.' }
 ];
 
 function readDraft() {
@@ -67,6 +31,10 @@ function physicalObjectSelected(deal) {
 
 function shareMarked(deal) {
   return flagsOf(deal).includes('shares') || deal.legalForm === 'share' || deal.shareSale === true || deal.objectType === 'share' || deal.objectCategory === 'share';
+}
+
+function objectLabel(type) {
+  return OBJECT_TYPES.find((item) => item.type === type)?.title || 'выбранный объект';
 }
 
 function fieldOption(value, label, current) {
@@ -117,16 +85,12 @@ function setObjectType(type) {
   if (!config) return;
 
   const deal = readDraft();
-  const previousType = deal.objectType;
-
   deal.objectType = config.type;
   deal.objectCategory = config.category;
   if (config.apartmentKind) deal.apartmentKind = config.apartmentKind;
   else delete deal.apartmentKind;
 
-  if (shareMarked(deal) && (!deal.shareBaseObject || deal.shareBaseObject === previousType || deal.shareBaseObject === 'share')) {
-    deal.shareBaseObject = config.type;
-  }
+  if (shareMarked(deal)) deal.shareBaseObject = config.type;
 
   writeDraft(deal);
   sessionStorage.setItem(RESUME_OBJECT_STEP_KEY, '1');
@@ -184,7 +148,7 @@ function findObjectCard() {
 
 function objectTypeCard(item, deal) {
   const active = deal.objectType === item.type;
-  return `<button class="option ${active ? 'active' : ''}" type="button" data-object-type="${item.type}">
+  return `<button class="option ${active ? 'active' : ''}" type="button" data-object-type="${esc(item.type)}">
     <b>${esc(item.title)}</b>
     <span>${esc(item.text)}</span>
   </button>`;
@@ -201,11 +165,11 @@ function legalFormBlock(deal) {
   const marked = shareMarked(deal);
   return `<div class="status" style="margin-top:14px">
     <b>Юридическая форма объекта</b>
-    <p class="muted" style="margin:6px 0 10px">Теперь уточните, что продаётся юридически. Если это обычная продажа всего объекта — оставьте “Целый объект”.</p>
+    <p class="muted" style="margin:6px 0 10px">Вы выбрали: <b>${esc(objectLabel(deal.objectType))}</b>. Теперь уточните, продаётся весь объект или доля / часть объекта.</p>
     <div class="option-grid">
       <button class="option ${!marked ? 'active' : ''}" type="button" data-legal-form="whole">
         <b>Целый объект</b>
-        <span>Продаётся весь объект. Вопросы по доле не нужны.</span>
+        <span>Продаётся весь выбранный объект. Вопросы по доле не нужны.</span>
       </button>
       <button class="option ${marked ? 'active' : ''}" type="button" data-legal-form="share">
         <b>Доля / часть объекта</b>
@@ -217,22 +181,12 @@ function legalFormBlock(deal) {
 }
 
 function shareFields(deal) {
-  const baseObject = deal.shareBaseObject || deal.objectType;
-  return `<div class="grid" style="margin-top:12px">
-    <div>${selectField('shareBaseObject', 'Доля в чём?', baseObject, [
-      ['', 'Совпадает с выбранным объектом'],
-      ['flat_mkd', 'в квартире в МКД'],
-      ['flat_ground', 'в квартире на земле'],
-      ['room', 'в комнате / коммунальном объекте'],
-      ['house_land', 'в доме с участком'],
-      ['house', 'в доме без уточнения земли'],
-      ['land', 'в земельном участке'],
-      ['commercial', 'в коммерции'],
-      ['other', 'другое']
-    ])}</div>
-    <div>${inputField('shareSize', 'Размер доли', deal.shareSize, 'например: 1/2, 1/3')}</div>
+  return `<div class="status" style="margin-top:12px;background:#fff">
+    <b>Доля в объекте:</b> ${esc(objectLabel(deal.objectType))}
+    <p class="muted" style="margin:6px 0 0">Тип объекта уже выбран выше. Здесь уточняем только условия доли.</p>
   </div>
-  <div class="grid">
+  <div class="grid" style="margin-top:12px">
+    <div>${inputField('shareSize', 'Размер доли', deal.shareSize, 'например: 1/2, 1/3')}</div>
     <div>${selectField('shareSeparateEntrance', 'Есть отдельный вход?', deal.shareSeparateEntrance, [
       ['', 'Не выбрано'],
       ['yes', 'да, есть отдельный вход'],
@@ -240,6 +194,8 @@ function shareFields(deal) {
       ['unknown', 'пока неизвестно'],
       ['not_applicable', 'не применимо']
     ])}</div>
+  </div>
+  <div class="grid">
     <div>${selectField('shareSeparateYard', 'Есть отдельный двор / участок?', deal.shareSeparateYard, [
       ['', 'Не выбрано'],
       ['yes', 'да'],
@@ -247,8 +203,6 @@ function shareFields(deal) {
       ['unknown', 'пока неизвестно'],
       ['not_applicable', 'не применимо']
     ])}</div>
-  </div>
-  <div class="grid">
     <div>${selectField('shareUseOrder', 'Порядок пользования определён?', deal.shareUseOrder, [
       ['', 'Не выбрано'],
       ['agreement', 'есть соглашение'],
@@ -257,6 +211,8 @@ function shareFields(deal) {
       ['no', 'не определён'],
       ['unknown', 'пока неизвестно']
     ])}</div>
+  </div>
+  <div class="grid">
     <div>${selectField('shareConflict', 'Есть конфликт с сособственниками?', deal.shareConflict, [
       ['', 'Не выбрано'],
       ['yes', 'да'],
@@ -323,11 +279,22 @@ function schedule() {
   }, 80);
 }
 
+function startObserver() {
+  if (observerStarted) return;
+  const host = document.getElementById('app');
+  if (!host) return;
+  observerStarted = true;
+  const observer = new MutationObserver(() => schedule());
+  observer.observe(host, { childList: true, subtree: true });
+}
+
 let attempts = 0;
 const timer = setInterval(() => {
   attempts += 1;
+  startObserver();
   apply();
-  if (attempts >= 30) clearInterval(timer);
+  if (observerStarted && attempts >= 10) clearInterval(timer);
+  if (attempts >= 40) clearInterval(timer);
 }, 150);
 
 document.addEventListener('click', (event) => {
