@@ -13,6 +13,21 @@ const presets = [
     patch: { preparationMode: 'deposit', stage: 'urgent_deposit', representation: 'one_spn_both', hasSeller: true, hasBuyer: true }
   },
   {
+    title: 'Задаток от продавца',
+    text: 'Работаем от продавца, покупатель есть или появился. Нужны право, документы, цена, задаток, расходы и расчёты.',
+    patch: { preparationMode: 'deposit', stage: 'urgent_deposit', representation: 'seller', hasSeller: true, hasBuyer: true }
+  },
+  {
+    title: 'Задаток от покупателя',
+    text: 'Работаем от покупателя, объект выбран. Нужны деньги покупателя, условия задатка, расходы и риски объекта.',
+    patch: { preparationMode: 'deposit', stage: 'urgent_deposit', representation: 'buyer', hasSeller: true, hasBuyer: true }
+  },
+  {
+    title: 'Партнёрская сделка',
+    text: 'Есть внешний партнёр. Важно понять, чья сторона, кто отвечает за документы, задаток и передачу информации.',
+    patch: { preparationMode: 'deposit', stage: 'terms_discussed', representation: 'partner_agency', hasSeller: true, hasBuyer: true }
+  },
+  {
     title: 'Только продавец',
     text: 'Работаем от продавца: право, документы, собственники, риски, готовность к задатку.',
     patch: { preparationMode: 'check_docs', stage: 'object_chosen', representation: 'seller', hasSeller: true, hasBuyer: false }
@@ -36,6 +51,26 @@ const presets = [
     title: 'Квартира на земле',
     text: 'Проверяем землю, статус дома, вход, коммуникации и документы на участок.',
     patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'flat', apartmentKind: 'flat_ground', objectType: 'flat_ground', hasSeller: true }
+  },
+  {
+    title: 'Дом с участком',
+    text: 'Проверяем отдельно дом и землю: кадастры, собственников, межевание, ВРИ, коммуникации.',
+    patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'house_land', objectType: 'house_land', hasSeller: true }
+  },
+  {
+    title: 'Земельный участок',
+    text: 'Категория земли, ВРИ, межевание, подъезд, ограничения, коммуникации, строения.',
+    patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'land', objectType: 'land', hasSeller: true }
+  },
+  {
+    title: 'Новостройка / уступка',
+    text: 'Застройщик, ДДУ или уступка, эскроу, акт, остаток оплаты, ипотека.',
+    patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'new_building', objectType: 'new_building', hasSeller: true }
+  },
+  {
+    title: 'Коммерция',
+    text: 'Назначение, собственник физлицо/юрлицо, арендатор, НДС, ограничения, отдельный вход.',
+    patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'commercial', objectType: 'commercial', hasSeller: true }
   }
 ];
 
@@ -82,13 +117,11 @@ function injectPresets() {
   const card = document.createElement('section');
   card.id = PRESET_CARD_ID;
   card.className = 'card';
-  card.innerHTML = `<div class="section-title">
-    <div>
-      <span class="pill blue">Быстрый старт</span>
-      <h2>Шаблоны сценариев</h2>
-      <p class="muted" style="margin:6px 0 0">Выберите типовую ситуацию, чтобы мастер сам выставил стартовые ответы. Это не удаляет черновик.</p>
-    </div>
-  </div><div class="list">${presets.map(presetHtml).join('')}</div>`;
+  card.innerHTML = `<details open>
+    <summary><span class="pill blue">Быстрый старт</span> <b>Шаблоны сценариев</b></summary>
+    <p class="muted" style="margin:10px 0 12px">Выберите типовую ситуацию, чтобы мастер сам выставил стартовые ответы. Это не удаляет черновик.</p>
+    <div class="list">${presets.map(presetHtml).join('')}</div>
+  </details>`;
 
   if (guide && guide.nextSibling) appShell.insertBefore(card, guide.nextSibling);
   else if (guide) appShell.appendChild(card);
