@@ -133,7 +133,7 @@ async function load() {
   const app = document.getElementById('app');
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Рабочий стол v2</h1><p>Загружаю лёгкий рабочий стол...</p></section>
-    <div class="status">Загружаю список видимых сделок.</div>
+    <div class="status">Загружаю список видимых сделок. Если Supabase отвечает медленно, это может занять до 45 секунд.</div>
     <div class="actions" style="justify-content:flex-start">
       <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
       <a class="btn light" href="./deals-v2.html">Список сделок</a>
@@ -146,12 +146,13 @@ async function load() {
   }
 
   try {
-    const data = await rpc('nav_v2_get_deals_list', { p_limit: 50 }, 15000);
+    const data = await rpc('nav_v2_get_deals_list', { p_limit: 50 }, 45000);
     renderDashboard(data);
   } catch (error) {
     app.innerHTML = `<main class="nav-v2-shell">
       <section class="hero"><h1>Рабочий стол v2</h1><p>Не удалось загрузить список сделок.</p></section>
       <div class="status error">${esc(error.message || error || 'Ошибка загрузки')}</div>
+      <div class="status warn">Если сделка только что сохранялась, она могла создаться в базе. Нажмите «Повторить» через несколько секунд или откройте список сделок.</div>
       <div class="actions" style="justify-content:flex-start">
         <a class="btn primary" href="./dashboard-v2.html">Повторить</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
