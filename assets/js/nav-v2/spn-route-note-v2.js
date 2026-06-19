@@ -38,10 +38,10 @@ function buildNote() {
   lines.push(`Сценарий: ${prep}.`);
   lines.push(`Сторона: ${side}.`);
   lines.push(`Стадия: ${stage}.`);
-  if (isLead) lines.push('Это короткий сценарий: сначала важно зафиксировать запрос клиента, контакт и следующий шаг. Детальная сделочная анкета нужна позже, когда появится объект или вторая сторона.');
-  if (deal.objectType === 'share') lines.push('Выбрана доля: нужны сособственники, уведомления/отказы и нотариальная логика.');
-  if (deal.objectType === 'room') lines.push('Выбрана комната: важно отличать её от доли и уточнить статус объекта, соседей и места общего пользования.');
-  if (deal.objectType === 'flat_ground') lines.push('Выбрана квартира на земле: дополнительно проверяются земля, вход, коммуникации и статус дома.');
+  if (isLead) lines.push('Короткий сценарий: зафиксируйте запрос, контакт и следующий шаг. Детальная сделочная анкета понадобится позже, когда появится объект или вторая сторона.');
+  if (deal.objectType === 'share') lines.push('Доля: нужны сособственники, уведомления/отказы и нотариальная логика.');
+  if (deal.objectType === 'room') lines.push('Комната: важно отличать её от доли, уточнить статус объекта, соседей и места общего пользования.');
+  if (deal.objectType === 'flat_ground') lines.push('Квартира на земле: дополнительно проверяются земля, вход, коммуникации и статус дома.');
   return lines;
 }
 
@@ -59,7 +59,23 @@ function injectNote() {
   box.innerHTML = `<summary><b>Логика сценария</b></summary><div style="margin-top:8px;line-height:1.5">${buildNote().map((line) => `<p style="margin:0 0 6px">${line}</p>`).join('')}</div>`;
 }
 
-const observer = new MutationObserver(() => injectNote());
-observer.observe(document.body, { childList: true, subtree: true });
-window.addEventListener('storage', injectNote);
-injectNote();
+let scheduled = false;
+function scheduleNoteUpdate() {
+  if (scheduled) return;
+  scheduled = true;
+  setTimeout(() => {
+    scheduled = false;
+    injectNote();
+  }, 80);
+}
+
+document.addEventListener('click', scheduleNoteUpdate, true);
+document.addEventListener('input', scheduleNoteUpdate, true);
+window.addEventListener('storage', scheduleNoteUpdate);
+
+let attempts = 0;
+const bootTimer = setInterval(() => {
+  attempts += 1;
+  injectNote();
+  if (document.getElementById('spnRouteNote') || attempts >= 20) clearInterval(bootTimer);
+}, 150);
