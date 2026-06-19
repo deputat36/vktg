@@ -38,9 +38,9 @@ const presets = [
     patch: { preparationMode: 'consult', stage: 'object_chosen', representation: 'buyer', hasSeller: false, hasBuyer: true }
   },
   {
-    title: 'Доля',
-    text: 'Отдельный сценарий: сособственники, уведомления/отказы, нотариус.',
-    patch: { preparationMode: 'check_docs', stage: 'object_chosen', objectCategory: 'share', objectType: 'share', hasSeller: true, flags: ['shares'] }
+    title: 'Доля / часть объекта',
+    text: 'Сначала выберите физический тип недвижимости, потом уточните долю, вход, двор и порядок пользования.',
+    patch: { preparationMode: 'check_docs', stage: 'object_chosen', hasSeller: true, legalForm: 'share', flags: ['shares'] }
   },
   {
     title: 'Комната',
