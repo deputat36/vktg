@@ -33,121 +33,130 @@ function objectTitle(type) {
   }[type] || 'Объект';
 }
 
-function commonMoneyFields() {
-  return `<div class="grid">
-    <div>${field('priceTotal', 'Цена объекта', 'number')}</div>
-    <div>${field('depositAmount', 'Планируемый задаток/аванс', 'number')}</div>
+function section(title, note, content) {
+  return `<div class="card" style="box-shadow:none;margin-top:12px">
+    <h3>${esc(title)}</h3>
+    ${note ? `<p class="muted" style="margin:4px 0 10px">${esc(note)}</p>` : ''}
+    ${content}
   </div>`;
 }
 
-function flatMkdFields() {
-  return `<div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом, квартира')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер квартиры', 'text', 'если есть')}</div>
+function docSection(content) {
+  return `<details class="status" style="margin-top:12px">
+    <summary><b>Для юриста / документов</b></summary>
+    <p class="muted" style="margin:8px 0 10px">Эти поля не должны тормозить первичное заполнение заявки. Заполняйте, если данные уже под рукой или нужно передать юристу.</p>
+    ${content}
+  </details>`;
+}
+
+function minimumFields(addressPlaceholder = 'город, улица, дом') {
+  return section('1. Минимум для заявки', 'Эти данные нужны, чтобы заявка была понятной и по ней можно было двигаться дальше.', `<div class="grid">
+    <div>${field('address', 'Адрес / ориентир', 'text', addressPlaceholder)}</div>
+    <div>${field('priceTotal', 'Цена объекта', 'number')}</div>
   </div>
-  ${commonMoneyFields()}
   <div class="grid">
+    <div>${field('depositAmount', 'Планируемый задаток/аванс', 'number')}</div>
+  </div>`);
+}
+
+function finalComment() {
+  return section('3. Комментарий по объекту', 'Коротко напишите то, что важно не потерять при передаче менеджеру, юристу или брокеру.', textarea('objectComment', 'Комментарий по объекту', 'Что важно знать юристу/руководителю?'));
+}
+
+function flatMkdFields() {
+  return `${minimumFields('город, улица, дом, квартира')}
+  ${section('2. Что влияет на подготовку', 'Эти вопросы помогают понять риски и дальнейшие действия.', `<div class="grid">
     <div>${field('floor', 'Этаж')}</div>
     <div>${field('roomsCount', 'Количество комнат')}</div>
   </div>
   ${textarea('registeredPeople', 'Кто зарегистрирован?', 'Есть ли дети, временная регистрация, когда выписка?')}
-  ${textarea('redevelopment', 'Перепланировка / особенности', 'Есть ли перепланировка, перенос мокрых зон?')}`;
+  ${textarea('redevelopment', 'Перепланировка / особенности', 'Есть ли перепланировка, перенос мокрых зон?')}`)}
+  ${docSection(`<div class="grid"><div>${field('cadastralNumber', 'Кадастровый номер квартиры', 'text', 'если есть')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function flatGroundFields() {
-  return `<div class="status" style="margin-bottom:12px"><b>Почему отдельный сценарий:</b><br>у квартиры на земле часто есть вопросы по земле, входу, коммуникациям и статусу дома.</div>
-  <div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом, квартира')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер квартиры', 'text', 'если есть')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
-    <div>${field('landCadastralNumber', 'Кадастровый номер земли')}</div>
+  return `${minimumFields('город, улица, дом, квартира')}
+  ${section('2. Что влияет на подготовку', 'Для квартиры на земле важны статус земли, вход, коммуникации и фактическое пользование.', `<div class="grid">
     <div>${field('landStatus', 'Статус земли / участка')}</div>
   </div>
-  ${textarea('flatGroundComment', 'Особенности квартиры на земле', 'Отдельный вход, коммуникации, доля земли, порядок пользования.')}`;
+  ${textarea('flatGroundComment', 'Особенности квартиры на земле', 'Отдельный вход, коммуникации, доля земли, порядок пользования.')}`)}
+  ${docSection(`<div class="grid">
+    <div>${field('cadastralNumber', 'Кадастровый номер квартиры', 'text', 'если есть')}</div>
+    <div>${field('landCadastralNumber', 'Кадастровый номер земли')}</div>
+  </div>`)}
+  ${finalComment()}`;
 }
 
 function roomFields() {
-  return `<div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом, квартира/общежитие')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер комнаты', 'text', 'если комната стоит на кадастре')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
+  return `${minimumFields('город, улица, дом, квартира/общежитие')}
+  ${section('2. Что влияет на подготовку', 'Для комнаты важно понять статус объекта и ситуацию с общими помещениями.', `<div class="grid">
     <div>${field('roomArea', 'Площадь комнаты')}</div>
     <div>${field('roomType', 'Комната где?', 'text', 'квартира, общежитие, коммуналка')}</div>
   </div>
-  ${textarea('commonAreas', 'Места общего пользования и соседи', 'Кухня/санузел, конфликт, порядок пользования, зарегистрированные?')}`;
+  ${textarea('commonAreas', 'Места общего пользования и соседи', 'Кухня/санузел, конфликт, порядок пользования, зарегистрированные?')}`)}
+  ${docSection(`<div class="grid"><div>${field('cadastralNumber', 'Кадастровый номер комнаты', 'text', 'если комната стоит на кадастре')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function houseLandFields() {
-  return `<div class="status" style="margin-bottom:12px"><b>Важно:</b><br>для дома с участком не нужен общий кадастровый номер. Проверяем отдельно дом и землю.</div>
-  <div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом')}</div>
+  return `${minimumFields('город, улица, дом')}
+  ${section('2. Что влияет на подготовку', 'Для дома с участком важно понять сам объект, землю, границы и коммуникации. Кадастровые номера — ниже, для юриста.', `<div class="grid">
     <div>${field('houseArea', 'Площадь дома')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
-    <div>${field('houseCadastralNumber', 'Кадастровый номер дома')}</div>
-    <div>${field('landCadastralNumber', 'Кадастровый номер земли')}</div>
+    <div>${field('landArea', 'Площадь участка')}</div>
   </div>
   <div class="grid">
     <div>${field('landCategory', 'Категория земли')}</div>
     <div>${field('landUse', 'ВРИ')}</div>
   </div>
-  ${textarea('boundariesComment', 'Межевание, границы, коммуникации', 'Подъезд, газ/свет/вода, совпадают ли собственники дома и земли?')}`;
+  ${textarea('boundariesComment', 'Межевание, границы, коммуникации', 'Подъезд, газ/свет/вода, совпадают ли собственники дома и земли?')}`)}
+  ${docSection(`<div class="grid">
+    <div>${field('houseCadastralNumber', 'Кадастровый номер дома')}</div>
+    <div>${field('landCadastralNumber', 'Кадастровый номер земли')}</div>
+  </div>`)}
+  ${finalComment()}`;
 }
 
 function landFields() {
-  return `<div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'район, улица, СНТ, ориентир')}</div>
-    <div>${field('landCadastralNumber', 'Кадастровый номер участка')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
+  return `${minimumFields('район, улица, СНТ, ориентир')}
+  ${section('2. Что влияет на подготовку', 'Для участка важны площадь, категория, ВРИ, подъезд, ограничения и коммуникации.', `<div class="grid">
     <div>${field('landArea', 'Площадь участка')}</div>
     <div>${field('landCategory', 'Категория земли')}</div>
   </div>
   <div class="grid">
     <div>${field('landUse', 'ВРИ')}</div>
   </div>
-  ${textarea('landComment', 'Ограничения и коммуникации', 'Межевание, подъезд, охранные зоны, ЛЭП, газ, вода, строения.')}`;
+  ${textarea('landComment', 'Ограничения и коммуникации', 'Межевание, подъезд, охранные зоны, ЛЭП, газ, вода, строения.')}`)}
+  ${docSection(`<div class="grid"><div>${field('landCadastralNumber', 'Кадастровый номер участка')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function newBuildingFields() {
-  return `<div class="grid">
-    <div>${field('address', 'ЖК / адрес / ориентир', 'text', 'название ЖК, дом, секция')}</div>
+  return `${minimumFields('название ЖК, дом, секция')}
+  ${section('2. Что влияет на подготовку', 'Для новостройки важны застройщик, тип договора, стадия и остаток оплаты.', `<div class="grid">
     <div>${field('developer', 'Застройщик')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
     <div>${field('contractType', 'ДДУ / уступка / готовая квартира')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер', 'text', 'только если уже есть')}</div>
   </div>
-  ${textarea('newBuildingComment', 'Особенности новостройки', 'Эскроу, акт, уступка, ипотека, остаток оплаты, сроки.')}`;
+  ${textarea('newBuildingComment', 'Особенности новостройки', 'Эскроу, акт, уступка, ипотека, остаток оплаты, сроки.')}`)}
+  ${docSection(`<div class="grid"><div>${field('cadastralNumber', 'Кадастровый номер', 'text', 'только если уже есть')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function commercialFields() {
-  return `<div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом, помещение')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер помещения', 'text', 'если есть')}</div>
-  </div>
-  ${commonMoneyFields()}
-  <div class="grid">
+  return `${minimumFields('город, улица, дом, помещение')}
+  ${section('2. Что влияет на подготовку', 'Для коммерции важны назначение, статус собственника, арендаторы, НДС и ограничения.', `<div class="grid">
     <div>${field('commercialPurpose', 'Назначение помещения')}</div>
     <div>${field('ownerLegalStatus', 'Собственник физлицо/юрлицо?')}</div>
   </div>
-  ${textarea('tenantComment', 'Арендатор, НДС, ограничения', 'Аренда, НДС, обременения, отдельный вход.')}`;
+  ${textarea('tenantComment', 'Арендатор, НДС, ограничения', 'Аренда, НДС, обременения, отдельный вход.')}`)}
+  ${docSection(`<div class="grid"><div>${field('cadastralNumber', 'Кадастровый номер помещения', 'text', 'если есть')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function fallbackFields() {
-  return `<div class="grid">
-    <div>${field('address', 'Адрес / ориентир', 'text', 'город, улица, дом')}</div>
-    <div>${field('cadastralNumber', 'Кадастровый номер', 'text', 'если есть')}</div>
-  </div>
-  ${commonMoneyFields()}
-  ${textarea('objectComment', 'Комментарий по объекту', 'Что важно знать юристу/руководителю?')}`;
+  return `${minimumFields('город, улица, дом')}
+  ${docSection(`<div class="grid"><div>${field('cadastralNumber', 'Кадастровый номер', 'text', 'если есть')}</div></div>`)}
+  ${finalComment()}`;
 }
 
 function fieldsByType(type) {
@@ -166,9 +175,8 @@ function detailStepHtml() {
   const type = deal.objectType;
   return `<div id="adaptiveObjectDetailsStep">
     <h2>Детали объекта</h2>
-    <p class="muted">Вопросы адаптированы под выбранный тип: <b>${esc(objectTitle(type))}</b>. Лишние кадастровые поля не показываются.</p>
+    <p class="muted">Вопросы сгруппированы по важности для выбранного типа: <b>${esc(objectTitle(type))}</b>. Сначала — то, что помогает двигать заявку. Кадастровые номера и реквизиты — в конце, для юриста.</p>
     ${fieldsByType(type)}
-    ${textarea('objectComment', 'Комментарий по объекту', 'Что важно знать юристу/руководителю?')}
   </div>`;
 }
 
