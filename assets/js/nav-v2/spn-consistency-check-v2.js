@@ -13,12 +13,17 @@ function filled(value) {
   return String(value || '').trim().length > 0;
 }
 
+function shareMarked(deal, flags) {
+  return flags.includes('shares') || deal.objectType === 'share' || deal.legalForm === 'share';
+}
+
 function buildChecks(deal) {
   const warnings = [];
   const tips = [];
   const flags = arr(deal.flags);
   const payments = arr(deal.payments);
   const settlements = arr(deal.settlements);
+  const isShare = shareMarked(deal, flags);
 
   if (deal.preparationMode === 'consult' && ['urgent_deposit', 'deposit_exists', 'main_deal'].includes(deal.stage)) {
     warnings.push('Выбрана консультация, но стадия уже похожа на задаток или сделку. Возможно, лучше выбрать “подготовка к задатку” или “подготовка сделки”.');
@@ -40,12 +45,32 @@ function buildChecks(deal) {
     tips.push('Стадия похожа на согласованную сделку, но одна из сторон отмечена как отсутствующая. Проверьте продавца и покупателя.');
   }
 
-  if (deal.objectType === 'share' && !flags.includes('shares')) {
-    warnings.push('Объект — доля. Проверьте, что в рисках/продавце отмечены доли, сособственники, уведомления и нотариус.');
+  if (deal.objectType === 'share') {
+    tips.push('Лучше выбрать физический тип недвижимости — квартира, дом, земля, коммерция — и отдельно отметить “продаётся доля / часть объекта”. Так сценарий будет точнее.');
+  }
+
+  if (isShare) {
+    if (!filled(deal.shareBaseObject) && deal.objectType === 'share') {
+      tips.push('Доля: уточните, в чём именно доля — квартира, дом, земля, коммерция или другое.');
+    }
+    if (!filled(deal.shareSize)) tips.push('Доля: укажите размер доли, например 1/2, 1/3 или 1/4.');
+    if (!filled(deal.shareSeparateEntrance) && ['house_land', 'house', 'flat_ground', 'share'].includes(deal.objectType || deal.shareBaseObject)) {
+      tips.push('Доля/часть дома: уточните, есть ли отдельный вход. От этого зависит сценарий продажи и риски покупателя.');
+    }
+    if (!filled(deal.shareUseOrder)) tips.push('Доля: уточните, определён ли порядок пользования — соглашением, судом, фактически или никак.');
+    if (deal.shareSeparateEntrance === 'yes' && !filled(deal.shareSeparateYard)) {
+      tips.push('Есть отдельный вход: уточните, есть ли отдельный двор/участок и как им пользуются.');
+    }
+    if (deal.shareSeparateEntrance === 'no') {
+      warnings.push('Доля без отдельного входа. Важно объяснить покупателю, что это не самостоятельный объект, а доля с повышенными рисками пользования.');
+    }
+    if (deal.shareConflict === 'yes') {
+      warnings.push('Есть конфликт с сособственниками. До задатка лучше подключить юриста и не обещать покупателю беспроблемное пользование.');
+    }
   }
 
   if (deal.objectType === 'room' && flags.includes('shares')) {
-    tips.push('Комната и доля — разные сценарии. Если это именно доля в праве, лучше выбрать объект “доля”. Если отдельная комната — оставьте “комната”.');
+    tips.push('Комната и доля — разные сценарии. Если это именно доля в праве, лучше выбрать физический тип объекта и отметить “доля”. Если отдельная комната — оставьте “комната”.');
   }
 
   if (deal.objectType === 'flat_ground' && !filled(deal.landStatus) && !filled(deal.landCadastralNumber)) {
