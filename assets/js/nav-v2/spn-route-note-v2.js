@@ -6,6 +6,38 @@ function textOf(value, map) {
   return map[value] || value || 'не выбрано';
 }
 
+function buildNextQuestions(deal) {
+  const questions = [];
+  const isLead = deal.stage === 'lead_only' || (deal.preparationMode === 'consult' && !deal.objectType);
+
+  if (isLead) {
+    questions.push('Что клиент хочет сделать: купить, продать, проверить документы или подготовиться к задатку?');
+    questions.push('Есть ли уже объект или вторая сторона?');
+    questions.push('Какой ближайший следующий шаг: документы, подбор, встреча, звонок, консультация?');
+    return questions;
+  }
+
+  if (deal.preparationMode === 'deposit' || deal.stage === 'urgent_deposit') {
+    questions.push('Цена, сумма задатка, дата и место задатка уже согласованы?');
+    questions.push('Кто получает деньги и каким способом?');
+    questions.push('Расходы и порядок расчётов согласованы до подписания?');
+  }
+
+  if (deal.representation === 'seller' || deal.representation === 'one_spn_both' || deal.representation === 'both') {
+    questions.push('Кто собственник, какое основание права, есть ли супруг, дети, доли или доверенность?');
+  }
+
+  if (deal.representation === 'buyer' || deal.representation === 'one_spn_both' || deal.representation === 'both') {
+    questions.push('За счёт чего покупатель платит: свои деньги, ипотека, маткапитал, сертификат?');
+  }
+
+  if (deal.objectType === 'share') questions.push('По доле: кто сособственники, есть ли уведомления/отказы, кто готовит нотариуса?');
+  if (deal.objectType === 'room') questions.push('По комнате: это отдельная комната или доля, какой статус, кто соседи, что с местами общего пользования?');
+  if (deal.objectType === 'flat_ground') questions.push('По квартире на земле: что с землёй, входом, коммуникациями и статусом дома?');
+
+  return questions.slice(0, 5);
+}
+
 function buildNote() {
   const deal = readDraft();
   const prep = textOf(deal.preparationMode, {
@@ -42,7 +74,7 @@ function buildNote() {
   if (deal.objectType === 'share') lines.push('Доля: нужны сособственники, уведомления/отказы и нотариальная логика.');
   if (deal.objectType === 'room') lines.push('Комната: важно отличать её от доли, уточнить статус объекта, соседей и места общего пользования.');
   if (deal.objectType === 'flat_ground') lines.push('Квартира на земле: дополнительно проверяются земля, вход, коммуникации и статус дома.');
-  return lines;
+  return { lines, questions: buildNextQuestions(deal) };
 }
 
 function injectNote() {
@@ -56,7 +88,14 @@ function injectNote() {
     box.style.marginTop = '12px';
     aside.appendChild(box);
   }
-  box.innerHTML = `<summary><b>Логика сценария</b></summary><div style="margin-top:8px;line-height:1.5">${buildNote().map((line) => `<p style="margin:0 0 6px">${line}</p>`).join('')}</div>`;
+
+  const note = buildNote();
+  const linesHtml = note.lines.map((line) => `<p style="margin:0 0 6px">${line}</p>`).join('');
+  const questionsHtml = note.questions.length
+    ? `<div style="margin-top:10px"><b>Что спросить сейчас:</b><ul style="margin:6px 0 0 18px;padding:0">${note.questions.map((line) => `<li>${line}</li>`).join('')}</ul></div>`
+    : '';
+
+  box.innerHTML = `<summary><b>Логика сценария</b></summary><div style="margin-top:8px;line-height:1.5">${linesHtml}${questionsHtml}</div>`;
 }
 
 let scheduled = false;
