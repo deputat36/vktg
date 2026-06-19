@@ -28,6 +28,18 @@ function buildChecks(deal) {
     warnings.push('Выбрана подготовка к задатку, но стадия “есть только клиент”. Для задатка обычно уже нужны объект, стороны, цена и сумма.');
   }
 
+  if (deal.representation === 'partner_agency' && !filled(deal.partnerAgencyComment)) {
+    tips.push('Партнёрская сделка: желательно указать, кто партнёр, чью сторону он ведёт и кто отвечает за документы/задаток.');
+  }
+
+  if (deal.stage === 'urgent_deposit' && !filled(deal.objectType)) {
+    warnings.push('Стадия — срочный задаток, но тип объекта ещё не выбран. До задатка нужен хотя бы тип объекта и адрес/ориентир.');
+  }
+
+  if ((deal.stage === 'terms_discussed' || deal.stage === 'main_deal') && (deal.hasSeller === false || deal.hasBuyer === false)) {
+    tips.push('Стадия похожа на согласованную сделку, но одна из сторон отмечена как отсутствующая. Проверьте продавца и покупателя.');
+  }
+
   if (deal.objectType === 'share' && !flags.includes('shares')) {
     warnings.push('Объект — доля. Проверьте, что в рисках/продавце отмечены доли, сособственники, уведомления и нотариус.');
   }
@@ -38,6 +50,32 @@ function buildChecks(deal) {
 
   if (deal.objectType === 'flat_ground' && !filled(deal.landStatus) && !filled(deal.landCadastralNumber)) {
     tips.push('Для квартиры на земле желательно уточнить землю: статус, кадастровый номер, порядок пользования или документы на участок.');
+  }
+
+  if (deal.objectType === 'house_land') {
+    if (!filled(deal.houseCadastralNumber) || !filled(deal.landCadastralNumber)) {
+      tips.push('Дом с участком: желательно отдельно указать кадастровые номера дома и земли.');
+    }
+    if (!filled(deal.landCategory) || !filled(deal.landUse)) {
+      tips.push('Дом с участком: уточните категорию земли и ВРИ, особенно если планируется ипотека или быстрый задаток.');
+    }
+  }
+
+  if (deal.objectType === 'land') {
+    if (!filled(deal.landCadastralNumber)) tips.push('Земельный участок: желательно указать кадастровый номер.');
+    if (!filled(deal.landCategory) || !filled(deal.landUse)) tips.push('Земельный участок: уточните категорию земли и ВРИ.');
+    if (!filled(deal.boundariesComment) && !filled(deal.landComment)) tips.push('Земельный участок: проверьте межевание, подъезд, ограничения, коммуникации и строения.');
+  }
+
+  if (deal.objectType === 'new_building') {
+    if (!filled(deal.developer)) tips.push('Новостройка/уступка: укажите застройщика.');
+    if (!filled(deal.contractType)) tips.push('Новостройка/уступка: уточните, это ДДУ, уступка или уже готовая квартира.');
+  }
+
+  if (deal.objectType === 'commercial') {
+    if (!filled(deal.commercialPurpose)) tips.push('Коммерция: уточните назначение помещения.');
+    if (!filled(deal.ownerLegalStatus)) tips.push('Коммерция: уточните, собственник физлицо или юрлицо, есть ли НДС.');
+    if (!filled(deal.tenantComment)) tips.push('Коммерция: проверьте арендатора, ограничения, коммунальные договоры и отдельный вход.');
   }
 
   if (flags.includes('minorSeller') || flags.includes('minorBuyer') || flags.includes('minorRegistered') || payments.includes('matcap') || payments.includes('nominalChild') || payments.includes('svoChildAccount')) {
