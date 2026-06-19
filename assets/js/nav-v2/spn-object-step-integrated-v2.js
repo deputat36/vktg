@@ -277,6 +277,8 @@ function objectStepHtml(deal) {
 }
 
 function replaceObjectStep(card) {
+  if (card.querySelector('#rebuiltObjectStep')) return;
+
   const title = card.querySelector('.section-title');
   const pageStatus = card.querySelector('#pageStatus');
   if (!title || !pageStatus) return;
@@ -350,7 +352,10 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('input', (event) => {
   const field = event.target?.closest?.('#rebuiltObjectStep [data-field]');
-  if (field) updateDraftField(field.dataset.field, field.value);
+  if (field) {
+    updateDraftField(field.dataset.field, field.value);
+    return;
+  }
   schedule();
 }, true);
 
@@ -358,7 +363,6 @@ document.addEventListener('change', (event) => {
   const field = event.target?.closest?.('#rebuiltObjectStep [data-field]');
   if (!field) return;
   updateDraftField(field.dataset.field, field.value);
-  field.dispatchEvent(new Event('input', { bubbles: true }));
 }, true);
 
 window.addEventListener('storage', schedule);
