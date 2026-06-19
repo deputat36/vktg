@@ -83,9 +83,12 @@ function authErrorText(error) {
     normalized.includes('invalid login credentials') ||
     normalized.includes('invalid_credentials') ||
     normalized.includes('invalid grant') ||
-    normalized.includes('invalid_grant')
+    normalized.includes('invalid_grant') ||
+    normalized.includes('ошибка supabase 400') ||
+    normalized.includes('supabase 400') ||
+    normalized.includes('запрос не выполнен')
   ) {
-    return 'Неверный email или пароль.';
+    return 'Неверный email или пароль. Проверьте пароль вручную, не используйте автоподстановку. Если не уверены — нажмите «Восстановить пароль» и задайте новый.';
   }
   if (normalized.includes('email not confirmed')) {
     return 'Email ещё не подтверждён. Откройте ссылку приглашения или восстановления пароля.';
