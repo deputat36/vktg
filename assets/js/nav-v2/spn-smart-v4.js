@@ -13,6 +13,7 @@ function moneyFilled(value) { return Number(String(value || '').replace(',', '.'
 function is(value, expected) { return String(value || '') === String(expected); }
 function has(key, value) { return arr(key).includes(value); }
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 const labels = {
   preparationMode: { consult:'консультация', deposit:'задаток', deal:'сделка', check_docs:'проверка документов', rework:'доработка заявки' },
@@ -154,9 +155,10 @@ function readiness() {
   ];
   if (hasSeller()) checks.push(check('Заполнен продавец', effectiveFlags().length > 0 || arr('basis').length > 0 || filled(state.deal.sellerComment), 'Отметьте признаки продавца, основание права или комментарий.'));
   if (hasBuyer()) checks.push(check('Заполнен покупатель', arr('payments').length > 0 || filled(state.deal.buyerPhone) || filled(state.deal.buyerComment), 'Укажите деньги, контакт или комментарий по покупателю.'));
-  if (needsMoney()) checks.push(check('Понятен источник денег', arr('payments').length > 0 || state.deal.preparationMode === 'consult', 'Отметьте деньги покупателя.'));
-  if (needsDeposit()) checks.push(check('Есть условия задатка', moneyFilled(state.deal.depositAmount) || filled(state.deal.depositDate) || filled(state.deal.depositConditions), 'Укажите сумму, дату или условия задатка.'));
-  if (needsTerms()) checks.push(check('Условия расчётов и расходов понятны', state.deal.settlementsAgreed === true && state.deal.expensesAgreed === true, 'Согласуйте порядок расчётов и кто оплачивает расходы.'));
+  if (needsMoney()) checks.push(check('Понятен источник денег', arr('payments').length > 0 || filled(state.deal.moneyComment), 'Отметьте источник денег или комментарий.'));
+  if (needsDeposit()) checks.push(check('Согласованы расчёты', state.deal.settlementsAgreed === true, 'До задатка нужно понимать порядок расчётов.'));
+  if (needsDeposit()) checks.push(check('Согласованы расходы', state.deal.expensesAgreed === true, 'До задатка нужно понимать, кто что оплачивает.'));
+  if (analysis().needsLawyer) checks.push(check('Понятен юридический риск', filled(state.deal.riskComment) || filled(state.deal.sellerComment) || filled(state.deal.objectComment), 'Добавьте комментарий по риску для юриста.'));
   checks.push(check('Есть следующий шаг', filled(state.deal.clientNextStep), 'Напишите ближайший шаг с клиентом.'));
   const done = checks.filter((item) => item.done).length;
   const percent = Math.round((done / Math.max(checks.length, 1)) * 100);
@@ -242,21 +244,17 @@ function stepRisks() {
 function handoffText() {
   const r = readiness();
   const a = analysis();
-  const lines = ['Передача заявки от СПН', '', `Что готовим: ${titleOf('preparationMode', state.deal.preparationMode)}`, `Кого сопровождаем: ${titleOf('representation', state.deal.representation)}`, `Стадия: ${titleOf('stage', state.deal.stage)}`, `Объект: ${titleOf('objectType', state.deal.objectType)}`, `Адрес: ${state.deal.address || 'не указан'}`, `Цена: ${state.deal.priceTotal || 'не указана'}`, `Задаток: ${state.deal.depositAmount || 'не указан'}`, '', `Продавец: ${hasSeller() ? 'есть/нужен блок продавца' : 'не требуется сейчас'}`, `Покупатель: ${hasBuyer() ? 'есть/нужен блок покупателя' : 'не требуется сейчас'}`, `Признаки и риски: ${a.flags.map((item) => labels.flags[item] || item).join(', ') || 'не указано'}`, `Деньги: ${listText('payments')}`, `Основание права: ${listText('basis')}`, `Расчёты: ${listText('settlements')}`, `Расходы согласованы: ${yesNo(state.deal.expensesAgreed)}`, `Расчёты согласованы: ${yesNo(state.deal.settlementsAgreed)}`, '', `Готовность карточки: ${r.percent}%`, `Риск: ${a.risk}`, `Нужен юрист: ${a.needsLawyer ? 'да' : 'нет/по ситуации'}`, `Нужен брокер: ${a.needsBroker ? 'да' : 'нет/по ситуации'}`, '', `Следующий шаг: ${state.deal.clientNextStep || 'не указан'}`, `Комментарий СПН: ${state.deal.spnFinalComment || state.deal.riskComment || state.deal.stageComment || 'не указан'}`];
-  if (a.blockers.length) lines.push('', 'Стоп-вопросы:', ...a.blockers.map((item) => '- ' + item));
-  if (a.notes.length) lines.push('', 'Подсказки:', ...a.notes.map((item) => '- ' + item));
-  if (r.missing.length) lines.push('', 'Что дозаполнить:', ...r.missing.map((item) => '- ' + item.title));
-  return lines.join('\n');
+  const lines = ['Передача заявки от СПН', '', `Что готовим: ${titleOf('preparationMode', state.deal.preparationMode)}`, `Кого сопровождаем: ${titleOf('representation', state.deal.representation)}`, `Стадия: ${titleOf('stage', state.deal.stage)}`, `Объект: ${titleOf('objectType', state.deal.objectType)}`, `Адрес: ${state.deal.address || 'не указан'}`, `Цена: ${state.deal.priceTotal || 'не указана'}`, `Задаток/аванс: ${state.deal.depositAmount || 'не указан'}`, '', `Продавец: ${hasSeller() ? 'есть/нужно уточнить' : 'не требуется на этом этапе'}`, `Покупатель: ${hasBuyer() ? 'есть/нужно уточнить' : 'не требуется на этом этапе'}`, `Деньги: ${listText('payments')}`, `Основание права: ${listText('basis')}`, `Расчёты: ${listText('settlements')}`, `Расходы согласованы: ${yesNo(state.deal.expensesAgreed)}`, `Расчёты согласованы: ${yesNo(state.deal.settlementsAgreed)}`, '', `Готовность карточки: ${r.percent}%`, `Риск: ${a.risk}`, a.blockers.length ? `Стоп-факторы: ${a.blockers.join('; ')}` : '', a.notes.length ? `Замечания: ${a.notes.join('; ')}` : '', '', `Следующий шаг с клиентом: ${state.deal.clientNextStep || 'не указан'}`, '', `Комментарий СПН: ${state.deal.spnFinalComment || state.deal.riskComment || state.deal.stageComment || 'нет'}`];
+  return lines.filter((line) => line !== '').join('\n');
 }
 function stepFinish() {
   const r = readiness();
   const a = analysis();
-  const status = a.blockers.length ? 'Стоп: нужен юрист до задатка' : r.percent >= 75 ? 'Можно двигаться дальше' : 'Можно сохранить черновик, но есть пробелы';
-  return `<h2>Итог</h2><div class="summary-grid"><div class="metric ${a.risk === 'red' ? 'red' : a.risk === 'yellow' ? 'yellow' : 'green'}"><span>Статус</span><b>${esc(status)}</b>${riskPill(a.risk)}</div><div class="metric ${r.percent >= 75 ? 'green' : 'yellow'}"><span>Готовность</span><b>${r.percent}%</b></div></div><div class="grid"><div class="card" style="box-shadow:none"><h3>Кого подключить</h3><div class="list"><div class="list-item"><b>Юрист</b>${a.needsLawyer ? 'подключить' : 'по ситуации'}</div><div class="list-item"><b>Брокер</b>${a.needsBroker ? 'подключить' : 'по ситуации'}</div></div></div><div class="card" style="box-shadow:none"><h3>Чего не хватает</h3><div class="list">${r.missing.map((item) => `<div class="list-item"><b>${esc(item.title)}</b><span class="small">${esc(item.help)}</span></div>`).join('') || '<div class="list-item">Ключевых пробелов нет.</div>'}</div></div></div>${textarea('spnFinalComment','Комментарий СПН', 'Что уже понятно, что просите проверить, что важно не забыть?')}${field('clientNextStep','Следующий шаг с клиентом', 'text', 'например: собрать документы, назначить задаток, подключить юриста')}<div class="card" style="box-shadow:none;margin-top:12px"><h3>Текст передачи</h3><textarea id="handoffText" readonly style="min-height:260px">${esc(handoffText())}</textarea><div class="actions" style="justify-content:flex-start"><button class="btn light" type="button" data-action="copy">Скопировать текст</button></div></div>`;
+  return `<h2>Итог и передача</h2><p class="muted">Проверьте готовность. Можно сохранить черновик и открыть карточку сделки.</p><div class="grid"><div class="card" style="box-shadow:none"><h3>Готовность</h3><div class="progress"><i style="width:${r.percent}%"></i></div><p><b>${r.percent}%</b></p>${r.missing.length ? `<ul>${r.missing.map((item) => `<li>${esc(item.title)} — ${esc(item.help)}</li>`).join('')}</ul>` : '<div class="status ok">Основные поля заполнены.</div>'}</div><div class="card" style="box-shadow:none"><h3>Маршрут</h3>${chips(routeReason(computeRoute()))}<div class="status ${a.risk === 'red' ? 'error' : a.risk === 'yellow' ? 'warn' : 'ok'}">${a.blockers[0] || a.notes[0] || 'Явных стоп-факторов нет.'}</div></div></div><div class="grid"><div>${textarea('clientNextStep','Ближайший шаг с клиентом', 'Позвонить, запросить документы, назначить задаток, подключить юриста...')}</div><div>${textarea('spnFinalComment','Финальный комментарий СПН', 'Что важно передать менеджеру/юристу/брокеру?')}</div></div><div class="field"><label>Текст передачи</label><textarea id="handoffText" readonly>${esc(handoffText())}</textarea></div><div class="actions" style="justify-content:flex-start"><button class="btn light" type="button" data-action="copy">Скопировать текст передачи</button></div>`;
 }
 function progressPanel(route) {
-  const r = readiness();
   const a = analysis();
+  const r = readiness();
   const reasons = routeReason(route);
   return `<div class="card" style="box-shadow:none;margin-top:12px"><h3>Почему такой маршрут</h3>${chips(reasons)}<div class="progress"><i style="width:${Math.round(((state.stepIndex + 1) / route.length) * 100)}%"></i></div><div class="status ${a.risk === 'red' ? 'error' : a.risk === 'yellow' ? 'warn' : 'ok'}">Готовность: ${r.percent}%. ${a.blockers[0] ? esc(a.blockers[0]) : a.notes[0] ? esc(a.notes[0]) : 'Явных стоп-факторов пока нет.'}</div></div>`;
 }
@@ -291,10 +289,21 @@ function copyHandoff() {
   navigator.clipboard?.writeText(text).then(() => setStatus('Текст передачи скопирован.', 'ok'), () => { if (field) { field.focus(); field.select(); } setStatus('Не удалось скопировать автоматически. Текст выделен, скопируйте вручную.', 'warn'); });
 }
 function normalizeText(value) { return String(value || '').trim().toLowerCase(); }
-async function findRecentlyCreatedDeal() {
+async function findRecentlyCreatedDeal(maxAttempts = 4) {
   const address = normalizeText(state.deal.address);
-  if (!address) return null;
-  try { const data = await rpc('nav_v2_get_deals_list', { p_limit: 30 }, 12000); return (data.items || []).find((deal) => normalizeText(deal.address) === address) || null; } catch (_) { return null; }
+  const objectType = normalizeText(state.deal.objectType);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const data = await rpc('nav_v2_get_deals_list', { p_limit: 50 }, 30000);
+      const items = data.items || [];
+      const byAddress = address ? items.find((deal) => normalizeText(deal.address) === address) : null;
+      if (byAddress) return byAddress;
+      const byType = objectType ? items.find((deal) => normalizeText(deal.object_type) === objectType) : null;
+      if (byType && attempt >= 2) return byType;
+    } catch (_) {}
+    await sleep(1500 * attempt);
+  }
+  return null;
 }
 function savePayload() {
   const a = analysis();
@@ -308,18 +317,23 @@ async function saveDeal() {
   isSaving = true;
   render();
   try {
-    setStatus('Сохраняю сделку в CRM...', 'info');
-    const saved = await rpc('nav_v2_save_wizard_result', { p_result: savePayload() }, 15000);
+    setStatus('Сохраняю сделку в CRM... Иногда Supabase отвечает медленно, дождитесь результата и не нажимайте повторно.', 'info');
+    const saved = await rpc('nav_v2_save_wizard_result', { p_result: savePayload() }, 45000);
     localStorage.removeItem(DRAFT_KEY);
     setStatus('Сделка сохранена. Открываю карточку...', 'ok');
     setTimeout(() => { location.href = `./deal-card-v2.html?id=${saved.id}`; }, 500);
   } catch (error) {
-    setStatus('Ответ от сохранения не получен быстро. Проверяю, не успела ли сделка создаться...', 'info');
-    const found = await findRecentlyCreatedDeal();
-    if (found?.id) { localStorage.removeItem(DRAFT_KEY); setStatus('Сделка найдена в базе. Открываю карточку...', 'ok'); setTimeout(() => { location.href = `./deal-card-v2.html?id=${found.id}`; }, 500); return; }
+    setStatus('Ответ от сохранения не получен быстро. Проверяю базу, это может занять до минуты...', 'info');
+    const found = await findRecentlyCreatedDeal(4);
+    if (found?.id) {
+      localStorage.removeItem(DRAFT_KEY);
+      setStatus('Сделка найдена в базе. Открываю карточку...', 'ok');
+      setTimeout(() => { location.href = `./deal-card-v2.html?id=${found.id}`; }, 500);
+      return;
+    }
     isSaving = false;
     render();
-    setStatus('Сделка не появилась в базе. Ошибка: ' + (error.message || error), 'error');
+    setStatus('Не удалось подтвердить сохранение. Не нажимайте повторно сразу: сначала откройте список сделок и проверьте, появилась ли заявка. Техническая ошибка: ' + (error.message || error), 'error');
   }
 }
 
