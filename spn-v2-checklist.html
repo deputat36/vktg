@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Проверка мастера СПН — Навигатор v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-87">
-  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-87">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-88">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-88">
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
@@ -16,7 +16,8 @@
 
     <section class="card">
       <div class="actions" style="justify-content:flex-start">
-        <a class="btn primary" href="./spn-v2.html?test=20260617-87">Открыть новую сделку</a>
+        <a class="btn primary" href="./spn-v2.html?test=20260617-88">Открыть новую сделку</a>
+        <button class="btn light" type="button" data-clear-draft="1">Очистить черновик и открыть мастер</button>
         <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
         <a class="btn light" href="./deals-v2.html">Сделки</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
@@ -28,7 +29,7 @@
         <h2>Как проверять</h2>
         <div class="list">
           <div class="list-item"><b>1. Открыть чистый вход</b><span class="small">Лучше в инкогнито или после Ctrl+F5.</span></div>
-          <div class="list-item"><b>2. Создать тестовую сделку</b><span class="small">Использовать один из сценариев ниже.</span></div>
+          <div class="list-item"><b>2. Запустить сценарий</b><span class="small">Нажмите кнопку в карточке сценария — черновик заполнится автоматически.</span></div>
           <div class="list-item"><b>3. Не заполнять лишнее</b><span class="small">Проверить, что мастер сам не заставляет вводить ненужные данные.</span></div>
           <div class="list-item"><b>4. Дойти до итога</b><span class="small">Финальный экран должен подсказать маршрут и кого подключить.</span></div>
           <div class="list-item"><b>5. Сохранить черновик</b><span class="small">После сохранения сделка должна появиться в списке и открыться.</span></div>
@@ -64,6 +65,7 @@
             <div class="list-item"><b>Покупатель</b>Один взрослый, собственные средства</div>
           </div>
           <div class="status ok">Ожидаемый результат: юрист/брокер не навязываются, итог говорит “можно двигаться дальше” или “можно сохранить черновик”.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-preset="simple_flat">Запустить сценарий</button></div>
         </article>
 
         <article class="deal-card">
@@ -75,6 +77,7 @@
             <div class="list-item"><b>Для юриста</b>Кадастровый номер дома и кадастровый номер земли в нижнем блоке</div>
           </div>
           <div class="status ok">Ожидаемый результат: общего поля “Кадастровый номер” для дома с участком нет.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-preset="house_land">Запустить сценарий</button></div>
         </article>
 
         <article class="deal-card">
@@ -86,6 +89,7 @@
             <div class="list-item"><b>Уточнения</b>Размер доли, отдельный вход, двор/участок, порядок пользования, конфликт</div>
           </div>
           <div class="status warn">Ожидаемый результат: мастер просит уточнения по доле, но не заставляет повторно выбирать тип объекта.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-preset="share_house">Запустить сценарий</button></div>
         </article>
 
         <article class="deal-card">
@@ -97,6 +101,7 @@
             <div class="list-item"><b>Задаток</b>Должно быть предупреждение перед задатком</div>
           </div>
           <div class="status warn">Ожидаемый результат: в итоговом экране появляется юрист, а при ипотеке — брокер.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-preset="matcap_minor">Запустить сценарий</button></div>
         </article>
 
         <article class="deal-card">
@@ -108,6 +113,7 @@
             <div class="list-item"><b>Итог</b>Финальный экран должен показать вопрос проверки расчётов</div>
           </div>
           <div class="status warn">Ожидаемый результат: мастер не даёт спокойно забыть, что часть оплаты будет позже.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-preset="post_registration">Запустить сценарий</button></div>
         </article>
       </div>
     </section>
@@ -135,5 +141,6 @@
       </div>
     </section>
   </main>
+  <script type="module" src="./assets/js/nav-v2/spn-checklist-presets-v2.js?v=20260617-88"></script>
 </body>
 </html>
