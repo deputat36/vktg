@@ -266,7 +266,11 @@ document.addEventListener('click', (event) => {
   saveMode(modeButton.dataset.spnWizardMode);
 }, true);
 
-document.addEventListener('input', schedule, true);
+document.addEventListener('input', (event) => {
+  if (event.target?.closest?.(`#${CARD_ID}`)) return;
+  schedule();
+}, true);
+document.addEventListener('change', schedule, true);
 window.addEventListener('storage', schedule);
 
 let attempts = 0;
