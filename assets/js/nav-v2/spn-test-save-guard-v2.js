@@ -2,6 +2,7 @@ const DRAFT_KEY = 'nav_deal_draft_v2';
 let scheduled = false;
 let armedButton = null;
 let originalText = '';
+let confirming = false;
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -10,6 +11,16 @@ function readDraft() {
 function isTestDraft() {
   const draft = readDraft();
   return Boolean(draft.createdFromChecklist || draft.testScenario);
+}
+
+function markButton(button) {
+  if (!button || button.disabled || button.dataset.testSaveGuard === '1') return button;
+  armedButton = button;
+  originalText = button.textContent || 'Сохранить и открыть карточку';
+  button.dataset.action = 'test-save-guard';
+  button.dataset.testSaveGuard = '1';
+  button.textContent = 'Тест: сохранить в CRM?';
+  return button;
 }
 
 function armSaveButton() {
@@ -26,12 +37,7 @@ function armSaveButton() {
     return;
   }
 
-  if (saveButton.dataset.testSaveGuard === '1') return;
-  armedButton = saveButton;
-  originalText = saveButton.textContent || 'Сохранить и открыть карточку';
-  saveButton.dataset.action = 'test-save-guard';
-  saveButton.dataset.testSaveGuard = '1';
-  saveButton.textContent = 'Тест: сохранить в CRM?';
+  markButton(saveButton);
 }
 
 function schedule() {
@@ -43,12 +49,9 @@ function schedule() {
   }, 80);
 }
 
-function clearTestDraft() {
-  localStorage.removeItem(DRAFT_KEY);
-  window.location.href = './spn-v2.html?test=20260617-91';
-}
-
 function confirmRealSave(button) {
+  if (confirming) return;
+  confirming = true;
   const text = [
     'Это тестовый сценарий со страницы проверки мастера.',
     '',
@@ -58,11 +61,17 @@ function confirmRealSave(button) {
     'Отмена — остаться в тесте.'
   ].join('\n');
 
-  if (!confirm(text)) return;
+  if (!confirm(text)) {
+    confirming = false;
+    return;
+  }
   button.dataset.action = 'save';
   delete button.dataset.testSaveGuard;
   button.textContent = originalText || 'Сохранить и открыть карточку';
-  button.click();
+  setTimeout(() => {
+    confirming = false;
+    button.click();
+  }, 0);
 }
 
 function injectMiniHint() {
@@ -74,7 +83,32 @@ function injectMiniHint() {
   actions.insertAdjacentHTML('beforebegin', `<div class="status warn" data-test-save-hint="1" style="margin-top:12px"><b>Тестовый черновик:</b> сохранение в CRM потребует отдельного подтверждения. Для реальной сделки сначала нажмите «Очистить тест» в жёлтой плашке.</div>`);
 }
 
+function guardNativeSaveTarget(event) {
+  if (!isTestDraft()) {
+    schedule();
+    return null;
+  }
+
+  const nativeSaveButton = event.target?.closest?.('[data-action="save"]');
+  if (!nativeSaveButton || nativeSaveButton.disabled) return null;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  return markButton(nativeSaveButton);
+}
+
+document.addEventListener('pointerdown', (event) => {
+  guardNativeSaveTarget(event);
+}, true);
+
 document.addEventListener('click', (event) => {
+  const nativeSaveButton = guardNativeSaveTarget(event);
+  if (nativeSaveButton) {
+    confirmRealSave(nativeSaveButton);
+    return;
+  }
+
   const button = event.target?.closest?.('[data-test-save-guard="1"]');
   if (!button) {
     schedule();
@@ -82,14 +116,22 @@ document.addEventListener('click', (event) => {
   }
   event.preventDefault();
   event.stopPropagation();
+  event.stopImmediatePropagation?.();
   confirmRealSave(button);
 }, true);
 
 document.addEventListener('pointerup', (event) => {
+  const nativeSaveButton = guardNativeSaveTarget(event);
+  if (nativeSaveButton) {
+    confirmRealSave(nativeSaveButton);
+    return;
+  }
+
   const button = event.target?.closest?.('[data-test-save-guard="1"]');
   if (!button) return;
   event.preventDefault();
   event.stopPropagation();
+  event.stopImmediatePropagation?.();
   confirmRealSave(button);
 }, true);
 
