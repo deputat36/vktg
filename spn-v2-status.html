@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Статус мастера СПН — Навигатор v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-97">
-  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-97">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-98">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-98">
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
@@ -18,16 +18,16 @@
       <div class="section-title">
         <div>
           <span class="pill green">Актуальная версия</span>
-          <h2 style="margin:8px 0 4px">20260617-97</h2>
-          <p class="muted" style="margin:0">После обновлений рекомендуется открыть страницу с параметром test и сделать Ctrl+F5.</p>
+          <h2 style="margin:8px 0 4px">20260617-98</h2>
+          <p class="muted" style="margin:0">Добавлены режимы заполнения мастера: быстро, с подсказками, для юриста и минимум.</p>
         </div>
       </div>
       <div class="actions" style="justify-content:flex-start">
-        <a class="btn primary" href="./spn-v2.html?test=20260617-97">Новая сделка</a>
-        <a class="btn light" href="./spn-v2-checklist.html?test=20260617-97">Проверка мастера</a>
-        <a class="btn light" href="./dashboard-v2.html?test=20260617-97">Рабочий стол</a>
+        <a class="btn primary" href="./spn-v2.html?test=20260617-98">Новая сделка</a>
+        <a class="btn light" href="./spn-v2-checklist.html?test=20260617-98">Проверка мастера</a>
+        <a class="btn light" href="./dashboard-v2.html?test=20260617-98">Рабочий стол</a>
         <a class="btn light" href="./dashboard-fast-v2.html">Быстрая версия</a>
-        <a class="btn light" href="./nav-v2.html?test=20260617-97">Главный вход</a>
+        <a class="btn light" href="./nav-v2.html?test=20260617-98">Главный вход</a>
         <a class="btn light" href="./deals-v2.html">Сделки</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
       </div>
@@ -37,6 +37,7 @@
       <div class="card">
         <h2>Что сейчас подключено</h2>
         <div class="list">
+          <div class="list-item"><b>Режимы заполнения</b><span class="small">Быстро, с подсказками, для юриста, минимум. Режим сохраняется в черновик и попадает в wizard_snapshot.</span></div>
           <div class="list-item"><b>Объект</b><span class="small">Физический тип объекта отдельно от юридической формы: целый объект или доля.</span></div>
           <div class="list-item"><b>Детали объекта</b><span class="small">В начале минимум для заявки, технические поля ниже.</span></div>
           <div class="list-item"><b>Продавец и право</b><span class="small">Собственники, основание права, супруг, доверенность, доли, обременения.</span></div>
@@ -44,31 +45,27 @@
           <div class="list-item"><b>Деньги покупателя</b><span class="small">Источник денег, ипотека, маткапитал, сертификаты, детские деньги.</span></div>
           <div class="list-item"><b>Задаток</b><span class="small">Сначала безопасность и условия, потом организационные детали.</span></div>
           <div class="list-item"><b>Расчёты и расходы</b><span class="small">Схема расчётов, расходы сторон, условия раскрытия, оплата после регистрации.</span></div>
-          <div class="list-item"><b>Дополнительные риски</b><span class="small">Финальная сводка и контрольные вопросы перед итогом.</span></div>
           <div class="list-item"><b>Итог и передача</b><span class="small">Решение по заявке, кого подключить, чего не хватает, текст передачи.</span></div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Защита тестирования</h2>
+        <h2>Как проверять режимы</h2>
         <div class="list">
-          <div class="list-item"><b>Тестовые сценарии</b><span class="small">Запускаются со страницы проверки мастера и записываются в локальный черновик браузера.</span></div>
-          <div class="list-item"><b>Жёлтая плашка</b><span class="small">В мастере видно, что открыт тестовый сценарий.</span></div>
-          <div class="list-item"><b>Очистить тест</b><span class="small">Кнопка удаляет тестовый черновик перед созданием реальной сделки.</span></div>
-          <div class="list-item"><b>Защита сохранения</b><span class="small">Тестовый черновик нельзя случайно сохранить в CRM без отдельного подтверждения. После подтверждения пропускается только один клик: нативный или резервный.</span></div>
-          <div class="list-item"><b>Отчёт проверки</b><span class="small">Результаты по сценариям сохраняются локально и копируются общим текстом.</span></div>
+          <div class="list-item"><b>Быстро</b><span class="small">Для опытного СПН: подсказки сворачиваются, остаётся короткий минимум и пробелы.</span></div>
+          <div class="list-item"><b>С подсказками</b><span class="small">Для новичка: показывает следующий вопрос, объяснения и предупреждения.</span></div>
+          <div class="list-item"><b>Для юриста</b><span class="small">Добавляет поле «Вопрос юристу» и черновик передачи юристу.</span></div>
+          <div class="list-item"><b>Минимум</b><span class="small">Для первичного клиента: проверяет только базовый набор заявки.</span></div>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>Рекомендуемый порядок проверки</h2>
+      <h2>Защита тестирования</h2>
       <div class="list">
-        <div class="list-item"><b>1. Открыть чистый вход</b><span class="small">Если есть странности с авторизацией или старым кешем.</span></div>
-        <div class="list-item"><b>2. Открыть страницу проверки мастера</b><span class="small">Запустить сценарий кнопкой, а не заполнять всё вручную.</span></div>
-        <div class="list-item"><b>3. Пройти до финального шага</b><span class="small">Проверить, кого система предлагает подключить и какие пробелы показывает.</span></div>
-        <div class="list-item"><b>4. Отметить результат</b><span class="small">ОК или Есть проблема, добавить короткий комментарий.</span></div>
-        <div class="list-item"><b>5. Скопировать отчёт</b><span class="small">Отправить в работу, если найдены дубли, лишние поля или слабые формулировки.</span></div>
+        <div class="list-item"><b>Тестовые сценарии</b><span class="small">Запускаются со страницы проверки мастера и записываются в локальный черновик браузера.</span></div>
+        <div class="list-item"><b>Жёлтая плашка</b><span class="small">В мастере видно, что открыт тестовый сценарий.</span></div>
+        <div class="list-item"><b>Защита сохранения</b><span class="small">Тестовый черновик нельзя случайно сохранить в CRM без отдельного подтверждения.</span></div>
       </div>
     </section>
 
@@ -77,19 +74,11 @@
       <div class="grid">
         <div>
           <h3>Если страница выглядит старой</h3>
-          <div class="status warn">Открыть ссылку с test=20260617-97 и нажать Ctrl+F5.</div>
+          <div class="status warn">Открыть ссылку с test=20260617-98 и нажать Ctrl+F5.</div>
         </div>
         <div>
           <h3>Если тестовый сценарий мешает</h3>
           <div class="status warn">Нажать “Очистить тест” в жёлтой плашке или “Очистить черновик и открыть мастер” на странице проверки.</div>
-        </div>
-        <div>
-          <h3>Если сделка долго сохраняется</h3>
-          <div class="status warn">Не нажимать повторно. Открыть список сделок через несколько секунд и проверить, появилась ли заявка.</div>
-        </div>
-        <div>
-          <h3>Если нашли дубль или лишний вопрос</h3>
-          <div class="status warn">Зафиксировать сценарий, шаг, что выбрано, что ожидали и что увидели.</div>
         </div>
       </div>
     </section>
