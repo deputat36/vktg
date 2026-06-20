@@ -4,6 +4,9 @@ let armedButton = null;
 let originalText = '';
 let confirming = false;
 let allowConfirmedSave = false;
+let confirmedButton = null;
+let confirmedClickPassed = false;
+let fallbackTimer = 0;
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -52,10 +55,31 @@ function schedule() {
 }
 
 function releaseConfirmedSave() {
+  clearTimeout(fallbackTimer);
   setTimeout(() => {
     allowConfirmedSave = false;
+    confirmedButton = null;
+    confirmedClickPassed = false;
+    fallbackTimer = 0;
     schedule();
   }, 1200);
+}
+
+function passConfirmedSave(button) {
+  allowConfirmedSave = true;
+  confirmedButton = button;
+  confirmedClickPassed = false;
+  button.dataset.action = 'save';
+  delete button.dataset.testSaveGuard;
+  button.textContent = originalText || 'Сохранить и открыть карточку';
+
+  clearTimeout(fallbackTimer);
+  fallbackTimer = setTimeout(() => {
+    if (!confirmedClickPassed && button.isConnected && button.dataset.action === 'save' && !button.disabled) {
+      button.click();
+    }
+    releaseConfirmedSave();
+  }, 120);
 }
 
 function confirmRealSave(button) {
@@ -75,16 +99,8 @@ function confirmRealSave(button) {
     return;
   }
 
-  allowConfirmedSave = true;
-  button.dataset.action = 'save';
-  delete button.dataset.testSaveGuard;
-  button.textContent = originalText || 'Сохранить и открыть карточку';
-
-  setTimeout(() => {
-    confirming = false;
-    button.click();
-    releaseConfirmedSave();
-  }, 0);
+  passConfirmedSave(button);
+  confirming = false;
 }
 
 function injectMiniHint() {
@@ -96,8 +112,18 @@ function injectMiniHint() {
   actions.insertAdjacentHTML('beforebegin', `<div class="status warn" data-test-save-hint="1" style="margin-top:12px"><b>Тестовый черновик:</b> сохранение в CRM потребует отдельного подтверждения. Для реальной сделки сначала нажмите «Очистить тест» в жёлтой плашке.</div>`);
 }
 
+function maybeMarkConfirmedClick(event) {
+  if (!allowConfirmedSave) return false;
+  const nativeSaveButton = event.target?.closest?.('[data-action="save"]');
+  if (!nativeSaveButton || nativeSaveButton !== confirmedButton) return false;
+  confirmedClickPassed = true;
+  clearTimeout(fallbackTimer);
+  releaseConfirmedSave();
+  return true;
+}
+
 function guardNativeSaveTarget(event) {
-  if (allowConfirmedSave) return null;
+  if (maybeMarkConfirmedClick(event)) return null;
 
   if (!isTestDraft()) {
     schedule();
