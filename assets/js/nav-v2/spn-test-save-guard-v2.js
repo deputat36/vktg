@@ -3,6 +3,7 @@ let scheduled = false;
 let armedButton = null;
 let originalText = '';
 let confirming = false;
+let allowConfirmedSave = false;
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -24,6 +25,7 @@ function markButton(button) {
 }
 
 function armSaveButton() {
+  if (allowConfirmedSave) return;
   const saveButton = document.querySelector('[data-action="save"]');
   if (!saveButton || saveButton.disabled) return;
   if (!isTestDraft()) {
@@ -49,6 +51,13 @@ function schedule() {
   }, 80);
 }
 
+function releaseConfirmedSave() {
+  setTimeout(() => {
+    allowConfirmedSave = false;
+    schedule();
+  }, 1200);
+}
+
 function confirmRealSave(button) {
   if (confirming) return;
   confirming = true;
@@ -65,12 +74,16 @@ function confirmRealSave(button) {
     confirming = false;
     return;
   }
+
+  allowConfirmedSave = true;
   button.dataset.action = 'save';
   delete button.dataset.testSaveGuard;
   button.textContent = originalText || 'Сохранить и открыть карточку';
+
   setTimeout(() => {
     confirming = false;
     button.click();
+    releaseConfirmedSave();
   }, 0);
 }
 
@@ -84,6 +97,8 @@ function injectMiniHint() {
 }
 
 function guardNativeSaveTarget(event) {
+  if (allowConfirmedSave) return null;
+
   if (!isTestDraft()) {
     schedule();
     return null;
