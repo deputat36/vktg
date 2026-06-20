@@ -30,6 +30,7 @@ const modes = {
 };
 
 let scheduled = false;
+let defaultModeSynced = false;
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -62,11 +63,15 @@ function setCoreField(name, value) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function syncModeToCore(mode, config) {
+  setCoreField('wizardMode', mode);
+  setCoreField('spnExperienceLevel', config.level);
+}
+
 function saveMode(mode) {
   const config = modes[mode] || modes.guided;
   writeDraft({ wizardMode: mode, spnExperienceLevel: config.level });
-  setCoreField('wizardMode', mode);
-  setCoreField('spnExperienceLevel', config.level);
+  syncModeToCore(mode, config);
   applyBodyClass(mode);
   schedule();
 }
@@ -177,9 +182,7 @@ function modeAdvice(mode, draft, missing, risks) {
 }
 
 function modeButtons(mode) {
-  return Object.entries(modes).map(([key, item]) => `<button class="btn ${mode === key ? 'primary' : 'light'}" type="button" data-spn-wizard-mode="${key}">
-    ${esc(item.title)}
-  </button>`).join('');
+  return Object.entries(modes).map(([key, item]) => `<button class="btn ${mode === key ? 'primary' : 'light'}" type="button" data-spn-wizard-mode="${key}">${esc(item.title)}</button>`).join('');
 }
 
 function progressLine(missing) {
@@ -195,19 +198,10 @@ function html(draft) {
   const risks = triggers(draft);
   return `<section class="card" id="${CARD_ID}" style="border:1px solid rgba(37,99,235,.22)">
     <div class="section-title">
-      <div>
-        <span class="pill blue">Режим мастера</span>
-        <h2 style="margin:8px 0 4px">${esc(config.title)}</h2>
-        <p class="muted" style="margin:0">${esc(config.text)}</p>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
-        <span class="pill green">${esc(config.badge)}</span>
-        ${progressLine(missing)}
-      </div>
+      <div><span class="pill blue">Режим мастера</span><h2 style="margin:8px 0 4px">${esc(config.title)}</h2><p class="muted" style="margin:0">${esc(config.text)}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end"><span class="pill green">${esc(config.badge)}</span>${progressLine(missing)}</div>
     </div>
-    <div class="actions" style="justify-content:flex-start;margin:12px 0">
-      ${modeButtons(mode)}
-    </div>
+    <div class="actions" style="justify-content:flex-start;margin:12px 0">${modeButtons(mode)}</div>
     <input type="hidden" data-field="wizardMode" data-spn-mode-core-field="wizardMode" value="${esc(mode)}">
     <input type="hidden" data-field="spnExperienceLevel" data-spn-mode-core-field="spnExperienceLevel" value="${esc(config.level)}">
     ${modeAdvice(mode, draft, missing, risks)}
@@ -231,8 +225,14 @@ function inject() {
   ensureStyle();
   const shell = document.querySelector('#app .nav-v2-shell');
   if (!shell) return;
-  const draft = readDraft();
+  let draft = readDraft();
   const mode = currentMode(draft);
+  const config = modes[mode];
+  if (!defaultModeSynced && (!draft.wizardMode || !draft.spnExperienceLevel)) {
+    defaultModeSynced = true;
+    draft = writeDraft({ wizardMode: mode, spnExperienceLevel: config.level });
+    syncModeToCore(mode, config);
+  }
   applyBodyClass(mode);
 
   let card = document.getElementById(CARD_ID);
@@ -249,18 +249,12 @@ function inject() {
 function schedule() {
   if (scheduled) return;
   scheduled = true;
-  setTimeout(() => {
-    scheduled = false;
-    inject();
-  }, 120);
+  setTimeout(() => { scheduled = false; inject(); }, 120);
 }
 
 document.addEventListener('click', (event) => {
   const modeButton = event.target?.closest?.('[data-spn-wizard-mode]');
-  if (!modeButton) {
-    schedule();
-    return;
-  }
+  if (!modeButton) { schedule(); return; }
   event.preventDefault();
   event.stopPropagation();
   saveMode(modeButton.dataset.spnWizardMode);
