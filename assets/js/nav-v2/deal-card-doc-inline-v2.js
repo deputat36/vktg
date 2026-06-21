@@ -2,8 +2,11 @@ import { rpc } from './supabase-v2.js';
 
 const DOCUMENT_STATUS_TITLES = {
   needed: 'Нужен',
+  requested: 'Запрошен',
+  missing: 'Не получен',
   received: 'Получен',
-  checked: 'Проверен'
+  checked: 'Проверен',
+  problem: 'Проблема'
 };
 
 function title(status) {
