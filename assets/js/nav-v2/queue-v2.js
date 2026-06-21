@@ -1,6 +1,6 @@
 import { getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
 
-const V='20260617-101';
+const V='20260617-102';
 const app=document.getElementById('app');
 let items=[];let profile={};let queue=new URLSearchParams(location.search).get('queue')||'all';
 const names={all:'Все',urgent:'Стоп-факторы',rework:'Доработка СПН',docs:'Документы',deposit:'Задатки',deal:'Основной договор',active:'Проверка',other:'Прочее'};
