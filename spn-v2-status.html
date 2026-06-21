@@ -4,84 +4,41 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Статус мастера СПН — Навигатор v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-98">
-  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-98">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-99">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-99">
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
     <section class="hero">
       <h1>Статус мастера СПН</h1>
-      <p>Актуальная сводка по новой сделке: ссылки, версии, подключённые блоки и порядок проверки.</p>
+      <p>Актуальная сводка по новой сделке, кабинету юриста, ссылкам и порядку проверки.</p>
     </section>
-
     <section class="card">
-      <div class="section-title">
-        <div>
-          <span class="pill green">Актуальная версия</span>
-          <h2 style="margin:8px 0 4px">20260617-98</h2>
-          <p class="muted" style="margin:0">Добавлены режимы заполнения мастера: быстро, с подсказками, для юриста и минимум.</p>
-        </div>
-      </div>
+      <div class="section-title"><div><span class="pill green">Актуальная версия</span><h2 style="margin:8px 0 4px">20260617-99</h2><p class="muted" style="margin:0">Добавлена серверная юридическая очередь и первая страница кабинета юриста.</p></div></div>
       <div class="actions" style="justify-content:flex-start">
-        <a class="btn primary" href="./spn-v2.html?test=20260617-98">Новая сделка</a>
-        <a class="btn light" href="./spn-v2-checklist.html?test=20260617-98">Проверка мастера</a>
-        <a class="btn light" href="./dashboard-v2.html?test=20260617-98">Рабочий стол</a>
-        <a class="btn light" href="./dashboard-fast-v2.html">Быстрая версия</a>
-        <a class="btn light" href="./nav-v2.html?test=20260617-98">Главный вход</a>
+        <a class="btn primary" href="./spn-v2.html?test=20260617-99">Новая сделка</a>
+        <a class="btn light" href="./queue-v2.html?test=20260617-99">Кабинет юриста</a>
+        <a class="btn light" href="./spn-v2-checklist.html?test=20260617-99">Проверка мастера</a>
+        <a class="btn light" href="./dashboard-v2.html?test=20260617-99">Рабочий стол</a>
+        <a class="btn light" href="./nav-v2.html?test=20260617-99">Главный вход</a>
         <a class="btn light" href="./deals-v2.html">Сделки</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
       </div>
     </section>
-
     <section class="grid">
-      <div class="card">
-        <h2>Что сейчас подключено</h2>
-        <div class="list">
-          <div class="list-item"><b>Режимы заполнения</b><span class="small">Быстро, с подсказками, для юриста, минимум. Режим сохраняется в черновик и попадает в wizard_snapshot.</span></div>
-          <div class="list-item"><b>Объект</b><span class="small">Физический тип объекта отдельно от юридической формы: целый объект или доля.</span></div>
-          <div class="list-item"><b>Детали объекта</b><span class="small">В начале минимум для заявки, технические поля ниже.</span></div>
-          <div class="list-item"><b>Продавец и право</b><span class="small">Собственники, основание права, супруг, доверенность, доли, обременения.</span></div>
-          <div class="list-item"><b>Покупатель</b><span class="small">Кто покупает, есть ли цепочка, кто принимает решение.</span></div>
-          <div class="list-item"><b>Деньги покупателя</b><span class="small">Источник денег, ипотека, маткапитал, сертификаты, детские деньги.</span></div>
-          <div class="list-item"><b>Задаток</b><span class="small">Сначала безопасность и условия, потом организационные детали.</span></div>
-          <div class="list-item"><b>Расчёты и расходы</b><span class="small">Схема расчётов, расходы сторон, условия раскрытия, оплата после регистрации.</span></div>
-          <div class="list-item"><b>Итог и передача</b><span class="small">Решение по заявке, кого подключить, чего не хватает, текст передачи.</span></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Как проверять режимы</h2>
-        <div class="list">
-          <div class="list-item"><b>Быстро</b><span class="small">Для опытного СПН: подсказки сворачиваются, остаётся короткий минимум и пробелы.</span></div>
-          <div class="list-item"><b>С подсказками</b><span class="small">Для новичка: показывает следующий вопрос, объяснения и предупреждения.</span></div>
-          <div class="list-item"><b>Для юриста</b><span class="small">Добавляет поле «Вопрос юристу» и черновик передачи юристу.</span></div>
-          <div class="list-item"><b>Минимум</b><span class="small">Для первичного клиента: проверяет только базовый набор заявки.</span></div>
-        </div>
-      </div>
+      <div class="card"><h2>Что сейчас подключено</h2><div class="list">
+        <div class="list-item"><b>Режимы заполнения</b><span class="small">Быстро, с подсказками, для юриста, минимум. Режим сохраняется в wizard_snapshot.</span></div>
+        <div class="list-item"><b>Кабинет юриста</b><span class="small">Очереди: стоп-факторы, документы, задатки, доработка СПН, основной договор.</span></div>
+        <div class="list-item"><b>Серверная очередь</b><span class="small">RPC nav_v2_get_lawyer_queue формирует приоритет, фокус и следующее действие юриста.</span></div>
+        <div class="list-item"><b>Итог и передача</b><span class="small">Мастер собирает решение, кого подключить, чего не хватает и текст передачи.</span></div>
+      </div></div>
+      <div class="card"><h2>Как проверять</h2><div class="list">
+        <div class="list-item"><b>СПН</b><span class="small">Открыть новую сделку, выбрать режим, пройти сценарий и проверить итог.</span></div>
+        <div class="list-item"><b>Юрист</b><span class="small">Открыть кабинет юриста и проверить очереди по рискам, документам и задаткам.</span></div>
+        <div class="list-item"><b>Карточка</b><span class="small">Из кабинета открыть проверку, документы или комментарии конкретной сделки.</span></div>
+      </div></div>
     </section>
-
-    <section class="card">
-      <h2>Защита тестирования</h2>
-      <div class="list">
-        <div class="list-item"><b>Тестовые сценарии</b><span class="small">Запускаются со страницы проверки мастера и записываются в локальный черновик браузера.</span></div>
-        <div class="list-item"><b>Жёлтая плашка</b><span class="small">В мастере видно, что открыт тестовый сценарий.</span></div>
-        <div class="list-item"><b>Защита сохранения</b><span class="small">Тестовый черновик нельзя случайно сохранить в CRM без отдельного подтверждения.</span></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Что делать при ошибке</h2>
-      <div class="grid">
-        <div>
-          <h3>Если страница выглядит старой</h3>
-          <div class="status warn">Открыть ссылку с test=20260617-98 и нажать Ctrl+F5.</div>
-        </div>
-        <div>
-          <h3>Если тестовый сценарий мешает</h3>
-          <div class="status warn">Нажать “Очистить тест” в жёлтой плашке или “Очистить черновик и открыть мастер” на странице проверки.</div>
-        </div>
-      </div>
-    </section>
+    <section class="card"><h2>Что делать при ошибке</h2><div class="grid"><div><h3>Если страница выглядит старой</h3><div class="status warn">Открыть ссылку с test=20260617-99 и нажать Ctrl+F5.</div></div><div><h3>Если кабинет юриста пустой</h3><div class="status warn">Проверить роль пользователя и наличие сделок, где нужен юрист, документы, задаток или есть риски.</div></div></div></section>
   </main>
 </body>
 </html>

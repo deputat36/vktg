@@ -1,0 +1,28 @@
+import { getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
+
+const V='20260617-99';
+const app=document.getElementById('app');
+let items=[];let profile={};let queue=new URLSearchParams(location.search).get('queue')||'all';
+const names={all:'Все',urgent:'Стоп-факторы',rework:'Доработка СПН',docs:'Документы',deposit:'Задатки',deal:'Основной договор',active:'Проверка',other:'Прочее'};
+function n(v){return Number(v||0)}
+function sid(id){return String(id||'').slice(0,8).toUpperCase()}
+function metric(t,v,c=''){return `<div class="metric ${c}"><span>${esc(t)}</span><b>${esc(v)}</b></div>`}
+function list(v){return Array.isArray(v)?v:[]}
+function cnt(q){return q==='all'?items.length:items.filter(x=>x.lawyer_queue===q).length}
+function cls(q){return q==='urgent'?'red':(q==='rework'||q==='docs')?'yellow':q==='deposit'?'blue':'green'}
+function card(x){const id=encodeURIComponent(x.id||'');const q=x.lawyer_queue||'other';const f=list(x.focus_reasons).join('; ')||'критичных признаков не найдено';return `<article class="deal-card">
+<div class="deal-head"><div><div class="small">ID ${sid(x.id)} · приоритет ${n(x.priority_score)}</div><div class="deal-title">${esc(x.title||'Сделка без названия')}</div><div class="small">${esc(x.address||'Адрес не указан')} · ${esc(x.object_type||'тип не указан')}</div></div>${riskPill(x.risk_level)}</div>
+<div class="deal-meta"><div><span class="small">К задатку</span><b>${n(x.readiness_deposit)}%</b></div><div><span class="small">К сделке</span><b>${n(x.readiness_deal)}%</b></div><div><span class="small">Документы</span><b>${n(x.missing_documents_count)}</b></div><div><span class="small">Задачи</span><b>${n(x.open_tasks_count)}</b></div></div>
+<div style="margin:10px 0"><span class="pill ${cls(q)}">${esc(names[q]||q)}</span> <span class="pill">${esc(statusText(x.status))}</span></div>
+<div class="status ${q==='urgent'?'error':f?'warn':'ok'}"><b>Фокус:</b> ${esc(f)}</div>
+<p><b>Что сделать:</b><br>${esc(x.lawyer_next_action||x.next_action||'Открыть карточку и проверить сделку.')}</p>
+<div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./deal-card-v2.html?id=${id}#risks">Проверка</a><a class="btn light" href="./deal-card-v2.html?id=${id}#docs">Документы</a><a class="btn light" href="./deal-card-v2.html?id=${id}#comments">Комментарии</a></div></article>`}
+function render(){const shown=queue==='all'?items:items.filter(x=>x.lawyer_queue===queue);app.innerHTML=`<main class="nav-v2-shell">
+<section class="hero"><h1>Кабинет юриста</h1><p>${esc(profile.full_name||'Пользователь')} · ${esc(profile.email||'')}</p></section>
+<section class="card"><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./queue-v2.html?test=${V}">Кабинет юриста</a><a class="btn light" href="./deals-v2.html?filter=lawyer">Сделки</a><a class="btn light" href="./dashboard-v2.html?test=${V}">Рабочий стол</a><a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a></div></section>
+<section class="kpi-row">${metric('Всего',cnt('all'))}${metric('Стоп-факторы',cnt('urgent'),cnt('urgent')?'red':'green')}${metric('Документы',cnt('docs'),cnt('docs')?'yellow':'green')}${metric('Задатки',cnt('deposit'),'blue')}${metric('Доработка СПН',cnt('rework'),cnt('rework')?'yellow':'green')}</section>
+<section class="card"><h2>Очереди</h2><div class="actions" style="justify-content:flex-start">${Object.keys(names).map(k=>`<button class="btn ${queue===k?'primary':'light'}" data-q="${k}" type="button">${esc(names[k])} · ${cnt(k)}</button>`).join('')}</div><div class="status ok" style="margin-top:12px">Приоритет: стоп-факторы → документы → задатки → возвраты СПН → основной договор.</div></section>
+<section class="card"><div class="section-title"><div><h2>${esc(names[queue]||'Очередь')}</h2><p class="muted">Сделки распределены сервером по юридическому фокусу и приоритету.</p></div><span class="pill blue">${shown.length}</span></div><div class="deal-list">${shown.map(card).join('')||'<div class="empty">В этой очереди сделок нет.</div>'}</div></section></main>`;document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{queue=b.dataset.q||'all';history.replaceState(null,'',`./queue-v2.html?test=${V}&queue=${queue}`);render()})}
+function login(msg=''){app.innerHTML='<main class="nav-v2-shell"><div id="authHost"></div></main>';renderAuthBox(document.getElementById('authHost'),async()=>location.reload());const s=document.getElementById('authStatus');if(s&&msg){s.className='status warn';s.textContent=msg}}
+async function load(){if(!getCachedUser()?.id)return login('Сначала войдите в Навигатор.');app.innerHTML='<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1><p>Загружаю очередь...</p></section><div class="status">Получаю данные.</div></main>';try{const d=await rpc('nav_v2_get_lawyer_queue',{p_limit:100},45000);profile=d?.profile||{};items=Array.isArray(d?.items)?d.items:[];render()}catch(e){app.innerHTML=`<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1></section><div class="status error">${esc(e.message||e)}</div></main>`}}
+load();
