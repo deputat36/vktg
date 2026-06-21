@@ -1,1 +1,2 @@
-console.log('queue ui 20260617-99');
+import { getCachedUser } from './supabase-v2.js';
+console.log('queue ui', getCachedUser());
