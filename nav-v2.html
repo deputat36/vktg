@@ -4,19 +4,78 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CRM Навигатор сделок v2</title>
-  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260617-100">
-  <link rel="stylesheet" href="./assets/css/nav-start-v2.css?v=20260617-100">
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260622-1">
+  <link rel="stylesheet" href="./assets/css/nav-start-v2.css?v=20260622-1">
 </head>
 <body class="nav-v2">
   <main id="app" class="nav-v2-shell">
-    <section class="hero start-hero"><h1>CRM Навигатор сделок v2</h1><p>Стартовая страница для чистого входа, проверки роли и перехода в рабочие разделы.</p></section>
-    <div id="startAuthHost"></div>
-    <section class="start-layout">
-      <div class="card start-focus"><span class="start-eyebrow">Если тестируем СПН</span><h2>Используйте чистый вход</h2><p class="muted">Чистый вход сбрасывает старую локальную сессию и кэш профиля в этом браузере.</p><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./nav-v2.html?clean=1">Чистый вход</a><a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a><a class="btn light" href="./spn-v2-status.html?test=20260617-100">Статус мастера</a><a class="btn light" href="./queue-v2.html?test=20260617-100">Кабинет юриста</a></div><div class="start-note">Для проверки сотрудника лучше использовать инкогнито или другой браузер, чтобы не смешивать сессии.</div></div>
-      <div class="card"><div class="start-section-title"><div><span class="start-eyebrow">Короткий маршрут</span><h2>Что сделать</h2></div></div><div class="start-steps"><div class="start-step"><b>Открыть чистый вход</b><span>Удалить старую сессию Навигатора из браузера.</span></div><div class="start-step"><b>Ввести email вручную</b><span>Не использовать автоподстановку браузера.</span></div><div class="start-step"><b>Войти</b><span>После входа откроется рабочий стол.</span></div><div class="start-step"><b>Проверить профиль</b><span>На рабочем столе должен быть email нужного сотрудника.</span></div></div></div>
+    <section class="hero start-hero">
+      <h1>CRM Навигатор сделок v2</h1>
+      <p>Рабочий центр для подготовки сделок: создать карточку, проверить документы, увидеть риски и передать задачу нужному специалисту.</p>
     </section>
-    <section class="card"><div class="start-section-title"><div><span class="start-eyebrow">Разделы</span><h2>Куда перейти</h2></div><p class="muted" style="margin:0">Основные разделы Навигатора.</p></div><div class="start-link-grid"><a class="start-link primary" href="./dashboard-v2.html?test=20260617-100"><b>Рабочий стол</b><span>Сводка и видимые сделки.</span><strong>Открыть</strong></a><a class="start-link" href="./deals-v2.html"><b>Сделки</b><span>Список доступных сделок.</span><strong>Смотреть</strong></a><a class="start-link green" href="./spn-v2.html?test=20260617-100"><b>Новая сделка</b><span>Актуальный мастер СПН.</span><strong>Создать</strong></a><a class="start-link" href="./queue-v2.html?test=20260617-100"><b>Кабинет юриста</b><span>Юридическая очередь по рискам, документам и задаткам.</span><strong>Открыть</strong></a><a class="start-link" href="./spn-v2-status.html?test=20260617-100"><b>Статус мастера</b><span>Версия, ссылки, проверка и что делать при ошибке.</span><strong>Открыть</strong></a><a class="start-link" href="./nav-system-check-v2.html"><b>Проверка</b><span>Диагностика входа и роли.</span><strong>Проверить</strong></a></div></section>
+
+    <div id="startAuthHost"></div>
+
+    <section class="start-layout">
+      <div class="card start-focus">
+        <span class="start-eyebrow">Основной маршрут</span>
+        <h2>Начните с рабочего стола</h2>
+        <p class="muted">После входа система покажет ваши сделки, роль и доступные действия. СПН увидит создание сделки, юрист — очередь проверки, администратор — команду и доступы.</p>
+        <div class="actions" style="justify-content:flex-start">
+          <a class="btn primary" href="./dashboard-v2.html">Открыть рабочий стол</a>
+          <a class="btn green" href="./spn-v2.html">Создать сделку</a>
+          <a class="btn light" href="./queue-v2.html">Кабинет юриста</a>
+        </div>
+        <div class="start-note">Если вы вошли не под тем сотрудником или страница ведёт себя странно, используйте чистый вход в блоке помощи ниже.</div>
+      </div>
+
+      <div class="card">
+        <div class="start-section-title">
+          <div>
+            <span class="start-eyebrow">Как работать</span>
+            <h2>Короткий порядок</h2>
+          </div>
+        </div>
+        <div class="start-steps">
+          <div class="start-step"><b>СПН создаёт сделку</b><span>Мастер задаёт только нужные вопросы и подсвечивает риски.</span></div>
+          <div class="start-step"><b>Система собирает контроль</b><span>Документы, задачи, готовность, юрист и брокер появляются автоматически.</span></div>
+          <div class="start-step"><b>Юрист проверяет очередь</b><span>Проблемные и просроченные документы видны отдельно.</span></div>
+          <div class="start-step"><b>Менеджер контролирует</b><span>Доработки, красные риски и зависшие сделки не теряются.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="start-section-title">
+        <div>
+          <span class="start-eyebrow">Разделы</span>
+          <h2>Рабочие разделы</h2>
+        </div>
+        <p class="muted" style="margin:0">Основные экраны без технических проверок.</p>
+      </div>
+      <div class="start-link-grid">
+        <a class="start-link primary" href="./dashboard-v2.html"><b>Рабочий стол</b><span>Сводка, роль и видимые сделки.</span><strong>Открыть</strong></a>
+        <a class="start-link green" href="./spn-v2.html"><b>Новая сделка</b><span>Умный мастер СПН.</span><strong>Создать</strong></a>
+        <a class="start-link" href="./deals-v2.html"><b>Сделки</b><span>Список и фильтры по рискам, документам и ролям.</span><strong>Смотреть</strong></a>
+        <a class="start-link" href="./queue-v2.html"><b>Кабинет юриста</b><span>Очередь по рискам, документам, задаткам и доработкам.</span><strong>Открыть</strong></a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="start-section-title">
+        <div>
+          <span class="start-eyebrow">Помощь</span>
+          <h2>Если что-то не открывается</h2>
+        </div>
+      </div>
+      <div class="start-link-grid">
+        <a class="start-link" href="./nav-v2.html?clean=1"><b>Чистый вход</b><span>Сбросить старую сессию и кэш профиля в браузере.</span><strong>Сбросить</strong></a>
+        <a class="start-link" href="./nav-system-check-v2.html"><b>Проверка системы</b><span>Диагностика входа, роли, Supabase и доступных страниц.</span><strong>Проверить</strong></a>
+        <a class="start-link" href="./spn-v2-checklist.html"><b>Проверка мастера</b><span>Сценарии для обучения и ручного теста СПН.</span><strong>Открыть</strong></a>
+        <a class="start-link" href="./spn-v2-status.html"><b>Статус мастера</b><span>Техническая страница версии и состояния мастера.</span><strong>Смотреть</strong></a>
+      </div>
+    </section>
   </main>
-  <script type="module" src="./assets/js/nav-v2/start-v2.js?v=20260617-100"></script>
+  <script type="module" src="./assets/js/nav-v2/start-v2.js?v=20260622-1"></script>
 </body>
 </html>
