@@ -53,6 +53,8 @@
 - Карточка сделки усилена: `nav_v2_add_comment(...)` принимает только видимость `team`, `private` или `public`, а `nav_v2_get_deal_card(uuid)` скрывает `private`-комментарии от всех, кроме автора, owner/admin и service role.
 - `nav_v2_get_deal_card(uuid)` теперь реально ограничивает последние комментарии и события 50 записями до JSON-агрегации.
 - `nav_v2_update_task_status(...)` теперь валидирует обязательный статус, блокирует строку задачи на время изменения, обновляет `updated_at`, возвращает `old_status` и не пишет повторное событие, если статус не изменился.
+- `nav_v2_add_deal_review(...)` нормализует решения проверки: `approved` не блокирует, `need_info` блокирует сделку, `blocked` блокирует задаток и сделку; для `need_info`/`blocked` обязателен комментарий.
+- `nav_v2_update_deal_status(...)` теперь блокирует положительные статусы, если есть блокирующие решения проверки, валидирует пустой статус, обновляет `updated_at`, возвращает `old_status` и не пишет повторное событие без фактической смены статуса.
 - RPC доработки СПН исправлены под v2-роли: `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` больше не используют legacy enum `nav_user_role`, корректно поддерживают `owner` и записывают `author_role` в комментариях.
 - `nav_v2_return_spn_rework(...)` теперь требует непустую причину возврата и позволяет юристу вернуть видимую ему сделку на доработку даже без широких прав редактирования.
 - Решения юриста переведены в структурированный слой: добавлен RPC `nav_v2_add_deal_review(...)`, а юридические шаблонные комментарии из существующих кнопок автоматически создают записи в `nav_deal_reviews_v2`.
@@ -89,7 +91,8 @@
   - `supabase/migrations/20260622181500_navigator_fix_rework_rpc_role_type.sql`;
   - `supabase/migrations/20260622183500_navigator_harden_wizard_save_rpc.sql`;
   - `supabase/migrations/20260622185500_navigator_fix_dashboard_list_counts.sql`;
-  - `supabase/migrations/20260622191000_navigator_harden_card_comments_and_tasks.sql`.
+  - `supabase/migrations/20260622191000_navigator_harden_card_comments_and_tasks.sql`;
+  - `supabase/migrations/20260622193000_navigator_block_positive_statuses_by_reviews.sql`.
 
 ## Проверено
 
@@ -109,6 +112,9 @@
 - `nav_v2_add_comment(...)`, `nav_v2_get_deal_card(uuid)` и `nav_v2_update_task_status(...)` закрыты от `anon`, доступны authenticated/service_role и содержат новые проверки.
 - Smoke-test приватного комментария внутри rollback прошел: автор видит 1 приватный комментарий, юрист видит 0, owner видит 1.
 - Smoke-test задачи внутри rollback прошел: два одинаковых вызова `nav_v2_update_task_status(..., 'in_progress')` создали только одно событие `task_status_changed`.
+- `nav_v2_add_deal_review(...)` и `nav_v2_update_deal_status(...)` закрыты от `anon`, доступны authenticated/service_role и содержат новые guards по решениям проверки.
+- Smoke-test решения проверки внутри rollback прошел: `blocked`-решение с входными `false/false` нормализовано в `blocks_deposit=true` и `blocks_deal=true`.
+- Негативный smoke-test статуса прошел: попытка поставить `ready_for_deal` при блокирующем решении остановлена ошибкой `Нельзя поставить положительный статус: есть блокирующие решения проверки`.
 - `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` закрыты от `anon`, доступны authenticated/service_role, используют `nav_v2_user_role`, не используют legacy `nav_user_role` и пишут `author_role`.
 - `nav_v2_return_spn_rework(...)` содержит обязательную проверку причины возврата.
 - `nav_v2_add_deal_review(...)` закрыт от `anon` и доступен authenticated; `nav_v2_add_comment(...)` пишет review-записи для юридических шаблонных действий.
