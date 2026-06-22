@@ -20,10 +20,6 @@ function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
 }
 
-function norm(value) {
-  return String(value || '').trim();
-}
-
 function roleLabel(role) {
   return ROLE_LABELS[role] || role || 'не назначен';
 }
@@ -43,7 +39,7 @@ function participantName(userId) {
 
 function assigneeOptions(selected) {
   const seen = new Set();
-  const options = ['<option value="">Не менять</option>'];
+  const options = [`<option value="" ${selected ? '' : 'selected'}>Без ответственного</option>`];
 
   list(cardData, 'participants').forEach((participant) => {
     if (!participant.user_id || seen.has(participant.user_id)) return;
@@ -90,7 +86,7 @@ function panelHtml(doc) {
     </div>
     <div class="actions" style="justify-content:flex-start;margin-top:8px">
       <button class="btn light" data-doc-workflow-save="${esc(doc.id)}">Сохранить ответственного и срок</button>
-      <span class="small">${esc(assignedText)}; ${esc(dueText)}. Пустое значение не меняет поле.</span>
+      <span class="small">${esc(assignedText)}; ${esc(dueText)}. Пустой ответственный или срок очищает поле.</span>
     </div>
   </div>`;
 }
@@ -118,13 +114,13 @@ async function saveWorkflow(docId) {
 
   try {
     setStatus('Сохраняю ответственного и срок...');
-    await rpc('nav_v2_update_document_workflow', {
+    await rpc('nav_v2_update_document_assignment', {
       p_document_id: docId,
-      p_status: null,
       p_assigned_to: assignedTo,
       p_responsible_role: role,
       p_due_date: dueDate,
-      p_note: null
+      p_clear_assigned_to: !assignedTo,
+      p_clear_due_date: !dueDate
     });
     setStatus('Документ обновлен. Обновляю карточку...');
     location.reload();
