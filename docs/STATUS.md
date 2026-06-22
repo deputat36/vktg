@@ -41,6 +41,12 @@
 - Добавлен RPC `nav_v2_update_document_workflow(...)`; старый `nav_v2_update_document_status(uuid, text)` сохранен как совместимая обертка.
 - В существующих 141 документах проставлена роль ответственного; у 125 открытых документов появился базовый срок.
 - В карточке сделки вкладка документов теперь показывает ответственного, срок, отметки `до задатка` / `до сделки`, заметку по проблеме и кнопку `Проблема` с обязательным пояснением.
+- Ручные add-RPC теперь валидируют обязательный текст и пишут события в историю сделки:
+  - `nav_v2_add_document(...)` → `document_added`;
+  - `nav_v2_add_risk(...)` → `risk_added`;
+  - `nav_v2_add_task(...)` → `task_added`;
+  - `nav_v2_add_expense(...)` → `expense_added`.
+- `nav_v2_add_expense(...)` дополнительно блокирует отрицательную сумму расхода.
 - Решения юриста переведены в структурированный слой: добавлен RPC `nav_v2_add_deal_review(...)`, а юридические шаблонные комментарии из существующих кнопок автоматически создают записи в `nav_deal_reviews_v2`.
 - Карточка сделки теперь показывает отдельную вкладку `Решения`, KPI по блокирующим решениям и выводит последнее юридическое решение в профиле юриста.
 - Юридические быстрые действия в карточке сделки теперь напрямую вызывают `nav_v2_add_deal_review(...)`, затем обновляют статус сделки и переводят пользователя во вкладку `Решения`.
@@ -70,7 +76,8 @@
   - `supabase/migrations/20260622161000_navigator_document_workflow_fields.sql`;
   - `supabase/migrations/20260622164000_navigator_structured_legal_reviews.sql`;
   - `supabase/migrations/20260622170500_navigator_lawyer_review_summary_rpc.sql`;
-  - `supabase/migrations/20260622173000_navigator_lawyer_queue_review_priority.sql`.
+  - `supabase/migrations/20260622173000_navigator_lawyer_queue_review_priority.sql`;
+  - `supabase/migrations/20260622175500_navigator_validate_and_log_mutation_rpcs.sql`.
 
 ## Проверено
 
@@ -80,6 +87,7 @@
 - Helper-RPC доступа содержат self/admin/service guard.
 - `nav_v2_update_document_workflow(...)` и совместимый `nav_v2_update_document_status(uuid, text)` закрыты от `anon` и доступны authenticated.
 - В `nav_deal_documents_v2` появились новые workflow-поля; 141/141 документов имеют `responsible_role`, 125 открытых документов имеют `due_date`.
+- `nav_v2_add_document(...)`, `nav_v2_add_risk(...)`, `nav_v2_add_task(...)`, `nav_v2_add_expense(...)` закрыты от `anon`, доступны authenticated/service_role, валидируют обязательные названия и пишут события аудита.
 - `nav_v2_add_deal_review(...)` закрыт от `anon` и доступен authenticated; `nav_v2_add_comment(...)` пишет review-записи для юридических шаблонных действий.
 - `nav_v2_get_lawyer_review_summary()` закрыт от `anon`, доступен authenticated/service_role и видит 3 сделки с решениями, 2 из них блокирующие.
 - `nav_v2_get_lawyer_queue(integer)` содержит `blocking_reviews_count` и `latest_review_decision`, закрыт от `anon`, доступен authenticated/service_role.
