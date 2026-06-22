@@ -49,6 +49,7 @@
 - `nav_v2_add_expense(...)` дополнительно блокирует отрицательную сумму расхода.
 - Мастер СПН усилен на сервере: `nav_v2_save_wizard_result(jsonb)` теперь доступен только owner/admin/manager/СПН, проверяет структуру JSON, известные значения справочников, массивы `flags/payments/basis`, цену, задаток и обязательные поля для подготовки задатка/сделки.
 - `nav_v2_save_wizard_result(jsonb)` блокирует задаток больше цены, отрицательные/нечисловые суммы и создание сделки без типа объекта или адреса там, где они обязательны.
+- Дашборд и список сделок исправлены: `nav_v2_get_dashboard()` теперь ограничивает задачи до агрегирования, а `nav_v2_get_deals_list(integer)` не считает документы `checked` как отсутствующие.
 - RPC доработки СПН исправлены под v2-роли: `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` больше не используют legacy enum `nav_user_role`, корректно поддерживают `owner` и записывают `author_role` в комментариях.
 - `nav_v2_return_spn_rework(...)` теперь требует непустую причину возврата и позволяет юристу вернуть видимую ему сделку на доработку даже без широких прав редактирования.
 - Решения юриста переведены в структурированный слой: добавлен RPC `nav_v2_add_deal_review(...)`, а юридические шаблонные комментарии из существующих кнопок автоматически создают записи в `nav_deal_reviews_v2`.
@@ -83,7 +84,8 @@
   - `supabase/migrations/20260622173000_navigator_lawyer_queue_review_priority.sql`;
   - `supabase/migrations/20260622175500_navigator_validate_and_log_mutation_rpcs.sql`;
   - `supabase/migrations/20260622181500_navigator_fix_rework_rpc_role_type.sql`;
-  - `supabase/migrations/20260622183500_navigator_harden_wizard_save_rpc.sql`.
+  - `supabase/migrations/20260622183500_navigator_harden_wizard_save_rpc.sql`;
+  - `supabase/migrations/20260622185500_navigator_fix_dashboard_list_counts.sql`.
 
 ## Проверено
 
@@ -97,6 +99,9 @@
 - `nav_v2_save_wizard_result(jsonb)` закрыт от `anon`, доступен authenticated/service_role, содержит role guard owner/admin/manager/СПН и новые проверки входного JSON.
 - Smoke-test `nav_v2_save_wizard_result(jsonb)` с валидной заявкой прошел внутри rollback: функция вернула draft-сделку, `risk_level = green`, `readiness_deposit = 100`, `readiness_deal = 65`.
 - Негативный smoke-test мастера прошел: заявка с задатком больше цены ожидаемо блокируется ошибкой `Задаток не может быть больше цены объекта`.
+- `nav_v2_get_dashboard()` и `nav_v2_get_deals_list(integer)` закрыты от `anon`, доступны authenticated; smoke-test от имени активного СПН выполнил оба RPC без ошибок.
+- `nav_v2_get_dashboard()` содержит CTE `visible_tasks` с `limit 30` до JSON-агрегации задач.
+- `nav_v2_get_deals_list(integer)` и `nav_v2_get_dashboard()` считают отсутствующими только обязательные документы не в статусах `received`/`checked`.
 - `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` закрыты от `anon`, доступны authenticated/service_role, используют `nav_v2_user_role`, не используют legacy `nav_user_role` и пишут `author_role`.
 - `nav_v2_return_spn_rework(...)` содержит обязательную проверку причины возврата.
 - `nav_v2_add_deal_review(...)` закрыт от `anon` и доступен authenticated; `nav_v2_add_comment(...)` пишет review-записи для юридических шаблонных действий.
