@@ -55,6 +55,8 @@
 - `nav_v2_update_task_status(...)` теперь валидирует обязательный статус, блокирует строку задачи на время изменения, обновляет `updated_at`, возвращает `old_status` и не пишет повторное событие, если статус не изменился.
 - `nav_v2_add_deal_review(...)` нормализует решения проверки: `approved` не блокирует, `need_info` блокирует сделку, `blocked` блокирует задаток и сделку; для `need_info`/`blocked` обязателен комментарий.
 - `nav_v2_update_deal_status(...)` теперь блокирует положительные статусы, если есть блокирующие решения проверки, валидирует пустой статус, обновляет `updated_at`, возвращает `old_status` и не пишет повторное событие без фактической смены статуса.
+- Profile-helper RPC усилены: `nav_v2_my_role(uuid)`, `nav_v2_is_active_user(uuid)` и `nav_v2_is_owner_or_admin(uuid)` теперь позволяют обычному пользователю проверять только себя; проверка чужого пользователя доступна owner/admin и service role.
+- Исправлен критичный сбой кабинета юриста: `nav_v2_get_lawyer_queue(integer)` больше не использует огромный `jsonb_build_object`, который падал на лимите PostgreSQL `cannot pass more than 100 arguments to a function`; очередь собирается через `to_jsonb` подготовленной строки.
 - RPC доработки СПН исправлены под v2-роли: `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` больше не используют legacy enum `nav_user_role`, корректно поддерживают `owner` и записывают `author_role` в комментариях.
 - `nav_v2_return_spn_rework(...)` теперь требует непустую причину возврата и позволяет юристу вернуть видимую ему сделку на доработку даже без широких прав редактирования.
 - Решения юриста переведены в структурированный слой: добавлен RPC `nav_v2_add_deal_review(...)`, а юридические шаблонные комментарии из существующих кнопок автоматически создают записи в `nav_deal_reviews_v2`.
@@ -92,7 +94,9 @@
   - `supabase/migrations/20260622183500_navigator_harden_wizard_save_rpc.sql`;
   - `supabase/migrations/20260622185500_navigator_fix_dashboard_list_counts.sql`;
   - `supabase/migrations/20260622191000_navigator_harden_card_comments_and_tasks.sql`;
-  - `supabase/migrations/20260622193000_navigator_block_positive_statuses_by_reviews.sql`.
+  - `supabase/migrations/20260622193000_navigator_block_positive_statuses_by_reviews.sql`;
+  - `supabase/migrations/20260622194500_navigator_harden_profile_helper_rpcs.sql`;
+  - `supabase/migrations/20260622195500_navigator_fix_lawyer_queue_json_build.sql`.
 
 ## Проверено
 
@@ -100,6 +104,7 @@
 - У `authenticated` и `service_role` доступ к рабочим наружным RPC сохранен.
 - Внутренние демо-реализации `_unchecked_20260622` недоступны `anon` и `authenticated`.
 - Helper-RPC доступа содержат self/admin/service guard.
+- Profile-helper RPC содержат self/admin/service guard: СПН видит собственную роль, не видит роль/активность чужого юриста и не может проверить owner/admin-статус owner; owner видит роль и активность юриста.
 - `nav_v2_update_document_workflow(...)` и совместимый `nav_v2_update_document_status(uuid, text)` закрыты от `anon` и доступны authenticated.
 - В `nav_deal_documents_v2` появились новые workflow-поля; 141/141 документов имеют `responsible_role`, 125 открытых документов имеют `due_date`.
 - `nav_v2_add_document(...)`, `nav_v2_add_risk(...)`, `nav_v2_add_task(...)`, `nav_v2_add_expense(...)` закрыты от `anon`, доступны authenticated/service_role, валидируют обязательные названия и пишут события аудита.
@@ -115,6 +120,8 @@
 - `nav_v2_add_deal_review(...)` и `nav_v2_update_deal_status(...)` закрыты от `anon`, доступны authenticated/service_role и содержат новые guards по решениям проверки.
 - Smoke-test решения проверки внутри rollback прошел: `blocked`-решение с входными `false/false` нормализовано в `blocks_deposit=true` и `blocks_deal=true`.
 - Негативный smoke-test статуса прошел: попытка поставить `ready_for_deal` при блокирующем решении остановлена ошибкой `Нельзя поставить положительный статус: есть блокирующие решения проверки`.
+- `nav_v2_get_lawyer_queue(10)` от имени активного юриста возвращает объект с `items/counts`, 10 элементов, счетчик `blocking_reviews` и `lawyer_next_action` в первой карточке.
+- `nav_v2_get_lawyer_queue(integer)` закрыт от `anon`, доступен authenticated/service_role и больше не содержит большого `jsonb_build_object` для элементов очереди.
 - `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` закрыты от `anon`, доступны authenticated/service_role, используют `nav_v2_user_role`, не используют legacy `nav_user_role` и пишут `author_role`.
 - `nav_v2_return_spn_rework(...)` содержит обязательную проверку причины возврата.
 - `nav_v2_add_deal_review(...)` закрыт от `anon` и доступен authenticated; `nav_v2_add_comment(...)` пишет review-записи для юридических шаблонных действий.
