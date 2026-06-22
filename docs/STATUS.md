@@ -46,15 +46,22 @@
   - `nav_v2_seed_demo_data()`;
   - `nav_v2_clear_demo_data()`.
 - Для демо-RPC добавлены наружные проверки `service_role` или авторизованный owner/admin; старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
+- Ужесточены helper-RPC доступа:
+  - `nav_v2_can_view_deal(uuid, uuid)`;
+  - `nav_v2_can_edit_deal(uuid, uuid)`;
+  - `nav_v2_can_change_task_status(uuid, uuid)`.
+- Helper-RPC теперь позволяют обычному пользователю проверять только собственный `p_uid`; проверка чужого доступа оставлена для owner/admin и `service_role`.
 - Миграции синхронизированы в репозитории:
   - `supabase/migrations/20260622143000_navigator_revoke_anon_nav_v2_workflow_rpcs.sql`;
-  - `supabase/migrations/20260622151500_navigator_harden_demo_data_rpcs.sql`.
+  - `supabase/migrations/20260622151500_navigator_harden_demo_data_rpcs.sql`;
+  - `supabase/migrations/20260622154500_navigator_harden_access_helper_rpcs.sql`.
 
 ## Проверено
 
 - У перечисленных рабочих RPC `anon_can_execute = false`.
 - У `authenticated` и `service_role` доступ к рабочим наружным RPC сохранен.
 - Внутренние демо-реализации `_unchecked_20260622` недоступны `anon` и `authenticated`.
+- Helper-RPC доступа содержат self/admin/service guard.
 - `nav_v2_list_users()`, `nav_v2_get_access_audit()`, `nav_v2_link_user_by_email(...)` и `nav_v2_update_user_profile(...)` уже содержат серверную проверку owner/admin.
 - Повторный security advisor больше не показывает предупреждение про публичный `anon`-вызов ранее открытых функций.
 
