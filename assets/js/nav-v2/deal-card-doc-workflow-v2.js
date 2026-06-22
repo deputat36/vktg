@@ -111,13 +111,15 @@ function panelHtml(doc) {
 }
 
 async function loadCard() {
-  if (!dealId || loading) return;
+  if (!dealId || loading) return false;
   loading = true;
   try {
     cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
+    return true;
   }
   catch (e) {
     setStatus('Не удалось загрузить данные документов: ' + e.message, 'error');
+    return false;
   }
   finally {
     loading = false;
@@ -175,7 +177,8 @@ async function saveWorkflow(docId) {
       p_clear_assigned_to: !assignedTo,
       p_clear_due_date: !dueDate
     });
-    await loadCard();
+    const refreshed = await loadCard();
+    if (!refreshed) return;
     refreshDocumentUi(docId);
     setStatus('Документ обновлен.');
   }
