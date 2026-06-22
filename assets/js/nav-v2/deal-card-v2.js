@@ -12,6 +12,7 @@ function metric(label, value, cls = '') { return `<div class="metric ${cls}"><sp
 function countOpenTasks(items) { return items.filter((task) => ['open', 'in_progress'].includes(task.status)).length; }
 function countMissingDocs(items) { return items.filter((doc) => doc.is_required && !['received', 'checked'].includes(doc.status)).length; }
 function countRedRisks(items) { return items.filter((risk) => risk.level === 'red' && risk.is_resolved !== true).length; }
+function countBlockingReviews(items) { return items.filter((review) => review.blocks_deposit || review.blocks_deal || review.decision === 'blocked').length; }
 function isLawyer() { return currentProfile?.role === 'lawyer'; }
 function setPageStatus(text, type = 'info') {
   const el = document.getElementById('pageStatus');
@@ -83,7 +84,7 @@ function lawyerQuickActions(deal) {
     <div class="section-title">
       <div>
         <h2>Юридические действия</h2>
-        <p class="muted">Кнопки фиксируют позицию юриста в комментариях и меняют рабочий статус сделки.</p>
+        <p class="muted">Кнопки фиксируют структурированное решение юриста и меняют рабочий статус сделки.</p>
       </div>
       ${riskPill(deal.risk_level)}
     </div>
@@ -94,7 +95,7 @@ function lawyerQuickActions(deal) {
       <button class="btn red" data-legal-action="stop_factor" type="button">Есть стоп-фактор</button>
       <button class="btn light" data-legal-action="return_spn" type="button">Вернуть СПН</button>
       <button class="btn light" data-tab-shortcut="docs" type="button">К документам</button>
-      <button class="btn light" data-tab-shortcut="comments" type="button">Комментарий</button>
+      <button class="btn light" data-tab-shortcut="reviews" type="button">К решениям</button>
     </div>
   </section>`;
 }
@@ -125,20 +126,23 @@ function lawyerHandoffIssues(data) {
   const docs = list(data, 'documents');
   const tasks = list(data, 'tasks');
   const risks = list(data, 'risks');
+  const reviews = list(data, 'reviews');
   const issues = [];
   const missingDocs = countMissingDocs(docs);
   const redRisks = countRedRisks(risks);
+  const blockingReviews = countBlockingReviews(reviews);
   const urgentTasks = tasks.filter((task) => ['urgent', 'high'].includes(task.priority) && ['open','in_progress'].includes(task.status)).length;
 
   if (missingDocs) issues.push(`Не хватает обязательных документов: ${missingDocs}.`);
   if (redRisks) issues.push(`Есть красные риски: ${redRisks}.`);
+  if (blockingReviews) issues.push(`Есть блокирующие решения проверки: ${blockingReviews}.`);
   if (urgentTasks) issues.push(`Есть срочные/важные открытые задачи: ${urgentTasks}.`);
   if (!deal.expenses_agreed) issues.push('Расходы между сторонами не согласованы.');
   if (!deal.settlements_agreed) issues.push('Порядок расчетов не согласован.');
   if ((deal.readiness_deposit || 0) < 70) issues.push(`Готовность к задатку низкая: ${deal.readiness_deposit || 0}%.`);
   if ((deal.readiness_deal || 0) < 60) issues.push(`Готовность к сделке низкая: ${deal.readiness_deal || 0}%.`);
 
-  return { issues, missingDocs, redRisks, urgentTasks, ok: issues.length === 0 };
+  return { issues, missingDocs, redRisks, blockingReviews, urgentTasks, ok: issues.length === 0 };
 }
 
 function lawyerReturnText() {
@@ -179,28 +183,44 @@ function spnBeforeLawyerPanel(data) {
     <div class="actions" style="justify-content:flex-start">
       <button class="btn light" data-tab-shortcut="docs" type="button">Проверить документы</button>
       <button class="btn light" data-tab-shortcut="risks" type="button">Проверить риски</button>
-      <button class="btn light" data-tab-shortcut="expenses" type="button">Проверить расходы</button>
+      <button class="btn light" data-tab-shortcut="reviews" type="button">Проверить решения</button>
       <button class="btn light" data-tab-shortcut="comments" type="button">Написать комментарий</button>
     </div>
   </section>`;
+}
+
+function reviewMeta(decision) {
+  return ({
+    approved: ['Одобрено', 'green'],
+    need_info: ['Нужна информация', 'yellow'],
+    blocked: ['Блокировано', 'red']
+  })[decision] || [decision || 'Решение', 'blue'];
+}
+
+function reviewPill(review) {
+  const [label, cls] = reviewMeta(review?.decision);
+  return `<span class="pill ${cls}">${esc(label)}</span>`;
 }
 
 function legalPanel(data) {
   const deal = data.deal;
   const docs = list(data, 'documents');
   const risks = list(data, 'risks');
+  const reviews = list(data, 'reviews');
+  const latestReview = reviews[0] || null;
   const missingDocs = countMissingDocs(docs);
   const redRisks = countRedRisks(risks);
+  const blockingReviews = countBlockingReviews(reviews);
   return `<section class="card" style="border:2px solid rgba(220,38,38,.16)">
     <div class="section-title">
-      <div><h2>Юридический профиль сделки</h2><p class="muted">Короткая карта проверки для юриста: риски, документы, дети, ипотека, расходы и расчеты.</p></div>
+      <div><h2>Юридический профиль сделки</h2><p class="muted">Короткая карта проверки для юриста: риски, документы, решения, дети, ипотека, расходы и расчеты.</p></div>
       <span class="pill yellow">lawyer</span>
     </div>
     <div class="kpi-row">
       ${metric('Красные риски', redRisks, redRisks ? 'red' : 'green')}
       ${metric('Не хватает документов', missingDocs, missingDocs ? 'yellow' : 'green')}
-      ${metric('Дети / опека', deal.has_children ? 'есть' : 'нет', deal.has_children ? 'red' : 'green')}
-      ${metric('Ипотека', deal.has_mortgage ? 'есть' : 'нет', deal.has_mortgage ? 'yellow' : '')}
+      ${metric('Блокирующие решения', blockingReviews, blockingReviews ? 'red' : 'green')}
+      ${metric('Последнее решение', latestReview ? reviewPill(latestReview) : '—')}
     </div>
     <div class="list">
       <div class="list-item"><b>Статус</b>${statusText(deal.status)}</div>
@@ -266,6 +286,20 @@ function renderRisks(items) {
   return `<div class="list">${items.map((risk) => `<div class="list-item"><div>${riskPill(risk.level)} ${risk.blocks_deposit ? '<span class="pill red">блокирует задаток</span>' : ''} ${risk.blocks_deal ? '<span class="pill red">блокирует сделку</span>' : ''}</div><b>${esc(risk.title)}</b><p class="muted">${esc(risk.description || '')}</p><p><b>Рекомендация:</b> ${esc(risk.recommendation || 'Проверить с ответственным специалистом.')}</p></div>`).join('')}</div>`;
 }
 
+function renderReviews(items) {
+  if (!items.length) return '<div class="empty">Решений проверки пока нет.</div>';
+  return `<div class="list">${items.map((review) => `<div class="list-item">
+    <div class="actions" style="justify-content:flex-start">
+      ${reviewPill(review)}
+      <span class="pill blue">${esc(roleLabel(review.reviewer_role))}</span>
+      ${review.blocks_deposit ? '<span class="pill red">блокирует задаток</span>' : ''}
+      ${review.blocks_deal ? '<span class="pill red">блокирует сделку</span>' : ''}
+    </div>
+    <span class="small">${dateText(review.created_at)}</span>
+    ${review.body ? `<p>${esc(review.body)}</p>` : '<p class="muted">Комментарий к решению не указан.</p>'}
+  </div>`).join('')}</div>`;
+}
+
 function renderExpenses(items) {
   if (!items.length) return '<div class="empty">Расходы пока не рассчитаны.</div>';
   const block = (title, sides) => {
@@ -298,12 +332,14 @@ function overview(data) {
   const docs = list(data, 'documents');
   const risks = list(data, 'risks');
   const tasks = list(data, 'tasks');
+  const reviews = list(data, 'reviews');
   const missingDocs = countMissingDocs(docs);
   const redRisks = countRedRisks(risks);
   const openTasks = countOpenTasks(tasks);
+  const blockingReviews = countBlockingReviews(reviews);
   return `<section class="grid">
     <div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div><div class="list-item"><b>Создана</b>${dateText(deal.created_at)}</div></div></div>
-    <div class="card"><h2>${isLawyer() ? 'Юридический контроль' : 'Контроль'}</h2><div class="list"><div class="list-item"><b>Следующий шаг</b>${esc(deal.next_action || 'Проверить карточку')}</div><div class="list-item"><b>Риски</b>${redRisks ? `<span class="pill red">красных: ${redRisks}</span>` : '<span class="pill green">красных нет</span>'}</div><div class="list-item"><b>Документы</b>${missingDocs ? `<span class="pill yellow">не хватает: ${missingDocs}</span>` : '<span class="pill green">критичных долгов нет</span>'}</div><div class="list-item"><b>Задачи</b>${openTasks ? `<span class="pill yellow">открытых: ${openTasks}</span>` : '<span class="pill green">открытых нет</span>'}</div><div class="list-item"><b>Расходы</b>${deal.expenses_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div><div class="list-item"><b>Расчеты</b>${deal.settlements_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div></div></div>
+    <div class="card"><h2>${isLawyer() ? 'Юридический контроль' : 'Контроль'}</h2><div class="list"><div class="list-item"><b>Следующий шаг</b>${esc(deal.next_action || 'Проверить карточку')}</div><div class="list-item"><b>Риски</b>${redRisks ? `<span class="pill red">красных: ${redRisks}</span>` : '<span class="pill green">красных нет</span>'}</div><div class="list-item"><b>Документы</b>${missingDocs ? `<span class="pill yellow">не хватает: ${missingDocs}</span>` : '<span class="pill green">критичных долгов нет</span>'}</div><div class="list-item"><b>Решения</b>${blockingReviews ? `<span class="pill red">блокирующих: ${blockingReviews}</span>` : '<span class="pill green">блокирующих нет</span>'}</div><div class="list-item"><b>Задачи</b>${openTasks ? `<span class="pill yellow">открытых: ${openTasks}</span>` : '<span class="pill green">открытых нет</span>'}</div><div class="list-item"><b>Расходы</b>${deal.expenses_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div><div class="list-item"><b>Расчеты</b>${deal.settlements_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div></div></div>
   </section>
   <section class="grid"><div>${statusSelector(deal)}</div><div class="card" style="box-shadow:none"><h3>Ответственные очереди</h3><div class="list"><div class="list-item"><b>Юрист</b>${deal.lawyer_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Брокер</b>${deal.broker_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Дети / опека / детские деньги</b>${deal.has_children ? '<span class="pill red">есть</span>' : '<span class="pill green">нет</span>'}</div><div class="list-item"><b>Ипотека</b>${deal.has_mortgage ? '<span class="pill yellow">есть</span>' : '<span class="pill green">нет</span>'}</div></div></div></section>`;
 }
@@ -313,10 +349,10 @@ function tabButton(id, title, count = null) { return `<button class="tab ${activ
 function renderTabs(data) {
   const defaultTabs = [
     tabButton('overview', 'Сводка'), tabButton('risks', 'Риски', list(data,'risks').length), tabButton('docs', 'Документы', list(data,'documents').length),
-    tabButton('tasks', 'Задачи', list(data,'tasks').length), tabButton('expenses', 'Расходы', list(data,'expenses').length), tabButton('comments', 'Комментарии', list(data,'comments').length), tabButton('history', 'История', list(data,'events').length)
+    tabButton('reviews', 'Решения', list(data,'reviews').length), tabButton('tasks', 'Задачи', list(data,'tasks').length), tabButton('expenses', 'Расходы', list(data,'expenses').length), tabButton('comments', 'Комментарии', list(data,'comments').length), tabButton('history', 'История', list(data,'events').length)
   ];
   const lawyerTabs = [
-    tabButton('risks', 'Риски', list(data,'risks').length), tabButton('docs', 'Документы', list(data,'documents').length), tabButton('tasks', 'Задачи', list(data,'tasks').length),
+    tabButton('risks', 'Риски', list(data,'risks').length), tabButton('docs', 'Документы', list(data,'documents').length), tabButton('reviews', 'Решения', list(data,'reviews').length), tabButton('tasks', 'Задачи', list(data,'tasks').length),
     tabButton('comments', 'Комментарии', list(data,'comments').length), tabButton('overview', 'Сводка'), tabButton('expenses', 'Расходы', list(data,'expenses').length), tabButton('history', 'История', list(data,'events').length)
   ];
   return `<section class="card"><div class="tabs">${(isLawyer() ? lawyerTabs : defaultTabs).join('')}</div>${renderTabContent(data)}</section>`;
@@ -325,6 +361,7 @@ function renderTabs(data) {
 function renderTabContent(data) {
   if (activeTab === 'risks') return `<h2>${isLawyer() ? 'Юридические риски и стоп-факторы' : 'Риски и рекомендации'}</h2>${isLawyer() ? '<div class="status warn">Проверьте правоустанавливающие документы, собственников, детей/опеку, обременения, расчеты, сроки и условия задатка.</div>' : ''}${renderRisks(list(data,'risks'))}`;
   if (activeTab === 'docs') return `<h2>${isLawyer() ? 'Документы для юридической проверки' : 'Документы'}</h2>${renderDocs(list(data,'documents'))}`;
+  if (activeTab === 'reviews') return `<h2>${isLawyer() ? 'Решения юридической проверки' : 'Решения проверки'}</h2>${renderReviews(list(data,'reviews'))}`;
   if (activeTab === 'tasks') return `<h2>${isLawyer() ? 'Задачи юриста и СПН' : 'Задачи'}</h2>${renderTasks(list(data,'tasks'))}`;
   if (activeTab === 'expenses') return `<h2>Расходы</h2>${renderExpenses(list(data,'expenses'))}`;
   if (activeTab === 'comments') return `<h2>${isLawyer() ? 'Юридические комментарии' : 'Комментарии'}</h2>${renderComments(list(data,'comments'))}`;
@@ -338,6 +375,7 @@ function renderCard(data) {
   const docs = list(data, 'documents');
   const tasks = list(data, 'tasks');
   const risks = list(data, 'risks');
+  const reviews = list(data, 'reviews');
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(deal))}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
     ${dealModePanel(deal)}
@@ -352,7 +390,7 @@ function renderCard(data) {
       ${metric('Статус', statusText(deal.status))}
       ${metric('Риск', riskPill(deal.risk_level))}
       ${metric('Красные риски', countRedRisks(risks), countRedRisks(risks) ? 'red' : 'green')}
-      ${metric('Цена', money(deal.price_total))}
+      ${metric('Решения', countBlockingReviews(reviews), countBlockingReviews(reviews) ? 'red' : 'green')}
     </div>
     ${spnBeforeLawyerPanel(data)}
     ${quickActions(deal)}
@@ -363,9 +401,9 @@ function renderCard(data) {
 
 async function runLegalAction(action) {
   const config = {
-    checked: ['preparing_deal', 'Юрист: первичная юридическая проверка выполнена. Критичных замечаний по текущей информации нет. Можно продолжать подготовку сделки.'],
-    need_documents: ['need_documents', 'Юрист: для продолжения проверки нужны дополнительные документы. СПН необходимо дозапросить пакет документов и обновить карточку сделки.'],
-    stop_factor: ['need_lawyer', 'Юрист: выявлен юридический стоп-фактор. До устранения замечаний нельзя переводить сделку к задатку/основной сделке.']
+    checked: ['preparing_deal', 'Юрист: первичная юридическая проверка выполнена. Критичных замечаний по текущей информации нет. Можно продолжать подготовку сделки.', 'approved', false, false],
+    need_documents: ['need_documents', 'Юрист: для продолжения проверки нужны дополнительные документы. СПН необходимо дозапросить пакет документов и обновить карточку сделки.', 'need_info', false, true],
+    stop_factor: ['need_lawyer', 'Юрист: выявлен юридический стоп-фактор. До устранения замечаний нельзя переводить сделку к задатку/основной сделке.', 'blocked', true, true]
   }[action];
 
   if (action === 'return_spn') {
@@ -382,8 +420,16 @@ async function runLegalAction(action) {
   if (!confirmDemoAction('зафиксировать юридическое действие')) return;
   try {
     setPageStatus('Фиксирую юридическое действие...');
-    await rpc('nav_v2_add_comment', { p_deal_id: dealId, p_body: config[1], p_visibility: 'team' });
+    await rpc('nav_v2_add_deal_review', {
+      p_deal_id: dealId,
+      p_decision: config[2],
+      p_body: config[1],
+      p_blocks_deposit: config[3],
+      p_blocks_deal: config[4]
+    });
     await rpc('nav_v2_update_deal_status', { p_deal_id: dealId, p_status: config[0] });
+    activeTab = 'reviews';
+    history.replaceState(null, '', `${location.pathname}${location.search}#${activeTab}`);
     await load();
   } catch (e) { setPageStatus('Ошибка юридического действия: ' + e.message, 'error'); }
 }
