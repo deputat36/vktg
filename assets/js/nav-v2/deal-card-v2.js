@@ -7,6 +7,7 @@ let activeTab = location.hash ? location.hash.replace('#', '') : 'overview';
 
 function list(data, key) { return Array.isArray(data?.[key]) ? data[key] : []; }
 function dateText(value) { return value ? new Date(value).toLocaleString('ru-RU') : '—'; }
+function dateShort(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
 function metric(label, value, cls = '') { return `<div class="metric ${cls}"><span>${label}</span><b>${value ?? '—'}</b></div>`; }
 function countOpenTasks(items) { return items.filter((task) => ['open', 'in_progress'].includes(task.status)).length; }
 function countMissingDocs(items) { return items.filter((doc) => doc.is_required && !['received', 'checked'].includes(doc.status)).length; }
@@ -210,9 +211,54 @@ function legalPanel(data) {
   </section>`;
 }
 
+function docStatusClass(doc) {
+  if (doc.status === 'checked') return 'green';
+  if (doc.status === 'received') return 'blue';
+  if (doc.status === 'problem') return 'red';
+  return 'yellow';
+}
+
+function docDuePill(doc) {
+  if (!doc.due_date || doc.status === 'checked') return '';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(doc.due_date);
+  due.setHours(0, 0, 0, 0);
+  const cls = due < today ? 'red' : 'blue';
+  return `<span class="pill ${cls}">срок: ${dateShort(doc.due_date)}</span>`;
+}
+
+function roleLabel(role) {
+  return ({ owner: 'owner', admin: 'admin', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'не назначен';
+}
+
 function renderDocs(items) {
   if (!items.length) return '<div class="empty">Документы пока не сформированы.</div>';
-  return `<div class="list">${items.map((doc) => `<div class="list-item"><div class="doc-status"><div><b>${esc(doc.title)}</b><span class="small">${esc(doc.category)} / ${esc(doc.side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span></div><span class="pill ${doc.status === 'received' || doc.status === 'checked' ? 'green' : 'yellow'}">${esc(doc.status || 'needed')}</span></div><div class="actions" style="justify-content:flex-start"><button class="btn light" data-doc-status="received" data-doc-id="${doc.id}">Получен</button><button class="btn light" data-doc-status="checked" data-doc-id="${doc.id}">Проверен</button><button class="btn light" data-doc-status="needed" data-doc-id="${doc.id}">Нужен</button></div></div>`).join('')}</div>`;
+  return `<div class="list">${items.map((doc) => {
+    const note = doc.problem_note || doc.status_note || '';
+    return `<div class="list-item">
+      <div class="doc-status">
+        <div>
+          <b>${esc(doc.title)}</b>
+          <span class="small">${esc(doc.category)} / ${esc(doc.side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span>
+        </div>
+        <span class="pill ${docStatusClass(doc)}">${esc(doc.status || 'needed')}</span>
+      </div>
+      <div class="actions" style="justify-content:flex-start;margin-top:8px">
+        <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
+        ${docDuePill(doc)}
+        ${doc.required_for_deposit ? '<span class="pill yellow">до задатка</span>' : ''}
+        ${doc.required_for_deal ? '<span class="pill">до сделки</span>' : ''}
+      </div>
+      ${note ? `<p class="muted"><b>Заметка:</b> ${esc(note)}</p>` : ''}
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn light" data-doc-status="received" data-doc-id="${doc.id}">Получен</button>
+        <button class="btn green" data-doc-status="checked" data-doc-id="${doc.id}">Проверен</button>
+        <button class="btn red" data-doc-status="problem" data-doc-id="${doc.id}">Проблема</button>
+        <button class="btn light" data-doc-status="needed" data-doc-id="${doc.id}">Нужен</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function renderRisks(items) {
@@ -367,7 +413,20 @@ function bindActions() {
   };
   document.querySelectorAll('[data-doc-id]').forEach((btn) => btn.onclick = async () => {
     if (!confirmDemoAction('изменить статус документа')) return;
-    try { setPageStatus('Обновляю документ...'); await rpc('nav_v2_update_document_status', { p_document_id: btn.dataset.docId, p_status: btn.dataset.docStatus }); await load(); }
+    const note = btn.dataset.docStatus === 'problem' ? prompt('Что не так с документом? Это увидят СПН и юрист.') : '';
+    if (btn.dataset.docStatus === 'problem' && !norm(note)) { setPageStatus('Для проблемного документа нужна короткая причина.', 'error'); return; }
+    try {
+      setPageStatus('Обновляю документ...');
+      await rpc('nav_v2_update_document_workflow', {
+        p_document_id: btn.dataset.docId,
+        p_status: btn.dataset.docStatus,
+        p_assigned_to: null,
+        p_responsible_role: null,
+        p_due_date: null,
+        p_note: note || null
+      });
+      await load();
+    }
     catch (e) { setPageStatus('Ошибка документа: ' + e.message, 'error'); }
   });
   document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick = async () => {
