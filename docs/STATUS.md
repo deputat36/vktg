@@ -42,13 +42,21 @@
   - `nav_v2_get_lawyer_queue(integer)`;
   - `nav_v2_return_spn_rework(uuid, text)`;
   - `nav_v2_submit_spn_rework(uuid, text)`.
-- Миграция синхронизирована в репозитории: `supabase/migrations/20260622143000_navigator_revoke_anon_nav_v2_workflow_rpcs.sql`.
+- Ужесточены демо-RPC:
+  - `nav_v2_seed_demo_data()`;
+  - `nav_v2_clear_demo_data()`.
+- Для демо-RPC добавлены наружные проверки `service_role` или авторизованный owner/admin; старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
+- Миграции синхронизированы в репозитории:
+  - `supabase/migrations/20260622143000_navigator_revoke_anon_nav_v2_workflow_rpcs.sql`;
+  - `supabase/migrations/20260622151500_navigator_harden_demo_data_rpcs.sql`.
 
 ## Проверено
 
 - У перечисленных рабочих RPC `anon_can_execute = false`.
-- У `authenticated` и `service_role` доступ к этим RPC сохранен.
-- Повторный security advisor больше не показывает предупреждение про публичный `anon`-вызов этих функций.
+- У `authenticated` и `service_role` доступ к рабочим наружным RPC сохранен.
+- Внутренние демо-реализации `_unchecked_20260622` недоступны `anon` и `authenticated`.
+- `nav_v2_list_users()`, `nav_v2_get_access_audit()`, `nav_v2_link_user_by_email(...)` и `nav_v2_update_user_profile(...)` уже содержат серверную проверку owner/admin.
+- Повторный security advisor больше не показывает предупреждение про публичный `anon`-вызов ранее открытых функций.
 
 ## Оставшиеся риски и технический долг
 
@@ -60,7 +68,7 @@
 
 ## Следующий приоритет
 
-1. Провести отдельный аудит всех `nav_v2_*` RPC, доступных authenticated.
+1. Продолжить аудит всех `nav_v2_*` RPC, доступных authenticated.
 2. Убрать технический шум из интерфейса обычных пользователей.
 3. Сделать документы полноценным рабочим процессом: ответственный, срок, статус, напоминание, решение.
 4. Перенести решения юриста из комментариев в структурированную таблицу `nav_deal_reviews_v2`.
