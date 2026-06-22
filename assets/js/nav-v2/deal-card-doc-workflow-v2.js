@@ -15,6 +15,7 @@ const ROLE_LABELS = {
   viewer: 'наблюдатель'
 };
 const ROLE_ORDER = ['manager', 'spn', 'lawyer', 'broker', 'viewer', 'owner', 'admin'];
+const CLOSED_DOC_STATUSES = ['received', 'checked'];
 
 function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
@@ -65,9 +66,27 @@ function isoDate(value) {
   return value ? String(value).slice(0, 10) : '';
 }
 
+function dateShort(value) {
+  return value ? new Date(value).toLocaleDateString('ru-RU') : '—';
+}
+
+function duePill(doc) {
+  if (!doc.due_date) return '';
+  const isOverdue = !CLOSED_DOC_STATUSES.includes(doc.status) && isoDate(doc.due_date) < isoDate(new Date().toISOString());
+  return `<span class="pill ${isOverdue ? 'red' : 'yellow'}">срок: ${esc(dateShort(doc.due_date))}</span>`;
+}
+
+function docMetaHtml(doc) {
+  const assignee = doc.assigned_to ? ` / ${participantName(doc.assigned_to)}` : '';
+  return `<span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}${esc(assignee)}</span>
+    ${duePill(doc)}
+    ${doc.required_for_deposit ? '<span class="pill yellow">до задатка</span>' : ''}
+    ${doc.required_for_deal ? '<span class="pill">до сделки</span>' : ''}`;
+}
+
 function panelHtml(doc) {
   const assignedText = doc.assigned_to ? `Сейчас назначен: ${participantName(doc.assigned_to)}` : 'Ответственный не назначен';
-  const dueText = doc.due_date ? `срок ${new Date(doc.due_date).toLocaleDateString('ru-RU')}` : 'срок не задан';
+  const dueText = doc.due_date ? `срок ${dateShort(doc.due_date)}` : 'срок не задан';
 
   return `<div class="doc-workflow-panel" data-doc-workflow-panel="${esc(doc.id)}" style="margin-top:10px">
     <div class="grid">
@@ -105,6 +124,40 @@ async function loadCard() {
   }
 }
 
+function documentById(docId) {
+  return list(cardData, 'documents').find((doc) => doc.id === docId);
+}
+
+function documentItem(docId) {
+  const button = document.querySelector(`[data-doc-id="${docId}"]`);
+  return button?.closest('.list-item') || null;
+}
+
+function bindWorkflowButton(docId) {
+  const button = document.querySelector(`[data-doc-workflow-save="${docId}"]`);
+  if (!button || button.dataset.bound === '1') return;
+  button.dataset.bound = '1';
+  button.onclick = () => saveWorkflow(docId);
+}
+
+function refreshDocumentUi(docId) {
+  const doc = documentById(docId);
+  const item = documentItem(docId);
+  if (!doc || !item) return;
+
+  const meta = item.querySelector('.doc-status + .actions');
+  if (meta) meta.innerHTML = docMetaHtml(doc);
+
+  const panel = item.querySelector(`[data-doc-workflow-panel="${docId}"]`);
+  if (panel) {
+    panel.outerHTML = panelHtml(doc);
+  }
+  else {
+    item.insertAdjacentHTML('beforeend', panelHtml(doc));
+  }
+  bindWorkflowButton(docId);
+}
+
 async function saveWorkflow(docId) {
   const role = document.querySelector(`[data-doc-role-save="${docId}"]`)?.value || null;
   const assignedTo = document.querySelector(`[data-doc-assignee-save="${docId}"]`)?.value || null;
@@ -122,8 +175,9 @@ async function saveWorkflow(docId) {
       p_clear_assigned_to: !assignedTo,
       p_clear_due_date: !dueDate
     });
-    setStatus('Документ обновлен. Обновляю карточку...');
-    location.reload();
+    await loadCard();
+    refreshDocumentUi(docId);
+    setStatus('Документ обновлен.');
   }
   catch (e) {
     setStatus('Ошибка документа: ' + e.message, 'error');
@@ -140,12 +194,7 @@ function enhanceDocuments() {
     const doc = docsById.get(docId);
     if (!item || !doc || item.querySelector(`[data-doc-workflow-panel="${docId}"]`)) return;
     item.insertAdjacentHTML('beforeend', panelHtml(doc));
-  });
-
-  document.querySelectorAll('[data-doc-workflow-save]').forEach((button) => {
-    if (button.dataset.bound === '1') return;
-    button.dataset.bound = '1';
-    button.onclick = () => saveWorkflow(button.dataset.docWorkflowSave);
+    bindWorkflowButton(docId);
   });
 }
 
