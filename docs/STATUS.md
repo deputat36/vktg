@@ -73,7 +73,8 @@
 - Закрыт публичный `anon`-доступ к рабочим RPC:
   - `nav_v2_get_lawyer_queue(integer)`;
   - `nav_v2_return_spn_rework(uuid, text)`;
-  - `nav_v2_submit_spn_rework(uuid, text)`.
+  - `nav_v2_submit_spn_rework(uuid, text)`;
+  - `nav_v2_update_deal_parties(uuid, text, text, text, text, text)`.
 - Ужесточены демо-RPC:
   - `nav_v2_seed_demo_data()`;
   - `nav_v2_clear_demo_data()`.
@@ -99,7 +100,8 @@
   - `supabase/migrations/20260622193000_navigator_block_positive_statuses_by_reviews.sql`;
   - `supabase/migrations/20260622194500_navigator_harden_profile_helper_rpcs.sql`;
   - `supabase/migrations/20260622195500_navigator_fix_lawyer_queue_json_build.sql`;
-  - `supabase/migrations/20260622202000_navigator_document_assignment_rpc.sql`.
+  - `supabase/migrations/20260622202000_navigator_document_assignment_rpc.sql`;
+  - `supabase/migrations/20260622203500_navigator_revoke_anon_update_deal_parties.sql`.
 
 ## Проверено
 
@@ -108,6 +110,7 @@
 - Внутренние демо-реализации `_unchecked_20260622` недоступны `anon` и `authenticated`.
 - Helper-RPC доступа содержат self/admin/service guard.
 - Profile-helper RPC содержат self/admin/service guard: СПН видит собственную роль, не видит роль/активность чужого юриста и не может проверить owner/admin-статус owner; owner видит роль и активность юриста.
+- `nav_v2_update_deal_parties(...)` закрыт от `anon`, доступен authenticated/service_role; security advisor больше не показывает `anon_security_definer_function_executable` для этой функции.
 - `nav_v2_update_document_workflow(...)` и совместимый `nav_v2_update_document_status(uuid, text)` закрыты от `anon` и доступны authenticated.
 - `nav_v2_update_document_assignment(...)` закрыт от `anon`, доступен authenticated/service_role, проверяет участника сделки для `assigned_to` и пишет `document_assignment_updated` только при фактическом изменении.
 - Smoke-test `nav_v2_update_document_assignment(...)` внутри rollback прошел: назначение участника, смена роли, установка срока и последующая очистка ответственного/срока вернули ожидаемые значения.
