@@ -39,9 +39,10 @@
 - Документы поддерживают статусы `needed`, `requested`, `received`, `checked`, `problem`.
 - Документы расширены до рабочего процесса: `assigned_to`, `responsible_role`, `due_date`, `status_note`, `problem_note`, `last_status_changed_at`, `resolved_at`, `updated_at`.
 - Добавлен RPC `nav_v2_update_document_workflow(...)`; старый `nav_v2_update_document_status(uuid, text)` сохранен как совместимая обертка.
+- Добавлен RPC `nav_v2_update_document_assignment(...)` для отдельного назначения и очистки ответственного/срока без изменения статуса документа; назначить можно только участника сделки.
 - В существующих 141 документах проставлена роль ответственного; у 125 открытых документов появился базовый срок.
 - В карточке сделки вкладка документов теперь показывает ответственного, срок, отметки `до задатка` / `до сделки`, заметку по проблеме и кнопку `Проблема` с обязательным пояснением.
-- В карточку сделки добавлены inline-контролы для роли, конкретного ответственного и срока документа; сохранение идет через `nav_v2_update_document_workflow(...)`, а варианты ответственных берутся из участников сделки.
+- В карточку сделки добавлены inline-контролы для роли, конкретного ответственного и срока документа; сохранение идет через `nav_v2_update_document_assignment(...)`, а варианты ответственных берутся из участников сделки.
 - Ручные add-RPC теперь валидируют обязательный текст и пишут события в историю сделки:
   - `nav_v2_add_document(...)` → `document_added`;
   - `nav_v2_add_risk(...)` → `risk_added`;
@@ -97,7 +98,8 @@
   - `supabase/migrations/20260622191000_navigator_harden_card_comments_and_tasks.sql`;
   - `supabase/migrations/20260622193000_navigator_block_positive_statuses_by_reviews.sql`;
   - `supabase/migrations/20260622194500_navigator_harden_profile_helper_rpcs.sql`;
-  - `supabase/migrations/20260622195500_navigator_fix_lawyer_queue_json_build.sql`.
+  - `supabase/migrations/20260622195500_navigator_fix_lawyer_queue_json_build.sql`;
+  - `supabase/migrations/20260622202000_navigator_document_assignment_rpc.sql`.
 
 ## Проверено
 
@@ -107,8 +109,10 @@
 - Helper-RPC доступа содержат self/admin/service guard.
 - Profile-helper RPC содержат self/admin/service guard: СПН видит собственную роль, не видит роль/активность чужого юриста и не может проверить owner/admin-статус owner; owner видит роль и активность юриста.
 - `nav_v2_update_document_workflow(...)` и совместимый `nav_v2_update_document_status(uuid, text)` закрыты от `anon` и доступны authenticated.
+- `nav_v2_update_document_assignment(...)` закрыт от `anon`, доступен authenticated/service_role, проверяет участника сделки для `assigned_to` и пишет `document_assignment_updated` только при фактическом изменении.
+- Smoke-test `nav_v2_update_document_assignment(...)` внутри rollback прошел: назначение участника, смена роли, установка срока и последующая очистка ответственного/срока вернули ожидаемые значения.
 - `nav_v2_update_document_workflow(...)` принимает `p_document_id`, `p_status`, `p_assigned_to`, `p_responsible_role`, `p_due_date`, `p_note`; `nav_v2_get_deal_card(uuid)` возвращает JSON карточки для UI-модуля документов.
-- `deal-card-v2.html` подключает `deal-card-doc-workflow-v2.js`; модуль читает `nav_v2_get_deal_card(uuid)` и сохраняет роль, ответственного и срок через workflow-RPC.
+- `deal-card-v2.html` подключает `deal-card-doc-workflow-v2.js`; модуль читает `nav_v2_get_deal_card(uuid)` и сохраняет роль, ответственного и срок через assignment-RPC.
 - В `nav_deal_documents_v2` появились новые workflow-поля; 141/141 документов имеют `responsible_role`, 125 открытых документов имеют `due_date`.
 - `nav_v2_add_document(...)`, `nav_v2_add_risk(...)`, `nav_v2_add_task(...)`, `nav_v2_add_expense(...)` закрыты от `anon`, доступны authenticated/service_role, валидируют обязательные названия и пишут события аудита.
 - `nav_v2_save_wizard_result(jsonb)` закрыт от `anon`, доступен authenticated/service_role, содержит role guard owner/admin/manager/СПН и новые проверки входного JSON.
@@ -145,7 +149,7 @@
 - В Supabase Auth выключена leaked password protection. Желательно включить в настройках Auth.
 - `README.md` и документация обновлены под Навигатор, но нужно дальше поддерживать их после крупных изменений.
 - Фронтенд v2 местами построен слоями дополнительных JS-модулей. Работает, но следующая стабилизация должна упростить карточку сделки и убрать лишние перезагрузки.
-- Следующий шаг по документам: добавить явное очищение назначенного ответственного/срока на уровне RPC и убрать перезагрузку страницы после сохранения.
+- Следующий шаг по документам: убрать перезагрузку страницы после сохранения ответственного/срока и перейти к полноценному worklist/kanban.
 - Следующий шаг по очереди юриста: добавить фильтр/очередь только по блокирующим решениям, если команда начнет активно пользоваться review-слоем.
 
 ## Следующий приоритет
