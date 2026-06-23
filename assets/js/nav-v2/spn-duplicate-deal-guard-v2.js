@@ -12,6 +12,7 @@ let deals = [];
 let profile = null;
 let loaded = false;
 let loadStarted = false;
+let loadError = '';
 let renderQueued = false;
 
 function readDraft() {
@@ -73,6 +74,14 @@ function draftDuplicateKey(draft, matches) {
     address: draftAddress(draft),
     objectType: draftObjectType(draft),
     matches: matches.map((deal) => ({ id: deal.id, exactObject: Boolean(deal.exactObject), address: addressSignature(deal.address) })).sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  });
+}
+
+function unavailableCheckKey(draft) {
+  return JSON.stringify({
+    unavailable: true,
+    address: draftAddress(draft),
+    objectType: draftObjectType(draft)
   });
 }
 
@@ -143,6 +152,13 @@ function panelHtml(matches, key, draft) {
   </div>`;
 }
 
+function unavailablePanelHtml() {
+  return `<div class="status warn" data-spn-duplicate-guard="true" data-duplicate-key="unavailable" style="margin:10px 0">
+    <b>Проверка дублей временно недоступна.</b>
+    <div style="margin-top:6px">Список существующих сделок не загрузился. Перед сохранением откройте «Мои сделки» и проверьте адрес вручную либо осознанно подтвердите продолжение.</div>
+  </div>`;
+}
+
 function moveNearCurrentStatus(existing) {
   const host = hostNode();
   if (!host || !existing) return;
@@ -153,6 +169,18 @@ function moveNearCurrentStatus(existing) {
 function renderPanel() {
   const existing = document.querySelector('[data-spn-duplicate-guard]');
   const draft = readDraft();
+
+  if (!loaded && loadError && hasUsefulAddress(draft)) {
+    if (existing?.dataset.duplicateKey === 'unavailable') {
+      moveNearCurrentStatus(existing);
+      return;
+    }
+    if (existing) existing.outerHTML = unavailablePanelHtml();
+    else hostNode()?.insertAdjacentHTML('afterend', unavailablePanelHtml());
+    moveNearCurrentStatus(document.querySelector('[data-spn-duplicate-guard]'));
+    return;
+  }
+
   const matches = possibleDuplicates(draft);
   const key = draftDuplicateKey(draft, matches);
   syncConfirmation(key, matches.length > 0);
@@ -196,15 +224,41 @@ async function loadDeals() {
     profile = data.profile || null;
     deals = data.items || [];
     loaded = true;
+    loadError = '';
     renderPanel();
-  } catch (_) {
+  } catch (error) {
     loaded = false;
+    loadError = error?.message || 'Не удалось загрузить сделки.';
     clearConfirmation();
+    renderPanel();
   }
 }
 
 function saveButtonFromEvent(event) {
-  return event.target?.closest?.('[data-action="save"]') || null;
+  return event.target?.closest?.('[data-action="save"], #saveDealBtn') || null;
+}
+
+function stopSave(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+}
+
+function guardUnavailableCheck(event, draft) {
+  if (loaded || !hasUsefulAddress(draft)) return false;
+  const key = unavailableCheckKey(draft);
+  syncConfirmation(key, true);
+  if (hasFreshConfirmation(key)) return false;
+
+  const message = `Не удалось загрузить список существующих сделок и автоматически проверить дубль по адресу.\n\nАдрес: ${draft.address || 'не указан'}\nОбъект: ${objectName(draftObjectType(draft))}\n\nСохранить новую карточку без автоматической проверки дублей?`;
+  if (confirm(message)) {
+    markConfirmed(key);
+    return false;
+  }
+
+  stopSave(event);
+  renderPanel();
+  return true;
 }
 
 function guardSave(event) {
@@ -212,6 +266,8 @@ function guardSave(event) {
   if (!button || button.disabled) return;
 
   const draft = readDraft();
+  if (guardUnavailableCheck(event, draft)) return;
+
   const matches = possibleDuplicates(draft);
   const key = draftDuplicateKey(draft, matches);
   syncConfirmation(key, matches.length > 0);
@@ -223,9 +279,7 @@ function guardSave(event) {
     return;
   }
 
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+  stopSave(event);
 }
 
 document.addEventListener('input', () => { loadDeals(); scheduleRender(); }, true);
