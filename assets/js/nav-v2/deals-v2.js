@@ -2,6 +2,8 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedP
 
 let allDeals = [];
 let profile = null;
+let loadInProgress = false;
+let loadError = '';
 const allowedFilters = new Set(['all', 'real', 'demo', 'attention', 'lawyer', 'broker', 'deposit', 'deal', 'docs', 'red', 'rework']);
 const urlParams = new URLSearchParams(location.search);
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
@@ -356,6 +358,11 @@ function render() {
       ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>'
       : '';
     const cardsHtml = items.map(safeRenderDealCard).join('') || emptyState();
+    const reloadState = loadInProgress ? 'disabled aria-busy="true"' : '';
+    const reloadText = loadInProgress ? 'Обновляю...' : 'Обновить';
+    const refreshStatus = loadError
+      ? `<div class="status error" role="alert">Не удалось обновить список. Ранее загруженные сделки сохранены. ${esc(loadError)} <button id="retryDeals" class="btn light" type="button">Повторить</button></div>`
+      : (loadInProgress ? '<div class="status" role="status" aria-live="polite">Обновляю данные, список остается доступным.</div>' : '');
 
     root.innerHTML = `<main class="nav-v2-shell">
       <section class="hero"><h1>${heroTitle}</h1><p>${heroText}</p></section>
@@ -363,7 +370,8 @@ function render() {
       ${renderKpi()}
       <section class="card">
         <div class="section-title"><div><h2>${profile?.role === 'lawyer' ? 'Сделки на юридическую проверку' : profile?.role === 'spn' ? 'Рабочий список' : 'Все сделки'}</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} / ${esc(roleName(profile?.role))}</p></div>${newDealButton}</div>
-        <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, объекту, СПН, статусу или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button">Обновить</button></div>
+        <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, объекту, СПН, статусу или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button" ${reloadState}>${reloadText}</button></div>
+        ${refreshStatus}
         <div class="status">Показано сделок: ${items.length} из ${allDeals.length}</div>
         <div class="deal-list">${cardsHtml}</div>
       </section>
@@ -372,17 +380,19 @@ function render() {
     const filter = document.getElementById('dealFilter');
     const search = document.getElementById('dealSearch');
     const reload = document.getElementById('reloadDeals');
+    const retry = document.getElementById('retryDeals');
     const reset = document.getElementById('resetDealsFilter');
     if (filter) {
       filter.value = currentFilter;
       filter.onchange = (event) => { currentFilter = event.target.value; updateUrl(); render(); };
     }
     if (search) search.oninput = (event) => { searchQuery = event.target.value; updateUrl(); render(); };
-    if (reload) reload.onclick = loadDeals;
+    if (reload) reload.onclick = () => loadDeals({ preserveContent: true });
+    if (retry) retry.onclick = () => loadDeals({ preserveContent: true });
     if (reset) reset.onclick = () => { currentFilter = 'all'; searchQuery = ''; updateUrl(); render(); };
   } catch (error) {
     root.innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка отображения списка: ${esc(error.message)}</div><button id="reloadDeals" class="btn light" type="button">Обновить</button></main>`;
-    document.getElementById('reloadDeals')?.addEventListener('click', loadDeals);
+    document.getElementById('reloadDeals')?.addEventListener('click', () => loadDeals({ preserveContent: Boolean(profile) }));
   }
 }
 
@@ -408,22 +418,39 @@ function renderLoginAfterLoadError() {
   }
 }
 
-async function loadDeals() {
-  document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю сделки...</div></main>';
+async function loadDeals({ preserveContent = false } = {}) {
+  if (loadInProgress) return;
+
+  const keepCurrentList = preserveContent && Boolean(profile);
+  loadInProgress = true;
+  loadError = '';
+
+  if (keepCurrentList) render();
+  else document.getElementById('app').innerHTML = '<main class="nav-v2-shell"><div class="status" role="status" aria-live="polite">Загружаю сделки...</div></main>';
+
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 });
     profile = data.profile;
     saveCachedProfile(profile);
     allDeals = data.items || [];
     applyDefaultFilterByRole();
+    loadInProgress = false;
+    loadError = '';
     render();
     publishDealsLoaded();
   } catch (error) {
+    loadInProgress = false;
     if (isAuthLoadError(error)) {
       renderLoginAfterLoadError();
       return;
     }
-    document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка загрузки: ${esc(error.message)}</div></main>`;
+    if (keepCurrentList) {
+      loadError = error?.message || 'Сервис временно недоступен.';
+      render();
+      return;
+    }
+    document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><div class="status error" role="alert">Ошибка загрузки: ${esc(error.message)}</div><button id="reloadDeals" class="btn light" type="button">Повторить</button></main>`;
+    document.getElementById('reloadDeals')?.addEventListener('click', () => loadDeals());
   }
 }
 
