@@ -4,6 +4,7 @@ let allDeals = [];
 let profile = null;
 const allowedFilters = new Set(['all', 'real', 'demo', 'attention', 'lawyer', 'broker', 'deposit', 'deal', 'docs', 'red', 'rework']);
 const urlParams = new URLSearchParams(location.search);
+const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
 let currentFilter = allowedFilters.has(urlParams.get('filter')) ? urlParams.get('filter') : 'all';
 let searchQuery = urlParams.get('q') || '';
 
@@ -141,6 +142,17 @@ function queueBadges(deal) {
 function applyDefaultFilterByRole() {
   if (!urlParams.get('filter') && profile?.role === 'lawyer') currentFilter = 'lawyer';
   if (!urlParams.get('filter') && profile?.role === 'broker') currentFilter = 'broker';
+}
+
+function publishDealsLoaded() {
+  const detail = {
+    profile,
+    items: Array.isArray(allDeals) ? allDeals.slice() : [],
+    filter: currentFilter,
+    query: searchQuery
+  };
+  window.navV2Deals = detail;
+  window.dispatchEvent(new CustomEvent(DEALS_LOADED_EVENT, { detail }));
 }
 
 function filterDeal(deal) {
@@ -405,6 +417,7 @@ async function loadDeals() {
     allDeals = data.items || [];
     applyDefaultFilterByRole();
     render();
+    publishDealsLoaded();
   } catch (error) {
     if (isAuthLoadError(error)) {
       renderLoginAfterLoadError();
