@@ -54,29 +54,39 @@ function criticalGaps(deal) {
   return gaps;
 }
 
-function gapKey(gaps) {
-  return JSON.stringify(gaps.map((item) => item.text));
+function confirmationKey(deal, gaps) {
+  return JSON.stringify({
+    gaps: gaps.map((item) => item.text),
+    preparationMode: deal.preparationMode || '',
+    representation: deal.representation || '',
+    stage: deal.stage || '',
+    objectType: deal.objectType || '',
+    address: String(deal.address || '').trim().toLowerCase(),
+    payments: arr(deal, 'payments').slice().sort(),
+    settlementsAgreed: deal.settlementsAgreed === true,
+    expensesAgreed: deal.expensesAgreed === true,
+    clientNextStep: String(deal.clientNextStep || '').trim().toLowerCase()
+  });
 }
 
-function hasFreshConfirmation(gaps) {
+function hasFreshConfirmation(key) {
   const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
-  const confirmedGaps = sessionStorage.getItem(CONFIRMED_GAPS_KEY) || '';
-  return value > 0 && Date.now() - value < 30000 && confirmedGaps === gapKey(gaps);
+  const confirmedKey = sessionStorage.getItem(CONFIRMED_GAPS_KEY) || '';
+  return value > 0 && Date.now() - value < 30000 && confirmedKey === key;
 }
 
-function markConfirmed(gaps) {
+function markConfirmed(key) {
   sessionStorage.setItem(CONFIRMED_KEY, String(Date.now()));
-  sessionStorage.setItem(CONFIRMED_GAPS_KEY, gapKey(gaps));
+  sessionStorage.setItem(CONFIRMED_GAPS_KEY, key);
 }
 
 function statusHost() {
   return document.getElementById('pageStatus');
 }
 
-function showWarning(gaps) {
+function showWarning(gaps, key) {
   const host = statusHost();
   if (!host) return;
-  const key = gapKey(gaps);
   if (host.dataset.saveGapKey === key) return;
   host.dataset.saveGapKey = key;
   host.className = 'status warn';
@@ -92,14 +102,17 @@ function guardSave(event) {
   const button = saveButtonFromEvent(event);
   if (!button || button.disabled) return;
 
-  const gaps = criticalGaps(readDraft());
+  const draft = readDraft();
+  const gaps = criticalGaps(draft);
   if (!gaps.length) return;
-  if (hasFreshConfirmation(gaps)) return;
 
-  showWarning(gaps);
+  const key = confirmationKey(draft, gaps);
+  if (hasFreshConfirmation(key)) return;
+
+  showWarning(gaps, key);
   const message = `Перед сохранением есть важные пробелы:\n\n${gaps.map((item, index) => `${index + 1}. ${item.text} (шаг: ${item.step})`).join('\n')}\n\nСохранить черновик в CRM всё равно?`;
   if (confirm(message)) {
-    markConfirmed(gaps);
+    markConfirmed(key);
     return;
   }
 
