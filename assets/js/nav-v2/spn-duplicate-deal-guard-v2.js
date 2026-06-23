@@ -13,8 +13,6 @@ let profile = null;
 let loaded = false;
 let loadStarted = false;
 let renderQueued = false;
-let lastMatches = [];
-let lastDraftKey = '';
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -157,8 +155,6 @@ function renderPanel() {
   const draft = readDraft();
   const matches = possibleDuplicates(draft);
   const key = draftDuplicateKey(draft, matches);
-  lastMatches = matches;
-  lastDraftKey = key;
   syncConfirmation(key, matches.length > 0);
 
   if (!matches.length) {
@@ -218,8 +214,6 @@ function guardSave(event) {
   const draft = readDraft();
   const matches = possibleDuplicates(draft);
   const key = draftDuplicateKey(draft, matches);
-  lastMatches = matches;
-  lastDraftKey = key;
   syncConfirmation(key, matches.length > 0);
   if (!matches.length || hasFreshConfirmation(key)) return;
 
