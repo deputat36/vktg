@@ -1,5 +1,7 @@
 import { rpc, esc } from './supabase-v2.js';
 
+const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
+
 let dealsById = new Map();
 let profile = null;
 let loaded = false;
@@ -129,32 +131,52 @@ function scheduleApply() {
   });
 }
 
+function setLoadedData(data) {
+  if (!data || !Array.isArray(data.items)) return false;
+  profile = data.profile || null;
+  dealsById = new Map(data.items.filter((deal) => deal?.id).map((deal) => [deal.id, deal]));
+  loaded = true;
+  apply();
+  return true;
+}
+
 async function loadData() {
   const seq = ++loadSeq;
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 12000);
     if (seq !== loadSeq) return;
-    profile = data.profile || null;
-    dealsById = new Map((data.items || []).map((deal) => [deal.id, deal]));
-    loaded = true;
-    apply();
+    setLoadedData(data);
   } catch (_) {
     if (seq !== loadSeq) return;
     loaded = false;
   }
 }
 
-function queueReload(delay = 0) {
+function clearReload() {
   window.clearTimeout(reloadTimer);
+  reloadTimer = null;
+}
+
+function queueReload(delay = 0) {
+  clearReload();
   reloadTimer = window.setTimeout(loadData, delay);
+}
+
+function usePublishedDeals() {
+  return setLoadedData(window.navV2Deals);
 }
 
 const app = document.getElementById('app') || document.body;
 new MutationObserver(scheduleApply).observe(app, { childList: true, subtree: true });
 
-document.addEventListener('click', (event) => {
-  if (event.target?.closest?.('#reloadDeals')) queueReload(900);
+window.addEventListener(DEALS_LOADED_EVENT, (event) => {
+  clearReload();
+  setLoadedData(event.detail);
 });
 
-loadData();
+document.addEventListener('click', (event) => {
+  if (event.target?.closest?.('#reloadDeals')) queueReload(1800);
+});
+
+if (!usePublishedDeals()) queueReload(1200);
 window.addEventListener('hashchange', scheduleApply);
