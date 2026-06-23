@@ -56,6 +56,12 @@ function objectName(type) {
   })[type] || type || 'объект';
 }
 
+function isDemoDeal(deal) {
+  return deal?.deal_summary?.demo === true
+    || deal?.wizard_snapshot?.demo === true
+    || String(deal?.title || '').startsWith('ДЕМО:');
+}
+
 function draftAddress(draft) {
   return addressSignature(draft.address);
 }
@@ -93,6 +99,7 @@ function possibleDuplicates(draft) {
   if (!loaded || profile?.role !== 'spn' || !hasUsefulAddress(draft)) return [];
 
   return deals
+    .filter((deal) => !isDemoDeal(deal))
     .filter((deal) => addressSignature(deal.address) === address)
     .map((deal) => ({
       ...deal,
