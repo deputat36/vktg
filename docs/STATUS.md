@@ -58,6 +58,7 @@
 - RPC доработки СПН исправлены под v2-роли: `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` используют `nav_v2_user_role`, поддерживают owner и пишут `author_role`.
 - Рабочие mutation-RPC валидируют обязательные поля и пишут события аудита: документы, риски, задачи, расходы.
 - Публичный `anon`-доступ закрыт у рабочих RPC Навигатора, где он не нужен.
+- Прямые table grants по таблицам `nav_*` сужены: у `anon` сняты все права на таблицы Навигатора, у `authenticated` оставлены только `SELECT/INSERT/UPDATE/DELETE`, без `TRUNCATE/REFERENCES/TRIGGER`.
 - Демо-RPC усилены: наружные функции требуют service role или owner/admin, старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
 - V2 helper-RPC доступа содержат self/admin/service guard:
   - `nav_v2_can_view_deal(uuid, uuid)`;
@@ -97,12 +98,16 @@
 - `supabase/migrations/20260623103000_navigator_revoke_direct_execute_from_v2_touch_trigger.sql`.
 - `supabase/migrations/20260623104500_navigator_harden_legacy_helper_rpcs.sql`.
 - `supabase/migrations/20260623110000_navigator_harden_legacy_wizard_save_rpc.sql`.
+- `supabase/migrations/20260623111500_navigator_tighten_table_grants.sql`.
 
 ## Проверено
 
 - У рабочих наружных RPC Навигатора `anon_can_execute = false`, где публичный доступ не нужен.
 - У `authenticated` и `service_role` доступ к нужным рабочим RPC сохранен.
 - Внутренние демо-реализации `_unchecked_20260622` недоступны `anon` и `authenticated`.
+- Все таблицы `nav_*` имеют включенный RLS.
+- У `anon` нет прямых table privileges на таблицы `nav_*`; прямой `select` из `nav_deals_v2` под ролью `anon` отклоняется `permission denied`.
+- У `authenticated` на таблицах `nav_*` остались только `DELETE/INSERT/SELECT/UPDATE`; прямой `select` из `nav_deals_v2` под активным пользователем проходит через RLS.
 - `nav_set_deal_created_by()` имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; trigger `trg_nav_deals_set_created_by` на `nav_deals` активен.
 - `nav_v2_touch_updated_at()` имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; triggers `nav_deals_v2_touch_updated_at` и `nav_deal_tasks_v2_touch_updated_at` активны.
 - Все trigger-функции `nav*` закрыты от прямого `anon`/`authenticated` execute; `service_role` сохранен.
