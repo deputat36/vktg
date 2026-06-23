@@ -20,6 +20,65 @@ function roleName(role) {
   return ({ owner:'Владелец', admin:'Админ', manager:'Менеджер', spn:'СПН', lawyer:'Юрист', broker:'Брокер', viewer:'Наблюдатель' })[role] || role || '—';
 }
 
+function objectTypeName(type) {
+  return ({
+    flat_mkd: 'Квартира в МКД',
+    flat_ground: 'Квартира на земле',
+    room: 'Комната',
+    share: 'Доля',
+    share_room: 'Доля / комната',
+    house_land: 'Дом с участком',
+    house: 'Дом',
+    land: 'Земельный участок',
+    new_building: 'Новостройка',
+    commercial: 'Коммерция'
+  })[type] || 'Объект';
+}
+
+function clean(value) {
+  return String(value || '').trim();
+}
+
+function isGenericTitle(title) {
+  const text = clean(title).toLowerCase();
+  return !text
+    || text.includes('продавец не указан')
+    || text.includes('покупатель не указан')
+    || text.includes('адрес не указан');
+}
+
+function dealDisplayTitle(deal) {
+  const rawTitle = clean(deal?.title);
+  if (!isGenericTitle(rawTitle)) return rawTitle;
+  const object = objectTypeName(deal?.object_type);
+  const address = clean(deal?.address);
+  if (address) return `${object} — ${address}`;
+  return `${object} — адрес уточняется`;
+}
+
+function dealPartiesText(deal) {
+  const sellerName = clean(deal?.seller_name);
+  const buyerName = clean(deal?.buyer_name);
+  const sellerSpn = clean(deal?.seller_spn);
+  const buyerSpn = clean(deal?.buyer_spn);
+  const manager = clean(deal?.manager);
+  const parts = [];
+
+  if (sellerName) parts.push(`продавец: ${sellerName}`);
+  if (buyerName) parts.push(`покупатель: ${buyerName}`);
+
+  if (!sellerName && !buyerName) {
+    if (sellerSpn && buyerSpn && sellerSpn === buyerSpn) parts.push(`СПН: ${sellerSpn}`);
+    else {
+      if (sellerSpn) parts.push(`СПН продавца: ${sellerSpn}`);
+      if (buyerSpn) parts.push(`СПН покупателя: ${buyerSpn}`);
+    }
+  }
+
+  if (manager) parts.push(`менеджер: ${manager}`);
+  return parts.join(' · ') || 'Стороны пока не указаны';
+}
+
 function missingDocs(deal) {
   return Number(deal?.missing_documents_count || 0);
 }
@@ -100,8 +159,10 @@ function filterDeal(deal) {
     const text = [
       deal?.id,
       deal?.title,
+      dealDisplayTitle(deal),
+      dealPartiesText(deal),
       deal?.address,
-      deal?.object_type,
+      objectTypeName(deal?.object_type),
       deal?.next_action,
       statusText(deal?.status),
       isDemoDeal(deal) ? 'демо demo' : 'рабочая реальная',
@@ -133,6 +194,16 @@ function renderKpi() {
     </div>`;
   }
 
+  if (profile?.role === 'spn') {
+    return `<div class="kpi-row">
+      <div class="metric"><span>Мои сделки</span><b>${allDeals.length}</b></div>
+      <div class="metric red"><span>Требуют внимания</span><b>${attention}</b></div>
+      <div class="metric yellow"><span>Документы</span><b>${docs}</b></div>
+      <div class="metric yellow"><span>Юристу</span><b>${lawyer}</b></div>
+      <div class="metric"><span>Брокеру</span><b>${broker}</b></div>
+    </div>`;
+  }
+
   return `<div class="kpi-row">
     <div class="metric"><span>Всего</span><b>${allDeals.length}</b></div>
     <div class="metric red"><span>На контроле</span><b>${attention}</b></div>
@@ -159,8 +230,9 @@ function statusBadges(deal) {
 
 function renderDealCard(deal, index) {
   const href = './deal-card-v2.html?id=' + encodeURIComponent(deal?.id || '') + (profile?.role === 'lawyer' ? '#risks' : '');
-  const title = esc(deal?.title || 'Сделка без названия');
-  const address = esc(deal?.address || 'Адрес не указан');
+  const title = esc(dealDisplayTitle(deal));
+  const address = esc(clean(deal?.address) || 'Адрес уточняется');
+  const parties = esc(dealPartiesText(deal));
   const lawyerMeta = profile?.role === 'lawyer'
     ? `<div><span class="small">Документы</span><b>${missingDocs(deal)}</b></div>`
     : `<div><span class="small">К сделке</span><b>${deal?.readiness_deal || 0}%</b></div>`;
@@ -177,6 +249,7 @@ function renderDealCard(deal, index) {
         <div class="small">№ ${index + 1} · ID ${shortId(deal?.id)} · создана ${formatDate(deal?.created_at)}</div>
         <div class="deal-title">${demoBadge(deal)}${title}</div>
         <div class="small">${address}</div>
+        <div class="small">${parties}</div>
       </div>
       ${riskPill(deal?.risk_level)}
     </div>
@@ -212,6 +285,19 @@ function filterOptions() {
       <option value="demo">Только демо</option>`;
   }
 
+  if (profile?.role === 'spn') {
+    return `<option value="all">Все мои сделки</option>
+      <option value="attention">Требуют внимания</option>
+      <option value="docs">Не хватает документов</option>
+      <option value="lawyer">Нужен юрист</option>
+      <option value="broker">Нужен брокер</option>
+      <option value="deposit">Готовы к задатку 80%+</option>
+      <option value="deal">Готовы к сделке 80%+</option>
+      <option value="rework">Вернули на доработку</option>
+      <option value="real">Только рабочие</option>
+      <option value="demo">Только демо</option>`;
+  }
+
   return `<option value="all">Все сделки</option>
     <option value="rework">На доработке у СПН</option>
     <option value="real">Только рабочие</option>
@@ -223,33 +309,49 @@ function filterOptions() {
     <option value="deal">Готовы к сделке 80%+</option>`;
 }
 
+function emptyState() {
+  const canCreate = ['owner','admin','manager','spn'].includes(profile?.role);
+  return `<div class="empty">
+    <b>Сделки не найдены.</b><br>
+    ${currentFilter !== 'all' || searchQuery.trim() ? 'Попробуйте сбросить фильтр или поиск.' : 'Создайте первую сделку из мастера.'}
+    <div class="actions" style="justify-content:center;margin-top:14px">
+      ${currentFilter !== 'all' || searchQuery.trim() ? '<button id="resetDealsFilter" class="btn light" type="button">Сбросить фильтр</button>' : ''}
+      ${canCreate ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>' : ''}
+    </div>
+  </div>`;
+}
+
 function render() {
   const root = document.getElementById('app');
   try {
     const items = allDeals.filter(filterDeal);
     const reworkCount = allDeals.filter(isReworkDeal).length;
-    const heroTitle = profile?.role === 'lawyer' ? 'Юридическая очередь' : 'Сделки v2';
+    const heroTitle = profile?.role === 'lawyer' ? 'Юридическая очередь' : profile?.role === 'spn' ? 'Мои сделки' : 'Сделки v2';
     const heroText = profile?.role === 'lawyer'
       ? 'Сделки, где нужно проверить юридические риски, документы, детей, обременения, расчеты и готовность к задатку.'
-      : 'Здесь отображаются все доступные сделки. Демо-сделки помечены отдельным бейджем и доступны через фильтр.';
+      : profile?.role === 'spn'
+        ? 'Рабочий список СПН: видно готовность, пробелы, задачи, юриста, брокера и ближайший шаг по каждой сделке.'
+        : 'Здесь отображаются все доступные сделки. Демо-сделки помечены отдельным бейджем и доступны через фильтр.';
     const topStatusClass = reworkCount ? 'warn' : 'ok';
     const topStatusText = reworkCount
       ? `На доработке у СПН: ${reworkCount}. Используйте фильтр «На доработке у СПН», чтобы быстро проверить зависшие карточки.`
       : (profile?.role === 'lawyer'
         ? 'Профиль юриста: основной фокус — риски, документы, юридические стоп-факторы и комментарии по сделке.'
-        : 'Фильтры «Юристу» и «Брокеру» учитывают статус сделки, стоп-факторы, красные риски и активность по задачам.');
+        : profile?.role === 'spn'
+          ? 'Если в карточке нет ФИО сторон, список показывает объект и адрес, чтобы сделку можно было быстро узнать.'
+          : 'Фильтры «Юристу» и «Брокеру» учитывают статус сделки, стоп-факторы, красные риски и активность по задачам.');
     const newDealButton = ['owner','admin','manager','spn'].includes(profile?.role)
       ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>'
       : '';
-    const cardsHtml = items.map(safeRenderDealCard).join('') || '<div class="empty">Сделки не найдены.</div>';
+    const cardsHtml = items.map(safeRenderDealCard).join('') || emptyState();
 
     root.innerHTML = `<main class="nav-v2-shell">
       <section class="hero"><h1>${heroTitle}</h1><p>${heroText}</p></section>
       <div class="status ${topStatusClass}">${esc(topStatusText)}</div>
       ${renderKpi()}
       <section class="card">
-        <div class="section-title"><div><h2>${profile?.role === 'lawyer' ? 'Сделки на юридическую проверку' : 'Все сделки'}</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} / ${esc(roleName(profile?.role))}</p></div>${newDealButton}</div>
-        <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, действию, статусу, ДЕМО или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button">Обновить</button></div>
+        <div class="section-title"><div><h2>${profile?.role === 'lawyer' ? 'Сделки на юридическую проверку' : profile?.role === 'spn' ? 'Рабочий список' : 'Все сделки'}</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} / ${esc(roleName(profile?.role))}</p></div>${newDealButton}</div>
+        <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, объекту, СПН, статусу или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button">Обновить</button></div>
         <div class="status">Показано сделок: ${items.length} из ${allDeals.length}</div>
         <div class="deal-list">${cardsHtml}</div>
       </section>
@@ -258,12 +360,14 @@ function render() {
     const filter = document.getElementById('dealFilter');
     const search = document.getElementById('dealSearch');
     const reload = document.getElementById('reloadDeals');
+    const reset = document.getElementById('resetDealsFilter');
     if (filter) {
       filter.value = currentFilter;
       filter.onchange = (event) => { currentFilter = event.target.value; updateUrl(); render(); };
     }
     if (search) search.oninput = (event) => { searchQuery = event.target.value; updateUrl(); render(); };
     if (reload) reload.onclick = loadDeals;
+    if (reset) reset.onclick = () => { currentFilter = 'all'; searchQuery = ''; updateUrl(); render(); };
   } catch (error) {
     root.innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка отображения списка: ${esc(error.message)}</div><button id="reloadDeals" class="btn light" type="button">Обновить</button></main>`;
     document.getElementById('reloadDeals')?.addEventListener('click', loadDeals);
