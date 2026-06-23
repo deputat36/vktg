@@ -89,18 +89,25 @@ function hostNode() {
   return document.getElementById('pageStatus') || document.getElementById('app');
 }
 
-function panelHtml(matches) {
+function panelHtml(matches, key) {
   const rows = matches.map((deal) => {
     const title = deal.display_title || deal.title || `${objectName(deal.object_type)} — ${deal.address || 'адрес уточняется'}`;
     const badge = deal.exactObject ? '<span class="pill red">адрес и объект совпадают</span>' : '<span class="pill yellow">адрес совпадает</span>';
     return `<li><a href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}" target="_blank" rel="noopener">${esc(title)}</a> <span class="small">ID ${esc(shortId(deal.id))}</span> ${badge}</li>`;
   }).join('');
 
-  return `<div class="status warn" data-spn-duplicate-guard="true" style="margin:10px 0">
+  return `<div class="status warn" data-spn-duplicate-guard="true" data-duplicate-key="${esc(key)}" style="margin:10px 0">
     <b>Проверьте дубль перед сохранением.</b>
     <div style="margin-top:6px">В ваших сделках уже есть карточка с таким адресом:</div>
     <ul style="margin:8px 0 0 18px;padding:0">${rows}</ul>
   </div>`;
+}
+
+function moveNearCurrentStatus(existing) {
+  const host = hostNode();
+  if (!host || !existing) return;
+  if (host.nextElementSibling === existing) return;
+  host.insertAdjacentElement('afterend', existing);
 }
 
 function renderPanel() {
@@ -113,18 +120,22 @@ function renderPanel() {
     return;
   }
 
-  const html = panelHtml(matches);
   const key = duplicateKey(matches);
-  if (existing?.dataset.duplicateKey === key) return;
+  if (existing?.dataset.duplicateKey === key) {
+    moveNearCurrentStatus(existing);
+    return;
+  }
 
+  const html = panelHtml(matches, key);
   if (existing) {
-    existing.outerHTML = html.replace('data-spn-duplicate-guard="true"', `data-spn-duplicate-guard="true" data-duplicate-key="${esc(key)}"`);
+    existing.outerHTML = html;
+    moveNearCurrentStatus(document.querySelector('[data-spn-duplicate-guard]'));
     return;
   }
 
   const host = hostNode();
   if (!host) return;
-  host.insertAdjacentHTML('afterend', html.replace('data-spn-duplicate-guard="true"', `data-spn-duplicate-guard="true" data-duplicate-key="${esc(key)}"`));
+  host.insertAdjacentHTML('afterend', html);
 }
 
 function scheduleRender() {
