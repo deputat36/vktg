@@ -47,36 +47,44 @@ function buildList(title, items, cls = 'yellow') {
   </div>`;
 }
 
-function blockHtml() {
+function snapshotViewModel() {
   const final = spnFinal();
   const readiness = readinessLocal();
-  const handoffText = clean(final.handoff_text);
-  const nextStep = clean(final.next_step || snapshotDeal().clientNextStep);
-  const comment = clean(final.comment || snapshotDeal().spnFinalComment || snapshotDeal().riskComment);
-  const missing = arrayOf(readiness.missing);
-  const blockers = arrayOf(readiness.blockers);
-  const notes = arrayOf(readiness.notes);
-  const readinessCard = Number(readiness.card || 0);
+  return {
+    handoffText: clean(final.handoff_text),
+    nextStep: clean(final.next_step || snapshotDeal().clientNextStep),
+    comment: clean(final.comment || snapshotDeal().spnFinalComment || snapshotDeal().riskComment),
+    missing: arrayOf(readiness.missing),
+    blockers: arrayOf(readiness.blockers),
+    notes: arrayOf(readiness.notes),
+    readinessCard: Number(readiness.card || 0)
+  };
+}
 
-  if (!handoffText && !nextStep && !comment && !missing.length && !blockers.length && !notes.length) return '';
+function snapshotKey(view) {
+  return JSON.stringify(view);
+}
 
-  return `<section class="card" data-spn-handoff-snapshot="true" style="border:2px solid rgba(59,130,246,.18)">
+function blockHtml(view) {
+  if (!view.handoffText && !view.nextStep && !view.comment && !view.missing.length && !view.blockers.length && !view.notes.length) return '';
+
+  return `<section class="card" data-spn-handoff-snapshot="true" data-snapshot-key="${esc(snapshotKey(view))}" style="border:2px solid rgba(59,130,246,.18)">
     <div class="section-title">
       <div>
         <h2>Текст передачи СПН</h2>
         <p class="muted">Это итог, который СПН сформировал в мастере при создании сделки.</p>
       </div>
-      ${readinessCard ? `<span class="pill ${readinessCard >= 80 ? 'green' : readinessCard >= 60 ? 'yellow' : 'red'}">готовность ${esc(readinessCard)}%</span>` : ''}
+      ${view.readinessCard ? `<span class="pill ${view.readinessCard >= 80 ? 'green' : view.readinessCard >= 60 ? 'yellow' : 'red'}">готовность ${esc(view.readinessCard)}%</span>` : ''}
     </div>
-    ${nextStep ? `<div class="status"><b>Ближайший шаг:</b> ${esc(nextStep)}</div>` : ''}
-    ${comment ? `<p><b>Комментарий СПН:</b> ${esc(comment)}</p>` : ''}
-    ${handoffText ? `<div class="field"><label>Готовый текст передачи</label><textarea readonly style="min-height:220px">${esc(handoffText)}</textarea></div>
+    ${view.nextStep ? `<div class="status"><b>Ближайший шаг:</b> ${esc(view.nextStep)}</div>` : ''}
+    ${view.comment ? `<p><b>Комментарий СПН:</b> ${esc(view.comment)}</p>` : ''}
+    ${view.handoffText ? `<div class="field"><label>Готовый текст передачи</label><textarea readonly style="min-height:220px">${esc(view.handoffText)}</textarea></div>
       <div class="actions" style="justify-content:flex-start"><button class="btn light" type="button" data-copy-spn-handoff="1">Скопировать текст</button></div>` : ''}
     <div class="side-by-side">
-      ${buildList('Не хватает', missing, 'yellow')}
-      ${buildList('Стоп-факторы', blockers, 'red')}
+      ${buildList('Не хватает', view.missing, 'yellow')}
+      ${buildList('Стоп-факторы', view.blockers, 'red')}
     </div>
-    ${buildList('Замечания', notes, 'blue')}
+    ${buildList('Замечания', view.notes, 'blue')}
   </section>`;
 }
 
@@ -101,14 +109,17 @@ function bindCopy() {
 function render() {
   if (!loaded) return;
   const existing = document.querySelector('[data-spn-handoff-snapshot]');
-  const html = blockHtml();
+  const view = snapshotViewModel();
+  const key = snapshotKey(view);
+  const html = blockHtml(view);
+
   if (!html) {
     existing?.remove();
     return;
   }
 
   if (existing) {
-    existing.outerHTML = html;
+    if (existing.dataset.snapshotKey !== key) existing.outerHTML = html;
     bindCopy();
     return;
   }
