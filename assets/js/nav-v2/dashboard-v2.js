@@ -20,6 +20,51 @@ function roleName(role) {
   })[role] || role || '—';
 }
 
+function objectTypeName(type) {
+  return ({
+    flat_mkd: 'Квартира в МКД',
+    flat_ground: 'Квартира на земле',
+    room: 'Комната',
+    share: 'Доля',
+    share_room: 'Доля / комната',
+    house_land: 'Дом с участком',
+    house: 'Дом',
+    land: 'Земельный участок',
+    new_building: 'Новостройка',
+    commercial: 'Коммерция'
+  })[type] || 'Объект';
+}
+
+function clean(value) {
+  return String(value || '').trim();
+}
+
+function isGenericTitle(title) {
+  const text = clean(title).toLowerCase();
+  return !text
+    || text.includes('продавец не указан')
+    || text.includes('покупатель не указан')
+    || text.includes('адрес не указан');
+}
+
+function dealDisplayTitle(deal) {
+  const rawTitle = clean(deal?.title);
+  if (!isGenericTitle(rawTitle)) return rawTitle;
+  const object = objectTypeName(deal?.object_type);
+  const address = clean(deal?.address);
+  if (address) return `${object} — ${address}`;
+  return `${object} — адрес уточняется`;
+}
+
+function profileNotice(profile) {
+  if (profile?.role !== 'spn') return '';
+  const missing = [];
+  if (!clean(profile?.manager_name) && !clean(profile?.manager_id)) missing.push('не назначен менеджер');
+  if (!clean(profile?.phone)) missing.push('не указан телефон');
+  if (!missing.length) return '';
+  return `<div class="status warn"><b>Профиль СПН требует уточнения:</b> ${esc(missing.join(', '))}. Это не блокирует работу, но снижает качество передачи сделки команде.</div>`;
+}
+
 function metric(label, value, cls = '') {
   return `<div class="metric ${cls}"><span>${esc(label)}</span><b>${value ?? 0}</b></div>`;
 }
@@ -29,8 +74,8 @@ function dealCard(deal) {
     <div class="deal-head">
       <div>
         <div class="small">ID ${shortId(deal.id)} · ${dateText(deal.created_at)}</div>
-        <div class="deal-title">${esc(deal.title || 'Сделка без названия')}</div>
-        <div class="small">${esc(deal.address || 'Адрес не указан')}</div>
+        <div class="deal-title">${esc(dealDisplayTitle(deal))}</div>
+        <div class="small">${esc(clean(deal.address) || 'Адрес уточняется')}</div>
       </div>
       ${riskPill(deal.risk_level)}
     </div>
@@ -49,7 +94,7 @@ function renderShell(profile, bodyHtml) {
   const email = profile?.email || getCachedUser()?.email || '';
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero">
-      <h1>Рабочий стол v2</h1>
+      <h1>${role === 'spn' ? 'Рабочий стол СПН' : 'Рабочий стол v2'}</h1>
       <p>Профиль: <b>${esc(profile?.full_name || 'Пользователь')}</b> · ${esc(email)} · роль: ${esc(roleName(role))}</p>
     </section>
     <section class="card">
@@ -85,8 +130,9 @@ function renderDashboard(data) {
   const missingDocuments = deals.reduce((sum, deal) => sum + Number(deal.missing_documents_count || 0), 0);
   const openTasks = deals.reduce((sum, deal) => sum + Number(deal.open_tasks_count || 0), 0);
 
-  const body = `<section class="kpi-row">
-      ${metric('Всего сделок', deals.length)}
+  const body = `${profileNotice(profile)}
+    <section class="kpi-row">
+      ${metric(profile.role === 'spn' ? 'Мои сделки' : 'Всего сделок', deals.length)}
       ${metric('Готовы к задатку', readyDeposit)}
       ${metric('Готовы к сделке', readyDeal)}
       ${metric('Документы', missingDocuments, missingDocuments ? 'yellow' : 'green')}
@@ -98,6 +144,8 @@ function renderDashboard(data) {
         <div class="list">
           <div class="list-item"><b>${esc(profile.full_name || 'Пользователь')}</b><span class="small">${esc(profile.email || '')}</span></div>
           <div class="list-item"><b>Роль</b>${esc(roleName(profile.role))}</div>
+          <div class="list-item"><b>Менеджер</b>${esc(profile.manager_name || 'не назначен')}</div>
+          <div class="list-item"><b>Телефон</b>${esc(profile.phone || 'не указан')}</div>
           <div class="list-item"><b>Контроль доступа</b>${deals.length === 1 ? 'Видна 1 сделка.' : `Видимых сделок: ${deals.length}`}</div>
         </div>
       </div>
