@@ -3,7 +3,9 @@ import { rpc, esc } from './supabase-v2.js';
 let dealsById = new Map();
 let profile = null;
 let loaded = false;
-let queued = false;
+let applyQueued = false;
+let reloadTimer = null;
+let loadSeq = 0;
 
 function number(value) {
   return Number(value || 0);
@@ -52,8 +54,14 @@ function priorityItems(deal) {
   return items.slice(0, 3);
 }
 
+function cssEscape(value) {
+  const text = String(value || '');
+  if (window.CSS?.escape) return CSS.escape(text);
+  return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function findDealArticle(dealId) {
-  const link = document.querySelector(`a[href*="id=${CSS.escape(dealId)}"]`);
+  const link = document.querySelector(`a[href*="id=${cssEscape(dealId)}"]`);
   return link?.closest?.('article.deal-card') || null;
 }
 
@@ -61,8 +69,17 @@ function updateTitle(article, deal) {
   const readableTitle = titleFor(deal);
   const title = article?.querySelector?.('.deal-title');
   if (!title || !readableTitle) return;
+
   const demo = title.querySelector('.pill.blue')?.outerHTML || '';
+  const titleKey = `${demo}|${readableTitle}`;
+  if (title.dataset.spnTitleKey === titleKey) return;
+
   title.innerHTML = `${demo}${demo ? ' ' : ''}${esc(readableTitle)}`;
+  title.dataset.spnTitleKey = titleKey;
+}
+
+function hintKey(items) {
+  return encodeURIComponent(items.join('\u001f'));
 }
 
 function renderHints(article, deal) {
@@ -71,11 +88,14 @@ function renderHints(article, deal) {
   const existing = article.querySelector('[data-spn-priority-hints]');
 
   if (!items.length) {
-    existing?.remove();
+    if (existing) existing.remove();
     return;
   }
 
-  const html = `<div class="status warn" data-spn-priority-hints="true" style="margin:10px 0">
+  const key = hintKey(items);
+  if (existing?.dataset.priorityKey === key) return;
+
+  const html = `<div class="status warn" data-spn-priority-hints="true" data-priority-key="${key}" style="margin:10px 0">
     <b>Первым делом СПН:</b>
     <ul style="margin:6px 0 0 18px;padding:0">${items.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
   </div>`;
@@ -100,29 +120,41 @@ function apply() {
   });
 }
 
-function schedule() {
-  if (queued) return;
-  queued = true;
+function scheduleApply() {
+  if (applyQueued) return;
+  applyQueued = true;
   requestAnimationFrame(() => {
-    queued = false;
+    applyQueued = false;
     apply();
   });
 }
 
 async function loadData() {
+  const seq = ++loadSeq;
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 12000);
+    if (seq !== loadSeq) return;
     profile = data.profile || null;
     dealsById = new Map((data.items || []).map((deal) => [deal.id, deal]));
     loaded = true;
     apply();
   } catch (_) {
+    if (seq !== loadSeq) return;
     loaded = false;
   }
 }
 
+function queueReload(delay = 0) {
+  window.clearTimeout(reloadTimer);
+  reloadTimer = window.setTimeout(loadData, delay);
+}
+
 const app = document.getElementById('app') || document.body;
-new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
+new MutationObserver(scheduleApply).observe(app, { childList: true, subtree: true });
+
+document.addEventListener('click', (event) => {
+  if (event.target?.closest?.('#reloadDeals')) queueReload(900);
+});
 
 loadData();
-window.addEventListener('hashchange', schedule);
+window.addEventListener('hashchange', scheduleApply);
