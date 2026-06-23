@@ -62,6 +62,7 @@
 - Legacy `nav_deal_events` больше не раскрывает всю ленту всем authenticated: `SELECT/INSERT/UPDATE` политики теперь проверяют доступ к связанной сделке через `nav_can_view_deal(...)` и ограничивают события без `deal_id` автором или админом.
 - Legacy `nav_deal_comments` больше не разрешает вставку комментария в любую чужую сделку: `SELECT/INSERT` политики теперь проверяют доступ к сделке через `nav_can_view_deal(...)`.
 - Legacy `nav_deal_reviews` больше не разрешает reviewer-записи без доступа к сделке: `SELECT/INSERT` политики теперь используют `nav_can_view_deal(...)`, а вставка дополнительно требует допустимую reviewer-роль.
+- Legacy `nav_deal_tasks` переведена на централизованный доступ: чтение идет через `nav_can_view_deal(...)`, создание и изменение — через `nav_can_edit_deal(...)`.
 - Профили защищены от self-escalation: прямые `INSERT/UPDATE` в `nav_profiles` и `nav_user_profiles` больше не позволяют обычному пользователю самому назначить себе роль admin/owner, активность, менеджера, email или invited_by.
 - RLS-политика `nav_v2_profiles_select` исправлена: убрано рекурсивное чтение `nav_user_profiles`, которое могло давать `infinite recursion` при прямых операциях с профилем.
 - Демо-RPC усилены: наружные функции требуют service role или owner/admin, старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
@@ -109,6 +110,7 @@
 - `supabase/migrations/20260623115000_navigator_harden_legacy_event_policies.sql`.
 - `supabase/migrations/20260623120500_navigator_harden_legacy_comment_policies.sql`.
 - `supabase/migrations/20260623122000_navigator_harden_legacy_review_policies.sql`.
+- `supabase/migrations/20260623123500_navigator_harden_legacy_task_policies.sql`.
 
 ## Проверено
 
@@ -121,6 +123,7 @@
 - Политика `nav_deal_events_select_authenticated` с `qual=true` удалена; legacy-события теперь видны только через доступ к сделке, а smoke-test подтвердил: админ видит событие своей legacy-сделки, посторонний СПН не видит.
 - Политика `nav_comments_insert_authenticated` удалена; legacy-комментарии теперь читаются и создаются только через доступ к сделке, а smoke-test подтвердил: владелец видит свой комментарий, посторонний СПН не видит и не может вставить комментарий в чужую legacy-сделку.
 - Legacy review-политики переведены на `nav_can_view_deal(...)`; smoke-test подтвердил: админ создает и видит review своей legacy-сделки, посторонний СПН не видит и не может вставить review в чужую сделку.
+- Legacy task-политики переведены на `nav_can_view_deal(...)` / `nav_can_edit_deal(...)`; smoke-test подтвердил: админ создает, видит и обновляет задачу своей legacy-сделки, посторонний СПН не видит, не создает и не обновляет чужую задачу.
 - `nav_profiles_guard_self_escalation` и `nav_v2_profiles_guard_self_escalation` включены; их функции недоступны для прямого `anon`/`authenticated` execute, `service_role` сохранен.
 - Негативные smoke-тесты profile self-escalation прошли: обычный СПН не может обновить собственную legacy-роль до `admin`, v2-роль до `owner`, а также не может создать себе новый профиль сразу с privileged ролью.
 - Позитивный smoke-test профиля прошел: обычное обновление собственного `full_name/phone` в `nav_user_profiles` разрешено и проходит через RLS.
