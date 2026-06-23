@@ -289,6 +289,23 @@ function roleLabel(role) {
   return ({ owner: 'owner', admin: 'admin', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'не назначен';
 }
 
+function canChangeTaskStatus(task) {
+  const role = currentProfile?.role;
+  const userId = currentProfile?.id;
+  if (!role || !userId) return false;
+  if (['owner', 'admin'].includes(role)) return true;
+  if (role === 'manager') return true;
+  if (task.assigned_to && task.assigned_to === userId) return true;
+  return !task.assigned_to && task.assigned_role === role;
+}
+
+function taskActions(task) {
+  if (canChangeTaskStatus(task)) {
+    return `<div class="actions" style="justify-content:flex-start"><button class="btn light" data-task-status="in_progress" data-task-id="${task.id}">В работе</button><button class="btn green" data-task-status="done" data-task-id="${task.id}">Готово</button><button class="btn light" data-task-status="open" data-task-id="${task.id}">Открыта</button></div>`;
+  }
+  return `<div class="status warn">Задача закреплена за ролью «${esc(roleLabel(task.assigned_role))}». Вы видите ее для контроля, но статус меняет ответственный специалист.</div>`;
+}
+
 function renderDocs(items) {
   if (!items.length) return '<div class="empty">Документы пока не сформированы.</div>';
   return `<div class="list">${items.map((doc) => {
@@ -350,7 +367,7 @@ function renderExpenses(items) {
 function renderTasks(items) {
   const filtered = isLawyer() ? items.filter((task) => !task.assigned_role || task.assigned_role === 'lawyer' || task.assigned_role === 'spn') : items;
   if (!filtered.length) return '<div class="empty">Задач по этому профилю пока нет.</div>';
-  return `<div class="list">${filtered.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.status)}</span> ${task.assigned_role ? `<span class="pill blue">${esc(task.assigned_role)}</span>` : ''}</div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p><div class="actions" style="justify-content:flex-start"><button class="btn light" data-task-status="in_progress" data-task-id="${task.id}">В работе</button><button class="btn green" data-task-status="done" data-task-id="${task.id}">Готово</button><button class="btn light" data-task-status="open" data-task-id="${task.id}">Открыта</button></div></div>`).join('')}</div>`;
+  return `<div class="list">${filtered.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.status)}</span> ${task.assigned_role ? `<span class="pill blue">${esc(roleLabel(task.assigned_role))}</span>` : ''}</div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p>${taskActions(task)}</div>`).join('')}</div>`;
 }
 
 function renderComments(items) {
