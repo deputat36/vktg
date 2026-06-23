@@ -82,6 +82,16 @@ function hasUsefulAddress(draft) {
   return draftAddress(draft).length >= 4 && draft.stage !== 'lead_only';
 }
 
+function clearConfirmation() {
+  sessionStorage.removeItem(CONFIRMED_KEY);
+  sessionStorage.removeItem(CONFIRMED_DUP_KEY);
+}
+
+function syncConfirmation(key, hasMatches) {
+  const confirmedKey = sessionStorage.getItem(CONFIRMED_DUP_KEY) || '';
+  if (!hasMatches || (confirmedKey && confirmedKey !== key)) clearConfirmation();
+}
+
 function hasFreshConfirmation(key) {
   const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
   const confirmedKey = sessionStorage.getItem(CONFIRMED_DUP_KEY) || '';
@@ -149,6 +159,7 @@ function renderPanel() {
   const key = draftDuplicateKey(draft, matches);
   lastMatches = matches;
   lastDraftKey = key;
+  syncConfirmation(key, matches.length > 0);
 
   if (!matches.length) {
     existing?.remove();
@@ -192,6 +203,7 @@ async function loadDeals() {
     renderPanel();
   } catch (_) {
     loaded = false;
+    clearConfirmation();
   }
 }
 
@@ -204,8 +216,11 @@ function guardSave(event) {
   if (!button || button.disabled) return;
 
   const draft = readDraft();
-  const matches = lastMatches.length ? lastMatches : possibleDuplicates(draft);
-  const key = lastDraftKey || draftDuplicateKey(draft, matches);
+  const matches = possibleDuplicates(draft);
+  const key = draftDuplicateKey(draft, matches);
+  lastMatches = matches;
+  lastDraftKey = key;
+  syncConfirmation(key, matches.length > 0);
   if (!matches.length || hasFreshConfirmation(key)) return;
 
   const message = `Похоже, сделка с таким адресом уже есть. ${duplicateReason(draft, matches)}\n\n${matches.map((deal, index) => `${index + 1}. ${deal.display_title || deal.title || deal.address || deal.id} (${shortId(deal.id)})`).join('\n')}\n\nСохранить новую карточку всё равно?`;
@@ -223,6 +238,7 @@ document.addEventListener('input', () => { loadDeals(); scheduleRender(); }, tru
 document.addEventListener('click', () => { loadDeals(); scheduleRender(); }, true);
 document.addEventListener('pointerup', guardSave, true);
 document.addEventListener('click', guardSave, true);
+window.addEventListener('storage', scheduleRender);
 
 loadDeals();
 scheduleRender();
