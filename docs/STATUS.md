@@ -59,6 +59,8 @@
 - Рабочие mutation-RPC валидируют обязательные поля и пишут события аудита: документы, риски, задачи, расходы.
 - Публичный `anon`-доступ закрыт у рабочих RPC Навигатора, где он не нужен.
 - Прямые table grants по таблицам `nav_*` сужены: у `anon` сняты все права на таблицы Навигатора, у `authenticated` оставлены только `SELECT/INSERT/UPDATE/DELETE`, без `TRUNCATE/REFERENCES/TRIGGER`.
+- Профили защищены от self-escalation: прямые `INSERT/UPDATE` в `nav_profiles` и `nav_user_profiles` больше не позволяют обычному пользователю самому назначить себе роль admin/owner, активность, менеджера, email или invited_by.
+- RLS-политика `nav_v2_profiles_select` исправлена: убрано рекурсивное чтение `nav_user_profiles`, которое могло давать `infinite recursion` при прямых операциях с профилем.
 - Демо-RPC усилены: наружные функции требуют service role или owner/admin, старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
 - V2 helper-RPC доступа содержат self/admin/service guard:
   - `nav_v2_can_view_deal(uuid, uuid)`;
@@ -99,6 +101,8 @@
 - `supabase/migrations/20260623104500_navigator_harden_legacy_helper_rpcs.sql`.
 - `supabase/migrations/20260623110000_navigator_harden_legacy_wizard_save_rpc.sql`.
 - `supabase/migrations/20260623111500_navigator_tighten_table_grants.sql`.
+- `supabase/migrations/20260623113000_navigator_guard_profile_self_escalation.sql`.
+- `supabase/migrations/20260623113500_navigator_fix_v2_profile_policy_recursion.sql`.
 
 ## Проверено
 
@@ -108,12 +112,16 @@
 - Все таблицы `nav_*` имеют включенный RLS.
 - У `anon` нет прямых table privileges на таблицы `nav_*`; прямой `select` из `nav_deals_v2` под ролью `anon` отклоняется `permission denied`.
 - У `authenticated` на таблицах `nav_*` остались только `DELETE/INSERT/SELECT/UPDATE`; прямой `select` из `nav_deals_v2` под активным пользователем проходит через RLS.
+- `nav_profiles_guard_self_escalation` и `nav_v2_profiles_guard_self_escalation` включены; их функции недоступны для прямого `anon`/`authenticated` execute, `service_role` сохранен.
+- Негативные smoke-тесты profile self-escalation прошли: обычный СПН не может обновить собственную legacy-роль до `admin`, v2-роль до `owner`, а также не может создать себе новый профиль сразу с privileged ролью.
+- Позитивный smoke-test профиля прошел: обычное обновление собственного `full_name/phone` в `nav_user_profiles` разрешено и проходит через RLS.
+- `nav_v2_profiles_select` больше не вызывает `infinite recursion` при прямом update профиля.
 - `nav_set_deal_created_by()` имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; trigger `trg_nav_deals_set_created_by` на `nav_deals` активен.
 - `nav_v2_touch_updated_at()` имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; triggers `nav_deals_v2_touch_updated_at` и `nav_deal_tasks_v2_touch_updated_at` активны.
 - Все trigger-функции `nav*` закрыты от прямого `anon`/`authenticated` execute; `service_role` сохранен.
 - Legacy helper-RPC после hardening:
-  - обычный SPN видит собственную роль и может проверить собственное право создания сделки;
-  - обычный SPN не видит роль чужого админа и не может проверить создание сделки за него;
+  - обычный СПН видит собственную роль и может проверить собственное право создания сделки;
+  - обычный СПН не видит роль чужого админа и не может проверить создание сделки за него;
   - админ может читать роль другого активного пользователя и оценивать его права;
   - service role может оценивать целевого пользователя без `auth.uid()`;
   - обычный пользователь не может получить `true` по `nav_can_view_deal` / `nav_can_edit_deal`, подставив `p_uid` админа.
