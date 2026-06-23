@@ -31,6 +31,37 @@ function norm(value) {
   return String(value || '').trim();
 }
 
+function objectTypeName(type) {
+  return ({
+    flat_mkd: 'Квартира в МКД',
+    flat_ground: 'Квартира на земле',
+    room: 'Комната',
+    share: 'Доля',
+    share_room: 'Доля / комната',
+    house_land: 'Дом с участком',
+    house: 'Дом',
+    land: 'Земельный участок',
+    new_building: 'Новостройка',
+    commercial: 'Коммерция'
+  })[type] || 'Объект';
+}
+
+function isGenericTitle(title) {
+  const text = norm(title).toLowerCase();
+  return !text
+    || text.includes('продавец не указан')
+    || text.includes('покупатель не указан')
+    || text.includes('адрес не указан');
+}
+
+function dealDisplayTitle(deal) {
+  const explicitTitle = norm(deal?.display_title);
+  if (explicitTitle) return explicitTitle;
+  const storedTitle = norm(deal?.title);
+  if (!isGenericTitle(storedTitle)) return storedTitle;
+  return `${objectTypeName(deal?.object_type)} — ${norm(deal?.address) || 'адрес уточняется'}`;
+}
+
 function findPersonNames(deal, side) {
   const summary = deal?.deal_summary || {};
   const snapshot = deal?.wizard_snapshot || {};
@@ -42,16 +73,22 @@ function findPersonNames(deal, side) {
   for (const key of keys) {
     values.push(deal?.[key], summary?.[key], sideData?.[key], snapshot?.[key]);
   }
-  const first = values.map(norm).find(Boolean);
-  return first || '—';
+  return values.map(norm).find(Boolean) || '';
+}
+
+function dealPartiesLine(deal) {
+  const seller = findPersonNames(deal, 'seller');
+  const buyer = findPersonNames(deal, 'buyer');
+  const parts = [];
+  if (seller) parts.push(`продавец: ${seller}`);
+  if (buyer) parts.push(`покупатель: ${buyer}`);
+  return parts.join(' · ');
 }
 
 function dealHeadline(deal) {
-  const address = norm(deal?.address) || 'Адрес не указан';
-  const seller = findPersonNames(deal, 'seller');
-  const buyer = findPersonNames(deal, 'buyer');
-  if (isLawyer()) return `Юридическая проверка: ${address} — ${seller} / ${buyer}`;
-  return `${address} — ${seller} / ${buyer}`;
+  const title = dealDisplayTitle(deal);
+  if (isLawyer()) return `Юридическая проверка: ${title}`;
+  return title;
 }
 
 function confirmDemoAction(actionText) {
@@ -337,8 +374,9 @@ function overview(data) {
   const redRisks = countRedRisks(risks);
   const openTasks = countOpenTasks(tasks);
   const blockingReviews = countBlockingReviews(reviews);
+  const partiesLine = dealPartiesLine(deal);
   return `<section class="grid">
-    <div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(deal.object_type || '—')}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div><div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div><div class="list-item"><b>Создана</b>${dateText(deal.created_at)}</div></div></div>
+    <div class="card"><h2>Суть сделки</h2><div class="list"><div class="list-item"><b>Тип</b>${isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span>' : '<span class="pill green">Рабочая</span>'}</div><div class="list-item"><b>Объект</b>${esc(objectTypeName(deal.object_type))}</div><div class="list-item"><b>Адрес</b>${esc(deal.address || '—')}</div>${partiesLine ? `<div class="list-item"><b>Стороны</b>${esc(partiesLine)}</div>` : ''}<div class="list-item"><b>Цена</b>${money(deal.price_total)}</div><div class="list-item"><b>Представительство</b>${esc(deal.representation_model || '—')}</div><div class="list-item"><b>Создана</b>${dateText(deal.created_at)}</div></div></div>
     <div class="card"><h2>${isLawyer() ? 'Юридический контроль' : 'Контроль'}</h2><div class="list"><div class="list-item"><b>Следующий шаг</b>${esc(deal.next_action || 'Проверить карточку')}</div><div class="list-item"><b>Риски</b>${redRisks ? `<span class="pill red">красных: ${redRisks}</span>` : '<span class="pill green">красных нет</span>'}</div><div class="list-item"><b>Документы</b>${missingDocs ? `<span class="pill yellow">не хватает: ${missingDocs}</span>` : '<span class="pill green">критичных долгов нет</span>'}</div><div class="list-item"><b>Решения</b>${blockingReviews ? `<span class="pill red">блокирующих: ${blockingReviews}</span>` : '<span class="pill green">блокирующих нет</span>'}</div><div class="list-item"><b>Задачи</b>${openTasks ? `<span class="pill yellow">открытых: ${openTasks}</span>` : '<span class="pill green">открытых нет</span>'}</div><div class="list-item"><b>Расходы</b>${deal.expenses_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div><div class="list-item"><b>Расчеты</b>${deal.settlements_agreed ? '<span class="pill green">согласованы</span>' : '<span class="pill yellow">не согласованы</span>'}</div></div></div>
   </section>
   <section class="grid"><div>${statusSelector(deal)}</div><div class="card" style="box-shadow:none"><h3>Ответственные очереди</h3><div class="list"><div class="list-item"><b>Юрист</b>${deal.lawyer_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Брокер</b>${deal.broker_needed ? '<span class="pill yellow">нужен</span>' : '<span class="pill green">не требуется</span>'}</div><div class="list-item"><b>Дети / опека / детские деньги</b>${deal.has_children ? '<span class="pill red">есть</span>' : '<span class="pill green">нет</span>'}</div><div class="list-item"><b>Ипотека</b>${deal.has_mortgage ? '<span class="pill yellow">есть</span>' : '<span class="pill green">нет</span>'}</div></div></div></section>`;
@@ -376,8 +414,9 @@ function renderCard(data) {
   const tasks = list(data, 'tasks');
   const risks = list(data, 'risks');
   const reviews = list(data, 'reviews');
+  const partiesLine = dealPartiesLine(deal);
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(deal))}</h1><p>${esc(deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
+    <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(deal))}</h1><p>${esc(partiesLine || deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
     ${dealModePanel(deal)}
     ${isLawyer() ? legalPanel(data) : ''}
     <div class="kpi-row">
