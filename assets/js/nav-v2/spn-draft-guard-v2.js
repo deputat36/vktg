@@ -56,6 +56,23 @@ function filled(value) {
   return String(value ?? '').trim().length > 0;
 }
 
+function arr(deal, key) {
+  return Array.isArray(deal?.[key]) ? deal[key] : [];
+}
+
+function hasBuyer(deal) {
+  if (deal.hasBuyer === true) return true;
+  if (deal.hasBuyer === false) return false;
+  return ['buyer', 'one_spn_both', 'both', 'partner_agency'].includes(deal.representation)
+    || ['terms_discussed', 'urgent_deposit', 'deposit_exists', 'main_deal'].includes(deal.stage);
+}
+
+function needsDeposit(deal) {
+  return deal.preparationMode === 'deposit'
+    || ['urgent_deposit', 'deposit_exists'].includes(deal.stage)
+    || (['terms_discussed', 'main_deal'].includes(deal.stage) && hasBuyer(deal));
+}
+
 function hasUsefulDraft(deal) {
   return deal && Object.keys(deal).some((key) => !key.startsWith('_') && filled(deal[key]));
 }
@@ -71,8 +88,9 @@ function missingItems(deal) {
   if (!filled(deal.stage)) items.push('стадия');
   if (!filled(deal.objectType)) items.push('тип объекта');
   if (!filled(deal.address) && deal.stage !== 'lead_only') items.push('адрес или ориентир');
-  if ((deal.preparationMode === 'deposit' || deal.stage === 'urgent_deposit') && deal.settlementsAgreed !== true) items.push('расчеты');
-  if ((deal.preparationMode === 'deposit' || deal.stage === 'urgent_deposit') && deal.expensesAgreed !== true) items.push('расходы');
+  if (hasBuyer(deal) && !arr(deal, 'payments').length && !filled(deal.moneyComment)) items.push('источник денег покупателя');
+  if (needsDeposit(deal) && deal.settlementsAgreed !== true) items.push('расчеты');
+  if (needsDeposit(deal) && deal.expensesAgreed !== true) items.push('расходы');
   if (!filled(deal.clientNextStep)) items.push('ближайший шаг');
   return items;
 }
@@ -87,14 +105,26 @@ function summary(deal) {
   ];
 }
 
+function draftKey(deal, missing) {
+  return encodeURIComponent(JSON.stringify({
+    preparationMode: deal.preparationMode || '',
+    representation: deal.representation || '',
+    stage: deal.stage || '',
+    objectType: deal.objectType || '',
+    address: deal.address || '',
+    missing
+  }));
+}
+
 function panelHtml(deal) {
   const missing = missingItems(deal);
+  const key = draftKey(deal, missing);
   const items = summary(deal).map((item) => `<span class="pill blue">${esc(item)}</span>`).join(' ');
   const missingText = missing.length
     ? `<div class="status warn" style="margin-top:10px">Перед сохранением проверьте: ${esc(missing.join(', '))}.</div>`
     : '<div class="status ok" style="margin-top:10px">Ключевые ориентиры черновика заполнены.</div>';
 
-  return `<section class="card" data-spn-draft-guard="true">
+  return `<section class="card" data-spn-draft-guard="true" data-draft-key="${key}">
     <div class="section-title">
       <div>
         <h2>Продолжается локальный черновик</h2>
@@ -118,8 +148,12 @@ function renderGuard() {
   const app = document.getElementById('app');
   if (!app) return;
 
+  const html = panelHtml(draft);
+  const key = html.match(/data-draft-key="([^"]+)"/)?.[1] || '';
+  if (existing?.dataset.draftKey === key) return;
+
   if (existing) {
-    existing.outerHTML = panelHtml(draft);
+    existing.outerHTML = html;
     bindClear();
     return;
   }
@@ -127,7 +161,7 @@ function renderGuard() {
   const shell = document.createElement('main');
   shell.className = 'nav-v2-shell';
   shell.dataset.spnDraftGuardShell = 'true';
-  shell.innerHTML = panelHtml(draft);
+  shell.innerHTML = html;
   app.parentNode.insertBefore(shell, app);
   bindClear();
 }
