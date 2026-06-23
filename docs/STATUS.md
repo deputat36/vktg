@@ -54,6 +54,7 @@
 - `nav_v2_update_task_status(...)` валидирует статус, блокирует строку задачи, обновляет `updated_at` и не пишет повторное событие без фактической смены статуса.
 - `nav_v2_update_deal_status(...)` блокирует положительные статусы при блокирующих review-решениях, проблемных/просроченных/обязательных незакрытых документах.
 - Мастер СПН усилен на сервере: `nav_v2_save_wizard_result(jsonb)` проверяет роль, структуру JSON, справочники, обязательные поля, цену и задаток.
+- Legacy-мастер также усилен: `nav_save_wizard_deal(jsonb)` проверяет активную роль, право создания сделки, JSON-структуру, обязательные объект/адрес, диапазон готовности, числовые цены, модель представительства и типы массивов.
 - RPC доработки СПН исправлены под v2-роли: `nav_v2_return_spn_rework(...)` и `nav_v2_submit_spn_rework(...)` используют `nav_v2_user_role`, поддерживают owner и пишут `author_role`.
 - Рабочие mutation-RPC валидируют обязательные поля и пишут события аудита: документы, риски, задачи, расходы.
 - Публичный `anon`-доступ закрыт у рабочих RPC Навигатора, где он не нужен.
@@ -95,6 +96,7 @@
 - `supabase/migrations/20260623101500_navigator_revoke_direct_execute_from_trigger_function.sql`.
 - `supabase/migrations/20260623103000_navigator_revoke_direct_execute_from_v2_touch_trigger.sql`.
 - `supabase/migrations/20260623104500_navigator_harden_legacy_helper_rpcs.sql`.
+- `supabase/migrations/20260623110000_navigator_harden_legacy_wizard_save_rpc.sql`.
 
 ## Проверено
 
@@ -110,11 +112,14 @@
   - админ может читать роль другого активного пользователя и оценивать его права;
   - service role может оценивать целевого пользователя без `auth.uid()`;
   - обычный пользователь не может получить `true` по `nav_can_view_deal` / `nav_can_edit_deal`, подставив `p_uid` админа.
+- Legacy `nav_save_wizard_deal(jsonb)` закрыт от `anon`, доступен authenticated/service_role и теперь валидирует серверный payload мастера.
+- Smoke-test `nav_save_wizard_deal(jsonb)` внутри rollback прошел: валидная заявка создала draft-сделку с ожидаемым названием.
+- Негативный smoke-test legacy-мастера прошел: заявка с нечисловой фактической ценой блокируется ошибкой `Фактическая цена должна быть числом`.
 - `nav_v2_update_document_assignment(...)` закрыт от `anon`, доступен authenticated/service_role, проверяет участника сделки для `assigned_to` и пишет `document_assignment_updated` только при фактическом изменении.
 - Smoke-test `nav_v2_update_document_assignment(...)` внутри rollback прошел: назначение участника, смена роли, установка срока и очистка ответственного/срока вернули ожидаемые значения.
 - В `nav_deal_documents_v2` workflow-поля заполнены: 141/141 документов имеют `responsible_role`, 125 открытых документов имеют `due_date`.
 - `nav_v2_save_wizard_result(jsonb)` закрыт от `anon`, доступен authenticated/service_role, содержит role guard owner/admin/manager/СПН и проверки входного JSON.
-- Позитивный smoke-test мастера внутри rollback вернул draft-сделку; негативный smoke-test с задатком больше цены ожидаемо блокируется.
+- Позитивный smoke-test v2-мастера внутри rollback вернул draft-сделку; негативный smoke-test с задатком больше цены ожидаемо блокируется.
 - Smoke-test приватного комментария внутри rollback прошел: автор видит приватный комментарий, юрист не видит, owner видит.
 - Smoke-test задачи внутри rollback прошел: два одинаковых вызова смены статуса создали только одно событие `task_status_changed`.
 - Smoke-test review-решения внутри rollback прошел: `blocked` нормализуется в `blocks_deposit=true` и `blocks_deal=true`.
