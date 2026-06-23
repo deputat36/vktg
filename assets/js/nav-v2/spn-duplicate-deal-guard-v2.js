@@ -106,7 +106,15 @@ function hostNode() {
   return document.getElementById('pageStatus') || document.getElementById('app');
 }
 
-function panelHtml(matches, key) {
+function duplicateReason(draft, matches) {
+  const exact = matches.some((deal) => deal.exactObject);
+  const objectText = draftObjectType(draft) ? ` Тип объекта: ${objectName(draftObjectType(draft))}.` : '';
+  return exact
+    ? `Совпали адрес и тип объекта.${objectText}`
+    : `Совпал адрес после приведения к единому виду.${objectText} Если это другой объект, проверьте квартиру, корпус или уточнение адреса.`;
+}
+
+function panelHtml(matches, key, draft) {
   const rows = matches.map((deal) => {
     const title = deal.display_title || deal.title || `${objectName(deal.object_type)} — ${deal.address || 'адрес уточняется'}`;
     const badge = deal.exactObject ? '<span class="pill red">адрес и объект совпадают</span>' : '<span class="pill yellow">адрес совпадает</span>';
@@ -115,7 +123,7 @@ function panelHtml(matches, key) {
 
   return `<div class="status warn" data-spn-duplicate-guard="true" data-duplicate-key="${esc(key)}" style="margin:10px 0">
     <b>Проверьте дубль перед сохранением.</b>
-    <div style="margin-top:6px">В ваших сделках уже есть карточка с таким адресом:</div>
+    <div style="margin-top:6px">${esc(duplicateReason(draft, matches))}</div>
     <ul style="margin:8px 0 0 18px;padding:0">${rows}</ul>
   </div>`;
 }
@@ -145,7 +153,7 @@ function renderPanel() {
     return;
   }
 
-  const html = panelHtml(matches, key);
+  const html = panelHtml(matches, key, draft);
   if (existing) {
     existing.outerHTML = html;
     moveNearCurrentStatus(document.querySelector('[data-spn-duplicate-guard]'));
@@ -193,7 +201,7 @@ function guardSave(event) {
   const key = lastDraftKey || draftDuplicateKey(draft, matches);
   if (!matches.length || hasFreshConfirmation(key)) return;
 
-  const message = `Похоже, сделка с таким адресом уже есть:\n\n${matches.map((deal, index) => `${index + 1}. ${deal.display_title || deal.title || deal.address || deal.id} (${shortId(deal.id)})`).join('\n')}\n\nСохранить новую карточку всё равно?`;
+  const message = `Похоже, сделка с таким адресом уже есть. ${duplicateReason(draft, matches)}\n\n${matches.map((deal, index) => `${index + 1}. ${deal.display_title || deal.title || deal.address || deal.id} (${shortId(deal.id)})`).join('\n')}\n\nСохранить новую карточку всё равно?`;
   if (confirm(message)) {
     markConfirmed(key);
     return;
