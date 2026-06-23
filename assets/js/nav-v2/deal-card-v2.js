@@ -46,6 +46,60 @@ function objectTypeName(type) {
   })[type] || 'Объект';
 }
 
+function docCategoryLabel(category) {
+  return ({
+    identity: 'личность',
+    object: 'объект',
+    basis: 'основание права',
+    utilities: 'справки и коммунальные',
+    land: 'земля',
+    children: 'дети / опека',
+    share: 'доля / сособственники',
+    mortgage: 'ипотека',
+    money: 'деньги',
+    other: 'другое'
+  })[category] || category || 'категория не указана';
+}
+
+function sideLabel(side) {
+  return ({
+    seller: 'продавец',
+    buyer: 'покупатель',
+    both: 'обе стороны',
+    company: 'компания',
+    other_agency: 'партнер',
+    external_party: 'внешняя сторона'
+  })[side] || side || 'сторона не указана';
+}
+
+function docStatusLabel(status) {
+  return ({
+    needed: 'нужен',
+    requested: 'запрошен',
+    received: 'получен',
+    checked: 'проверен',
+    problem: 'проблема'
+  })[status] || status || 'нужен';
+}
+
+function taskStatusLabel(status) {
+  return ({
+    open: 'открыта',
+    in_progress: 'в работе',
+    done: 'готово',
+    cancelled: 'отменена'
+  })[status] || status || 'открыта';
+}
+
+function taskPriorityLabel(priority) {
+  return ({
+    urgent: 'срочно',
+    high: 'важно',
+    normal: 'обычно',
+    low: 'низкий'
+  })[priority] || priority || 'обычно';
+}
+
 function isGenericTitle(title) {
   const text = norm(title).toLowerCase();
   return !text
@@ -310,13 +364,15 @@ function renderDocs(items) {
   if (!items.length) return '<div class="empty">Документы пока не сформированы.</div>';
   return `<div class="list">${items.map((doc) => {
     const note = doc.problem_note || doc.status_note || '';
+    const category = docCategoryLabel(doc.category);
+    const side = sideLabel(doc.side);
     return `<div class="list-item">
       <div class="doc-status">
         <div>
           <b>${esc(doc.title)}</b>
-          <span class="small">${esc(doc.category)} / ${esc(doc.side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span>
+          <span class="small">${esc(category)} / ${esc(side)}${doc.description ? ' — ' + esc(doc.description) : ''}</span>
         </div>
-        <span class="pill ${docStatusClass(doc)}">${esc(doc.status || 'needed')}</span>
+        <span class="pill ${docStatusClass(doc)}">${esc(docStatusLabel(doc.status))}</span>
       </div>
       <div class="actions" style="justify-content:flex-start;margin-top:8px">
         <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
@@ -367,7 +423,7 @@ function renderExpenses(items) {
 function renderTasks(items) {
   const filtered = isLawyer() ? items.filter((task) => !task.assigned_role || task.assigned_role === 'lawyer' || task.assigned_role === 'spn') : items;
   if (!filtered.length) return '<div class="empty">Задач по этому профилю пока нет.</div>';
-  return `<div class="list">${filtered.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(task.priority)}</span> <span class="pill">${esc(task.status)}</span> ${task.assigned_role ? `<span class="pill blue">${esc(roleLabel(task.assigned_role))}</span>` : ''}</div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p>${taskActions(task)}</div>`).join('')}</div>`;
+  return `<div class="list">${filtered.map((task) => `<div class="list-item"><div><span class="pill ${task.priority === 'urgent' ? 'red' : task.priority === 'high' ? 'yellow' : 'blue'}">${esc(taskPriorityLabel(task.priority))}</span> <span class="pill">${esc(taskStatusLabel(task.status))}</span> ${task.assigned_role ? `<span class="pill blue">${esc(roleLabel(task.assigned_role))}</span>` : ''}</div><b>${esc(task.title)}</b><p class="muted">${esc(task.description || '')}</p>${taskActions(task)}</div>`).join('')}</div>`;
 }
 
 function renderComments(items) {
