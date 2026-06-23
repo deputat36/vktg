@@ -45,6 +45,7 @@
 - В карточку сделки добавлены inline-контролы для роли, конкретного ответственного и срока документа; сохранение идет через `nav_v2_update_document_assignment(...)`, а варианты ответственных берутся из участников сделки.
 - После сохранения ответственного/срока карточка больше не перезагружает страницу целиком: модуль заново читает `nav_v2_get_deal_card(uuid)` и обновляет только плашки и панель конкретного документа.
 - Trigger-функция `nav_set_deal_created_by()` закрыта от прямого RPC-вызова `authenticated`; trigger `trg_nav_deals_set_created_by` на `nav_deals` сохранен.
+- Trigger-функция `nav_v2_touch_updated_at()` закрыта от прямого RPC-вызова `authenticated`; v2-триггеры `nav_deals_v2_touch_updated_at` и `nav_deal_tasks_v2_touch_updated_at` сохранены.
 - Ручные add-RPC теперь валидируют обязательный текст и пишут события в историю сделки:
   - `nav_v2_add_document(...)` → `document_added`;
   - `nav_v2_add_risk(...)` → `risk_added`;
@@ -104,7 +105,8 @@
   - `supabase/migrations/20260622195500_navigator_fix_lawyer_queue_json_build.sql`;
   - `supabase/migrations/20260622202000_navigator_document_assignment_rpc.sql`;
   - `supabase/migrations/20260622203500_navigator_revoke_anon_update_deal_parties.sql`;
-  - `supabase/migrations/20260623101500_navigator_revoke_direct_execute_from_trigger_function.sql`.
+  - `supabase/migrations/20260623101500_navigator_revoke_direct_execute_from_trigger_function.sql`;
+  - `supabase/migrations/20260623103000_navigator_revoke_direct_execute_from_v2_touch_trigger.sql`.
 
 ## Проверено
 
@@ -114,6 +116,8 @@
 - Helper-RPC доступа содержат self/admin/service guard.
 - Profile-helper RPC содержат self/admin/service guard: СПН видит собственную роль, не видит роль/активность чужого юриста и не может проверить owner/admin-статус owner; owner видит роль и активность юриста.
 - `nav_set_deal_created_by()` теперь имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; trigger `trg_nav_deals_set_created_by` на `nav_deals` остался активен.
+- `nav_v2_touch_updated_at()` теперь имеет `anon_can_execute=false`, `authenticated_can_execute=false`, `service_can_execute=true`; triggers `nav_deals_v2_touch_updated_at` и `nav_deal_tasks_v2_touch_updated_at` остались активны.
+- Все trigger-функции `nav*` сейчас закрыты от прямого `anon`/`authenticated` execute; `service_role` сохранен, связанные триггеры включены.
 - Повторный security advisor больше не показывает предупреждение `authenticated_security_definer_function_executable` для `nav_set_deal_created_by()`.
 - `nav_v2_update_deal_parties(...)` закрыт от `anon`, доступен authenticated/service_role; security advisor больше не показывает `anon_security_definer_function_executable` для этой функции.
 - `nav_v2_update_document_workflow(...)` и совместимый `nav_v2_update_document_status(uuid, text)` закрыты от `anon` и доступны authenticated.
