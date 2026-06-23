@@ -59,6 +59,7 @@
 - Рабочие mutation-RPC валидируют обязательные поля и пишут события аудита: документы, риски, задачи, расходы.
 - Публичный `anon`-доступ закрыт у рабочих RPC Навигатора, где он не нужен.
 - Прямые table grants по таблицам `nav_*` сужены: у `anon` сняты все права на таблицы Навигатора, у `authenticated` оставлены только `SELECT/INSERT/UPDATE/DELETE`, без `TRUNCATE/REFERENCES/TRIGGER`.
+- Legacy `nav_deal_events` больше не раскрывает всю ленту всем authenticated: `SELECT/INSERT/UPDATE` политики теперь проверяют доступ к связанной сделке через `nav_can_view_deal(...)` и ограничивают события без `deal_id` автором или админом.
 - Профили защищены от self-escalation: прямые `INSERT/UPDATE` в `nav_profiles` и `nav_user_profiles` больше не позволяют обычному пользователю самому назначить себе роль admin/owner, активность, менеджера, email или invited_by.
 - RLS-политика `nav_v2_profiles_select` исправлена: убрано рекурсивное чтение `nav_user_profiles`, которое могло давать `infinite recursion` при прямых операциях с профилем.
 - Демо-RPC усилены: наружные функции требуют service role или owner/admin, старые реализации переименованы во внутренние `_unchecked_20260622` и закрыты от `anon`/`authenticated`.
@@ -103,6 +104,7 @@
 - `supabase/migrations/20260623111500_navigator_tighten_table_grants.sql`.
 - `supabase/migrations/20260623113000_navigator_guard_profile_self_escalation.sql`.
 - `supabase/migrations/20260623113500_navigator_fix_v2_profile_policy_recursion.sql`.
+- `supabase/migrations/20260623115000_navigator_harden_legacy_event_policies.sql`.
 
 ## Проверено
 
@@ -112,6 +114,7 @@
 - Все таблицы `nav_*` имеют включенный RLS.
 - У `anon` нет прямых table privileges на таблицы `nav_*`; прямой `select` из `nav_deals_v2` под ролью `anon` отклоняется `permission denied`.
 - У `authenticated` на таблицах `nav_*` остались только `DELETE/INSERT/SELECT/UPDATE`; прямой `select` из `nav_deals_v2` под активным пользователем проходит через RLS.
+- Политика `nav_deal_events_select_authenticated` с `qual=true` удалена; legacy-события теперь видны только через доступ к сделке, а smoke-test подтвердил: админ видит событие своей legacy-сделки, посторонний СПН не видит.
 - `nav_profiles_guard_self_escalation` и `nav_v2_profiles_guard_self_escalation` включены; их функции недоступны для прямого `anon`/`authenticated` execute, `service_role` сохранен.
 - Негативные smoke-тесты profile self-escalation прошли: обычный СПН не может обновить собственную legacy-роль до `admin`, v2-роль до `owner`, а также не может создать себе новый профиль сразу с privileged ролью.
 - Позитивный smoke-test профиля прошел: обычное обновление собственного `full_name/phone` в `nav_user_profiles` разрешено и проходит через RLS.
