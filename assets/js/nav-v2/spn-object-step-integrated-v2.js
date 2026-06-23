@@ -64,6 +64,7 @@ function normalizeLegacyShare() {
   const flags = new Set(flagsOf(deal));
   flags.add('shares');
 
+  const baseConfig = OBJECT_TYPES.find((item) => item.type === deal.shareBaseObject);
   const next = {
     ...deal,
     legalForm: 'share',
@@ -71,9 +72,16 @@ function normalizeLegacyShare() {
     flags: [...flags]
   };
 
-  delete next.objectType;
-  delete next.objectCategory;
-  delete next.apartmentKind;
+  if (baseConfig) {
+    next.objectType = baseConfig.type;
+    next.objectCategory = baseConfig.category;
+    if (baseConfig.apartmentKind) next.apartmentKind = baseConfig.apartmentKind;
+    else delete next.apartmentKind;
+  } else {
+    delete next.objectType;
+    delete next.objectCategory;
+    delete next.apartmentKind;
+  }
 
   writeDraft(next);
   sessionStorage.setItem(RESUME_OBJECT_STEP_KEY, '1');
