@@ -105,7 +105,7 @@ function showWarning(gaps, key) {
 }
 
 function saveButtonFromEvent(event) {
-  return event.target?.closest?.('[data-action="save"]') || null;
+  return event.target?.closest?.('[data-action="save"], #saveDealBtn') || null;
 }
 
 function guardSave(event) {
