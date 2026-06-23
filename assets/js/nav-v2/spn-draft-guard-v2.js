@@ -1,4 +1,6 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
+const DRAFT_UPDATED_KEY = 'nav_deal_draft_v2_updated_at';
+const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 const LABELS = {
   preparationMode: {
@@ -50,6 +52,13 @@ function esc(value) {
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
+}
+
+function readUpdatedAt() {
+  const value = localStorage.getItem(DRAFT_UPDATED_KEY);
+  if (!value) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : null;
 }
 
 function filled(value) {
@@ -105,20 +114,47 @@ function summary(deal) {
   ];
 }
 
-function draftKey(deal, missing) {
+function draftKey(deal, missing, updatedAt) {
   return encodeURIComponent(JSON.stringify({
     preparationMode: deal.preparationMode || '',
     representation: deal.representation || '',
     stage: deal.stage || '',
     objectType: deal.objectType || '',
     address: deal.address || '',
-    missing
+    missing,
+    updatedAt: updatedAt || ''
   }));
+}
+
+function formatAge(updatedAt) {
+  if (!updatedAt) return null;
+  const elapsed = Math.max(0, Date.now() - updatedAt);
+  const minutes = Math.floor(elapsed / 60000);
+  if (minutes < 2) return 'только что';
+  if (minutes < 60) return `${minutes} мин. назад`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ч. назад`;
+  const days = Math.floor(hours / 24);
+  return `${days} дн. назад`;
+}
+
+function freshnessHtml(updatedAt) {
+  if (!updatedAt) {
+    return '<div class="status warn" style="margin-top:10px"><b>Возраст черновика неизвестен.</b> Он создан до включения контроля времени. Перед продолжением перепроверьте клиента, объект и текущие условия.</div>';
+  }
+
+  const age = formatAge(updatedAt);
+  if (Date.now() - updatedAt >= STALE_AFTER_MS) {
+    return `<div class="status warn" style="margin-top:10px"><b>Черновик давно не обновлялся: ${esc(age)}.</b> Перед сохранением уточните у клиента цену, состав участников, расчеты, расходы и документы.</div>`;
+  }
+
+  return `<div class="status ok" style="margin-top:10px">Последнее изменение: ${esc(age)}.</div>`;
 }
 
 function panelHtml(deal) {
   const missing = missingItems(deal);
-  const key = draftKey(deal, missing);
+  const updatedAt = readUpdatedAt();
+  const key = draftKey(deal, missing, updatedAt);
   const items = summary(deal).map((item) => `<span class="pill blue">${esc(item)}</span>`).join(' ');
   const missingText = missing.length
     ? `<div class="status warn" style="margin-top:10px">Перед сохранением проверьте: ${esc(missing.join(', '))}.</div>`
@@ -130,9 +166,13 @@ function panelHtml(deal) {
         <h2>Продолжается локальный черновик</h2>
         <p class="muted">Это ещё не сделка в CRM. Проверьте, что черновик относится к текущему клиенту, или начните заново.</p>
       </div>
-      <button class="btn light" type="button" data-spn-clear-draft="1">Начать заново</button>
+      <div class="actions">
+        <button class="btn primary" type="button" data-spn-continue-draft="1">Продолжить</button>
+        <button class="btn light" type="button" data-spn-clear-draft="1">Начать заново</button>
+      </div>
     </div>
     <div class="actions" style="justify-content:flex-start">${items}</div>
+    ${freshnessHtml(updatedAt)}
     ${missingText}
   </section>`;
 }
@@ -141,7 +181,9 @@ function renderGuard() {
   const existing = document.querySelector('[data-spn-draft-guard]');
   const draft = readDraft();
   if (!hasUsefulDraft(draft)) {
+    existing?.closest('[data-spn-draft-guard-shell]')?.remove();
     existing?.remove();
+    localStorage.removeItem(DRAFT_UPDATED_KEY);
     return;
   }
 
@@ -154,7 +196,7 @@ function renderGuard() {
 
   if (existing) {
     existing.outerHTML = html;
-    bindClear();
+    bindActions();
     return;
   }
 
@@ -163,13 +205,19 @@ function renderGuard() {
   shell.dataset.spnDraftGuardShell = 'true';
   shell.innerHTML = html;
   app.parentNode.insertBefore(shell, app);
-  bindClear();
+  bindActions();
 }
 
-function bindClear() {
+function bindActions() {
+  document.querySelector('[data-spn-continue-draft]')?.addEventListener('click', () => {
+    document.getElementById('app')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => document.querySelector('#app input, #app textarea, #app button')?.focus(), 350);
+  }, { once: true });
+
   document.querySelector('[data-spn-clear-draft]')?.addEventListener('click', () => {
     if (!confirm('Очистить локальный черновик и начать новую сделку с чистого листа?')) return;
     localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_UPDATED_KEY);
     location.reload();
   }, { once: true });
 }
@@ -184,8 +232,20 @@ function schedule() {
   });
 }
 
-document.addEventListener('input', schedule, true);
-document.addEventListener('click', schedule, true);
+function markDraftChanged() {
+  window.setTimeout(() => {
+    const draft = readDraft();
+    if (hasUsefulDraft(draft)) localStorage.setItem(DRAFT_UPDATED_KEY, new Date().toISOString());
+    else localStorage.removeItem(DRAFT_UPDATED_KEY);
+    schedule();
+  }, 0);
+}
+
+document.addEventListener('input', markDraftChanged, true);
+document.addEventListener('click', (event) => {
+  if (event.target?.closest?.('[data-click], #saveDraftBtn')) markDraftChanged();
+  else schedule();
+}, true);
 window.addEventListener('storage', schedule);
 
 renderGuard();
