@@ -69,6 +69,16 @@ function confirmationKey(deal, gaps) {
   });
 }
 
+function clearConfirmation() {
+  sessionStorage.removeItem(CONFIRMED_KEY);
+  sessionStorage.removeItem(CONFIRMED_GAPS_KEY);
+}
+
+function syncConfirmation(key, hasGaps) {
+  const confirmedKey = sessionStorage.getItem(CONFIRMED_GAPS_KEY) || '';
+  if (!hasGaps || (confirmedKey && confirmedKey !== key)) clearConfirmation();
+}
+
 function hasFreshConfirmation(key) {
   const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
   const confirmedKey = sessionStorage.getItem(CONFIRMED_GAPS_KEY) || '';
@@ -104,10 +114,9 @@ function guardSave(event) {
 
   const draft = readDraft();
   const gaps = criticalGaps(draft);
-  if (!gaps.length) return;
-
   const key = confirmationKey(draft, gaps);
-  if (hasFreshConfirmation(key)) return;
+  syncConfirmation(key, gaps.length > 0);
+  if (!gaps.length || hasFreshConfirmation(key)) return;
 
   showWarning(gaps, key);
   const message = `Перед сохранением есть важные пробелы:\n\n${gaps.map((item, index) => `${index + 1}. ${item.text} (шаг: ${item.step})`).join('\n')}\n\nСохранить черновик в CRM всё равно?`;
@@ -121,5 +130,17 @@ function guardSave(event) {
   event.stopImmediatePropagation();
 }
 
+function syncFromDraft() {
+  const draft = readDraft();
+  const gaps = criticalGaps(draft);
+  const key = confirmationKey(draft, gaps);
+  syncConfirmation(key, gaps.length > 0);
+}
+
+document.addEventListener('input', syncFromDraft, true);
+document.addEventListener('click', syncFromDraft, true);
 document.addEventListener('pointerup', guardSave, true);
 document.addEventListener('click', guardSave, true);
+window.addEventListener('storage', syncFromDraft);
+
+syncFromDraft();
