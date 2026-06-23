@@ -3,6 +3,10 @@ import { rpc, esc } from './supabase-v2.js';
 const DRAFT_KEY = 'nav_deal_draft_v2';
 const CONFIRMED_KEY = 'nav_spn_duplicate_confirmed_at_v2';
 const CONFIRMED_DUP_KEY = 'nav_spn_duplicate_confirmed_key_v2';
+const ADDRESS_STOP_WORDS = new Set([
+  'ул', 'улица', 'пер', 'переулок', 'пр', 'проспект', 'пркт', 'пл', 'площадь', 'ш', 'шоссе',
+  'д', 'дом', 'к', 'корп', 'корпус', 'стр', 'строение', 'кв', 'квартира', 'пом', 'помещение'
+]);
 
 let deals = [];
 let profile = null;
@@ -25,6 +29,14 @@ function normalize(value) {
     .replace(/\s+/g, ' ');
 }
 
+function addressSignature(value) {
+  return normalize(value)
+    .split(' ')
+    .map((part) => part.replace(/^0+(\d)/, '$1'))
+    .filter((part) => part && !ADDRESS_STOP_WORDS.has(part))
+    .join(' ');
+}
+
 function shortId(id) {
   return String(id || '').slice(0, 8).toUpperCase();
 }
@@ -45,7 +57,7 @@ function objectName(type) {
 }
 
 function draftAddress(draft) {
-  return normalize(draft.address);
+  return addressSignature(draft.address);
 }
 
 function draftObjectType(draft) {
@@ -56,12 +68,12 @@ function draftDuplicateKey(draft, matches) {
   return JSON.stringify({
     address: draftAddress(draft),
     objectType: draftObjectType(draft),
-    matches: matches.map((deal) => ({ id: deal.id, exactObject: Boolean(deal.exactObject) })).sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    matches: matches.map((deal) => ({ id: deal.id, exactObject: Boolean(deal.exactObject), address: addressSignature(deal.address) })).sort((a, b) => String(a.id).localeCompare(String(b.id)))
   });
 }
 
 function hasUsefulAddress(draft) {
-  return draftAddress(draft).length >= 6 && draft.stage !== 'lead_only';
+  return draftAddress(draft).length >= 4 && draft.stage !== 'lead_only';
 }
 
 function hasFreshConfirmation(key) {
@@ -81,7 +93,7 @@ function possibleDuplicates(draft) {
   if (!loaded || profile?.role !== 'spn' || !hasUsefulAddress(draft)) return [];
 
   return deals
-    .filter((deal) => normalize(deal.address) === address)
+    .filter((deal) => addressSignature(deal.address) === address)
     .map((deal) => ({
       ...deal,
       exactObject: Boolean(type && String(deal.object_type || '') === type)
