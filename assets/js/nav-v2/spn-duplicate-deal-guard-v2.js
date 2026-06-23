@@ -10,6 +10,7 @@ let loaded = false;
 let loadStarted = false;
 let renderQueued = false;
 let lastMatches = [];
+let lastDraftKey = '';
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -51,23 +52,27 @@ function draftObjectType(draft) {
   return String(draft.objectType || '').trim();
 }
 
+function draftDuplicateKey(draft, matches) {
+  return JSON.stringify({
+    address: draftAddress(draft),
+    objectType: draftObjectType(draft),
+    matches: matches.map((deal) => ({ id: deal.id, exactObject: Boolean(deal.exactObject) })).sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  });
+}
+
 function hasUsefulAddress(draft) {
   return draftAddress(draft).length >= 6 && draft.stage !== 'lead_only';
 }
 
-function duplicateKey(matches) {
-  return JSON.stringify(matches.map((deal) => deal.id).sort());
-}
-
-function hasFreshConfirmation(matches) {
+function hasFreshConfirmation(key) {
   const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
-  const key = sessionStorage.getItem(CONFIRMED_DUP_KEY) || '';
-  return value > 0 && Date.now() - value < 30000 && key === duplicateKey(matches);
+  const confirmedKey = sessionStorage.getItem(CONFIRMED_DUP_KEY) || '';
+  return value > 0 && Date.now() - value < 30000 && confirmedKey === key;
 }
 
-function markConfirmed(matches) {
+function markConfirmed(key) {
   sessionStorage.setItem(CONFIRMED_KEY, String(Date.now()));
-  sessionStorage.setItem(CONFIRMED_DUP_KEY, duplicateKey(matches));
+  sessionStorage.setItem(CONFIRMED_DUP_KEY, key);
 }
 
 function possibleDuplicates(draft) {
@@ -79,7 +84,7 @@ function possibleDuplicates(draft) {
     .filter((deal) => normalize(deal.address) === address)
     .map((deal) => ({
       ...deal,
-      exactObject: type && String(deal.object_type || '') === type
+      exactObject: Boolean(type && String(deal.object_type || '') === type)
     }))
     .sort((a, b) => Number(b.exactObject) - Number(a.exactObject))
     .slice(0, 3);
@@ -112,15 +117,17 @@ function moveNearCurrentStatus(existing) {
 
 function renderPanel() {
   const existing = document.querySelector('[data-spn-duplicate-guard]');
-  const matches = possibleDuplicates(readDraft());
+  const draft = readDraft();
+  const matches = possibleDuplicates(draft);
+  const key = draftDuplicateKey(draft, matches);
   lastMatches = matches;
+  lastDraftKey = key;
 
   if (!matches.length) {
     existing?.remove();
     return;
   }
 
-  const key = duplicateKey(matches);
   if (existing?.dataset.duplicateKey === key) {
     moveNearCurrentStatus(existing);
     return;
@@ -169,12 +176,14 @@ function guardSave(event) {
   const button = saveButtonFromEvent(event);
   if (!button || button.disabled) return;
 
-  const matches = lastMatches.length ? lastMatches : possibleDuplicates(readDraft());
-  if (!matches.length || hasFreshConfirmation(matches)) return;
+  const draft = readDraft();
+  const matches = lastMatches.length ? lastMatches : possibleDuplicates(draft);
+  const key = lastDraftKey || draftDuplicateKey(draft, matches);
+  if (!matches.length || hasFreshConfirmation(key)) return;
 
   const message = `Похоже, сделка с таким адресом уже есть:\n\n${matches.map((deal, index) => `${index + 1}. ${deal.display_title || deal.title || deal.address || deal.id} (${shortId(deal.id)})`).join('\n')}\n\nСохранить новую карточку всё равно?`;
   if (confirm(message)) {
-    markConfirmed(matches);
+    markConfirmed(key);
     return;
   }
 
