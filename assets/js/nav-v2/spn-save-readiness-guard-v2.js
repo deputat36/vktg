@@ -1,5 +1,6 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
 const CONFIRMED_KEY = 'nav_spn_save_confirmed_at_v2';
+const CONFIRMED_GAPS_KEY = 'nav_spn_save_confirmed_gaps_v2';
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -11,6 +12,15 @@ function filled(value) {
 
 function arr(deal, key) {
   return Array.isArray(deal?.[key]) ? deal[key] : [];
+}
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"]/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;'
+  }[char]));
 }
 
 function hasBuyer(deal) {
@@ -26,27 +36,37 @@ function needsDeposit(deal) {
     || (['terms_discussed', 'main_deal'].includes(deal.stage) && hasBuyer(deal));
 }
 
+function gap(text, step) {
+  return { text, step };
+}
+
 function criticalGaps(deal) {
   const gaps = [];
-  if (!filled(deal.preparationMode)) gaps.push('не выбрано, что готовим');
-  if (!filled(deal.representation)) gaps.push('не выбрано, кого сопровождаем');
-  if (!filled(deal.stage)) gaps.push('не указана стадия');
-  if (!filled(deal.objectType)) gaps.push('не выбран тип объекта');
-  if (!filled(deal.address) && deal.stage !== 'lead_only') gaps.push('нет адреса или ориентира');
-  if (hasBuyer(deal) && !arr(deal, 'payments').length && !filled(deal.moneyComment)) gaps.push('непонятен источник денег покупателя');
-  if (needsDeposit(deal) && deal.settlementsAgreed !== true) gaps.push('расчеты не согласованы');
-  if (needsDeposit(deal) && deal.expensesAgreed !== true) gaps.push('расходы не согласованы');
-  if (!filled(deal.clientNextStep)) gaps.push('не указан ближайший шаг с клиентом');
+  if (!filled(deal.preparationMode)) gaps.push(gap('не выбрано, что готовим', 'Что готовим'));
+  if (!filled(deal.representation)) gaps.push(gap('не выбрано, кого сопровождаем', 'Сторона'));
+  if (!filled(deal.stage)) gaps.push(gap('не указана стадия', 'Стадия'));
+  if (!filled(deal.objectType)) gaps.push(gap('не выбран тип объекта', 'Объект'));
+  if (!filled(deal.address) && deal.stage !== 'lead_only') gaps.push(gap('нет адреса или ориентира', 'Детали объекта'));
+  if (hasBuyer(deal) && !arr(deal, 'payments').length && !filled(deal.moneyComment)) gaps.push(gap('непонятен источник денег покупателя', 'Деньги'));
+  if (needsDeposit(deal) && deal.settlementsAgreed !== true) gaps.push(gap('расчеты не согласованы', 'Расчеты и расходы'));
+  if (needsDeposit(deal) && deal.expensesAgreed !== true) gaps.push(gap('расходы не согласованы', 'Расчеты и расходы'));
+  if (!filled(deal.clientNextStep)) gaps.push(gap('не указан ближайший шаг с клиентом', 'Итог'));
   return gaps;
 }
 
-function hasFreshConfirmation() {
-  const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
-  return value > 0 && Date.now() - value < 30000;
+function gapKey(gaps) {
+  return JSON.stringify(gaps.map((item) => item.text));
 }
 
-function markConfirmed() {
+function hasFreshConfirmation(gaps) {
+  const value = Number(sessionStorage.getItem(CONFIRMED_KEY) || 0);
+  const confirmedGaps = sessionStorage.getItem(CONFIRMED_GAPS_KEY) || '';
+  return value > 0 && Date.now() - value < 30000 && confirmedGaps === gapKey(gaps);
+}
+
+function markConfirmed(gaps) {
   sessionStorage.setItem(CONFIRMED_KEY, String(Date.now()));
+  sessionStorage.setItem(CONFIRMED_GAPS_KEY, gapKey(gaps));
 }
 
 function statusHost() {
@@ -56,8 +76,12 @@ function statusHost() {
 function showWarning(gaps) {
   const host = statusHost();
   if (!host) return;
+  const key = gapKey(gaps);
+  if (host.dataset.saveGapKey === key) return;
+  host.dataset.saveGapKey = key;
   host.className = 'status warn';
-  host.innerHTML = `Перед сохранением есть пробелы: ${gaps.map((item) => `• ${item}`).join(' ')}`;
+  host.innerHTML = `<b>Сохранение остановлено: есть важные пробелы.</b><ul style="margin:8px 0 0 18px;padding:0">${gaps.map((item) => `<li>${esc(item.text)} <span class="small">шаг: ${esc(item.step)}</span></li>`).join('')}</ul>`;
+  host.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function saveButtonFromEvent(event) {
@@ -67,15 +91,15 @@ function saveButtonFromEvent(event) {
 function guardSave(event) {
   const button = saveButtonFromEvent(event);
   if (!button || button.disabled) return;
-  if (hasFreshConfirmation()) return;
 
   const gaps = criticalGaps(readDraft());
   if (!gaps.length) return;
+  if (hasFreshConfirmation(gaps)) return;
 
   showWarning(gaps);
-  const message = `Перед сохранением есть важные пробелы:\n\n${gaps.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n\nСохранить черновик в CRM всё равно?`;
+  const message = `Перед сохранением есть важные пробелы:\n\n${gaps.map((item, index) => `${index + 1}. ${item.text} (шаг: ${item.step})`).join('\n')}\n\nСохранить черновик в CRM всё равно?`;
   if (confirm(message)) {
-    markConfirmed();
+    markConfirmed(gaps);
     return;
   }
 
