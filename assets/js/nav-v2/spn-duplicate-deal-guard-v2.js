@@ -11,7 +11,8 @@ const ADDRESS_STOP_WORDS = new Set([
 let deals = [];
 let profile = null;
 let loaded = false;
-let loadStarted = false;
+let loadInProgress = false;
+let loadAttempted = false;
 let loadError = '';
 let renderQueued = false;
 
@@ -153,9 +154,12 @@ function panelHtml(matches, key, draft) {
 }
 
 function unavailablePanelHtml() {
+  const buttonText = loadInProgress ? 'Проверяю...' : 'Повторить проверку';
+  const disabled = loadInProgress ? 'disabled aria-busy="true"' : '';
   return `<div class="status warn" data-spn-duplicate-guard="true" data-duplicate-key="unavailable" style="margin:10px 0">
     <b>Проверка дублей временно недоступна.</b>
-    <div style="margin-top:6px">Список существующих сделок не загрузился. Перед сохранением откройте «Мои сделки» и проверьте адрес вручную либо осознанно подтвердите продолжение.</div>
+    <div style="margin-top:6px">Список существующих сделок не загрузился. Черновик сохранён в браузере; повторите проверку без перезагрузки страницы.</div>
+    <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn light" type="button" data-spn-retry-duplicates="1" ${disabled}>${buttonText}</button><a class="btn light" href="./deals-v2.html" target="_blank" rel="noopener">Открыть мои сделки</a></div>
   </div>`;
 }
 
@@ -170,11 +174,7 @@ function renderPanel() {
   const existing = document.querySelector('[data-spn-duplicate-guard]');
   const draft = readDraft();
 
-  if (!loaded && loadError && hasUsefulAddress(draft)) {
-    if (existing?.dataset.duplicateKey === 'unavailable') {
-      moveNearCurrentStatus(existing);
-      return;
-    }
+  if (!loaded && loadAttempted && hasUsefulAddress(draft)) {
     if (existing) existing.outerHTML = unavailablePanelHtml();
     else hostNode()?.insertAdjacentHTML('afterend', unavailablePanelHtml());
     moveNearCurrentStatus(document.querySelector('[data-spn-duplicate-guard]'));
@@ -216,20 +216,29 @@ function scheduleRender() {
   });
 }
 
-async function loadDeals() {
-  if (loadStarted) return;
-  loadStarted = true;
+async function loadDeals({ force = false } = {}) {
+  if (loadInProgress || (loaded && !force)) return;
+  loadInProgress = true;
+  loadAttempted = true;
+  if (force) {
+    loaded = false;
+    loadError = '';
+    clearConfirmation();
+    renderPanel();
+  }
+
   try {
     const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 12000);
     profile = data.profile || null;
     deals = data.items || [];
     loaded = true;
     loadError = '';
-    renderPanel();
   } catch (error) {
     loaded = false;
     loadError = error?.message || 'Не удалось загрузить сделки.';
     clearConfirmation();
+  } finally {
+    loadInProgress = false;
     renderPanel();
   }
 }
@@ -283,7 +292,17 @@ function guardSave(event) {
 }
 
 document.addEventListener('input', () => { loadDeals(); scheduleRender(); }, true);
-document.addEventListener('click', () => { loadDeals(); scheduleRender(); }, true);
+document.addEventListener('click', (event) => {
+  const retry = event.target?.closest?.('[data-spn-retry-duplicates]');
+  if (retry) {
+    event.preventDefault();
+    event.stopPropagation();
+    loadDeals({ force: true });
+    return;
+  }
+  loadDeals();
+  scheduleRender();
+}, true);
 document.addEventListener('pointerup', guardSave, true);
 document.addEventListener('click', guardSave, true);
 window.addEventListener('storage', scheduleRender);
