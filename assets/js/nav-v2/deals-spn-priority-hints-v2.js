@@ -13,6 +13,12 @@ function number(value) {
   return Number(value || 0);
 }
 
+function dateText(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('ru-RU');
+}
+
 function isRedRisk(deal) {
   return deal?.risk_level === 'red' || number(deal?.red_risks_count) > 0;
 }
@@ -25,12 +31,26 @@ function titleFor(deal) {
   return String(deal?.display_title || '').trim();
 }
 
+function taskDeadlineItem(deal) {
+  const overdue = number(deal?.overdue_tasks_count);
+  const open = number(deal?.open_tasks_count);
+  const due = dateText(deal?.next_task_due_date);
+
+  if (overdue > 0) return `Закрыть просроченные задачи: ${overdue}. Ближайший срок: ${due || 'уточнить в карточке'}.`;
+  if (open > 0 && !due) return `Назначить сроки открытым задачам: без даты остаётся ${open}.`;
+  if (open > 0 && due) return `Проверить ближайший срок задач: ${due}. Открыто задач: ${open}.`;
+  return '';
+}
+
 function priorityItems(deal) {
   const items = [];
 
   if (isRework(deal)) {
     items.push('Закрыть доработку: открыть карточку, исправить замечания и отправить на повторную проверку.');
   }
+
+  const deadlineItem = taskDeadlineItem(deal);
+  if (deadlineItem) items.push(deadlineItem);
 
   if (number(deal?.missing_documents_count) > 0) {
     items.push(`Собрать обязательные документы: не хватает ${number(deal.missing_documents_count)}.`);
