@@ -1,5 +1,5 @@
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
-const VISIBLE_ROLES = new Set(['owner', 'admin', 'lawyer']);
+const VISIBLE_ROLES = new Set(['owner', 'admin', 'lawyer', 'spn']);
 
 let data = null;
 let applyQueued = false;
@@ -18,6 +18,10 @@ function clean(value) {
   return String(value || '').trim();
 }
 
+function samePerson(left, right) {
+  return clean(left).toLocaleLowerCase('ru-RU') === clean(right).toLocaleLowerCase('ru-RU');
+}
+
 function cssEscape(value) {
   const text = String(value || '');
   if (window.CSS?.escape) return CSS.escape(text);
@@ -32,6 +36,17 @@ function findDealCard(dealId) {
 function responsibleText(deal) {
   const seller = clean(deal?.seller_spn);
   const buyer = clean(deal?.buyer_spn);
+  const ownName = clean(data?.profile?.full_name);
+
+  if (data?.profile?.role === 'spn' && ownName) {
+    const ownSeller = seller && samePerson(seller, ownName);
+    const ownBuyer = buyer && samePerson(buyer, ownName);
+    if (ownSeller && ownBuyer) return 'Вы ведёте продавца и покупателя';
+    if (ownSeller && buyer) return `Вы ведёте продавца · покупателя ведёт: ${buyer}`;
+    if (ownBuyer && seller) return `Продавца ведёт: ${seller} · вы ведёте покупателя`;
+    if (ownSeller) return 'Вы ведёте продавца';
+    if (ownBuyer) return 'Вы ведёте покупателя';
+  }
 
   if (seller && buyer && seller === buyer) return `СПН: ${seller}`;
   if (seller && buyer) return `СПН продавца: ${seller} · СПН покупателя: ${buyer}`;
@@ -47,8 +62,9 @@ function renderResponsible(card, deal) {
   const existing = card.querySelector('[data-responsible-spn]');
   if (existing?.dataset.responsibleKey === key) return;
 
+  const heading = data?.profile?.role === 'spn' ? 'Ваша зона ответственности:' : 'Подготовку ведёт:';
   const html = `<div class="status" data-responsible-spn="true" data-responsible-key="${key}" style="margin:10px 0">
-    <b>Подготовку ведёт:</b> ${esc(text)}
+    <b>${heading}</b> ${esc(text)}
   </div>`;
 
   if (existing) {
