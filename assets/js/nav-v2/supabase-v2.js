@@ -4,7 +4,10 @@ const SESSION_KEY = 'nav_session_v2';
 const PROFILE_CACHE_KEY = 'nav_profile_v2';
 const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;
 const LAST_EMAIL_KEY = 'nav_last_email_v2';
+const WIZARD_RECOVERY_TTL_MS = 2 * 60 * 1000;
 let profileRequest = null;
+let lastDealsListIds = new Set();
+let wizardSaveRecovery = null;
 
 function readSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
@@ -170,10 +173,55 @@ export function requireUser() {
   return user;
 }
 
+function rememberDealsList(data) {
+  const items = Array.isArray(data?.items) ? data.items : [];
+  lastDealsListIds = new Set(items.map((item) => item?.id).filter(Boolean));
+}
+
+function beginWizardSaveRecovery() {
+  wizardSaveRecovery = {
+    baselineIds: new Set(lastDealsListIds),
+    hasBaseline: lastDealsListIds.size > 0,
+    startedAt: Date.now(),
+    active: false
+  };
+}
+
+function activateWizardSaveRecovery() {
+  if (!wizardSaveRecovery) beginWizardSaveRecovery();
+  wizardSaveRecovery.active = true;
+  wizardSaveRecovery.startedAt = Date.now();
+}
+
+function recoverNewDealsOnly(data) {
+  const recovery = wizardSaveRecovery;
+  if (!recovery?.active) {
+    rememberDealsList(data);
+    return data;
+  }
+  if (Date.now() - recovery.startedAt > WIZARD_RECOVERY_TTL_MS) {
+    wizardSaveRecovery = null;
+    rememberDealsList(data);
+    return data;
+  }
+
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const newItems = recovery.hasBaseline
+    ? items.filter((item) => item?.id && !recovery.baselineIds.has(item.id))
+    : [];
+
+  if (newItems.length) {
+    wizardSaveRecovery = null;
+    rememberDealsList(data);
+  }
+  return { ...data, items: newItems };
+}
+
 export async function rpc(name, payload = {}, timeout = 20000) {
   requireUser();
   const started = performance.now();
   let refreshed = false;
+  if (name === 'nav_v2_save_wizard_result') beginWizardSaveRecovery();
   try {
     let response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST', headers: headers(), body: JSON.stringify(payload)
@@ -185,9 +233,14 @@ export async function rpc(name, payload = {}, timeout = 20000) {
         method: 'POST', headers: headers(), body: JSON.stringify(payload)
       }, timeout);
     }
-    const data = await parse(response);
+    let data = await parse(response);
     if (name === 'nav_v2_get_my_profile') saveCachedProfile(data?.profile || null);
+    if (name === 'nav_v2_get_deals_list') data = recoverNewDealsOnly(data);
+    if (name === 'nav_v2_save_wizard_result') wizardSaveRecovery = null;
     return data;
+  } catch (error) {
+    if (name === 'nav_v2_save_wizard_result') activateWizardSaveRecovery();
+    throw error;
   } finally {
     console.info(`[nav-v2] RPC ${name}: ${Math.round(performance.now() - started)} ms${refreshed ? ' (после refresh)' : ''}`);
   }
