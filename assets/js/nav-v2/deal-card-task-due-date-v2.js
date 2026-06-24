@@ -12,6 +12,14 @@ function isDemoDeal() {
   return document.querySelector('.hero .pill.blue')?.textContent?.trim() === 'ДЕМО';
 }
 
+function todayValue() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function dateLabel(value) {
   if (!value) return '<span class="pill yellow">срок не установлен</span>';
   const due = new Date(`${value}T00:00:00`);
@@ -35,7 +43,7 @@ function editorHtml(task) {
     <div class="actions" style="justify-content:flex-start;align-items:flex-end">
       <div class="field" style="margin:0;min-width:180px">
         <label for="taskDue-${esc(task.id)}">Срок выполнения</label>
-        <input id="taskDue-${esc(task.id)}" type="date" value="${esc(value)}" data-task-due-input="${esc(task.id)}">
+        <input id="taskDue-${esc(task.id)}" type="date" min="${todayValue()}" value="${esc(value)}" data-task-due-input="${esc(task.id)}">
       </div>
       <button class="btn primary" type="button" data-task-due-save="${esc(task.id)}">Сохранить срок</button>
       ${value ? `<button class="btn light" type="button" data-task-due-clear="${esc(task.id)}">Снять срок</button>` : ''}
@@ -45,10 +53,22 @@ function editorHtml(task) {
   </div>`;
 }
 
-function findTaskItem(taskId) {
+function summaryHtml(task) {
+  return `<div class="actions" data-task-due-summary="${esc(task.id)}" style="justify-content:flex-start;margin-top:8px">
+    ${dateLabel(task.due_date)}
+    <span class="small">Срок меняет ответственный специалист.</span>
+  </div>`;
+}
+
+function findTaskItem(task) {
   const buttons = document.querySelectorAll('[data-task-id]');
   for (const button of buttons) {
-    if (button.dataset.taskId === taskId) return button.closest('.list-item');
+    if (button.dataset.taskId === task.id) return button.closest('.list-item');
+  }
+  const items = document.querySelectorAll('.list-item');
+  for (const item of items) {
+    const title = item.querySelector(':scope > b')?.textContent?.trim();
+    if (title === String(task.title || '').trim()) return item;
   }
   return null;
 }
@@ -56,10 +76,13 @@ function findTaskItem(taskId) {
 function injectEditors() {
   if (!isTasksTab() || !Array.isArray(cardData?.tasks)) return;
   cardData.tasks.forEach((task) => {
-    if (task.can_change_status !== true) return;
-    const item = findTaskItem(task.id);
-    if (!item || item.querySelector('[data-task-due-editor]')) return;
-    item.insertAdjacentHTML('beforeend', editorHtml(task));
+    const item = findTaskItem(task);
+    if (!item) return;
+    if (task.can_change_status === true) {
+      if (!item.querySelector('[data-task-due-editor]')) item.insertAdjacentHTML('beforeend', editorHtml(task));
+      return;
+    }
+    if (!item.querySelector('[data-task-due-summary]')) item.insertAdjacentHTML('beforeend', summaryHtml(task));
   });
 }
 
@@ -83,6 +106,10 @@ async function saveDueDate(taskId, value, button) {
   const task = cardData?.tasks?.find((item) => item.id === taskId);
   if (!task || task.can_change_status !== true) {
     setPageStatus('Нет прав менять срок этой задачи.', 'error');
+    return;
+  }
+  if (value && value < todayValue()) {
+    setPageStatus('Срок задачи не может быть в прошлом.', 'error');
     return;
   }
   if (isDemoDeal() && !confirm('Это демо-сделка. Изменить срок тестовой задачи?')) return;
