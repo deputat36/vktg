@@ -28,7 +28,7 @@ function findDealCard(dealId) {
 }
 
 function updatedTime(deal) {
-  const value = Date.parse(deal?.updated_at || '');
+  const value = Date.parse(deal?.last_activity_at || deal?.updated_at || '');
   return Number.isFinite(value) ? value : null;
 }
 
@@ -51,29 +51,29 @@ function recencyState(deal) {
     return {
       cls: 'warn',
       key: 'unknown',
-      text: 'Дата обновления неизвестна. Перед следующим действием перепроверьте условия с клиентом.'
+      text: 'Дата активности неизвестна. Перед следующим действием перепроверьте условия с клиентом.'
     };
   }
 
   const elapsed = Math.max(0, Date.now() - time);
   if (FINAL_STATUSES.has(deal?.status)) {
-    return { cls: '', key: `final-${time}`, text: `Последнее изменение: ${age}.` };
+    return { cls: '', key: `final-${time}`, text: `Последняя активность: ${age}.` };
   }
   if (elapsed >= CRITICAL_AFTER_MS) {
     return {
       cls: 'error',
       key: `critical-${time}`,
-      text: `Данные не обновлялись ${age}. До задатка или сделки заново подтвердите цену, участников, документы, расчёты и расходы.`
+      text: `В карточке не было активности ${age}. До задатка или сделки заново подтвердите цену, участников, документы, расчёты и расходы.`
     };
   }
   if (elapsed >= WARN_AFTER_MS) {
     return {
       cls: 'warn',
       key: `warn-${time}`,
-      text: `Данные обновлялись ${age}. Перед звонком клиенту проверьте, не изменились ли условия и ближайший шаг.`
+      text: `Последняя активность была ${age}. Перед звонком клиенту проверьте, не изменились ли условия и ближайший шаг.`
     };
   }
-  return { cls: '', key: `fresh-${time}`, text: `Данные обновлены ${age}.` };
+  return { cls: '', key: `fresh-${time}`, text: `Последняя активность: ${age}.` };
 }
 
 function renderRecency(card, deal) {
