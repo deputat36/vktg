@@ -1,6 +1,9 @@
 import { rpc } from './supabase-v2.js';
 
 const ID = 'dealResponsibilitySnapshotV2';
+let cachedSnapshot = null;
+let loading = false;
+let lastKey = '';
 
 function dealId() {
   return new URLSearchParams(location.search).get('id') || '';
@@ -48,19 +51,39 @@ function openCounts(counts) {
 }
 
 function target() {
-  return document.querySelector('.tabs') || document.querySelector('.card') || document.querySelector('#app main') || document.querySelector('#app');
+  const main = document.querySelector('#app main.nav-v2-shell') || document.querySelector('#app main');
+  if (!main) return null;
+  return main.querySelector('.tabs') || main.querySelector('.card') || main;
 }
 
-function draw(snapshot) {
+function snapshotKey(snapshot) {
+  return JSON.stringify({
+    clients: snapshot?.client_owner_text || '',
+    lawyer: snapshot?.legal_owner_text || '',
+    action: snapshot?.next_handoff_action || '',
+    counts: snapshot?.open_counts || {}
+  });
+}
+
+function ensureBox(place) {
   let box = document.getElementById(ID);
-  if (!box) {
-    box = document.createElement('section');
-    box.id = ID;
-    box.className = 'card';
-    box.style.margin = '14px 0';
-    box.style.borderLeft = '4px solid rgba(37,99,235,.45)';
-    target()?.after(box);
-  }
+  if (box) return box;
+  box = document.createElement('section');
+  box.id = ID;
+  box.className = 'card';
+  box.style.margin = '14px 0';
+  box.style.borderLeft = '4px solid rgba(37,99,235,.45)';
+  place.after(box);
+  return box;
+}
+
+function draw(snapshot, force = false) {
+  const place = target();
+  if (!place) return false;
+  const key = snapshotKey(snapshot);
+  if (!force && key === lastKey && document.getElementById(ID)) return true;
+  lastKey = key;
+  const box = ensureBox(place);
   box.innerHTML = '';
   const h2 = document.createElement('h2');
   h2.textContent = 'Ответственность и передача юристу';
@@ -77,18 +100,35 @@ function draw(snapshot) {
   appendList(box, 'Что СПН передает юристу', contract.spn_must_provide);
   appendList(box, 'Что юрист возвращает СПН', contract.lawyer_must_provide);
   appendList(box, 'Что СПН делает после ответа юриста', contract.spn_after_lawyer);
+  return true;
 }
 
 async function load() {
   const id = dealId();
-  if (!id) return;
+  if (!id || loading) return;
+  loading = true;
   try {
-    const snapshot = await rpc('nav_v2_get_deal_responsibility_snapshot', { p_deal_id: id }, 10000);
-    draw(snapshot || {});
-  } catch (_) {}
+    cachedSnapshot = await rpc('nav_v2_get_deal_responsibility_snapshot', { p_deal_id: id }, 10000);
+    draw(cachedSnapshot || {}, true);
+  } catch (_) {
+    // Карточка может быть еще не авторизована или сессия может обновляться основным модулем.
+  } finally {
+    loading = false;
+  }
+}
+
+function ensureRendered() {
+  if (cachedSnapshot && !document.getElementById(ID)) draw(cachedSnapshot, true);
+  if (!cachedSnapshot && !loading && target()) load();
 }
 
 window.addEventListener('nav-v2:deal-card-updated', load);
 window.addEventListener('nav-v2:document-workflow-updated', load);
 window.addEventListener('nav-v2:task-updated', load);
+
+const app = document.getElementById('app');
+if (app) {
+  new MutationObserver(ensureRendered).observe(app, { childList: true, subtree: true });
+}
+
 load();
