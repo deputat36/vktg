@@ -1,7 +1,12 @@
+import { rpc } from './supabase-v2.js';
+
 const EVENT = 'nav-v2:deals-loaded';
 const ROLES = new Set(['owner', 'admin', 'lawyer', 'spn']);
 let state = null;
 let queued = false;
+let scoreLoading = false;
+let scoreKey = '';
+let scores = new Map();
 
 function clean(value) {
   return String(value || '').trim();
@@ -43,7 +48,7 @@ function lawyerLine(deal) {
   return 'Юрист подключается при рисках или договоре.';
 }
 
-function handoffGaps(deal) {
+function localHandoffGaps(deal) {
   const gaps = [];
   if (!clean(deal && deal.seller_name)) gaps.push('ФИО продавца');
   if (!clean(deal && deal.seller_phone)) gaps.push('телефон продавца');
@@ -57,12 +62,43 @@ function handoffGaps(deal) {
   return gaps;
 }
 
+function serverScore(deal) {
+  return scores.get(String(deal && deal.id || '')) || null;
+}
+
 function readinessLine(deal) {
-  const gaps = handoffGaps(deal);
+  const server = serverScore(deal);
+  const gaps = localHandoffGaps(deal);
+  if (server) {
+    const count = Number(server.handoff_gap_count || 0);
+    const score = Number(server.handoff_readiness_score || 0);
+    if (!count) return 'Передача юристу: базовые данные заполнены, готовность 100%.';
+    const shown = gaps.length ? gaps.slice(0, 4).join(', ') : 'откройте карточку для деталей';
+    const tail = gaps.length > 4 ? ' и ещё ' + (gaps.length - 4) : '';
+    return 'Перед юристом дозаполнить: ' + shown + tail + '. Готовность: ' + score + '%, пробелов: ' + count + '.';
+  }
   if (!gaps.length) return 'Передача юристу: базовые данные заполнены.';
   const shown = gaps.slice(0, 4).join(', ');
   const tail = gaps.length > 4 ? ' и ещё ' + (gaps.length - 4) : '';
   return 'Перед юристом дозаполнить: ' + shown + tail + '.';
+}
+
+async function loadScores() {
+  if (!state || scoreLoading || !Array.isArray(state.items)) return;
+  const ids = state.items.map((deal) => deal && deal.id).filter(Boolean).slice(0, 100);
+  const key = ids.join('|');
+  if (!ids.length || key === scoreKey) return;
+  scoreLoading = true;
+  try {
+    const data = await rpc('nav_v2_get_handoff_scores', { p_deal_ids: ids }, 12000);
+    scores = new Map((Array.isArray(data && data.items) ? data.items : []).map((item) => [String(item.deal_id), item]));
+    scoreKey = key;
+    apply();
+  } catch (_) {
+    // Если серверная оценка недоступна, остаётся локальный fallback по полям списка.
+  } finally {
+    scoreLoading = false;
+  }
 }
 
 function applyOne(deal) {
@@ -104,6 +140,14 @@ function schedule() {
   requestAnimationFrame(() => { queued = false; apply(); });
 }
 
-window.addEventListener(EVENT, (event) => { state = event.detail; apply(); });
+function setState(next) {
+  state = next;
+  scores = new Map();
+  scoreKey = '';
+  apply();
+  loadScores();
+}
+
+window.addEventListener(EVENT, (event) => { if (event.detail) setState(event.detail); });
 new MutationObserver(schedule).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
-if (window.navV2Deals) { state = window.navV2Deals; apply(); }
+if (window.navV2Deals) setState(window.navV2Deals);
