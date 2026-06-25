@@ -3,6 +3,7 @@ import { rpc } from './supabase-v2.js';
 const dealId = new URLSearchParams(location.search).get('id');
 let permissions = new Map();
 let loaded = false;
+let loading = null;
 let applyQueued = false;
 let reloadQueued = false;
 
@@ -24,6 +25,13 @@ function roleLabel(role) {
 
 function canChangeTask(task) {
   return boolValue(task?.can_change_status);
+}
+
+function setInlineStatus(text, type = 'warn') {
+  const target = document.querySelector('#pageStatus') || document.querySelector('#app .status');
+  if (!target) return;
+  target.className = 'status ' + type;
+  target.textContent = text;
 }
 
 function ensureHint(container, task) {
@@ -73,30 +81,48 @@ function queueReloadPermissions() {
   reloadQueued = true;
   setTimeout(async () => {
     reloadQueued = false;
-    await loadPermissions();
+    await loadPermissions(true);
   }, 900);
 }
 
-async function loadPermissions() {
-  if (!dealId) return;
-  try {
-    const card = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000);
-    permissions = new Map((card.tasks || []).map((task) => [task.id, task]));
-    loaded = true;
-    applyTaskPermissions();
-  } catch (_) {
-    loaded = false;
+async function loadPermissions(force = false) {
+  if (!dealId) return false;
+  if (loaded && !force) return true;
+  if (loading) return loading;
+  loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000)
+    .then((card) => {
+      permissions = new Map((card.tasks || []).map((task) => [task.id, task]));
+      loaded = true;
+      applyTaskPermissions();
+      return true;
+    })
+    .catch(() => {
+      loaded = false;
+      return false;
+    })
+    .finally(() => { loading = null; });
+  return loading;
+}
+
+async function ensureLoadedBeforeAction(event) {
+  const button = event.target.closest('button[data-task-id][data-task-status]');
+  if (!button) return;
+  if (loaded) {
+    if (!button.disabled) queueReloadPermissions();
+    return;
   }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  setInlineStatus('Проверяю права на изменение задачи...');
+  const ok = await loadPermissions();
+  if (ok) setInlineStatus('Права проверены. Повторите действие по задаче.', 'ok');
+  else setInlineStatus('Не удалось проверить права по задаче. Попробуйте обновить карточку.', 'error');
 }
 
 const app = document.getElementById('app');
 if (app) {
   new MutationObserver(queueApply).observe(app, { childList: true, subtree: true });
-  app.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-task-id][data-task-status]');
-    if (button && !button.disabled) queueReloadPermissions();
-  }, true);
+  app.addEventListener('click', ensureLoadedBeforeAction, true);
 }
 
-loadPermissions();
 window.addEventListener('hashchange', queueApply);
