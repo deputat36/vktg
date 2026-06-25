@@ -1,4 +1,4 @@
-import './deals-handoff-summary-v2.js';
+import './deals-handoff-summary-v2.js?v=20260625-1035';
 
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
 const WARN_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
@@ -17,14 +17,11 @@ function esc(value) {
   }[char]));
 }
 
-function cssEscape(value) {
-  const text = String(value || '');
-  if (window.CSS?.escape) return CSS.escape(text);
-  return text.replace(/\/g, '\\').replace(/"/g, '\"');
-}
-
 function findDealCard(dealId) {
-  const link = document.querySelector(`a[href*="id=${cssEscape(dealId)}"]`);
+  const id = String(dealId || '');
+  const encoded = encodeURIComponent(id);
+  const links = Array.from(document.querySelectorAll('a[href*="deal-card-v2.html"]'));
+  const link = links.find((item) => item.href.includes(encoded) || item.href.includes(id));
   return link?.closest?.('article.deal-card') || null;
 }
 
