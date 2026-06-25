@@ -12,7 +12,7 @@ function add(name, value, ok = true) {
 function draw() {
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Проверка карточки</h1><p>${esc(dealId || 'id не указан')}</p></section>
-    <section class="card"><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./deal-card-v2.html?id=${encodeURIComponent(dealId)}&cache=${Date.now()}">Открыть карточку</a><a class="btn light" href="./deals-v2.html">Сделки</a></div></section>
+    <section class="card"><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./deal-card-v2.html?id=${encodeURIComponent(dealId)}&cache=${Date.now()}">Открыть карточку</a><a class="btn light" href="./deal-card-safe-v2.html?id=${encodeURIComponent(dealId)}&cache=${Date.now()}">Безопасный вход</a><a class="btn light" href="./deals-v2.html">Сделки</a></div></section>
     <section class="card"><h2>Результат</h2><div class="list">${rows.map((r) => `<div class="list-item"><b>${esc(r.name)}</b><span class="pill ${r.ok ? 'green' : 'red'}">${r.ok ? 'ok' : 'ошибка'}</span><p>${esc(r.value)}</p></div>`).join('') || '<div class="status">Запускаю проверку...</div>'}</div></section>
   </main>`;
 }
