@@ -4,6 +4,7 @@ const dealId = new URLSearchParams(location.search).get('id');
 let cardData = null;
 let loading = false;
 let scheduled = false;
+let observerStarted = false;
 
 const ROLE_LABELS = {
   owner: 'owner',
@@ -110,8 +111,9 @@ function panelHtml(doc) {
   </div>`;
 }
 
-async function loadCard() {
+async function loadCard(force = false) {
   if (!dealId || loading) return false;
+  if (cardData && !force) return true;
   loading = true;
   try {
     cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
@@ -177,7 +179,7 @@ async function saveWorkflow(docId) {
       p_clear_assigned_to: !assignedTo,
       p_clear_due_date: !dueDate
     });
-    const refreshed = await loadCard();
+    const refreshed = await loadCard(true);
     if (!refreshed) return;
     refreshDocumentUi(docId);
     setStatus('Документ обновлен.');
@@ -201,21 +203,28 @@ function enhanceDocuments() {
   });
 }
 
-function scheduleEnhance() {
+function hasDocumentButtons() {
+  return Boolean(document.querySelector('[data-doc-id]'));
+}
+
+async function scheduleEnhance() {
   if (scheduled) return;
   scheduled = true;
-  requestAnimationFrame(() => {
+  requestAnimationFrame(async () => {
     scheduled = false;
-    enhanceDocuments();
+    if (!hasDocumentButtons()) return;
+    const loaded = await loadCard();
+    if (loaded) enhanceDocuments();
   });
 }
 
-async function boot() {
-  await loadCard();
-  enhanceDocuments();
-
+function boot() {
   const app = document.getElementById('app') || document.body;
-  new MutationObserver(scheduleEnhance).observe(app, { childList: true, subtree: true });
+  if (!observerStarted) {
+    observerStarted = true;
+    new MutationObserver(scheduleEnhance).observe(app, { childList: true, subtree: true });
+  }
+  scheduleEnhance();
 }
 
 boot();
