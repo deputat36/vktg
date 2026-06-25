@@ -90,7 +90,7 @@ async function ensureCardData() {
   if (!dealId || !isTasksTab()) return;
   if (cardData) return injectEditors();
   if (!loading) {
-    loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000)
+    loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId })
       .then((data) => { cardData = data; return data; })
       .finally(() => { loading = null; });
   }
