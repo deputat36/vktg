@@ -1,3 +1,5 @@
+import './deals-handoff-summary-v2.js';
+
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
 const WARN_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 const CRITICAL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
@@ -7,19 +9,18 @@ let data = null;
 let applyQueued = false;
 
 function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  return String(value ?? '').replace(/[&<>"]/g, (char) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+    '"': '&quot;'
   }[char]));
 }
 
 function cssEscape(value) {
   const text = String(value || '');
   if (window.CSS?.escape) return CSS.escape(text);
-  return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return text.replace(/\/g, '\\').replace(/"/g, '\"');
 }
 
 function findDealCard(dealId) {
@@ -91,7 +92,7 @@ function renderRecency(card, deal) {
     return;
   }
 
-  const responsibility = card.querySelector('[data-responsible-spn]');
+  const responsibility = card.querySelector('[data-responsible-spn]') || card.querySelector('[data-handoff-summary]');
   if (responsibility) responsibility.insertAdjacentHTML('afterend', html);
   else card.querySelector('.deal-head')?.insertAdjacentHTML('afterend', html);
 }
