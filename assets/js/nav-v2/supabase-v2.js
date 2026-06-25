@@ -5,6 +5,7 @@ const PROFILE_CACHE_KEY = 'nav_profile_v2';
 const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;
 const LAST_EMAIL_KEY = 'nav_last_email_v2';
 const WIZARD_RECOVERY_TTL_MS = 2 * 60 * 1000;
+const DEFAULT_RPC_TIMEOUT_MS = 45000;
 let profileRequest = null;
 let lastDealsListIds = new Set();
 let wizardSaveRecovery = null;
@@ -99,7 +100,7 @@ function authErrorText(error) {
   return message || 'Не удалось войти. Проверьте email и пароль.';
 }
 
-async function safeFetch(url, options = {}, timeout = 20000) {
+async function safeFetch(url, options = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
@@ -217,7 +218,7 @@ function recoverNewDealsOnly(data) {
   return { ...data, items: newItems };
 }
 
-export async function rpc(name, payload = {}, timeout = 20000) {
+export async function rpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) {
   requireUser();
   const started = performance.now();
   let refreshed = false;
