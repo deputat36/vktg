@@ -13,9 +13,9 @@ function text(value) {
   return String(value || '').trim();
 }
 
-function appendLine(root, title, value) {
+function appendLine(root, title, value, className = 'status') {
   const div = document.createElement('div');
-  div.className = 'status';
+  div.className = className;
   const b = document.createElement('b');
   b.textContent = title + ': ';
   div.appendChild(b);
@@ -50,6 +50,21 @@ function openCounts(counts) {
   return parts.join(' · ') || 'нет открытых действий';
 }
 
+function readinessClass(snapshot) {
+  if (snapshot?.handoff_ready === true) return 'status ok';
+  const gaps = Number(snapshot?.handoff_gap_count || 0);
+  return gaps > 3 ? 'status error' : 'status warn';
+}
+
+function appendHandoffReadiness(root, snapshot) {
+  const score = Number(snapshot?.handoff_readiness_score ?? 0);
+  const gaps = Array.isArray(snapshot?.handoff_gaps) ? snapshot.handoff_gaps : [];
+  const title = snapshot?.handoff_ready ? 'Готовность передачи юристу' : 'Пробелы передачи юристу';
+  const line = `${Number.isFinite(score) ? score : 0}% · ${text(snapshot?.handoff_status_text) || 'Проверьте данные перед юридической проверкой'}`;
+  appendLine(root, title, line, readinessClass(snapshot));
+  if (gaps.length) appendList(root, 'Что СПН должен дозаполнить перед юристом', gaps);
+}
+
 function target() {
   const main = document.querySelector('#app main.nav-v2-shell') || document.querySelector('#app main');
   if (!main) return null;
@@ -61,7 +76,10 @@ function snapshotKey(snapshot) {
     clients: snapshot?.client_owner_text || '',
     lawyer: snapshot?.legal_owner_text || '',
     action: snapshot?.next_handoff_action || '',
-    counts: snapshot?.open_counts || {}
+    counts: snapshot?.open_counts || {},
+    gaps: snapshot?.handoff_gaps || [],
+    score: snapshot?.handoff_readiness_score || 0,
+    ready: snapshot?.handoff_ready === true
   });
 }
 
@@ -94,6 +112,7 @@ function draw(snapshot, force = false) {
   box.appendChild(p);
   appendLine(box, 'Клиенты', text(snapshot.client_owner_text) || 'СПН по клиентам не назначен');
   appendLine(box, 'Юрист', text(snapshot.legal_owner_text) || 'Юридическая ответственность не определена');
+  appendHandoffReadiness(box, snapshot || {});
   appendLine(box, 'Открытые действия', openCounts(snapshot.open_counts));
   appendLine(box, 'Ближайший фокус', text(snapshot.next_handoff_action) || 'Проверить карточку');
   const contract = snapshot.handoff_contract || {};
