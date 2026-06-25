@@ -6,9 +6,17 @@ const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;
 const LAST_EMAIL_KEY = 'nav_last_email_v2';
 const WIZARD_RECOVERY_TTL_MS = 2 * 60 * 1000;
 const DEFAULT_RPC_TIMEOUT_MS = 45000;
+const DEDUPED_RPC_NAMES = new Set([
+  'nav_v2_get_deal_card',
+  'nav_v2_get_my_profile',
+  'nav_v2_get_deal_responsibility_snapshot',
+  'nav_v2_get_deal_status_options',
+  'nav_v2_get_handoff_scores'
+]);
 let profileRequest = null;
 let lastDealsListIds = new Set();
 let wizardSaveRecovery = null;
+let inFlightRpc = new Map();
 
 function readSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
@@ -218,7 +226,12 @@ function recoverNewDealsOnly(data) {
   return { ...data, items: newItems };
 }
 
-export async function rpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) {
+function rpcDedupeKey(name, payload, timeout) {
+  try { return `${name}:${timeout}:${JSON.stringify(payload || {})}`; }
+  catch (_) { return `${name}:${timeout}:payload`; }
+}
+
+async function executeRpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) {
   requireUser();
   const started = performance.now();
   let refreshed = false;
@@ -245,6 +258,21 @@ export async function rpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) 
   } finally {
     console.info(`[nav-v2] RPC ${name}: ${Math.round(performance.now() - started)} ms${refreshed ? ' (после refresh)' : ''}`);
   }
+}
+
+export async function rpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) {
+  if (!DEDUPED_RPC_NAMES.has(name)) return executeRpc(name, payload, timeout);
+  const key = rpcDedupeKey(name, payload, timeout);
+  const current = inFlightRpc.get(key);
+  if (current) {
+    console.info(`[nav-v2] RPC ${name}: использую уже выполняющийся запрос`);
+    return current;
+  }
+  const promise = executeRpc(name, payload, timeout).finally(() => {
+    if (inFlightRpc.get(key) === promise) inFlightRpc.delete(key);
+  });
+  inFlightRpc.set(key, promise);
+  return promise;
 }
 
 export async function getMyProfile({ refresh = false, timeout = 6000 } = {}) {
