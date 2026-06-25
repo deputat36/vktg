@@ -43,11 +43,33 @@ function lawyerLine(deal) {
   return 'Юрист подключается при рисках или договоре.';
 }
 
+function handoffGaps(deal) {
+  const gaps = [];
+  if (!clean(deal && deal.seller_name)) gaps.push('ФИО продавца');
+  if (!clean(deal && deal.seller_phone)) gaps.push('телефон продавца');
+  if (!clean(deal && deal.buyer_name)) gaps.push('ФИО покупателя');
+  if (!clean(deal && deal.buyer_phone)) gaps.push('телефон покупателя');
+  if (!clean(deal && deal.object_type)) gaps.push('тип объекта');
+  if (!clean(deal && deal.address)) gaps.push('адрес');
+  if (Number(deal && deal.price_total || 0) <= 0) gaps.push('цена');
+  if ((deal && deal.settlements_agreed) !== true) gaps.push('расчёты');
+  if ((deal && deal.expenses_agreed) !== true) gaps.push('расходы');
+  return gaps;
+}
+
+function readinessLine(deal) {
+  const gaps = handoffGaps(deal);
+  if (!gaps.length) return 'Передача юристу: базовые данные заполнены.';
+  const shown = gaps.slice(0, 4).join(', ');
+  const tail = gaps.length > 4 ? ' и ещё ' + (gaps.length - 4) : '';
+  return 'Перед юристом дозаполнить: ' + shown + tail + '.';
+}
+
 function applyOne(deal) {
   const card = findCard(deal.id);
   if (!card) return;
   let box = card.querySelector('[data-handoff-summary]');
-  const key = clientsLine(deal) + '|' + lawyerLine(deal);
+  const key = clientsLine(deal) + '|' + lawyerLine(deal) + '|' + readinessLine(deal);
   if (box && box.dataset.key === key) return;
   if (!box) {
     box = document.createElement('div');
@@ -67,7 +89,7 @@ function applyOne(deal) {
   box.appendChild(document.createElement('br'));
   const muted = document.createElement('span');
   muted.className = 'muted';
-  muted.textContent = lawyerLine(deal);
+  muted.textContent = lawyerLine(deal) + ' ' + readinessLine(deal);
   box.appendChild(muted);
 }
 
