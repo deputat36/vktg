@@ -1,4 +1,4 @@
-import { getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js?v=20260625-1130';
+import { getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js?v=20260625-1230';
 
 const app = document.getElementById('app');
 const dealId = new URLSearchParams(location.search).get('id') || '';
