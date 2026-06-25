@@ -119,7 +119,7 @@ async function loadRecheckAlert() {
   loaded = true;
   try {
     const [data, profile] = await Promise.all([
-      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000),
+      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }),
       getMyProfile({ timeout: 6000 }).catch(() => null)
     ]);
     cardData = data;
