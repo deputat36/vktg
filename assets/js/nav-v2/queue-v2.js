@@ -1,6 +1,6 @@
 import { getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
 
-const V = '20260622-3';
+const V = '20260625-1020';
 const app = document.getElementById('app');
 let items = [];
 let profile = {};
@@ -27,6 +27,7 @@ function list(v) { return Array.isArray(v) ? v : []; }
 function cnt(q) { return q === 'all' ? items.length : items.filter((x) => x.lawyer_queue === q).length; }
 function cls(q) { return (q === 'urgent' || q === 'problem_docs' || q === 'overdue_docs') ? 'red' : (q === 'resubmitted' || q === 'rework' || q === 'docs') ? 'yellow' : q === 'deposit' ? 'blue' : 'green'; }
 function waitDays(v) { const d = v ? new Date(v) : null; if (!d || Number.isNaN(d.getTime())) return 0; return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)); }
+function clean(v) { return String(v || '').trim(); }
 
 function reviewSummary(x) {
   const fallback = x.review_summary || {};
@@ -80,6 +81,16 @@ function reviewPills(x) {
   return `<div style="margin:10px 0">${p.join(' ')}</div>`;
 }
 
+function spnClientLine(x) {
+  const seller = clean(x.seller_spn);
+  const buyer = clean(x.buyer_spn);
+  if (seller && buyer && seller === buyer) return `${seller} ведёт продавца и покупателя. СПН отвечает за коммуникацию и сбор данных для юриста.`;
+  if (seller && buyer) return `Продавца ведёт: ${seller}. Покупателя ведёт: ${buyer}. СПН отвечают за коммуникацию и сбор данных для юриста.`;
+  if (seller) return `Продавца ведёт: ${seller}. СПН отвечает за коммуникацию и сбор данных для юриста.`;
+  if (buyer) return `Покупателя ведёт: ${buyer}. СПН отвечает за коммуникацию и сбор данных для юриста.`;
+  return 'СПН по клиентам не назначен. Перед юридической проверкой нужно назначить ответственного за коммуникацию.';
+}
+
 function card(x) {
   const id = encodeURIComponent(x.id || '');
   const q = x.lawyer_queue || 'other';
@@ -96,6 +107,7 @@ function card(x) {
       </div>
       ${riskPill(x.risk_level)}
     </div>
+    <div class="status" style="margin:10px 0"><b>СПН по клиентам:</b> ${esc(spnClientLine(x))}</div>
     <div class="deal-meta">
       <div><span class="small">К задатку</span><b>${n(x.readiness_deposit)}%</b></div>
       <div><span class="small">К сделке</span><b>${n(x.readiness_deal)}%</b></div>
