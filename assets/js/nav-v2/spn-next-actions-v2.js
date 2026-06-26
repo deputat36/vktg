@@ -153,25 +153,38 @@ function docsSummaryHtml(docs) {
   </div>`;
 }
 
+function docItemHtml(doc) {
+  return `<div class="list-item">
+    <div class="actions" style="justify-content:flex-start;margin-top:0">
+      ${duePill(doc.due_date, 'срок документа не установлен')}
+      <span class="pill ${docStatusClass(doc.status)}">${esc(docStatusLabel(doc.status))}</span>
+      <span class="pill yellow">обязательный</span>
+      ${docStagePills(doc)}
+      <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
+    </div>
+    <b>${esc(doc.title || 'Документ')}</b>
+    ${doc.description ? `<p class="muted">${esc(doc.description)}</p>` : ''}
+  </div>`;
+}
+
+function docGroupHtml(title, docs, limit) {
+  if (!docs.length) return '';
+  const visible = docs.slice(0, limit);
+  const hiddenCount = Math.max(0, docs.length - visible.length);
+  return `<h4>${esc(title)}</h4>
+    <div class="list">${visible.map(docItemHtml).join('')}</div>
+    ${hiddenCount ? `<p class="small">Еще в группе: ${hiddenCount}.</p>` : ''}`;
+}
+
 function docsHtml(docs) {
   if (!docs.length) return '';
-  const visible = docs.slice(0, 2);
-  const hiddenCount = Math.max(0, docs.length - visible.length);
+  const spnDocs = docs.filter((doc) => doc.responsible_role === 'spn');
+  const otherDocs = docs.filter((doc) => doc.responsible_role !== 'spn');
+  const hiddenCount = Math.max(0, docs.length - Math.min(spnDocs.length, 2) - Math.min(otherDocs.length, 2));
   return `<h3>Документы к контролю</h3>
     ${docsSummaryHtml(docs)}
-    <div class="list">
-      ${visible.map((doc) => `<div class="list-item">
-        <div class="actions" style="justify-content:flex-start;margin-top:0">
-          ${duePill(doc.due_date, 'срок документа не установлен')}
-          <span class="pill ${docStatusClass(doc.status)}">${esc(docStatusLabel(doc.status))}</span>
-          <span class="pill yellow">обязательный</span>
-          ${docStagePills(doc)}
-          <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
-        </div>
-        <b>${esc(doc.title || 'Документ')}</b>
-        ${doc.description ? `<p class="muted">${esc(doc.description)}</p>` : ''}
-      </div>`).join('')}
-    </div>
+    ${docGroupHtml('Мои документы СПН', spnDocs, 2)}
+    ${docGroupHtml('Контроль других специалистов', otherDocs, 2)}
     ${hiddenCount ? `<p class="small">Еще обязательных документов к контролю: ${hiddenCount}. Полный список во вкладке «Документы».</p>` : ''}`;
 }
 
