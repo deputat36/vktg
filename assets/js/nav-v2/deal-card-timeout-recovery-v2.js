@@ -3,6 +3,8 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase
 const MARK = 'navV2DealCardTimeoutRecovery';
 const RETRY_PARAM = 'timeout_retry';
 const SESSION_KEY = 'nav_session_v2';
+const STARTED_AT = Date.now();
+const HANG_FALLBACK_MS = 25000;
 let handled = false;
 
 function esc(value) {
@@ -12,6 +14,11 @@ function esc(value) {
 function isTimeoutErrorText(text) {
   const value = String(text || '').toLowerCase();
   return value.includes('supabase не ответил') || value.includes('не удалось подключиться к supabase');
+}
+
+function isLoadingTooLong(text) {
+  const value = String(text || '').toLowerCase();
+  return Date.now() - STARTED_AT > HANG_FALLBACK_MS && value.includes('загружаю карточку сделки');
 }
 
 function currentDealId() {
@@ -154,16 +161,19 @@ async function tryFallback(errorText) {
 
 function inspect() {
   const app = document.getElementById('app');
-  if (!app || handled) return;
+  if (!app || handled || document.getElementById(MARK)) return;
   const text = app.textContent || '';
-  if (!isTimeoutErrorText(text)) return;
+  const timeout = isTimeoutErrorText(text);
+  const hanging = isLoadingTooLong(text);
+  if (!timeout && !hanging) return;
   handled = true;
-  if (!hasRetried()) {
+  if (timeout && !hasRetried()) {
     setTimeout(() => { location.href = retryUrl(); }, 600);
     return;
   }
-  tryFallback(text.trim());
+  tryFallback(timeout ? text.trim() : 'Карточка долго оставалась в состоянии загрузки.');
 }
 
 new MutationObserver(inspect).observe(document.getElementById('app') || document.body, { childList: true, subtree: true, characterData: true });
+setInterval(inspect, 3000);
 inspect();
