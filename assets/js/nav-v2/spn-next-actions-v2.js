@@ -129,7 +129,7 @@ async function loadCard(force = false) {
   if (!dealId) return null;
   if (cardData && !force) return cardData;
   if (!loading) {
-    loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 15000)
+    loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId })
       .then((data) => { cardData = data; return data; })
       .finally(() => { loading = null; });
   }
