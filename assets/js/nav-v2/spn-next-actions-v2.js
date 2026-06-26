@@ -84,6 +84,26 @@ function docSort(a, b) {
   return String(a.title || '').localeCompare(String(b.title || ''), 'ru');
 }
 
+function nextStepHtml(tasks, docs) {
+  const overdueTasks = tasks.filter((task) => daysUntil(task.due_date) < 0);
+  const todayTasks = tasks.filter((task) => daysUntil(task.due_date) === 0);
+  const overdueSpnDocs = docs.filter((doc) => doc.responsible_role === 'spn' && daysUntil(doc.due_date) < 0);
+  const overdueWatchedDocs = docs.filter((doc) => doc.responsible_role !== 'spn' && daysUntil(doc.due_date) < 0);
+  const spnDocs = docs.filter((doc) => doc.responsible_role === 'spn');
+
+  let text = '';
+  if (overdueTasks.length) text = 'Сначала закройте просроченные задачи СПН или перенесите срок, если задача ещё не готова.';
+  else if (overdueSpnDocs.length) text = 'Сначала запросите или получите просроченные документы, за которые отвечает СПН.';
+  else if (overdueWatchedDocs.length) text = 'Сначала проконтролируйте просроченные документы у ответственных специалистов.';
+  else if (todayTasks.length) text = 'Начните с задач СПН на сегодня.';
+  else if (spnDocs.length) text = 'Начните со своих обязательных документов СПН.';
+  else if (tasks.length) text = 'Начните с ближайшей задачи СПН.';
+  else if (docs.length) text = 'Проконтролируйте обязательные документы по сделке.';
+
+  if (!text) return '';
+  return `<div class="status warn"><b>Приоритет сейчас:</b> ${esc(text)}</div>`;
+}
+
 function panelStatus(tasks, docs) {
   const overdueTasks = tasks.filter((task) => daysUntil(task.due_date) < 0).length;
   const todayTasks = tasks.filter((task) => daysUntil(task.due_date) === 0).length;
@@ -199,6 +219,7 @@ function renderPanel(tasks, docs) {
       <span class="pill yellow">${count} открыто</span>
     </div>
     ${panelStatus(tasks, docs)}
+    ${nextStepHtml(tasks, docs)}
     ${tasksHtml(tasks)}
     ${docsHtml(docs)}
     <div class="actions" style="justify-content:flex-start">
