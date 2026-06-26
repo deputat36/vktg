@@ -128,7 +128,7 @@ function emptyPanel() {
       </div>
       <span class="pill green">чисто</span>
     </div>
-    <div class="status ok">Можно перейти к проверке рисков или подготовке передачи специалистам.</div>
+    <div class="status ok">Можно перейти к проверке рисков, актуальности данных или подготовке передачи специалистам.</div>
   </section>`;
 }
 
@@ -173,6 +173,19 @@ function docsSummaryHtml(docs) {
   </div>`;
 }
 
+function docsOwnershipHintHtml(spnDocs, otherDocs) {
+  if (spnDocs.length && otherDocs.length) {
+    return `<div class="status warn"><b>Разделение ответственности:</b> «Мои документы СПН» нужно запросить или получить самому. «Контроль других специалистов» — проверить срок и при необходимости связаться с ответственным.</div>`;
+  }
+  if (spnDocs.length) {
+    return `<div class="status warn"><b>Ответственность СПН:</b> эти документы нужно запросить, получить или актуализировать самому.</div>`;
+  }
+  if (otherDocs.length) {
+    return `<div class="status warn"><b>Контроль СПН:</b> документы ведут другие специалисты, задача СПН — видеть срок и не пропустить задержку.</div>`;
+  }
+  return '';
+}
+
 function docItemHtml(doc) {
   return `<div class="list-item">
     <div class="actions" style="justify-content:flex-start;margin-top:0">
@@ -203,6 +216,7 @@ function docsHtml(docs) {
   const hiddenCount = Math.max(0, docs.length - Math.min(spnDocs.length, 2) - Math.min(otherDocs.length, 2));
   return `<h3>Документы к контролю</h3>
     ${docsSummaryHtml(docs)}
+    ${docsOwnershipHintHtml(spnDocs, otherDocs)}
     ${docGroupHtml('Мои документы СПН', spnDocs, 2)}
     ${docGroupHtml('Контроль других специалистов', otherDocs, 2)}
     ${hiddenCount ? `<p class="small">Еще обязательных документов к контролю: ${hiddenCount}. Полный список во вкладке «Документы».</p>` : ''}`;
