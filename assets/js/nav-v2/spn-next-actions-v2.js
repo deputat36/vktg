@@ -177,6 +177,22 @@ function docsSummaryHtml(docs) {
   </div>`;
 }
 
+function docsStageBlockerHtml(docs) {
+  const depositDocs = docs.filter((doc) => doc.required_for_deposit === true);
+  const dealDocs = docs.filter((doc) => doc.required_for_deal === true);
+  const targetDocs = depositDocs.length ? depositDocs : dealDocs;
+  if (!targetDocs.length) return '';
+  const spnCount = targetDocs.filter((doc) => doc.responsible_role === 'spn').length;
+  const watchedCount = targetDocs.length - spnCount;
+  const parts = [`всего: ${targetDocs.length}`];
+  if (spnCount) parts.push(`СПН: ${spnCount}`);
+  if (watchedCount) parts.push(`контроль: ${watchedCount}`);
+  if (depositDocs.length) {
+    return `<div class="status error"><b>Блокер задатка:</b> не хватает обязательных документов до задатка (${parts.join(', ')}). Закройте их до подготовки задатка.</div>`;
+  }
+  return `<div class="status warn"><b>Блокер сделки:</b> не хватает обязательных документов до сделки (${parts.join(', ')}). Проверьте получение до передачи дальше.</div>`;
+}
+
 function docsOwnershipHintHtml(spnDocs, otherDocs) {
   if (spnDocs.length && otherDocs.length) {
     return `<div class="status warn"><b>Разделение ответственности:</b> «Мои документы СПН» нужно запросить или получить самому. «Контроль других специалистов» — проверить срок и при необходимости связаться с ответственным.</div>`;
@@ -220,6 +236,7 @@ function docsHtml(docs) {
   const hiddenCount = Math.max(0, docs.length - Math.min(spnDocs.length, 2) - Math.min(otherDocs.length, 2));
   return `<h3>Документы к контролю</h3>
     ${docsSummaryHtml(docs)}
+    ${docsStageBlockerHtml(docs)}
     ${docsOwnershipHintHtml(spnDocs, otherDocs)}
     ${docGroupHtml('Мои документы СПН', spnDocs, 2)}
     ${docGroupHtml('Контроль других специалистов', otherDocs, 2)}
