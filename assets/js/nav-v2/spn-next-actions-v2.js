@@ -115,8 +115,9 @@ function mount(html) {
   const main = document.querySelector('#app .nav-v2-shell');
   if (!main) return false;
   const existing = main.querySelector('[data-spn-next-actions]');
-  if (existing) existing.outerHTML = html;
-  else {
+  if (existing) {
+    if (existing.outerHTML !== html) existing.outerHTML = html;
+  } else {
     const before = main.querySelector('.kpi-row') || main.querySelector('.card');
     if (before) before.insertAdjacentHTML('beforebegin', html);
     else main.insertAdjacentHTML('beforeend', html);
