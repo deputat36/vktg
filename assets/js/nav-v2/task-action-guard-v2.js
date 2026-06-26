@@ -1,4 +1,4 @@
-import { rpc } from './supabase-v2.js?v=20260625-1230';
+import { rpc } from './supabase-v2.js?v=20260625-1320';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let permissions = new Map();
