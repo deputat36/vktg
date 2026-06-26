@@ -14,6 +14,7 @@ const DEDUPED_RPC_NAMES = new Set([
   'nav_v2_get_handoff_scores'
 ]);
 let profileRequest = null;
+let refreshRequest = null;
 let lastDealsListIds = new Set();
 let wizardSaveRecovery = null;
 let inFlightRpc = new Map();
@@ -131,16 +132,23 @@ function accessPageUrl() {
 }
 
 async function refreshSession() {
-  const session = readSession();
-  if (!session?.refresh_token) { writeSession(null); return null; }
-  const response = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: session.refresh_token })
-  }, 12000);
-  const payload = await parse(response);
-  writeSession(payload);
-  return payload;
+  if (refreshRequest) {
+    console.info('[nav-v2] Auth refresh: использую уже выполняющееся обновление сессии');
+    return refreshRequest;
+  }
+  refreshRequest = (async () => {
+    const session = readSession();
+    if (!session?.refresh_token) { writeSession(null); return null; }
+    const response = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    }, 12000);
+    const payload = await parse(response);
+    writeSession(payload);
+    return payload;
+  })().finally(() => { refreshRequest = null; });
+  return refreshRequest;
 }
 
 export async function signIn(email, password) {
