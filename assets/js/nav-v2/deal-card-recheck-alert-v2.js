@@ -1,4 +1,4 @@
-import { rpc, esc, getCachedUser, getMyProfile } from './supabase-v2.js';
+import { rpc, esc, getCachedUser, getMyProfile } from './supabase-v2.js?v=20260625-1230';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let loaded = false;
