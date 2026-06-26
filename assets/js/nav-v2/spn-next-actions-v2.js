@@ -36,6 +36,16 @@ function roleLabel(role) {
   return ({ owner: 'owner', admin: 'admin', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'не назначен';
 }
 
+function docStatusLabel(status) {
+  return ({ needed: 'нужен', requested: 'запрошен', received: 'получен', checked: 'проверен', problem: 'проблема' })[status] || status || 'нужен';
+}
+
+function docStatusClass(status) {
+  if (status === 'problem') return 'red';
+  if (status === 'requested') return 'blue';
+  return 'yellow';
+}
+
 function openTask(task) {
   return !['done', 'completed', 'cancelled'].includes(String(task?.status || ''));
 }
@@ -121,6 +131,13 @@ function tasksHtml(tasks) {
     ${hiddenCount ? `<p class="small">Еще задач: ${hiddenCount}. Полный список во вкладке «Задачи».</p>` : ''}`;
 }
 
+function docStagePills(doc) {
+  const pills = [];
+  if (doc.required_for_deposit === true) pills.push('<span class="pill red">до задатка</span>');
+  if (doc.required_for_deal === true) pills.push('<span class="pill yellow">до сделки</span>');
+  return pills.join('');
+}
+
 function docsHtml(docs) {
   if (!docs.length) return '';
   const visible = docs.slice(0, 2);
@@ -130,7 +147,9 @@ function docsHtml(docs) {
       ${visible.map((doc) => `<div class="list-item">
         <div class="actions" style="justify-content:flex-start;margin-top:0">
           ${duePill(doc.due_date, 'срок документа не установлен')}
+          <span class="pill ${docStatusClass(doc.status)}">${esc(docStatusLabel(doc.status))}</span>
           <span class="pill yellow">обязательный</span>
+          ${docStagePills(doc)}
           <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
         </div>
         <b>${esc(doc.title || 'Документ')}</b>
