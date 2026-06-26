@@ -158,6 +158,20 @@ function docStagePills(doc) {
   return pills.join('');
 }
 
+function roleBreakdownHtml(docs, title = 'По ответственным') {
+  if (!docs.length) return '';
+  const counts = docs.reduce((map, doc) => {
+    const role = doc.responsible_role || 'unknown';
+    map.set(role, (map.get(role) || 0) + 1);
+    return map;
+  }, new Map());
+  const pills = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || roleLabel(a[0]).localeCompare(roleLabel(b[0]), 'ru'))
+    .map(([role, count]) => `<span class="pill blue">${esc(roleLabel(role))}: ${count}</span>`)
+    .join('');
+  return `<div class="actions" style="justify-content:flex-start;margin-top:0"><span class="pill">${esc(title)}</span>${pills}</div>`;
+}
+
 function docsSummaryHtml(docs) {
   if (!docs.length) return '';
   const forDeposit = docs.filter((doc) => doc.required_for_deposit === true).length;
@@ -174,7 +188,7 @@ function docsSummaryHtml(docs) {
     <span class="pill blue">юрист: ${forLawyer}</span>
     ${overdueSpn ? `<span class="pill red">просрочено СПН: ${overdueSpn}</span>` : ''}
     ${overdueWatched ? `<span class="pill red">просрочено контроль: ${overdueWatched}</span>` : ''}
-  </div>`;
+  </div>${roleBreakdownHtml(docs)}`;
 }
 
 function stageBlockerAction(spnCount, watchedCount, stageText) {
@@ -193,10 +207,11 @@ function docsStageBlockerHtml(docs) {
   const parts = [`всего: ${targetDocs.length}`];
   if (spnCount) parts.push(`СПН: ${spnCount}`);
   if (watchedCount) parts.push(`контроль: ${watchedCount}`);
+  const roleBreakdown = roleBreakdownHtml(targetDocs, 'Блокер по ролям');
   if (depositDocs.length) {
-    return `<div class="status error"><b>Блокер задатка:</b> не хватает обязательных документов до задатка (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'подготовки задатка'))}</div>`;
+    return `<div class="status error"><b>Блокер задатка:</b> не хватает обязательных документов до задатка (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'подготовки задатка'))}</div>${roleBreakdown}`;
   }
-  return `<div class="status warn"><b>Блокер сделки:</b> не хватает обязательных документов до сделки (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'передачи сделки дальше'))}</div>`;
+  return `<div class="status warn"><b>Блокер сделки:</b> не хватает обязательных документов до сделки (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'передачи сделки дальше'))}</div>${roleBreakdown}`;
 }
 
 function docsOwnershipHintHtml(spnDocs, otherDocs) {
