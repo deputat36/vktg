@@ -164,12 +164,16 @@ function docsSummaryHtml(docs) {
   const forDeal = docs.filter((doc) => doc.required_for_deal === true).length;
   const forSpn = docs.filter((doc) => doc.responsible_role === 'spn').length;
   const forLawyer = docs.filter((doc) => doc.responsible_role === 'lawyer').length;
+  const overdueSpn = docs.filter((doc) => doc.responsible_role === 'spn' && daysUntil(doc.due_date) < 0).length;
+  const overdueWatched = docs.filter((doc) => doc.responsible_role !== 'spn' && daysUntil(doc.due_date) < 0).length;
   return `<div class="actions" style="justify-content:flex-start;margin-top:0">
     <span class="pill yellow">всего: ${docs.length}</span>
     <span class="pill red">до задатка: ${forDeposit}</span>
     <span class="pill yellow">до сделки: ${forDeal}</span>
     <span class="pill blue">СПН: ${forSpn}</span>
     <span class="pill blue">юрист: ${forLawyer}</span>
+    ${overdueSpn ? `<span class="pill red">просрочено СПН: ${overdueSpn}</span>` : ''}
+    ${overdueWatched ? `<span class="pill red">просрочено контроль: ${overdueWatched}</span>` : ''}
   </div>`;
 }
 
