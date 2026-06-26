@@ -1,4 +1,4 @@
-import { rpc, esc } from './supabase-v2.js?v=20260625-1230';
+import { rpc, esc } from './supabase-v2.js?v=20260625-1320';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let cardData = null;
@@ -12,22 +12,49 @@ function isDemoDeal() {
   return document.querySelector('.hero .pill.blue')?.textContent?.trim() === 'ДЕМО';
 }
 
-function todayValue() {
+function localDate(offsetDays = 0) {
   const date = new Date();
+  date.setDate(date.getDate() + Number(offsetDays || 0));
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function dateValue(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
+function todayValue() {
+  return dateValue(localDate());
+}
+
+function dateValueWithOffset(offsetDays) {
+  return dateValue(localDate(offsetDays));
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+  const due = new Date(`${value}T00:00:00`);
+  const today = localDate();
+  return Math.round((due.getTime() - today.getTime()) / 86400000);
+}
+
 function dateLabel(value) {
   if (!value) return '<span class="pill yellow">срок не установлен</span>';
   const due = new Date(`${value}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const cls = due < today ? 'red' : due.getTime() === today.getTime() ? 'yellow' : 'blue';
-  const prefix = due < today ? 'просрочено: ' : due.getTime() === today.getTime() ? 'сегодня: ' : 'срок: ';
-  return `<span class="pill ${cls}">${prefix}${due.toLocaleDateString('ru-RU')}</span>`;
+  const diff = daysUntil(value);
+  const dateText = due.toLocaleDateString('ru-RU');
+  const cls = diff < 0 ? 'red' : diff <= 1 ? 'yellow' : 'blue';
+  const prefix = diff < 0
+    ? 'просрочено: '
+    : diff === 0
+      ? 'сегодня: '
+      : diff === 1
+        ? 'завтра: '
+        : 'срок: ';
+  return `<span class="pill ${cls}">${prefix}${dateText}</span>`;
 }
 
 function setPageStatus(text, type = 'info') {
@@ -35,6 +62,15 @@ function setPageStatus(text, type = 'info') {
   if (!status) return;
   status.className = `status ${type}`;
   status.textContent = text;
+}
+
+function presetButtonsHtml(taskId) {
+  return `<div class="actions" style="justify-content:flex-start;margin-top:8px;gap:6px">
+    <button class="btn light" type="button" data-task-due-preset="${esc(taskId)}" data-task-due-days="0">Сегодня</button>
+    <button class="btn light" type="button" data-task-due-preset="${esc(taskId)}" data-task-due-days="1">Завтра</button>
+    <button class="btn light" type="button" data-task-due-preset="${esc(taskId)}" data-task-due-days="2">+2 дня</button>
+    <button class="btn light" type="button" data-task-due-preset="${esc(taskId)}" data-task-due-days="5">+5 дней</button>
+  </div>`;
 }
 
 function editorHtml(task) {
@@ -46,10 +82,11 @@ function editorHtml(task) {
         <input id="taskDue-${esc(task.id)}" type="date" min="${todayValue()}" value="${esc(value)}" data-task-due-input="${esc(task.id)}">
       </div>
       <button class="btn primary" type="button" data-task-due-save="${esc(task.id)}">Сохранить срок</button>
-      ${value ? `<button class="btn light" type="button" data-task-due-clear="${esc(task.id)}">Снять срок</button>` : ''}
+      <button class="btn light" type="button" data-task-due-clear="${esc(task.id)}">Снять срок</button>
       <span data-task-due-label="${esc(task.id)}">${dateLabel(value)}</span>
     </div>
-    <div class="small" data-task-due-status="${esc(task.id)}">Срок виден в списке сделок и помогает не пропустить следующий шаг.</div>
+    ${presetButtonsHtml(task.id)}
+    <div class="small" data-task-due-status="${esc(task.id)}">Быстрые сроки только подставляют дату. Для изменения нажмите «Сохранить срок».</div>
   </div>`;
 }
 
@@ -102,6 +139,14 @@ async function ensureCardData() {
   }
 }
 
+function updateDuePreview(taskId) {
+  const input = document.querySelector(`[data-task-due-input="${taskId}"]`);
+  const label = document.querySelector(`[data-task-due-label="${taskId}"]`);
+  const status = document.querySelector(`[data-task-due-status="${taskId}"]`);
+  if (label) label.innerHTML = dateLabel(input?.value || '');
+  if (status) status.textContent = 'Дата выбрана. Чтобы применить изменение, нажмите «Сохранить срок».';
+}
+
 async function saveDueDate(taskId, value, button) {
   const task = cardData?.tasks?.find((item) => item.id === taskId);
   if (!task || task.can_change_status !== true) {
@@ -133,6 +178,17 @@ document.addEventListener('click', (event) => {
   const tab = event.target.closest('[data-tab="tasks"], [data-tab-shortcut="tasks"]');
   if (tab) setTimeout(ensureCardData, 0);
 
+  const preset = event.target.closest('[data-task-due-preset]');
+  if (preset) {
+    const taskId = preset.dataset.taskDuePreset;
+    const input = document.querySelector(`[data-task-due-input="${taskId}"]`);
+    if (input) {
+      input.value = dateValueWithOffset(Number(preset.dataset.taskDueDays || 0));
+      updateDuePreview(taskId);
+    }
+    return;
+  }
+
   const save = event.target.closest('[data-task-due-save]');
   if (save) {
     const taskId = save.dataset.taskDueSave;
@@ -143,6 +199,11 @@ document.addEventListener('click', (event) => {
 
   const clear = event.target.closest('[data-task-due-clear]');
   if (clear) saveDueDate(clear.dataset.taskDueClear, null, clear);
+});
+
+document.addEventListener('input', (event) => {
+  const input = event.target.closest('[data-task-due-input]');
+  if (input) updateDuePreview(input.dataset.taskDueInput);
 });
 
 window.addEventListener('hashchange', ensureCardData);
