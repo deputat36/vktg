@@ -60,6 +60,28 @@
 
 `deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a`
 
+7. Добавлена облегчённая серверная RPC:
+
+`nav_v2_get_deal_card_lite(uuid)`
+
+Она возвращает только базовые данные для безопасной карточки:
+
+- сделку;
+- документы;
+- задачи;
+- риски;
+- комментарии.
+
+Без тяжёлой истории, расходов и дополнительных блоков полного интерфейса.
+
+8. Безопасная карточка теперь сначала вызывает lite-RPC, а полную RPC использует только как fallback.
+
+9. Диагностическая страница теперь отдельно проверяет:
+
+- профиль;
+- lite-карточку;
+- полную карточку.
+
 ## Текущий HTML карточки
 
 В `deal-card-v2.html` подключено:
@@ -68,19 +90,31 @@
 - `deal-card-timeout-recovery-v2.js?v=20260625-1140`
 - importmap на `supabase-v2.js?v=20260625-1115`
 
+## Текущий безопасный вход
+
+В `deal-card-safe-v2.html` подключено:
+
+- `deal-card-safe-v2.js?v=20260625-1150`
+
+## Текущая диагностика
+
+В `deal-card-check-v2.html` подключено:
+
+- `deal-card-check-v2.js?v=20260625-1155`
+
 ## Что проверять пользователю
 
 Основная карточка:
 
-`https://deputat36.github.io/vktg/deal-card-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1140`
+`https://deputat36.github.io/vktg/deal-card-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
 
 Безопасная карточка:
 
-`https://deputat36.github.io/vktg/deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1140`
+`https://deputat36.github.io/vktg/deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
 
 Диагностика:
 
-`https://deputat36.github.io/vktg/deal-card-check-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1140`
+`https://deputat36.github.io/vktg/deal-card-check-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
 
 ## CRM «Лидер»
 
