@@ -69,9 +69,13 @@
 - значение `cache` из URL;
 - текущий путь страницы.
 
-Ограничение: попытка поднять версию подключения в `deal-card-check-v2.html` до нового query-параметра была заблокирована GitHub connector. HTML пока содержит старый query для JS-модуля, но сам JS-файл обновлён в репозитории.
+Основной `deal-card-check-v2.html` пока содержит старый query-параметр подключения JS. Для гарантированно свежей диагностики создана отдельная минимальная страница:
 
-Для ручной проверки диагностику лучше открывать с жёстким обновлением страницы или в режиме инкогнито.
+`deal-card-diag-v2.html`
+
+Она подключает:
+
+`assets/js/nav-v2/deal-card-check-v2.js?v=20260626-1135`
 
 ## Практический вывод
 
@@ -87,7 +91,8 @@
 - усиленный importmap в `deal-card-v2.html`;
 - recovery-модуль;
 - `deal-card-safe-v2.html` с lite-RPC;
-- `deal-card-check-v2.html` с отдельной диагностикой lite/full.
+- `deal-card-check-v2.html` с отдельной диагностикой lite/full;
+- `deal-card-diag-v2.html` со свежим диагностическим JS.
 
 ## URL для проверки
 
@@ -99,7 +104,11 @@
 
 `https://deputat36.github.io/vktg/deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260626-smoke`
 
-Диагностика:
+Рекомендуемая диагностика:
+
+`https://deputat36.github.io/vktg/deal-card-diag-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260626-smoke`
+
+Старая диагностика:
 
 `https://deputat36.github.io/vktg/deal-card-check-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260626-smoke`
 
