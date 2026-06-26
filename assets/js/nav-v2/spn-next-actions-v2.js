@@ -138,11 +138,27 @@ function docStagePills(doc) {
   return pills.join('');
 }
 
+function docsSummaryHtml(docs) {
+  if (!docs.length) return '';
+  const forDeposit = docs.filter((doc) => doc.required_for_deposit === true).length;
+  const forDeal = docs.filter((doc) => doc.required_for_deal === true).length;
+  const forSpn = docs.filter((doc) => doc.responsible_role === 'spn').length;
+  const forLawyer = docs.filter((doc) => doc.responsible_role === 'lawyer').length;
+  return `<div class="actions" style="justify-content:flex-start;margin-top:0">
+    <span class="pill yellow">всего: ${docs.length}</span>
+    <span class="pill red">до задатка: ${forDeposit}</span>
+    <span class="pill yellow">до сделки: ${forDeal}</span>
+    <span class="pill blue">СПН: ${forSpn}</span>
+    <span class="pill blue">юрист: ${forLawyer}</span>
+  </div>`;
+}
+
 function docsHtml(docs) {
   if (!docs.length) return '';
   const visible = docs.slice(0, 2);
   const hiddenCount = Math.max(0, docs.length - visible.length);
   return `<h3>Документы к контролю</h3>
+    ${docsSummaryHtml(docs)}
     <div class="list">
       ${visible.map((doc) => `<div class="list-item">
         <div class="actions" style="justify-content:flex-start;margin-top:0">
