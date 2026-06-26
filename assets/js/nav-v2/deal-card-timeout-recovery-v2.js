@@ -36,6 +36,10 @@ function checkUrl() {
   return `./deal-card-check-v2.html?id=${encodeURIComponent(currentDealId())}&cache=${Date.now()}`;
 }
 
+function safeUrl() {
+  return `./deal-card-safe-v2.html?id=${encodeURIComponent(currentDealId())}&cache=${Date.now()}`;
+}
+
 function hasRetried() {
   return new URLSearchParams(location.search).get(RETRY_PARAM) === '1';
 }
@@ -108,6 +112,7 @@ function renderMiniCard(data, sourceText) {
       </div>
       <div class="actions" style="justify-content:flex-start">
         <a class="btn primary" href="${retryUrl()}">Повторить полную загрузку</a>
+        <a class="btn light" href="${safeUrl()}">Безопасный вход</a>
         <a class="btn light" href="${checkUrl()}">Проверка карточки</a>
         <a class="btn light" href="./deals-v2.html">К списку сделок</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
@@ -133,10 +138,11 @@ function renderRecovery(errorText) {
       <div class="status warn">${esc(errorText || 'Supabase не ответил вовремя.')}</div>
       <div class="list">
         <div class="list-item"><b>ID сделки</b>${esc(dealId || 'не указан')}</div>
-        <div class="list-item"><b>Что сделать</b>Нажмите «Повторить загрузку». Если ошибка повторяется, откройте проверку карточки или чистый вход.</div>
+        <div class="list-item"><b>Что сделать</b>Нажмите «Безопасный вход». Если нужно проверить полную карточку — попробуйте повторить загрузку.</div>
       </div>
       <div class="actions" style="justify-content:flex-start">
-        <a class="btn primary" href="${retryUrl()}">Повторить загрузку</a>
+        <a class="btn primary" href="${safeUrl()}">Безопасный вход</a>
+        <a class="btn light" href="${retryUrl()}">Повторить загрузку</a>
         <a class="btn light" href="${checkUrl()}">Проверка карточки</a>
         <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
         <a class="btn light" href="./deals-v2.html">К списку сделок</a>
