@@ -34,9 +34,15 @@
 ## Что было сделано
 
 1. Увеличен общий RPC timeout в `assets/js/nav-v2/supabase-v2.js` с 20 до 45 секунд.
-2. В `deal-card-v2.html` добавлен importmap, чтобы дочерний импорт `./supabase-v2.js` принудительно резолвился в свежую версию:
+2. В `deal-card-v2.html` добавлен и усилен importmap, чтобы дочерний импорт `./supabase-v2.js` принудительно резолвился в свежую версию:
 
 `./assets/js/nav-v2/supabase-v2.js?v=20260625-1115`
+
+Importmap дополнительно покрывает варианты:
+
+- `./assets/js/nav-v2/supabase-v2.js`
+- `/vktg/assets/js/nav-v2/supabase-v2.js`
+- `https://deputat36.github.io/vktg/assets/js/nav-v2/supabase-v2.js`
 
 3. Подключён и усилен recovery-модуль:
 
@@ -82,6 +88,14 @@
 - lite-карточку;
 - полную карточку.
 
+10. Исправлен service_role bypass в связанных RPC:
+
+- `nav_v2_get_deal_card_lite(uuid)`;
+- `nav_v2_get_handoff_scores(jsonb)`;
+- `nav_v2_get_deal_responsibility_snapshot(uuid)`.
+
+Теперь служебная роль не отправляется в `nav_v2_can_view_deal(..., null)`.
+
 ## Текущий HTML карточки
 
 В `deal-card-v2.html` подключено:
@@ -106,15 +120,15 @@
 
 Основная карточка:
 
-`https://deputat36.github.io/vktg/deal-card-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
+`https://deputat36.github.io/vktg/deal-card-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1215`
 
 Безопасная карточка:
 
-`https://deputat36.github.io/vktg/deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
+`https://deputat36.github.io/vktg/deal-card-safe-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1215`
 
 Диагностика:
 
-`https://deputat36.github.io/vktg/deal-card-check-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1155`
+`https://deputat36.github.io/vktg/deal-card-check-v2.html?id=03029d49-6e43-47b6-856e-4886f0ac320a&cache=20260625-1215`
 
 ## CRM «Лидер»
 
