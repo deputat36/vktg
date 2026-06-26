@@ -4,6 +4,7 @@ const app = document.getElementById('app');
 const dealId = new URLSearchParams(location.search).get('id') || '';
 let data = null;
 let active = location.hash ? location.hash.replace('#', '') : 'overview';
+let source = 'lite';
 
 function arr(key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
@@ -88,7 +89,7 @@ function render() {
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>${esc(title)}</h1><p>${esc(deal.address || deal.next_action || 'Безопасный вход в карточку без старого кэша.')}</p></section>
     <section class="card">
-      <div class="status ok">Безопасный режим: карточка загружена модулем с принудительным обновлением Supabase-клиента.</div>
+      <div class="status ok">Безопасный режим: карточка загружена через ${source === 'lite' ? 'облегчённую RPC' : 'полную RPC fallback'} с принудительным обновлением Supabase-клиента.</div>
       <div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./deal-card-v2.html?id=${encodeURIComponent(dealId)}&cache=${Date.now()}">Открыть полную карточку</a><a class="btn light" href="./deals-v2.html">К списку сделок</a><a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a></div>
     </section>
     <section class="kpi-row">${metric('Статус', statusText(deal.status))}${metric('Цена', money(deal.price_total))}${metric('Документы', missingDocs, missingDocs ? 'yellow' : 'green')}${metric('Задачи', openTasks, openTasks ? 'yellow' : 'green')}</section>
@@ -102,6 +103,16 @@ function render() {
   });
 }
 
+async function loadCardData() {
+  try {
+    source = 'lite';
+    return await rpc('nav_v2_get_deal_card_lite', { p_deal_id: dealId }, 30000);
+  } catch (_) {
+    source = 'full';
+    return await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 60000);
+  }
+}
+
 async function load() {
   if (!getCachedUser()) return renderAuthBox(app, async () => location.reload());
   if (!dealId) {
@@ -110,7 +121,7 @@ async function load() {
   }
   app.innerHTML = '<main class="nav-v2-shell"><div class="status">Загружаю безопасную карточку...</div></main>';
   try {
-    data = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 60000);
+    data = await loadCardData();
     render();
   } catch (error) {
     app.innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Ошибка безопасной карточки</h1></section><div class="status error">${esc(error.message || error)}</div><div class="actions" style="justify-content:flex-start"><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(dealId)}">Проверка карточки</a><a class="btn light" href="./deals-v2.html">К списку</a></div></main>`;
