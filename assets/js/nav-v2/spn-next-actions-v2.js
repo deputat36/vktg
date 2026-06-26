@@ -177,6 +177,12 @@ function docsSummaryHtml(docs) {
   </div>`;
 }
 
+function stageBlockerAction(spnCount, watchedCount, stageText) {
+  if (spnCount && watchedCount) return `Запросите свои документы и свяжитесь с ответственными по контрольным документам до ${stageText}.`;
+  if (spnCount) return `Запросите или получите документы СПН до ${stageText}.`;
+  return `Свяжитесь с ответственными и зафиксируйте срок получения до ${stageText}.`;
+}
+
 function docsStageBlockerHtml(docs) {
   const depositDocs = docs.filter((doc) => doc.required_for_deposit === true);
   const dealDocs = docs.filter((doc) => doc.required_for_deal === true);
@@ -188,9 +194,9 @@ function docsStageBlockerHtml(docs) {
   if (spnCount) parts.push(`СПН: ${spnCount}`);
   if (watchedCount) parts.push(`контроль: ${watchedCount}`);
   if (depositDocs.length) {
-    return `<div class="status error"><b>Блокер задатка:</b> не хватает обязательных документов до задатка (${parts.join(', ')}). Закройте их до подготовки задатка.</div>`;
+    return `<div class="status error"><b>Блокер задатка:</b> не хватает обязательных документов до задатка (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'подготовки задатка'))}</div>`;
   }
-  return `<div class="status warn"><b>Блокер сделки:</b> не хватает обязательных документов до сделки (${parts.join(', ')}). Проверьте получение до передачи дальше.</div>`;
+  return `<div class="status warn"><b>Блокер сделки:</b> не хватает обязательных документов до сделки (${parts.join(', ')}). ${esc(stageBlockerAction(spnCount, watchedCount, 'передачи сделки дальше'))}</div>`;
 }
 
 function docsOwnershipHintHtml(spnDocs, otherDocs) {
