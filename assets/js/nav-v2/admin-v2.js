@@ -1,7 +1,8 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, statusText } from './supabase-v2.js';
 
 let users = [];
 let dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
+let dataQuality = { summary: null, source_counts: [], items: [], error: '' };
 let loadErrors = [];
 
 const roles = [
@@ -9,6 +10,7 @@ const roles = [
   ['lawyer','Юрист'], ['broker','Брокер'], ['viewer','Наблюдатель']
 ];
 
+function n(value) { return Number(value || 0); }
 function dateText(value) { return value ? new Date(value).toLocaleString('ru-RU') : '—'; }
 function roleOptions(selected) { return roles.map(([id, title]) => `<option value="${id}" ${selected === id ? 'selected' : ''}>${title}</option>`).join(''); }
 function managerOptions(selected) {
@@ -67,6 +69,70 @@ function accessGuide() {
   </section>`;
 }
 
+function sourceLabel(source) {
+  return ({
+    auto_quality_seller_name: 'Продавец',
+    auto_quality_buyer_name: 'Покупатель',
+    auto_quality_address: 'Адрес объекта',
+    auto_quality_responsible_spn: 'Ответственный СПН'
+  })[source] || source || 'Проверка качества';
+}
+
+function issuePills(item) {
+  const pills = [];
+  if (item.missing_seller) pills.push('<span class="pill yellow">нет продавца</span>');
+  if (item.missing_buyer) pills.push('<span class="pill yellow">нет покупателя</span>');
+  if (item.missing_address) pills.push('<span class="pill yellow">нет адреса</span>');
+  if (item.without_spn) pills.push('<span class="pill red">нет СПН</span>');
+  if (item.lawyer_unassigned) pills.push('<span class="pill red">нет юриста</span>');
+  if (item.broker_unassigned) pills.push('<span class="pill yellow">нет брокера</span>');
+  if (n(item.open_quality_tasks_count)) pills.push(`<span class="pill blue">quality задач: ${n(item.open_quality_tasks_count)}</span>`);
+  return pills.join(' ');
+}
+
+function qualityDashboard() {
+  const summary = dataQuality.summary || {};
+  const sources = Array.isArray(dataQuality.source_counts) ? dataQuality.source_counts : [];
+  const items = Array.isArray(dataQuality.items) ? dataQuality.items : [];
+  const sourceHtml = sources.map((item) => `<div class="list-item"><b>${esc(sourceLabel(item.source))}</b><span class="small">${esc(item.status)} · ${esc(item.priority)}</span><p>${n(item.count)} открытых задач</p></div>`).join('');
+  const rows = items.slice(0, 12).map((item) => `<div class="list-item">
+    <div class="section-title">
+      <div><b>${esc(item.title || 'Сделка')}</b><span class="small">${esc(item.address || 'адрес уточняется')} · ${esc(statusText(item.status))}</span></div>
+      <span class="pill ${n(item.issue_count) >= 5 ? 'red' : 'yellow'}">проблем: ${n(item.issue_count)}</span>
+    </div>
+    <div style="margin:8px 0">${issuePills(item)}</div>
+    <p class="muted">СПН: ${esc(item.seller_spn || item.buyer_spn || 'не назначен')} · менеджер: ${esc(item.manager || 'не назначен')}</p>
+    <div class="actions" style="justify-content:flex-start"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(item.id)}#tasks">Открыть задачи</a><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(item.id)}">Карточка</a></div>
+  </div>`).join('');
+
+  return `<section class="card" id="data-quality-box">
+    <div class="section-title">
+      <div><h2>Качество данных</h2><p class="muted">Серверная сводка по пробелам карточек и auto-quality задачам. Это помогает owner/admin видеть, что мешает понятной передаче сделок.</p></div>
+      <span class="pill ${n(summary.urgent_quality_tasks) ? 'red' : n(summary.open_quality_tasks) ? 'yellow' : 'green'}">${n(summary.open_quality_tasks)} задач</span>
+    </div>
+    ${dataQuality.error ? `<div class="status warn">Сводка качества недоступна: ${esc(dataQuality.error)}</div>` : '<div class="status ok">Сводка качества загружена из защищенного owner/admin RPC.</div>'}
+    <div class="kpi-row">
+      <div class="metric"><span>Сделок всего</span><b>${n(summary.total_deals)}</b></div>
+      <div class="metric"><span>Рабочие</span><b>${n(summary.real_deals)}</b></div>
+      <div class="metric"><span>Демо</span><b>${n(summary.demo_deals)}</b></div>
+      <div class="metric red"><span>С пробелами</span><b>${n(summary.deals_with_issues)}</b></div>
+      <div class="metric yellow"><span>Нет продавца</span><b>${n(summary.missing_seller)}</b></div>
+      <div class="metric yellow"><span>Нет покупателя</span><b>${n(summary.missing_buyer)}</b></div>
+      <div class="metric yellow"><span>Нет адреса</span><b>${n(summary.missing_address)}</b></div>
+      <div class="metric red"><span>Нет СПН</span><b>${n(summary.without_spn)}</b></div>
+      <div class="metric red"><span>Юрист не назначен</span><b>${n(summary.lawyer_unassigned)}</b></div>
+      <div class="metric yellow"><span>Брокер не назначен</span><b>${n(summary.broker_unassigned)}</b></div>
+      <div class="metric yellow"><span>Quality задач</span><b>${n(summary.open_quality_tasks)}</b></div>
+      <div class="metric red"><span>Срочных quality</span><b>${n(summary.urgent_quality_tasks)}</b></div>
+    </div>
+    <div class="grid">
+      <div><h3>Типы автозадач</h3><div class="list">${sourceHtml || '<div class="empty">Автозадач качества нет.</div>'}</div></div>
+      <div><h3>Топ сделок для исправления</h3><div class="list">${rows || '<div class="empty">Критичных пробелов не найдено.</div>'}</div></div>
+    </div>
+    <div class="actions" style="justify-content:flex-start"><button id="reloadQuality" class="btn light" type="button">Обновить качество</button><a class="btn light" href="./deals-v2.html?filter=attention">Сделки на контроле</a></div>
+  </section>`;
+}
+
 function demoControls() {
   return `<section class="card"><div class="section-title"><div><h2>Демо-данные v2</h2><p class="muted">Демо-набор создается только в таблицах nav_ и не затрагивает CRM «Лидер».</p></div><span class="pill yellow">owner/admin</span></div><div class="kpi-row"><div class="metric"><span>Всего сделок</span><b>${dealStats.total}</b></div><div class="metric"><span>Демо</span><b>${dealStats.demo}</b></div><div class="metric green"><span>Рабочие</span><b>${dealStats.real}</b></div><div class="metric"><span>Последнее демо</span><b>${dateText(dealStats.lastDemoAt)}</b></div></div><div id="demoStatus" class="status">Готово к работе с демо-набором.</div><div class="actions" style="justify-content:flex-start"><button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button><button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html?filter=demo">Демо-сделки</a><a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a></div></section>`;
 }
@@ -76,14 +142,17 @@ function testingSummary() {
 }
 
 function render() {
-  document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>${statusBox()}${accessGuide()}<section class="grid"><div class="card" id="new-user-box"><h2>Профиль сотрудника в Навигаторе</h2><p class="muted">Этот блок создает/обновляет роль сотрудника в CRM. Для входа после этого создайте ссылку доступа.</p><div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div><div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div><div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div><div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div><div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div><div id="adminStatus" class="status">Шаг 1: добавьте профиль. Шаг 2: создайте ссылку доступа.</div><div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Сохранить профиль</button><a class="btn green" href="./nav-access-v2.html">Создать доступ</a></div></div><div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div></section>${demoControls()}${testingSummary()}<section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section></main>`;
+  document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>${statusBox()}${accessGuide()}<section class="grid"><div class="card" id="new-user-box"><h2>Профиль сотрудника в Навигаторе</h2><p class="muted">Этот блок создает/обновляет роль сотрудника в CRM. Для входа после этого создайте ссылку доступа.</p><div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div><div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div><div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div><div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div><div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div><div id="adminStatus" class="status">Шаг 1: добавьте профиль. Шаг 2: создайте ссылку доступа.</div><div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Сохранить профиль</button><a class="btn green" href="./nav-access-v2.html">Создать доступ</a></div></div><div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div></section>${qualityDashboard()}${demoControls()}${testingSummary()}<section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section></main>`;
   bind();
 }
 
 async function reloadDealStats() { const data = await rpc('nav_v2_get_deals_list', { p_limit: 200 }, 15000); calcDealStats(data.items || []); }
+async function reloadDataQuality() { dataQuality = await rpc('nav_v2_get_data_quality_dashboard', { p_limit: 30 }, 15000); }
 
 function bind() {
   document.getElementById('reloadUsers').onclick = load;
+  const reloadQuality = document.getElementById('reloadQuality');
+  if (reloadQuality) reloadQuality.onclick = async () => { await load(); location.hash = 'data-quality-box'; };
   document.getElementById('addUser').onclick = async () => {
     try {
       setStatus('Сохраняю профиль сотрудника...');
@@ -99,12 +168,12 @@ function bind() {
     } catch (e) { setStatus('Ошибка профиля: ' + e.message + '. Если аккаунта еще нет в Auth, используйте страницу «Создать доступ».', 'error'); }
   };
   document.getElementById('seedDemoData').onclick = async () => {
-    try { setDemoStatus('Создаю демо-набор...'); const result = await rpc('nav_v2_seed_demo_data', {}, 20000); await reloadDealStats(); render(); setDemoStatus(`Демо-набор создан: ${result.created_deals || 0} сделок.`, 'ok'); }
+    try { setDemoStatus('Создаю демо-набор...'); const result = await rpc('nav_v2_seed_demo_data', {}, 20000); await reloadDealStats(); await reloadDataQuality().catch((e) => { dataQuality.error = e.message; }); render(); setDemoStatus(`Демо-набор создан: ${result.created_deals || 0} сделок.`, 'ok'); }
     catch (e) { setDemoStatus('Ошибка демо-набора: ' + e.message, 'error'); }
   };
   document.getElementById('clearDemoData').onclick = async () => {
     if (!confirm('Удалить только демо-сделки Навигатора v2?')) return;
-    try { setDemoStatus('Очищаю демо-набор...'); const result = await rpc('nav_v2_clear_demo_data', {}, 20000); await reloadDealStats(); render(); setDemoStatus(`Удалено сделок: ${result.deleted_deals || 0}.`, 'ok'); }
+    try { setDemoStatus('Очищаю демо-набор...'); const result = await rpc('nav_v2_clear_demo_data', {}, 20000); await reloadDealStats(); await reloadDataQuality().catch((e) => { dataQuality.error = e.message; }); render(); setDemoStatus(`Удалено сделок: ${result.deleted_deals || 0}.`, 'ok'); }
     catch (e) { setDemoStatus('Ошибка очистки: ' + e.message, 'error'); }
   };
   document.querySelectorAll('[data-save-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.saveUser, null));
@@ -134,8 +203,10 @@ async function load() {
   loadErrors = [];
   users = [];
   dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
+  dataQuality = { summary: null, source_counts: [], items: [], error: '' };
   try { const userData = await rpc('nav_v2_list_users', {}, 15000); users = userData.items || []; } catch (e) { loadErrors.push('пользователи: ' + e.message); }
   try { await reloadDealStats(); } catch (e) { loadErrors.push('статистика: ' + e.message); }
+  try { await reloadDataQuality(); } catch (e) { dataQuality.error = e.message; loadErrors.push('качество данных: ' + e.message); }
   render();
 }
 
