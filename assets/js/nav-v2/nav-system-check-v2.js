@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260627-0425';
+const CHECK_VERSION = '20260627-0455';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -313,6 +313,7 @@ function render() {
           <div class="list-item"><b>Профиль</b><p class="muted">Есть ли пользователь в nav_user_profiles и какая роль назначена.</p></div>
           <div class="list-item"><b>CRM</b><p class="muted">Загрузка рабочего стола и списка сделок по текущей роли.</p></div>
           <div class="list-item"><b>RPC права</b><p class="muted">Для owner/admin проверяется, что клиентские RPC доступны authenticated и закрыты для anon.</p></div>
+          <div class="list-item"><b>Внутренние RPC</b><p class="muted">Для owner/admin проверяется, что helper-функции закрыты для браузерных ролей.</p></div>
           <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных HTML-страниц на GitHub Pages.</p></div>
           <div class="list-item"><b>Админка</b><p class="muted">Команда и доступы проверяются только для owner/admin.</p></div>
           <div class="list-item"><b>Доступы</b><p class="muted">Edge Function проверяется через безопасный POST dry_run без создания пользователя.</p></div>
@@ -520,6 +521,52 @@ async function checkRpcGrants() {
   }
 }
 
+function renderInternalRpcLockdownHealth(data) {
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const missing = Number(data?.missing_count || 0);
+  const opened = Number(data?.open_count || 0);
+  if (data?.ok === true && missing === 0 && opened === 0) {
+    updateCheck('Внутренние RPC', 'ok', `Проверено внутренних функций: ${items.length}. authenticated, anon и PUBLIC не имеют EXECUTE.`);
+    return;
+  }
+  const openedText = rpcGrantFailures(
+    items,
+    (item) => !item.exists_in_db || item.authenticated_can_execute || item.anon_can_execute || item.public_can_execute
+  );
+  updateCheck(
+    'Внутренние RPC',
+    'error',
+    `Нарушен lockdown внутренних RPC. Не найдено: ${missing}. Открыто ролям: ${opened}.`,
+    openedText
+  );
+}
+
+async function checkInternalRpcLockdown() {
+  const role = currentProfile?.role || '';
+  if (role && !['owner', 'admin'].includes(role)) {
+    updateCheck('Внутренние RPC', 'ok', 'Проверка внутренних RPC доступна только owner/admin. Для текущей роли это корректно.', `Текущая роль: ${roleName(role)}`);
+    return;
+  }
+
+  const roleText = role ? `Текущая роль: ${roleName(role)}` : 'Роль еще не определена, пробую owner/admin диагностику напрямую.';
+  updateCheck('Внутренние RPC', 'info', 'Проверяю lockdown внутренних helper-функций...', roleText);
+  try {
+    const data = await rpc('nav_v2_get_internal_rpc_lockdown_health', {}, 12000);
+    renderInternalRpcLockdownHealth(data);
+  } catch (e) {
+    if (updateRpcPermissionError('Внутренние RPC', e)) return;
+    if (!role && String(e?.message || '').includes('owner/admin')) {
+      updateCheck('Внутренние RPC', 'warn', 'Роль не определена, а admin-диагностика внутренних RPC недоступна. Сначала исправьте профиль/роль, затем повторите проверку.', e.message);
+      return;
+    }
+    if (String(e?.message || '').includes('owner/admin')) {
+      updateCheck('Внутренние RPC', 'ok', 'Проверка внутренних RPC доступна только owner/admin. Для текущей роли это корректно.', e.message);
+      return;
+    }
+    updateCheck('Внутренние RPC', 'error', e.message);
+  }
+}
+
 async function checkStaticPages() {
   updateCheck('Страницы GitHub Pages', 'info', 'Проверяю доступность основных HTML-страниц...');
   const failed = [];
@@ -606,6 +653,7 @@ async function runAllChecks() {
   await checkDeals();
   checkProfileConsistency();
   await checkRpcGrants();
+  await checkInternalRpcLockdown();
   await checkStaticPages();
   await checkTeam();
   await checkEdgeFunction();
