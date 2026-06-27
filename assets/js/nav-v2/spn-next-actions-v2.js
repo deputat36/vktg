@@ -24,6 +24,14 @@ function dateShort(value) {
   return value ? localDate(value).toLocaleDateString('ru-RU') : '—';
 }
 
+function dayWord(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'день';
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'дня';
+  return 'дней';
+}
+
 function priorityWeight(priority) {
   return ({ urgent: 0, high: 1, normal: 2, low: 3 })[priority] ?? 2;
 }
@@ -71,7 +79,10 @@ function missingRequiredDoc(doc) {
 function duePill(value, emptyText = 'срок не установлен') {
   const diff = daysUntil(value);
   if (!value) return `<span class="pill yellow">${esc(emptyText)}</span>`;
-  if (diff < 0) return `<span class="pill red">просрочено: ${dateShort(value)}</span>`;
+  if (diff < 0) {
+    const days = Math.abs(diff);
+    return `<span class="pill red">просрочено ${days} ${dayWord(days)}: ${dateShort(value)}</span>`;
+  }
   if (diff === 0) return `<span class="pill yellow">сегодня: ${dateShort(value)}</span>`;
   if (diff === 1) return `<span class="pill yellow">завтра: ${dateShort(value)}</span>`;
   return `<span class="pill blue">срок: ${dateShort(value)}</span>`;
