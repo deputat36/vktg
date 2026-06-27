@@ -36,6 +36,16 @@ function roleLabel(role) {
   return ({ owner: 'owner', admin: 'admin', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'не назначен';
 }
 
+function roleContactLabel(role) {
+  return ({ owner: 'владельцем', admin: 'администратором', manager: 'менеджером', spn: 'СПН', lawyer: 'юристом', broker: 'брокером', viewer: 'наблюдателем' })[role] || roleLabel(role);
+}
+
+function roleTargetsText(docs) {
+  const roles = [...new Set(docs.map((doc) => doc.responsible_role).filter(Boolean))];
+  if (!roles.length) return 'ответственными специалистами';
+  return roles.map(roleContactLabel).join(', ');
+}
+
 function docStatusLabel(status) {
   return ({ needed: 'нужен', requested: 'запрошен', received: 'получен', checked: 'проверен', problem: 'проблема' })[status] || status || 'нужен';
 }
@@ -93,8 +103,9 @@ function nextStepHtml(tasks, docs) {
 
   let text = '';
   if (overdueTasks.length) text = 'Сначала закройте просроченные задачи СПН или перенесите срок, если задача ещё не готова.';
+  else if (overdueSpnDocs.length && overdueWatchedDocs.length) text = `Сначала запросите свои просроченные документы СПН и свяжитесь с ${roleTargetsText(overdueWatchedDocs)} по контрольным документам.`;
   else if (overdueSpnDocs.length) text = 'Сначала запросите или получите просроченные документы, за которые отвечает СПН.';
-  else if (overdueWatchedDocs.length) text = 'Сначала проконтролируйте просроченные документы у ответственных специалистов.';
+  else if (overdueWatchedDocs.length) text = `Сначала свяжитесь с ${roleTargetsText(overdueWatchedDocs)} по просроченным контрольным документам и зафиксируйте срок получения.`;
   else if (todayTasks.length) text = 'Начните с задач СПН на сегодня.';
   else if (spnDocs.length) text = 'Начните со своих обязательных документов СПН.';
   else if (tasks.length) text = 'Начните с ближайшей задачи СПН.';
