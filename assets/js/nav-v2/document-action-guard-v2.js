@@ -94,7 +94,7 @@ async function loadPermissions(force = false) {
   if (!dealId) return false;
   if (loaded && !force) return true;
   if (loading) return loading;
-  loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000)
+  loading = rpc('nav_v2_get_deal_card_lite', { p_deal_id: dealId }, 12000)
     .then((card) => {
       permissions = new Map((card.documents || []).map((doc) => [doc.id, doc]));
       loaded = true;
