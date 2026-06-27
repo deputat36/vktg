@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260617-1';
+const CHECK_VERSION = '20260627-0325';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -292,6 +292,7 @@ function render() {
           <div class="list-item"><b>Auth</b><p class="muted">Есть ли сессия, access token, refresh token и срок действия JWT.</p></div>
           <div class="list-item"><b>Профиль</b><p class="muted">Есть ли пользователь в nav_user_profiles и какая роль назначена.</p></div>
           <div class="list-item"><b>CRM</b><p class="muted">Загрузка рабочего стола и списка сделок по текущей роли.</p></div>
+          <div class="list-item"><b>RPC права</b><p class="muted">Для owner/admin проверяется, что клиентские RPC доступны authenticated и закрыты для anon.</p></div>
           <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных HTML-страниц на GitHub Pages.</p></div>
           <div class="list-item"><b>Админка</b><p class="muted">Команда и доступы проверяются только для owner/admin.</p></div>
           <div class="list-item"><b>Доступы</b><p class="muted">Edge Function проверяется через безопасный POST dry_run без создания пользователя.</p></div>
@@ -452,6 +453,39 @@ function checkProfileConsistency() {
   updateCheck('Согласованность профиля', 'ok', 'Профиль из разных RPC согласован. Статус активности взят из полного профиля nav_v2_get_my_profile.', sources.map(sourceProfileLine).join('; '));
 }
 
+function rpcGrantFailures(items, predicate) {
+  return items.filter(predicate).map((item) => item.signature || item.title).slice(0, 8).join('; ');
+}
+
+async function checkRpcGrants() {
+  if (!['owner', 'admin'].includes(currentProfile?.role)) {
+    updateCheck('RPC права', 'ok', 'Проверка grants доступна только owner/admin. Для текущей роли это корректно.', `Текущая роль: ${roleName(currentProfile?.role)}`);
+    return;
+  }
+
+  updateCheck('RPC права', 'info', 'Проверяю EXECUTE grants для клиентских RPC...');
+  try {
+    const data = await rpc('nav_v2_get_rpc_grant_health', {}, 12000);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const missing = Number(data?.missing_authenticated_count || 0);
+    const anonOpen = Number(data?.anon_open_count || 0);
+    if (data?.ok === true && missing === 0 && anonOpen === 0) {
+      updateCheck('RPC права', 'ok', `Проверено RPC: ${items.length}. authenticated имеет EXECUTE, anon закрыт.`);
+      return;
+    }
+    const missingText = rpcGrantFailures(items, (item) => !item.exists_in_db || !item.authenticated_can_execute);
+    const anonText = rpcGrantFailures(items, (item) => item.anon_can_execute);
+    updateCheck(
+      'RPC права',
+      'error',
+      `Нет EXECUTE для authenticated: ${missing}. Открыто для anon: ${anonOpen}.`,
+      [missingText && `missing: ${missingText}`, anonText && `anon: ${anonText}`].filter(Boolean).join(' | ')
+    );
+  } catch (e) {
+    updateCheck('RPC права', 'error', e.message);
+  }
+}
+
 async function checkStaticPages() {
   updateCheck('Страницы GitHub Pages', 'info', 'Проверяю доступность основных HTML-страниц...');
   const failed = [];
@@ -536,6 +570,7 @@ async function runAllChecks() {
   await checkProfile();
   await checkDeals();
   checkProfileConsistency();
+  await checkRpcGrants();
   await checkStaticPages();
   await checkTeam();
   await checkEdgeFunction();
