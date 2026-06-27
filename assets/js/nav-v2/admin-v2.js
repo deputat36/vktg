@@ -3,6 +3,8 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc, statusText } from './
 let users = [];
 let dealStats = { total: 0, demo: 0, real: 0, lastDemoAt: null };
 let dataQuality = { summary: null, source_counts: [], items: [], error: '' };
+let accessDiagnostic = { result: null, error: '' };
+let accessDiagnosticForm = { email: '', dealId: '' };
 let loadErrors = [];
 
 const roles = [
@@ -29,6 +31,7 @@ function statusBox() {
 }
 function setStatus(text, type='info') { const el = document.getElementById('adminStatus'); if (el) { el.className = 'status ' + type; el.textContent = text; } }
 function setDemoStatus(text, type='info') { const el = document.getElementById('demoStatus'); if (el) { el.className = 'status ' + type; el.textContent = text; } }
+function setAccessDiagnosticStatus(text, type='info') { const el = document.getElementById('accessDiagnosticStatus'); if (el) { el.className = 'status ' + type; el.textContent = text; } }
 
 function row(user) {
   return `<div class="list-item">
@@ -133,6 +136,83 @@ function qualityDashboard() {
   </section>`;
 }
 
+function triPill(value, yes = 'да', no = 'нет') {
+  if (value === true) return `<span class="pill green">${yes}</span>`;
+  if (value === false) return `<span class="pill red">${no}</span>`;
+  return '<span class="pill yellow">нет данных</span>';
+}
+
+function smokePills(smoke = {}) {
+  return [
+    ['Профиль', smoke.profile_ok],
+    ['Список сделок', smoke.deals_list_ok],
+    ['Сделка в списке', smoke.deals_list_contains_deal],
+    ['Lite-карточка', smoke.lite_card_ok],
+    ['Full-карточка', smoke.full_card_ok]
+  ].map(([label, ok]) => `<div class="metric ${ok ? 'green' : 'red'}"><span>${label}</span><b>${ok ? 'OK' : 'FAIL'}</b></div>`).join('');
+}
+
+function signalRows(signals = {}) {
+  const labels = {
+    is_active_profile: 'Профиль активен',
+    created_by_user: 'Создатель сделки',
+    seller_spn: 'СПН продавца',
+    buyer_spn: 'СПН покупателя',
+    manager: 'Менеджер сделки',
+    lawyer: 'Юрист сделки',
+    broker: 'Брокер сделки',
+    participant_can_view: 'Участник может смотреть',
+    participant_can_edit: 'Участник может редактировать',
+    manager_of_assigned_spn: 'Менеджер назначенного СПН'
+  };
+  return Object.entries(labels).map(([key, label]) => `<div class="list-item"><b>${label}</b>${triPill(signals[key])}</div>`).join('');
+}
+
+function accessDiagnosticPanel() {
+  const result = accessDiagnostic.result || null;
+  const target = result?.target || null;
+  const deal = result?.deal || null;
+  const participants = Array.isArray(result?.participants) ? result.participants : [];
+  const smoke = result?.rpc_smoke || {};
+  const status = accessDiagnostic.error
+    ? `<div id="accessDiagnosticStatus" class="status error">${esc(accessDiagnostic.error)}</div>`
+    : result
+      ? `<div id="accessDiagnosticStatus" class="status ${result.ok ? 'ok' : 'warn'}">Диагностика выполнена: ${result.ok ? 'доступ подтвержден' : 'есть проблема доступа'}.</div>`
+      : '<div id="accessDiagnosticStatus" class="status">Укажите email сотрудника и id сделки, затем запустите проверку.</div>';
+  const participantRows = participants.map((item) => `<div class="list-item">
+    <b>${esc(item.full_name || item.email || item.user_id || 'Участник')}</b>
+    <span class="small">${esc(item.email || '')} · ${esc(item.role || '')} · ${esc(item.role_in_deal || '')}</span>
+    <div style="margin-top:8px">${triPill(item.can_view, 'can_view', 'no view')} ${triPill(item.can_edit, 'can_edit', 'no edit')} ${triPill(item.can_manage_tasks, 'tasks', 'no tasks')} ${triPill(item.can_view_finance, 'finance', 'no finance')}</div>
+  </div>`).join('');
+  const resultHtml = result ? `<div class="grid">
+    <div>
+      <h3>Результат RPC</h3>
+      <div class="kpi-row">${smokePills(smoke)}</div>
+      <div class="list" style="margin-top:12px">${signalRows(result.access_signals || {})}</div>
+    </div>
+    <div>
+      <h3>Пользователь и сделка</h3>
+      <div class="list">
+        <div class="list-item"><b>${esc(target?.full_name || target?.email || 'Пользователь не найден')}</b><span class="small">${esc(target?.email || '')} · ${esc(target?.role || '')}</span>${triPill(target?.is_active === true, 'активен', 'выключен')}</div>
+        <div class="list-item"><b>${esc(deal?.title || 'Сделка не найдена')}</b><span class="small">${esc(deal?.id || '')} · ${esc(statusText(deal?.status))}</span>${deal?.id ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(deal.id)}">Диагностика карточки</a></div>` : ''}</div>
+      </div>
+      <h3>Участники</h3>
+      <div class="list">${participantRows || '<div class="empty">Участники сделки не найдены.</div>'}</div>
+    </div>
+  </div>` : '';
+
+  return `<section class="card" id="deal-access-diagnostic-box">
+    <div class="section-title"><div><h2>Диагностика доступа к сделке</h2><p class="muted">Проверка owner/admin RPC: профиль, участники, список сделок, lite/full карточка от имени выбранного пользователя.</p></div><span class="pill blue">owner/admin</span></div>
+    <div class="grid">
+      <div class="field"><label>Email сотрудника</label><input id="diagnosticEmail" placeholder="user@example.ru" value="${esc(accessDiagnosticForm.email)}"></div>
+      <div class="field"><label>ID сделки</label><input id="diagnosticDealId" placeholder="uuid сделки" value="${esc(accessDiagnosticForm.dealId)}"></div>
+    </div>
+    ${status}
+    <div class="actions" style="justify-content:flex-start"><button id="checkDealAccess" class="btn primary" type="button">Проверить доступ</button><button id="clearDealAccessDiagnostic" class="btn light" type="button">Очистить результат</button></div>
+    ${resultHtml}
+  </section>`;
+}
+
 function demoControls() {
   return `<section class="card"><div class="section-title"><div><h2>Демо-данные v2</h2><p class="muted">Демо-набор создается только в таблицах nav_ и не затрагивает CRM «Лидер».</p></div><span class="pill yellow">owner/admin</span></div><div class="kpi-row"><div class="metric"><span>Всего сделок</span><b>${dealStats.total}</b></div><div class="metric"><span>Демо</span><b>${dealStats.demo}</b></div><div class="metric green"><span>Рабочие</span><b>${dealStats.real}</b></div><div class="metric"><span>Последнее демо</span><b>${dateText(dealStats.lastDemoAt)}</b></div></div><div id="demoStatus" class="status">Готово к работе с демо-набором.</div><div class="actions" style="justify-content:flex-start"><button id="seedDemoData" class="btn primary" type="button">Создать / пересоздать демо-набор</button><button id="clearDemoData" class="btn red" type="button">Очистить демо-набор</button><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a><a class="btn light" href="./deals-v2.html?filter=demo">Демо-сделки</a><a class="btn light" href="./deals-v2.html?filter=real">Рабочие сделки</a></div></section>`;
 }
@@ -142,7 +222,7 @@ function testingSummary() {
 }
 
 function render() {
-  document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>${statusBox()}${accessGuide()}<section class="grid"><div class="card" id="new-user-box"><h2>Профиль сотрудника в Навигаторе</h2><p class="muted">Этот блок создает/обновляет роль сотрудника в CRM. Для входа после этого создайте ссылку доступа.</p><div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div><div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div><div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div><div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div><div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div><div id="adminStatus" class="status">Шаг 1: добавьте профиль. Шаг 2: создайте ссылку доступа.</div><div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Сохранить профиль</button><a class="btn green" href="./nav-access-v2.html">Создать доступ</a></div></div><div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div></section>${qualityDashboard()}${demoControls()}${testingSummary()}<section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section></main>`;
+  document.getElementById('app').innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Команда Навигатора</h1><p>Управление ролями только для CRM «Навигатор сделок». Таблицы и роли CRM «Лидер» не используются.</p></section>${statusBox()}${accessGuide()}<section class="grid"><div class="card" id="new-user-box"><h2>Профиль сотрудника в Навигаторе</h2><p class="muted">Этот блок создает/обновляет роль сотрудника в CRM. Для входа после этого создайте ссылку доступа.</p><div class="field"><label>Email</label><input id="newEmail" placeholder="user@example.ru"></div><div class="field"><label>Имя</label><input id="newName" placeholder="ФИО"></div><div class="field"><label>Телефон</label><input id="newPhone" placeholder="Можно оставить пустым"></div><div class="field"><label>Роль</label><select id="newRole">${roleOptions('spn')}</select></div><div class="field"><label>Менеджер</label><select id="newManager">${managerOptions('')}</select></div><div id="adminStatus" class="status">Шаг 1: добавьте профиль. Шаг 2: создайте ссылку доступа.</div><div class="actions" style="justify-content:flex-start"><button id="addUser" class="btn primary" type="button">Сохранить профиль</button><a class="btn green" href="./nav-access-v2.html">Создать доступ</a></div></div><div class="card"><h2>Роли</h2><div class="list"><div class="list-item"><b>owner/admin</b>Полный доступ.</div><div class="list-item"><b>manager</b>Контроль команды.</div><div class="list-item"><b>spn</b>Создание и ведение сделок.</div><div class="list-item"><b>lawyer/broker</b>Юридические и ипотечные очереди.</div></div></div></section>${qualityDashboard()}${accessDiagnosticPanel()}${demoControls()}${testingSummary()}<section class="card"><div class="section-title"><h2>Пользователи</h2><button id="reloadUsers" class="btn light" type="button">Обновить</button></div><div class="list">${users.map(row).join('') || '<div class="empty">Пользователи не загрузились. Попробуйте обновить вход или страницу.</div>'}</div></section></main>`;
   bind();
 }
 
@@ -153,6 +233,10 @@ function bind() {
   document.getElementById('reloadUsers').onclick = load;
   const reloadQuality = document.getElementById('reloadQuality');
   if (reloadQuality) reloadQuality.onclick = async () => { await load(); location.hash = 'data-quality-box'; };
+  const checkDealAccess = document.getElementById('checkDealAccess');
+  if (checkDealAccess) checkDealAccess.onclick = runDealAccessDiagnostic;
+  const clearDealAccessDiagnostic = document.getElementById('clearDealAccessDiagnostic');
+  if (clearDealAccessDiagnostic) clearDealAccessDiagnostic.onclick = () => { accessDiagnostic = { result: null, error: '' }; render(); location.hash = 'deal-access-diagnostic-box'; };
   document.getElementById('addUser').onclick = async () => {
     try {
       setStatus('Сохраняю профиль сотрудника...');
@@ -178,6 +262,32 @@ function bind() {
   };
   document.querySelectorAll('[data-save-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.saveUser, null));
   document.querySelectorAll('[data-toggle-user]').forEach((btn) => btn.onclick = () => saveUser(btn.dataset.toggleUser, btn.dataset.active === 'true'));
+}
+
+async function runDealAccessDiagnostic() {
+  accessDiagnosticForm = {
+    email: document.getElementById('diagnosticEmail')?.value.trim() || '',
+    dealId: document.getElementById('diagnosticDealId')?.value.trim() || ''
+  };
+  accessDiagnostic = { result: null, error: '' };
+  if (!accessDiagnosticForm.email || !accessDiagnosticForm.dealId) {
+    accessDiagnostic.error = 'Укажите email сотрудника и id сделки.';
+    render();
+    location.hash = 'deal-access-diagnostic-box';
+    return;
+  }
+  try {
+    setAccessDiagnosticStatus('Проверяю доступ через защищенный RPC...');
+    const result = await rpc('nav_v2_check_deal_access', {
+      p_email: accessDiagnosticForm.email,
+      p_deal_id: accessDiagnosticForm.dealId
+    }, 20000);
+    accessDiagnostic = { result, error: '' };
+  } catch (e) {
+    accessDiagnostic = { result: null, error: 'Ошибка диагностики: ' + e.message };
+  }
+  render();
+  location.hash = 'deal-access-diagnostic-box';
 }
 
 async function saveUser(id, activeOverride) {
