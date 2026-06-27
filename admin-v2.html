@@ -8,7 +8,17 @@
 </head>
 <body class="nav-v2" data-admin-page="admin">
   <div id="app"></div>
-  <script type="module" src="./assets/js/nav-v2/admin-loader-v2.js?v=20260617-44"></script>
+  <script type="importmap">
+    {
+      "scopes": {
+        "./assets/js/nav-v2/": {
+          "./supabase-v2.js": "./assets/js/nav-v2/supabase-v2.js?v=20260625-1320",
+          "./supabase-v2.js?v=20260625-1230": "./assets/js/nav-v2/supabase-v2.js?v=20260625-1320"
+        }
+      }
+    }
+  </script>
+  <script type="module" src="./assets/js/nav-v2/admin-loader-v2.js?v=20260627-0355"></script>
   <script type="module" src="./assets/js/nav-v2/admin-profile-editor-ux-v2.js?v=20260624-0755"></script>
   <script type="module" src="./assets/js/nav-v2/expired-session-helper-v2.js?v=20260617-44"></script>
   <script type="module" src="./assets/js/nav-v2/role-menu-v2.js?v=20260617-44"></script>
