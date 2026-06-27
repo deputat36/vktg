@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260627-0415';
+const CHECK_VERSION = '20260627-0425';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -480,32 +480,42 @@ function rpcGrantFailures(items, predicate) {
   return items.filter(predicate).map((item) => item.signature || item.title).slice(0, 8).join('; ');
 }
 
+function renderRpcGrantHealth(data) {
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const missing = Number(data?.missing_authenticated_count || 0);
+  const anonOpen = Number(data?.anon_open_count || 0);
+  if (data?.ok === true && missing === 0 && anonOpen === 0) {
+    updateCheck('RPC права', 'ok', `Проверено RPC: ${items.length}. authenticated имеет EXECUTE, anon закрыт.`);
+    return;
+  }
+  const missingText = rpcGrantFailures(items, (item) => !item.exists_in_db || !item.authenticated_can_execute);
+  const anonText = rpcGrantFailures(items, (item) => item.anon_can_execute);
+  updateCheck(
+    'RPC права',
+    'error',
+    `Нет EXECUTE для authenticated: ${missing}. Открыто для anon: ${anonOpen}.`,
+    [missingText && `missing: ${missingText}`, anonText && `anon: ${anonText}`].filter(Boolean).join(' | ')
+  );
+}
+
 async function checkRpcGrants() {
-  if (!['owner', 'admin'].includes(currentProfile?.role)) {
-    updateCheck('RPC права', 'ok', 'Проверка grants доступна только owner/admin. Для текущей роли это корректно.', `Текущая роль: ${roleName(currentProfile?.role)}`);
+  const role = currentProfile?.role || '';
+  if (role && !['owner', 'admin'].includes(role)) {
+    updateCheck('RPC права', 'ok', 'Проверка grants доступна только owner/admin. Для текущей роли это корректно.', `Текущая роль: ${roleName(role)}`);
     return;
   }
 
-  updateCheck('RPC права', 'info', 'Проверяю EXECUTE grants для клиентских RPC...');
+  const roleText = role ? `Текущая роль: ${roleName(role)}` : 'Роль еще не определена, пробую owner/admin диагностику напрямую.';
+  updateCheck('RPC права', 'info', 'Проверяю EXECUTE grants для клиентских RPC...', roleText);
   try {
     const data = await rpc('nav_v2_get_rpc_grant_health', {}, 12000);
-    const items = Array.isArray(data?.items) ? data.items : [];
-    const missing = Number(data?.missing_authenticated_count || 0);
-    const anonOpen = Number(data?.anon_open_count || 0);
-    if (data?.ok === true && missing === 0 && anonOpen === 0) {
-      updateCheck('RPC права', 'ok', `Проверено RPC: ${items.length}. authenticated имеет EXECUTE, anon закрыт.`);
-      return;
-    }
-    const missingText = rpcGrantFailures(items, (item) => !item.exists_in_db || !item.authenticated_can_execute);
-    const anonText = rpcGrantFailures(items, (item) => item.anon_can_execute);
-    updateCheck(
-      'RPC права',
-      'error',
-      `Нет EXECUTE для authenticated: ${missing}. Открыто для anon: ${anonOpen}.`,
-      [missingText && `missing: ${missingText}`, anonText && `anon: ${anonText}`].filter(Boolean).join(' | ')
-    );
+    renderRpcGrantHealth(data);
   } catch (e) {
     if (updateRpcPermissionError('RPC права', e)) return;
+    if (!role && String(e?.message || '').includes('owner/admin')) {
+      updateCheck('RPC права', 'warn', 'Роль не определена, а admin-диагностика grants недоступна. Сначала исправьте профиль/роль, затем повторите проверку.', e.message);
+      return;
+    }
     updateCheck('RPC права', 'error', e.message);
   }
 }
