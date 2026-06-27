@@ -21,6 +21,20 @@
 
 Функция не меняет данные и возвращает JSON-отчет.
 
+## Интерфейс
+
+Добавлен модуль:
+
+`assets/js/nav-v2/nav-system-check-internal-rpc-v2.js`
+
+Он подключен на странице:
+
+`nav-system-check-v2.html`
+
+После запуска системной диагностики модуль добавляет в результаты пункт `Внутренние RPC`.
+
+Для owner/admin пункт показывает фактический результат lockdown. Для остальных ролей ожидаемый отказ owner/admin-only считается корректным состоянием.
+
 ## Доступ
 
 - `authenticated`: может вызвать функцию, но тело допускает только активные роли `owner` и `admin`;
@@ -33,7 +47,14 @@
 
 - owner `deputat36@gmail.com`: `ok=true`, `missing_count=0`, `open_count=0`, `items_count=11`;
 - СПН Овчинников: ожидаемый отказ `Проверка внутренних RPC доступна только owner/admin`;
-- grants самой диагностической функции: `authenticated=true`, `anon=false`, `public=false`.
+- grants самой диагностической функции: `authenticated=true`, `anon=false`, `public=false`;
+- `nav_v2_get_deals_list(20)` для owner работает, возвращает 20 сделок.
+
+Проверено в GitHub:
+
+- миграция сохранена в `supabase/migrations/20260627044500_nav_v2_internal_rpc_lockdown_health.sql`;
+- модуль диагностики сохранен в `assets/js/nav-v2/nav-system-check-internal-rpc-v2.js`;
+- `nav-system-check-v2.html` подключает модуль с версией `20260627-0445`.
 
 ## CRM «Лидер»
 
