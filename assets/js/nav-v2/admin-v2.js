@@ -168,6 +168,16 @@ function signalRows(signals = {}) {
   return Object.entries(labels).map(([key, label]) => `<div class="list-item"><b>${label}</b>${triPill(signals[key])}</div>`).join('');
 }
 
+function targetStatusPill(target) {
+  if (!target) return '<span class="pill yellow">профиль не найден</span>';
+  return triPill(target.is_active === true, 'активен', 'выключен');
+}
+
+function dealStatusPill(deal) {
+  if (!deal) return '<span class="pill yellow">сделка не найдена</span>';
+  return `<span class="pill blue">${esc(statusText(deal.status))}</span>`;
+}
+
 function accessDiagnosticPanel() {
   const result = accessDiagnostic.result || null;
   const target = result?.target || null;
@@ -177,7 +187,7 @@ function accessDiagnosticPanel() {
   const status = accessDiagnostic.error
     ? `<div id="accessDiagnosticStatus" class="status error">${esc(accessDiagnostic.error)}</div>`
     : result
-      ? `<div id="accessDiagnosticStatus" class="status ${result.ok ? 'ok' : 'warn'}">Диагностика выполнена: ${result.ok ? 'доступ подтвержден' : 'есть проблема доступа'}.</div>`
+      ? `<div id="accessDiagnosticStatus" class="status ${result.ok ? 'ok' : 'warn'}">Диагностика выполнена: ${result.ok ? 'доступ подтвержден' : 'нужна проверка профиля, сделки или прав'}.</div>`
       : '<div id="accessDiagnosticStatus" class="status">Укажите email сотрудника и id сделки, затем запустите проверку.</div>';
   const participantRows = participants.map((item) => `<div class="list-item">
     <b>${esc(item.full_name || item.email || item.user_id || 'Участник')}</b>
@@ -193,8 +203,8 @@ function accessDiagnosticPanel() {
     <div>
       <h3>Пользователь и сделка</h3>
       <div class="list">
-        <div class="list-item"><b>${esc(target?.full_name || target?.email || 'Пользователь не найден')}</b><span class="small">${esc(target?.email || '')} · ${esc(target?.role || '')}</span>${triPill(target?.is_active === true, 'активен', 'выключен')}</div>
-        <div class="list-item"><b>${esc(deal?.title || 'Сделка не найдена')}</b><span class="small">${esc(deal?.id || '')} · ${esc(statusText(deal?.status))}</span>${deal?.id ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(deal.id)}">Диагностика карточки</a></div>` : ''}</div>
+        <div class="list-item"><b>${esc(target?.full_name || target?.email || 'Пользователь не найден')}</b><span class="small">${esc(target?.email || accessDiagnosticForm.email || '')} · ${esc(target?.role || 'роль не определена')}</span>${targetStatusPill(target)}</div>
+        <div class="list-item"><b>${esc(deal?.title || 'Сделка не найдена')}</b><span class="small">${esc(deal?.id || accessDiagnosticForm.dealId || '')}</span>${dealStatusPill(deal)}${deal?.id ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(deal.id)}">Диагностика карточки</a></div>` : ''}</div>
       </div>
       <h3>Участники</h3>
       <div class="list">${participantRows || '<div class="empty">Участники сделки не найдены.</div>'}</div>
