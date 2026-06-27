@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260627-0325';
+const CHECK_VERSION = '20260627-0415';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -89,6 +89,24 @@ function statusText(status) {
   if (status === 'warn') return 'Внимание';
   if (status === 'error') return 'Ошибка';
   return 'Проверка';
+}
+
+function rpcPermissionIssue(error) {
+  const message = String(error?.message || error || '');
+  const match = message.match(/permission denied for function ([a-zA-Z0-9_]+)/i);
+  if (!match) return null;
+  const fn = match[1];
+  return {
+    details: `Нет EXECUTE на RPC ${fn}. Это не таймаут: нужно восстановить grants для authenticated и проверить пункт «RPC права».`,
+    meta: message
+  };
+}
+
+function updateRpcPermissionError(title, error) {
+  const issue = rpcPermissionIssue(error);
+  if (!issue) return false;
+  updateCheck(title, 'error', issue.details, issue.meta);
+  return true;
 }
 
 function updateCheck(title, status, details = '', meta = '') {
@@ -205,6 +223,8 @@ function downgradeTransientErrors() {
   const dashboard = checkItem('Рабочий стол');
   const profileOk = checkIsOk('Профиль и роль');
   const dealsOk = checkIsOk('Список сделок');
+
+  if (dashboard?.meta && rpcPermissionIssue(dashboard.meta)) return;
 
   if (dashboard?.status === 'error' && profileOk && dealsOk && currentProfile?.role) {
     Object.assign(dashboard, {
@@ -383,6 +403,7 @@ async function checkDashboard() {
     updateCheck('Рабочий стол', 'ok', `Всего сделок: ${data.summary?.total ?? '—'}. Открытых задач: ${(data.tasks || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
     dashboardOk = false;
+    if (updateRpcPermissionError('Рабочий стол', e)) return;
     updateCheck('Рабочий стол', 'error', e.message);
   }
 }
@@ -399,6 +420,7 @@ async function checkProfile() {
     const status = profileActivityStatus(currentProfile);
     updateCheck('Профиль и роль', status, `Роль: ${roleName(currentProfile.role)}. Статус: ${profileActivityText(currentProfile)}.`, currentProfile.email);
   } catch (e) {
+    if (updateRpcPermissionError('Профиль и роль', e)) return;
     if (currentProfile?.role) {
       updateCheck('Профиль и роль', 'warn', 'Прямой запрос профиля не ответил вовремя, но роль уже получена через рабочий стол.', `Роль: ${roleName(currentProfile.role)}`);
     } else {
@@ -414,6 +436,7 @@ async function checkDeals() {
     mergeProfile(data.profile, 'nav_v2_get_deals_list');
     updateCheck('Список сделок', 'ok', `Загружено сделок: ${(data.items || []).length}.`, `Роль: ${roleName(data.profile?.role || currentProfile?.role)}`);
   } catch (e) {
+    if (updateRpcPermissionError('Список сделок', e)) return;
     const status = dashboardOk ? 'warn' : 'error';
     const details = dashboardOk
       ? 'Список сделок не ответил на диагностический запрос, но рабочий стол загрузился. Возможно, временный сетевой сбой Supabase/GitHub Pages.'
@@ -482,6 +505,7 @@ async function checkRpcGrants() {
       [missingText && `missing: ${missingText}`, anonText && `anon: ${anonText}`].filter(Boolean).join(' | ')
     );
   } catch (e) {
+    if (updateRpcPermissionError('RPC права', e)) return;
     updateCheck('RPC права', 'error', e.message);
   }
 }
@@ -514,6 +538,7 @@ async function checkTeam() {
     const data = await rpc('nav_v2_list_users', {}, 15000);
     updateCheck('Команда', 'ok', `Пользователей в Навигаторе: ${(data.items || []).length}.`);
   } catch (e) {
+    if (updateRpcPermissionError('Команда', e)) return;
     updateCheck('Команда', 'error', e.message);
   }
 }
