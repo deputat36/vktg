@@ -2,14 +2,14 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260627-0455';
+const CHECK_VERSION = '20260627-0505';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
 let dashboardOk = false;
 let lastRunAt = null;
 
-const STATIC_PAGES = [
+const COMMON_STATIC_PAGES = [
   ['Стартовая страница', './nav-v2.html'],
   ['Рабочий стол', './dashboard-v2.html'],
   ['Список сделок', './deals-v2.html'],
@@ -142,6 +142,24 @@ function roleActions() {
     return [...common, ['Новая сделка', './spn-v2.html'], ['Команда', './admin-v2.html'], ['Создать доступ', './nav-access-v2.html'], ['Аудит доступов', './nav-access-audit-v2.html']];
   }
   return common;
+}
+
+function staticPagesForRole() {
+  const role = currentProfile?.role || '';
+  const pages = [...COMMON_STATIC_PAGES];
+  if (role === 'owner' || role === 'admin') {
+    pages.push(['Команда', './admin-v2.html']);
+    pages.push(['Аудит доступов', './nav-access-audit-v2.html']);
+    pages.push(['Диагностика карточки', './deal-card-diag-v2.html']);
+  }
+  if (role === 'lawyer') {
+    pages.push(['Кабинет юриста', './queue-v2.html']);
+    pages.push(['Юридическая очередь', './deals-v2.html?filter=lawyer']);
+  }
+  if (role === 'broker') {
+    pages.push(['Брокерская очередь', './deals-v2.html?filter=broker']);
+  }
+  return pages;
 }
 
 function actionLinks() {
@@ -314,7 +332,7 @@ function render() {
           <div class="list-item"><b>CRM</b><p class="muted">Загрузка рабочего стола и списка сделок по текущей роли.</p></div>
           <div class="list-item"><b>RPC права</b><p class="muted">Для owner/admin проверяется, что клиентские RPC доступны authenticated и закрыты для anon.</p></div>
           <div class="list-item"><b>Внутренние RPC</b><p class="muted">Для owner/admin проверяется, что helper-функции закрыты для браузерных ролей.</p></div>
-          <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных HTML-страниц на GitHub Pages.</p></div>
+          <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных и ролевых HTML-страниц на GitHub Pages.</p></div>
           <div class="list-item"><b>Админка</b><p class="muted">Команда и доступы проверяются только для owner/admin.</p></div>
           <div class="list-item"><b>Доступы</b><p class="muted">Edge Function проверяется через безопасный POST dry_run без создания пользователя.</p></div>
         </div>
@@ -568,9 +586,10 @@ async function checkInternalRpcLockdown() {
 }
 
 async function checkStaticPages() {
-  updateCheck('Страницы GitHub Pages', 'info', 'Проверяю доступность основных HTML-страниц...');
+  const pages = staticPagesForRole();
+  updateCheck('Страницы GitHub Pages', 'info', `Проверяю HTML-страницы для роли: ${roleName(currentProfile?.role)}...`);
   const failed = [];
-  for (const [title, href] of STATIC_PAGES) {
+  for (const [title, href] of pages) {
     try {
       const response = await fetch(href, { method: 'GET', cache: 'no-store' });
       if (!response.ok) failed.push(`${title}: ${response.status}`);
@@ -579,9 +598,9 @@ async function checkStaticPages() {
     }
   }
   if (failed.length) {
-    updateCheck('Страницы GitHub Pages', 'warn', 'Некоторые страницы не ответили на статическую проверку.', failed.join('; '));
+    updateCheck('Страницы GitHub Pages', 'warn', 'Некоторые страницы роли не ответили на статическую проверку.', failed.join('; '));
   } else {
-    updateCheck('Страницы GitHub Pages', 'ok', `Все основные страницы доступны: ${STATIC_PAGES.length}.`);
+    updateCheck('Страницы GitHub Pages', 'ok', `Все основные и ролевые страницы доступны: ${pages.length}.`, `Роль: ${roleName(currentProfile?.role)}`);
   }
 }
 
