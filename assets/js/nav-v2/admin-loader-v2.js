@@ -4,7 +4,7 @@ const app = document.getElementById('app');
 const page = document.body.dataset.adminPage || 'admin';
 
 const scripts = {
-  admin: './admin-v2.js?v=20260627-1430',
+  admin: './admin-v2.js?v=20260627-1500',
   invite: './admin-invite-v2.js?v=20260617-43',
   access: './nav-temp-password-v2.js?v=20260617-43',
   audit: './nav-access-audit-v2.js?v=20260617-43'
