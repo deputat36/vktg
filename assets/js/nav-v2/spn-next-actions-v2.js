@@ -227,6 +227,11 @@ function docsOwnershipHintHtml(spnDocs, otherDocs) {
   return '';
 }
 
+function spnDocumentActionText(doc) {
+  if (doc.responsible_role === 'spn') return 'Действие СПН: запросить, получить или актуализировать этот документ.';
+  return `Действие СПН: проконтролировать ответственного (${roleLabel(doc.responsible_role)}) и срок получения.`;
+}
+
 function docItemHtml(doc) {
   return `<div class="list-item">
     <div class="actions" style="justify-content:flex-start;margin-top:0">
@@ -237,6 +242,7 @@ function docItemHtml(doc) {
       <span class="pill blue">ответственный: ${esc(roleLabel(doc.responsible_role))}</span>
     </div>
     <b>${esc(doc.title || 'Документ')}</b>
+    <p class="small">${esc(spnDocumentActionText(doc))}</p>
     ${doc.description ? `<p class="muted">${esc(doc.description)}</p>` : ''}
   </div>`;
 }
