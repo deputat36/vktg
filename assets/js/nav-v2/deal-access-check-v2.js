@@ -8,12 +8,25 @@ let form = {
 };
 let result = null;
 let errorText = '';
+let infoText = '';
 let busy = false;
 
 function pill(value, yes = 'да', no = 'нет') {
   if (value === true) return `<span class="pill green">${yes}</span>`;
   if (value === false) return `<span class="pill red">${no}</span>`;
   return '<span class="pill yellow">нет данных</span>';
+}
+
+function readForm() {
+  form = {
+    email: document.getElementById('diagEmail')?.value.trim() || '',
+    dealId: document.getElementById('diagDealId')?.value.trim() || ''
+  };
+  return form;
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || '');
 }
 
 function smokeRows(smoke = {}) {
@@ -50,12 +63,31 @@ function participantRows(items = []) {
   </div>`).join('');
 }
 
-function diagnosticUrl() {
+function diagnosticUrl(values = form) {
   const url = new URL('./deal-access-check-v2.html', location.href);
-  if (form.email) url.searchParams.set('email', form.email);
-  if (form.dealId) url.searchParams.set('deal_id', form.dealId);
+  if (values.email) url.searchParams.set('email', values.email);
+  if (values.dealId) url.searchParams.set('deal_id', values.dealId);
   url.searchParams.set('auto', '1');
   return url.href;
+}
+
+function updateAutoLink() {
+  const link = document.getElementById('autoDiagLink');
+  if (link) link.href = diagnosticUrl(readForm());
+}
+
+async function copyDiagnosticUrl() {
+  const url = diagnosticUrl(readForm());
+  infoText = '';
+  errorText = '';
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
+    await navigator.clipboard.writeText(url);
+    infoText = 'Ссылка диагностики скопирована.';
+  } catch (_) {
+    infoText = 'Ссылка для копирования: ' + url;
+  }
+  draw();
 }
 
 function resultView() {
@@ -79,7 +111,7 @@ function resultView() {
         <h3>Пользователь и сделка</h3>
         <div class="list">
           <div class="list-item"><b>${esc(target?.full_name || target?.email || 'Пользователь не найден')}</b><span class="small">${esc(target?.email || form.email || '')} · ${esc(target?.role || 'роль не определена')}</span>${target ? pill(target.is_active === true, 'активен', 'выключен') : '<span class="pill yellow">профиль не найден</span>'}</div>
-          <div class="list-item"><b>${esc(deal?.title || 'Сделка не найдена')}</b><span class="small">${esc(deal?.id || form.dealId || '')}</span>${deal ? `<span class="pill blue">${esc(statusText(deal.status))}</span>` : '<span class="pill yellow">сделка не найдена</span>'}${deal?.id ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(deal.id)}">Проверка карточки</a></div>` : ''}</div>
+          <div class="list-item"><b>${esc(deal?.title || 'Сделка не найдена')}</b><span class="small">${esc(deal?.id || form.dealId || '')}</span>${deal ? `<span class="pill blue">${esc(statusText(deal.status))}</span>` : '<span class="pill yellow">сделка не найдена</span>'}${deal?.id ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a><a class="btn light" href="./deal-card-check-v2.html?id=${encodeURIComponent(deal.id)}">Проверка карточки</a><a class="btn light" id="resultAutoDiagLink" href="${esc(diagnosticUrl())}">Ссылка на эту проверку</a></div>` : ''}</div>
         </div>
         <h3>Участники</h3>
         <div class="list">${participantRows(participants) || '<div class="empty">Участники сделки не найдены.</div>'}</div>
@@ -91,21 +123,24 @@ function resultView() {
 function draw() {
   const status = errorText
     ? `<div class="status error">${esc(errorText)}</div>`
-    : result
-      ? `<div class="status ${result.ok ? 'ok' : 'warn'}">${result.ok ? 'Доступ подтвержден.' : 'Нужна проверка профиля, сделки или прав.'}</div>`
-      : '<div class="status">Заполните email и id сделки. Для автозапуска используйте параметр auto=1.</div>';
+    : infoText
+      ? `<div class="status ok">${esc(infoText)}</div>`
+      : result
+        ? `<div class="status ${result.ok ? 'ok' : 'warn'}">${result.ok ? 'Доступ подтвержден.' : 'Нужна проверка профиля, сделки или прав.'}</div>`
+        : '<div class="status">Заполните email и id сделки. Для автозапуска используйте параметр auto=1.</div>';
 
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero"><h1>Диагностика доступа</h1><p>Owner/admin проверка доступа пользователя к конкретной сделке без ручного SQL.</p></section>
     <section class="card">
       <div class="grid">
-        <div class="field"><label>Email сотрудника</label><input id="diagEmail" value="${esc(form.email)}" placeholder="user@example.ru"></div>
-        <div class="field"><label>ID сделки</label><input id="diagDealId" value="${esc(form.dealId)}" placeholder="uuid сделки"></div>
+        <div class="field"><label>Email сотрудника</label><input id="diagEmail" value="${esc(form.email)}" placeholder="user@example.ru" autocomplete="email"></div>
+        <div class="field"><label>ID сделки</label><input id="diagDealId" value="${esc(form.dealId)}" placeholder="uuid сделки" autocomplete="off"></div>
       </div>
       ${status}
       <div class="actions" style="justify-content:flex-start">
         <button id="runDiag" class="btn primary" type="button" ${busy ? 'disabled' : ''}>${busy ? 'Проверяю...' : 'Проверить доступ'}</button>
-        <a class="btn light" href="${esc(diagnosticUrl())}">Ссылка с автопроверкой</a>
+        <a id="autoDiagLink" class="btn light" href="${esc(diagnosticUrl())}">Ссылка с автопроверкой</a>
+        <button id="copyDiagLink" class="btn light" type="button">Скопировать ссылку</button>
         <a class="btn light" href="./admin-v2.html#deal-access-diagnostic-box">Админка</a>
         <a class="btn light" href="./deals-v2.html">Сделки</a>
       </div>
@@ -114,17 +149,24 @@ function draw() {
   </main>`;
 
   document.getElementById('runDiag').onclick = runDiagnostic;
+  document.getElementById('copyDiagLink').onclick = copyDiagnosticUrl;
+  document.getElementById('diagEmail').addEventListener('input', updateAutoLink);
+  document.getElementById('diagDealId').addEventListener('input', updateAutoLink);
 }
 
 async function runDiagnostic() {
-  form = {
-    email: document.getElementById('diagEmail')?.value.trim() || '',
-    dealId: document.getElementById('diagDealId')?.value.trim() || ''
-  };
+  if (busy) return;
+  readForm();
   result = null;
   errorText = '';
+  infoText = '';
   if (!form.email || !form.dealId) {
     errorText = 'Укажите email сотрудника и id сделки.';
+    draw();
+    return;
+  }
+  if (!isUuid(form.dealId)) {
+    errorText = 'ID сделки должен быть UUID.';
     draw();
     return;
   }
