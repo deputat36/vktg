@@ -115,15 +115,26 @@ function nextStepHtml(tasks, docs) {
   return `<div class="status warn"><b>Приоритет сейчас:</b> ${esc(text)}</div>`;
 }
 
+function overdueDocsStatusText(docs) {
+  const spnDocs = docs.filter((doc) => doc.responsible_role === 'spn');
+  const watchedDocs = docs.filter((doc) => doc.responsible_role !== 'spn');
+  if (spnDocs.length && watchedDocs.length) {
+    return `Документы: СПН ${spnDocs.length}, контроль ${watchedDocs.length}. Запросите свои документы и свяжитесь с ${roleTargetsText(watchedDocs)}.`;
+  }
+  if (spnDocs.length) return `Документы СПН: ${spnDocs.length}. Запросите или получите их.`;
+  if (watchedDocs.length) return `Контрольные документы: ${watchedDocs.length}. Свяжитесь с ${roleTargetsText(watchedDocs)} и зафиксируйте срок.`;
+  return '';
+}
+
 function panelStatus(tasks, docs) {
-  const overdueTasks = tasks.filter((task) => daysUntil(task.due_date) < 0).length;
+  const overdueTasks = tasks.filter((task) => daysUntil(task.due_date) < 0);
   const todayTasks = tasks.filter((task) => daysUntil(task.due_date) === 0).length;
-  const overdueDocs = docs.filter((doc) => daysUntil(doc.due_date) < 0).length;
-  if (overdueTasks || overdueDocs) {
+  const overdueDocs = docs.filter((doc) => daysUntil(doc.due_date) < 0);
+  if (overdueTasks.length || overdueDocs.length) {
     const parts = [];
-    if (overdueTasks) parts.push(`СПН-задачи: ${overdueTasks}`);
-    if (overdueDocs) parts.push(`документы: ${overdueDocs}`);
-    return `<div class="status error">Есть просроченные пункты: ${parts.join(', ')}. Их нужно закрыть или перенести срок.</div>`;
+    if (overdueTasks.length) parts.push(`СПН-задачи: ${overdueTasks.length}. Закройте или перенесите срок, если задача ещё не готова.`);
+    if (overdueDocs.length) parts.push(overdueDocsStatusText(overdueDocs));
+    return `<div class="status error"><b>Есть просрочки.</b> ${esc(parts.filter(Boolean).join(' '))}</div>`;
   }
   if (todayTasks) return `<div class="status warn">На сегодня есть СПН-задачи: ${todayTasks}. Начните с них.</div>`;
   if (docs.length) return `<div class="status warn">Есть обязательные документы к контролю: ${docs.length}. Проверьте запрос и получение.</div>`;
