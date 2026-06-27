@@ -72,7 +72,7 @@ async function fallbackRpc(name, payload) {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(payload)
-  });
+  }, 30000);
   const text = await response.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
@@ -103,7 +103,7 @@ function renderMiniCard(data, sourceText) {
   app.innerHTML = `<main class="nav-v2-shell" id="${MARK}">
     <section class="hero"><h1>${esc(title)}</h1><p>${esc(deal.address || deal.next_action || 'Минимальная карточка загружена аварийным режимом.')}</p></section>
     <section class="card">
-      <div class="status warn">Основная карточка не дождалась ответа Supabase. Ниже показана аварийная сводка. ${esc(sourceText || '')}</div>
+      <div class="status warn">Основная карточка не дождалась ответа Supabase. Ниже показана облегчённая аварийная сводка. ${esc(sourceText || '')}</div>
       <div class="kpi-row">
         <div class="metric"><span>Цена</span><b>${money(deal.price_total)}</b></div>
         <div class="metric"><span>Документы</span><b>${missingDocs}</b></div>
@@ -156,12 +156,12 @@ async function tryFallback(errorText) {
   const id = currentDealId();
   if (!id) return renderRecovery(errorText);
   const app = document.getElementById('app');
-  if (app) app.innerHTML = '<main class="nav-v2-shell"><div class="status warn">Основная карточка не загрузилась. Пробую аварийную загрузку сделки...</div></main>';
+  if (app) app.innerHTML = '<main class="nav-v2-shell"><div class="status warn">Основная карточка не загрузилась. Пробую облегчённую аварийную загрузку сделки...</div></main>';
   try {
-    const data = await fallbackRpc('nav_v2_get_deal_card', { p_deal_id: id });
+    const data = await fallbackRpc('nav_v2_get_deal_card_lite', { p_deal_id: id });
     renderMiniCard(data, errorText);
   } catch (error) {
-    renderRecovery((errorText || '') + ' Аварийная загрузка тоже не удалась: ' + error.message);
+    renderRecovery((errorText || '') + ' Облегчённая аварийная загрузка тоже не удалась: ' + error.message);
   }
 }
 
