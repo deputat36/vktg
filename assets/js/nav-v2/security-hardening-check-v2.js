@@ -103,7 +103,7 @@ function draw() {
     <div class="status ${statusClass}">${statusText}</div>
     <section class="card">
       <div class="section-title">
-        <div><h2>Проверка</h2><p class="muted">Доступна только owner/admin. Данные читаются через RPC `nav_v2_get_security_hardening_health()`.</p></div>
+        <div><h2>Проверка</h2><p class="muted">Доступна только owner/admin. Данные читаются через RPC nav_v2_get_security_hardening_health().</p></div>
         <span class="pill ${isAdmin() ? 'blue' : 'yellow'}">${isAdmin() ? 'owner/admin' : 'restricted'}</span>
       </div>
       <div class="actions" style="justify-content:flex-start;margin-top:8px">
@@ -114,14 +114,14 @@ function draw() {
     </section>
     ${result ? `<section class="grid">
       <div class="card">
-        <div class="section-title"><div><h2>Таблицы</h2><p class="muted">RLS и прямые права ` + '`anon`/`PUBLIC`' + `.</p></div><span class="pill ${Number(tables.anon_or_public_open_count || 0) || Number(tables.rls_disabled_count || 0) ? 'red' : 'ok'}">${Number(tables.checked_count || 0)}</span></div>
+        <div class="section-title"><div><h2>Таблицы</h2><p class="muted">RLS и прямые права anon/PUBLIC.</p></div><span class="pill ${Number(tables.anon_or_public_open_count || 0) || Number(tables.rls_disabled_count || 0) ? 'red' : 'ok'}">${Number(tables.checked_count || 0)}</span></div>
         <div class="list">
           ${metric('RLS выключен', tables.rls_disabled_count ?? 0, Number(tables.rls_disabled_count || 0) ? 'red' : 'ok')}
           ${metric('Открытые anon/PUBLIC grants', tables.anon_or_public_open_count ?? 0, Number(tables.anon_or_public_open_count || 0) ? 'red' : 'ok')}
         </div>
       </div>
       <div class="card">
-        <div class="section-title"><div><h2>Функции</h2><p class="muted">EXECUTE для ` + '`anon`/`PUBLIC`' + ` и SECURITY DEFINER.</p></div><span class="pill ${Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok'}">${Number(functions.checked_count || 0)}</span></div>
+        <div class="section-title"><div><h2>Функции</h2><p class="muted">EXECUTE для anon/PUBLIC и SECURITY DEFINER.</p></div><span class="pill ${Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok'}">${Number(functions.checked_count || 0)}</span></div>
         <div class="list">
           ${metric('SECURITY DEFINER функций', functions.security_definer_count ?? 0, 'blue')}
           ${metric('Открытые anon/PUBLIC EXECUTE', functions.anon_or_public_open_count ?? 0, Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok')}
