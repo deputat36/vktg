@@ -42,6 +42,24 @@ function commonCards() {
     card('Список сделок', 'Проверка видимости сделок по текущей роли.', './deals-v2.html', 'deals')
   ].join('');
 }
+function recommendedOrder() {
+  if (!isAdmin()) {
+    return `<div class="list-item"><b>1. Проверка системы</b><p class="muted">Базовая проверка входа, роли, сессии, рабочих страниц и доступных текущей роли RPC.</p></div>
+      <div class="list-item"><b>2. Рабочий стол</b><p class="muted">Проверьте, что рабочий контур роли открывается и показывает ожидаемые задачи/сделки.</p></div>
+      <div class="list-item"><b>3. Список сделок</b><p class="muted">Проверьте видимость сделок по текущей роли и фильтрам очереди.</p></div>
+      <div class="list-item"><b>4. Проверка карточки по ID</b><p class="muted">Если есть проблема с конкретной сделкой, проверьте открытие карточки по id.</p></div>
+      <div class="list-item"><b>5. Owner/admin проверки</b><p class="muted">Если нужна проверка grants, качества данных, профилей команды или доступа к чужой сделке, передайте отчет владельцу или администратору.</p></div>`;
+  }
+  return `<div class="list-item"><b>1. Operations health overview</b><p class="muted">Для owner/admin: одним запуском увидеть технические блокеры и операционные предупреждения.</p></div>
+    <div class="list-item"><b>2. Проверка системы</b><p class="muted">Базовая проверка входа, роли и ключевых RPC.</p></div>
+    <div class="list-item"><b>3. Security hardening</b><p class="muted">Для owner/admin: убедиться, что RLS и прямые grants закрыты для anon/PUBLIC.</p></div>
+    <div class="list-item"><b>4. Frontend RPC coverage</b><p class="muted">Для owner/admin: убедиться, что все RPC, вызываемые интерфейсом, существуют, доступны authenticated и входят в grant-health.</p></div>
+    <div class="list-item"><b>5. Качество данных сделок</b><p class="muted">Для owner/admin: найти пробелы в карточках, срочные auto-quality задачи и сделки для исправления.</p></div>
+    <div class="list-item"><b>6. Качество профилей команды</b><p class="muted">Для owner/admin: проверить СПН без менеджера, телефоны, email, дубли и корректность manager_id.</p></div>
+    <div class="list-item"><b>7. RPC grants</b><p class="muted">Для owner/admin: убедиться, что authenticated/anon/PUBLIC выставлены корректно на публичных RPC.</p></div>
+    <div class="list-item"><b>8. Диагностика доступа к сделке</b><p class="muted">Для проблем конкретного пользователя и конкретной сделки.</p></div>
+    <div class="list-item"><b>9. Команда и качество данных</b><p class="muted">Проверка ролей, активных профилей, demo-набора и auto-quality задач.</p></div>`;
+}
 function draw() {
   const profileLine = profile
     ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))} · ${profile.is_active ? 'активен' : 'статус уточняется'}`
@@ -64,17 +82,7 @@ function draw() {
     </section>
     <section class="card">
       <h2>Рекомендуемый порядок</h2>
-      <div class="list">
-        <div class="list-item"><b>1. Operations health overview</b><p class="muted">Для owner/admin: одним запуском увидеть технические блокеры и операционные предупреждения.</p></div>
-        <div class="list-item"><b>2. Проверка системы</b><p class="muted">Базовая проверка входа, роли и ключевых RPC.</p></div>
-        <div class="list-item"><b>3. Security hardening</b><p class="muted">Для owner/admin: убедиться, что RLS и прямые grants закрыты для anon/PUBLIC.</p></div>
-        <div class="list-item"><b>4. Frontend RPC coverage</b><p class="muted">Для owner/admin: убедиться, что все RPC, вызываемые интерфейсом, существуют, доступны authenticated и входят в grant-health.</p></div>
-        <div class="list-item"><b>5. Качество данных сделок</b><p class="muted">Для owner/admin: найти пробелы в карточках, срочные auto-quality задачи и сделки для исправления.</p></div>
-        <div class="list-item"><b>6. Качество профилей команды</b><p class="muted">Для owner/admin: проверить СПН без менеджера, телефоны, email, дубли и корректность manager_id.</p></div>
-        <div class="list-item"><b>7. RPC grants</b><p class="muted">Для owner/admin: убедиться, что authenticated/anon/PUBLIC выставлены корректно на публичных RPC.</p></div>
-        <div class="list-item"><b>8. Диагностика доступа к сделке</b><p class="muted">Для проблем конкретного пользователя и конкретной сделки.</p></div>
-        <div class="list-item"><b>9. Команда и качество данных</b><p class="muted">Проверка ролей, активных профилей, demo-набора и auto-quality задач.</p></div>
-      </div>
+      <div class="list">${recommendedOrder()}</div>
     </section>
   </main>`;
 }
