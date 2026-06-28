@@ -13,7 +13,7 @@ function getActivePage() {
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('queue-v2')) return 'queue';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
-  if (path.includes('diagnostics-v2') || path.includes('rpc-grant-check-v2') || path.includes('deal-access-check-v2') || path.includes('deal-card-check-v2') || path.includes('deal-card-diag-v2')) return 'diagnostics';
+  if (path.includes('diagnostics-v2') || path.includes('security-hardening-check-v2') || path.includes('rpc-grant-check-v2') || path.includes('deal-access-check-v2') || path.includes('deal-card-check-v2') || path.includes('deal-card-diag-v2')) return 'diagnostics';
   if (path.includes('admin-v2') || path.includes('admin-invite-v2')) return 'admin';
   if (path.includes('nav-access-audit-v2')) return 'audit';
   if (path.includes('nav-access-v2')) return 'access';
