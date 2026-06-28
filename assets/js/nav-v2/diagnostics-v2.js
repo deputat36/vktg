@@ -8,6 +8,18 @@ function roleName(role) {
   return ({ owner: 'Владелец', admin: 'Администратор', manager: 'Менеджер', spn: 'СПН', lawyer: 'Юрист', broker: 'Брокер', viewer: 'Наблюдатель' })[role] || role || 'не определена';
 }
 function isAdmin() { return ['owner', 'admin'].includes(profile?.role); }
+function hasOwn(obj, key) { return Object.prototype.hasOwnProperty.call(obj || {}, key); }
+function profileActiveText() {
+  if (!profile) return 'профиль не определен';
+  if (profile.is_active === true) return 'активен';
+  if (profile.is_active === false) return 'выключен';
+  return 'статус активности не передан';
+}
+function profileStatusTone() {
+  if (errorText || profile?.is_active === false) return 'error';
+  if (!profile || !hasOwn(profile, 'is_active')) return 'warn';
+  return isAdmin() ? 'ok' : 'warn';
+}
 function card(title, text, href, tag = '', adminOnly = false) {
   const locked = adminOnly && !isAdmin();
   const pill = tag ? `<span class="pill ${locked ? 'yellow' : 'blue'}">${esc(locked ? 'owner/admin' : tag)}</span>` : '';
@@ -62,14 +74,14 @@ function recommendedOrder() {
 }
 function draw() {
   const profileLine = profile
-    ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))} · ${profile.is_active ? 'активен' : 'статус уточняется'}`
+    ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))} · ${esc(profileActiveText())}`
     : 'профиль не определен';
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero">
       <h1>Диагностика Навигатора</h1>
       <p>Единая точка входа для проверки системы, карточек, доступов и RPC grants. CRM «Лидер» не используется.</p>
     </section>
-    ${errorText ? `<div class="status error">${esc(errorText)}</div>` : `<div class="status ${isAdmin() ? 'ok' : 'warn'}">Текущий профиль: ${profileLine}</div>`}
+    ${errorText ? `<div class="status error">${esc(errorText)}</div>` : `<div class="status ${profileStatusTone()}">Текущий профиль: ${profileLine}</div>`}
     <section class="grid">
       <div class="card">
         <div class="section-title"><div><h2>Общие проверки</h2><p class="muted">Доступны всем авторизованным ролям, результат зависит от прав пользователя.</p></div><span class="pill blue">all roles</span></div>
