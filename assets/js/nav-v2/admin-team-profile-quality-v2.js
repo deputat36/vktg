@@ -35,14 +35,14 @@ function checkRow(item) {
     </div>
   </div>`;
 }
-function panelHtml() {
+function panelInnerHtml() {
   const summary = health?.summary || {};
   const status = errorText
     ? `<div class="status error">${esc(errorText)}</div>`
     : health
       ? `<div class="status ${n(health.error_count) ? 'error' : n(health.warning_count) ? 'warn' : 'ok'}">Критичных ошибок: ${n(health.error_count)}. Предупреждений: ${n(health.warning_count)}.</div>`
       : '<div class="status">Проверяю качество профилей команды...</div>';
-  return `<section class="card" id="team-profile-quality-box">
+  return `
     <div class="section-title">
       <div><h2>Качество профилей команды</h2><p class="muted">Owner/admin health-check по профилям: менеджеры СПН, телефоны, email, дубли и корректность manager_id.</p></div>
       <span class="pill ${health?.ok ? 'green' : errorText ? 'red' : 'yellow'}">${health?.ok ? 'ok' : 'check'}</span>
@@ -72,8 +72,7 @@ function panelHtml() {
         </div>
       </div>
     </div>
-    <div class="actions" style="justify-content:flex-start"><button id="reloadTeamProfileQuality" class="btn light" type="button">Обновить качество профилей</button><a class="btn light" href="./nav-access-v2.html">Создать доступ</a></div>
-  </section>`;
+    <div class="actions" style="justify-content:flex-start"><button id="reloadTeamProfileQuality" class="btn light" type="button">Обновить качество профилей</button><a class="btn light" href="./nav-access-v2.html">Создать доступ</a></div>`;
 }
 function mountPanel() {
   const main = app?.querySelector('main.nav-v2-shell');
@@ -82,11 +81,13 @@ function mountPanel() {
   if (!panel) {
     panel = document.createElement('section');
     panel.id = 'team-profile-quality-box';
+    panel.className = 'card';
     const firstGrid = main.querySelector('section.grid');
     if (firstGrid) main.insertBefore(panel, firstGrid);
     else main.appendChild(panel);
   }
-  panel.outerHTML = panelHtml();
+  const html = panelInnerHtml();
+  if (panel.innerHTML !== html) panel.innerHTML = html;
   document.getElementById('reloadTeamProfileQuality')?.addEventListener('click', () => loadHealth(true));
 }
 async function loadHealth(force = false) {
@@ -108,7 +109,7 @@ async function loadHealth(force = false) {
 
 if (app) {
   new MutationObserver(() => {
-    mountPanel();
+    if (!document.getElementById('team-profile-quality-box')) mountPanel();
     loadHealth(false);
   }).observe(app, { childList: true, subtree: true });
   mountPanel();
