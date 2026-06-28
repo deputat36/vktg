@@ -44,6 +44,9 @@ function problemRow(item, type) {
   if (type === 'index') {
     return `<div class="list-item"><b>${esc(item.index_name || 'unknown')}</b><p class="muted">table: ${esc(item.table_name || 'unknown')} · severity: ${esc(item.severity || 'warning')}</p><p class="muted">exists=${item.exists_in_db ? 'true' : 'false'} · valid=${item.is_valid ? 'true' : 'false'} · ready=${item.is_ready ? 'true' : 'false'} · unique=${item.is_unique ? 'true' : 'false'}</p><p class="muted">${esc(item.purpose || '')}</p></div>`;
   }
+  if (type === 'internal') {
+    return `<div class="list-item"><b>${esc(item.title || 'unknown')}</b><p class="muted">${esc(item.signature || '')}</p><p class="muted">reason: ${esc(item.reason || 'internal function')}</p><p class="muted">exists=${item.exists_in_db ? 'true' : 'false'} · authenticated=${item.authenticated_can_execute ? 'true' : 'false'} · anon=${item.anon_can_execute ? 'true' : 'false'} · PUBLIC=${item.public_can_execute ? 'true' : 'false'}</p></div>`;
+  }
   return `<div class="list-item"><b>${esc(item.function_name || 'unknown')}(${esc(item.identity_args || '')})</b><p class="muted">SECURITY DEFINER: ${item.security_definer ? 'yes' : 'no'} · auth.uid(): ${item.has_auth_uid_check ? 'yes' : 'no'} · owner/admin: ${item.has_owner_admin_check ? 'yes' : 'no'}</p><p class="muted">anon_execute=${item.anon_execute ? 'true' : 'false'} · public_execute=${item.public_execute ? 'true' : 'false'} · authenticated_execute=${item.authenticated_execute ? 'true' : 'false'}</p></div>`;
 }
 
@@ -51,11 +54,11 @@ function problemList(title, items, type) {
   if (!items?.length) {
     return `<section class="card"><div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Проблем не найдено.</p></div><span class="pill ok">0</span></div></section>`;
   }
-  return `<section class="card"><div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Нужно исправить права, RLS, policy, storage или индексное покрытие.</p></div><span class="pill red">${items.length}</span></div><div class="list">${items.map((item) => problemRow(item, type)).join('')}</div></section>`;
+  return `<section class="card"><div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Нужно исправить права, RLS, policy, storage, индексы или lockdown внутренних RPC.</p></div><span class="pill red">${items.length}</span></div><div class="list">${items.map((item) => problemRow(item, type)).join('')}</div></section>`;
 }
 
 function overallOk() {
-  return Boolean(result?.ok && (result.storage?.ok ?? true) && (result.rls?.ok ?? true) && (result.indexes?.ok ?? true));
+  return Boolean(result?.ok && (result.storage?.ok ?? true) && (result.rls?.ok ?? true) && (result.indexes?.ok ?? true) && (result.internal?.ok ?? true));
 }
 
 function buildReport() {
@@ -63,7 +66,9 @@ function buildReport() {
   const storage = result.storage || {};
   const rls = result.rls || {};
   const indexes = result.indexes || {};
+  const internal = result.internal || {};
   const indexFindings = (indexes.expected_indexes || []).filter((item) => !item.exists_in_db || !item.is_valid);
+  const internalFindings = (internal.items || []).filter((item) => !item.exists_in_db || item.authenticated_can_execute || item.anon_can_execute || item.public_can_execute);
   return [
     `Security hardening health: ${overallOk() ? 'OK' : 'PROBLEMS'}`,
     `checked_at: ${result.checked_at || ''}`,
@@ -89,6 +94,9 @@ function buildReport() {
     `indexes.missing_count: ${indexes.missing_count ?? 0}`,
     `indexes.invalid_count: ${indexes.invalid_count ?? 0}`,
     `indexes.problem_count: ${indexes.problem_count ?? 0}`,
+    `internal_rpc.items_count: ${internal.items_count ?? 0}`,
+    `internal_rpc.missing_count: ${internal.missing_count ?? 0}`,
+    `internal_rpc.open_count: ${internal.open_count ?? 0}`,
     `functions.checked_count: ${result.functions?.checked_count ?? 0}`,
     `functions.security_definer_count: ${result.functions?.security_definer_count ?? 0}`,
     `functions.anon_or_public_open_count: ${result.functions?.anon_or_public_open_count ?? 0}`,
@@ -98,6 +106,7 @@ function buildReport() {
     `view_problems: ${JSON.stringify(result.views?.problems || [])}`,
     `storage_problems: ${JSON.stringify(storage.problems || [])}`,
     `index_problems: ${JSON.stringify(indexFindings)}`,
+    `internal_rpc_findings: ${JSON.stringify(internalFindings)}`,
     `function_problems: ${JSON.stringify(result.functions?.problems || [])}`
   ].join('\n');
 }
@@ -122,21 +131,24 @@ function draw() {
   const views = result?.views || {};
   const storage = result?.storage || {};
   const indexes = result?.indexes || {};
+  const internal = result?.internal || {};
   const functions = result?.functions || {};
   const rlsProblemCount = Number(rls.problem_count || 0);
   const viewProblemCount = Number(views.anon_or_public_open_count || 0) + Number(views.authenticated_non_invoker_view_count || 0) + Number(views.authenticated_materialized_view_count || 0);
   const storageProblemCount = Number(storage.nav_related_public_count || 0) + Number(storage.nav_related_without_specific_policy_count || 0);
   const indexFindings = (indexes.expected_indexes || []).filter((item) => !item.exists_in_db || !item.is_valid);
+  const internalFindings = (internal.items || []).filter((item) => !item.exists_in_db || item.authenticated_can_execute || item.anon_can_execute || item.public_can_execute);
   const indexProblemCount = Number(indexes.problem_count || indexFindings.length || 0);
+  const internalProblemCount = Number(internal.open_count || 0) + Number(internal.missing_count || 0);
   const isOk = overallOk();
   const statusClass = errorText ? 'error' : isOk ? 'ok' : result ? 'warn' : 'warn';
   const statusText = errorText || (result ? `Security hardening: ${isOk ? 'OK' : 'есть проблемы'} · проверено ${esc(fmtDate(result.checked_at))}` : `Текущий профиль: ${profileLine}`);
 
   app.innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>Security hardening</h1><p>Проверка RLS, policies, views, Storage, индексов и прямых grants для Навигатора. CRM «Лидер» не используется.</p></section>
+    <section class="hero"><h1>Security hardening</h1><p>Проверка RLS, policies, views, Storage, индексов, внутренних RPC и прямых grants для Навигатора. CRM «Лидер» не используется.</p></section>
     <div class="status ${statusClass}">${statusText}</div>
     <section class="card">
-      <div class="section-title"><div><h2>Проверка</h2><p class="muted">Доступна только owner/admin. Данные читаются через security, RLS policy, Storage и Index health RPC.</p></div><span class="pill ${isAdmin() ? 'blue' : 'yellow'}">${isAdmin() ? 'owner/admin' : 'restricted'}</span></div>
+      <div class="section-title"><div><h2>Проверка</h2><p class="muted">Доступна только owner/admin. Данные читаются через security, RLS policy, Storage, Index и Internal RPC health.</p></div><span class="pill ${isAdmin() ? 'blue' : 'yellow'}">${isAdmin() ? 'owner/admin' : 'restricted'}</span></div>
       <div class="actions" style="justify-content:flex-start;margin-top:8px"><button id="runCheck" class="btn primary" type="button" ${isLoading || !isAdmin() ? 'disabled' : ''}>${isLoading ? 'Проверяю...' : 'Запустить проверку'}</button><button id="copyReport" class="btn light" type="button" ${!result ? 'disabled' : ''}>${copied ? 'Скопировано' : 'Скопировать отчет'}</button><a class="btn light" href="./diagnostics-v2.html">К диагностике</a></div>
     </section>
     ${result ? `<section class="grid">
@@ -145,6 +157,7 @@ function draw() {
       <div class="card"><div class="section-title"><div><h2>Views</h2><p class="muted">security_invoker и SELECT grants.</p></div><span class="pill ${viewProblemCount ? 'red' : 'ok'}">${Number(views.checked_count || 0)}</span></div><div class="list">${metric('security_invoker views', views.security_invoker_count ?? 0, 'blue')}${metric('Открытые anon/PUBLIC SELECT', views.anon_or_public_open_count ?? 0, Number(views.anon_or_public_open_count || 0) ? 'red' : 'ok')}${metric('Authenticated без security_invoker', views.authenticated_non_invoker_view_count ?? 0, Number(views.authenticated_non_invoker_view_count || 0) ? 'red' : 'ok')}${metric('Authenticated materialized views', views.authenticated_materialized_view_count ?? 0, Number(views.authenticated_materialized_view_count || 0) ? 'red' : 'ok')}</div></div>
       <div class="card"><div class="section-title"><div><h2>Storage</h2><p class="muted">Buckets и policies для документов Навигатора.</p></div><span class="pill ${storageProblemCount ? 'red' : 'ok'}">${Number(storage.bucket_count || 0)}</span></div><div class="list">${metric('Публичные buckets всего', storage.public_bucket_count ?? 0, Number(storage.public_bucket_count || 0) ? 'yellow' : 'ok')}${metric('Storage object policies', storage.object_policy_count ?? 0, 'blue')}${metric('Nav-related buckets', storage.nav_related_bucket_count ?? 0, 'blue')}${metric('Nav-related public buckets', storage.nav_related_public_count ?? 0, Number(storage.nav_related_public_count || 0) ? 'red' : 'ok')}${metric('Nav-related buckets без policy', storage.nav_related_without_specific_policy_count ?? 0, Number(storage.nav_related_without_specific_policy_count || 0) ? 'red' : 'ok')}</div></div>
       <div class="card"><div class="section-title"><div><h2>Indexes</h2><p class="muted">Покрытие горячих путей RLS/RPC и auto-quality задач.</p></div><span class="pill ${indexProblemCount ? 'red' : 'ok'}">${Number(indexes.expected_count || 0)}</span></div><div class="list">${metric('Ожидаемые индексы', indexes.expected_count ?? 0, 'blue')}${metric('Отсутствуют', indexes.missing_count ?? 0, Number(indexes.missing_count || 0) ? 'red' : 'ok')}${metric('Invalid', indexes.invalid_count ?? 0, Number(indexes.invalid_count || 0) ? 'red' : 'ok')}</div></div>
+      <div class="card"><div class="section-title"><div><h2>Internal RPC</h2><p class="muted">Trigger/helper функции, которые не должны быть browser-callable.</p></div><span class="pill ${internalProblemCount ? 'red' : 'ok'}">${Number(internal.items_count || 0)}</span></div><div class="list">${metric('Проверено', internal.items_count ?? 0, 'blue')}${metric('Отсутствуют', internal.missing_count ?? 0, Number(internal.missing_count || 0) ? 'red' : 'ok')}${metric('Открыты для browser roles', internal.open_count ?? 0, Number(internal.open_count || 0) ? 'red' : 'ok')}</div></div>
       <div class="card"><div class="section-title"><div><h2>Функции</h2><p class="muted">EXECUTE для anon/PUBLIC и SECURITY DEFINER.</p></div><span class="pill ${Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok'}">${Number(functions.checked_count || 0)}</span></div><div class="list">${metric('SECURITY DEFINER функций', functions.security_definer_count ?? 0, 'blue')}${metric('Открытые anon/PUBLIC EXECUTE', functions.anon_or_public_open_count ?? 0, Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok')}</div></div>
     </section>
     ${problemList('Проблемные таблицы', tables.problems || [], 'table')}
@@ -152,6 +165,7 @@ function draw() {
     ${problemList('Проблемные views', views.problems || [], 'view')}
     ${problemList('Проблемные Storage buckets', storage.problems || [], 'storage')}
     ${problemList('Проблемные индексы', indexFindings, 'index')}
+    ${problemList('Проблемные internal RPC', internalFindings, 'internal')}
     ${problemList('Проблемные функции', functions.problems || [], 'function')}` : ''}
   </main>`;
 
@@ -165,13 +179,14 @@ async function runCheck() {
   errorText = '';
   draw();
   try {
-    const [security, rls, storage, indexes] = await Promise.all([
+    const [security, rls, storage, indexes, internal] = await Promise.all([
       rpc('nav_v2_get_security_hardening_health', {}, 20000),
       rpc('nav_v2_get_rls_policy_health', {}, 20000),
       rpc('nav_v2_get_storage_security_health', {}, 20000),
-      rpc('nav_v2_get_index_health', {}, 20000)
+      rpc('nav_v2_get_index_health', {}, 20000),
+      rpc('nav_v2_get_internal_rpc_lockdown_health', {}, 20000)
     ]);
-    result = { ...security, rls, storage, indexes };
+    result = { ...security, rls, storage, indexes, internal };
   } catch (error) {
     errorText = 'Ошибка проверки: ' + (error.message || error);
   } finally {
