@@ -75,7 +75,7 @@ function draw() {
   </main>`;
 }
 async function init() {
-  setupTop('check');
+  setupTop('diagnostics');
   if (!getCachedUser()) return renderAuthBox(app, async () => location.reload());
   try {
     const data = await rpc('nav_v2_get_my_profile', {}, 12000);
