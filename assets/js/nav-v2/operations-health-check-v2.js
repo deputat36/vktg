@@ -33,14 +33,27 @@ function boolCard(title, isOk, details, href, toneWhenWarn = 'red') {
     ${href ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="${esc(href)}">Открыть</a></div>` : ''}
   </div>`;
 }
-function diagnosticActions() {
-  if (!profile || isAdmin()) {
-    return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./security-hardening-check-v2.html">Security</a><a class="btn light" href="./data-quality-check-v2.html">Качество данных</a><a class="btn light" href="./team-profile-quality-check-v2.html">Качество команды</a></div>`;
-  }
+function safeDiagnosticActions() {
   return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a></div>`;
 }
+function diagnosticActions() {
+  if (canRunOwnerHealth()) {
+    return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./security-hardening-check-v2.html">Security</a><a class="btn light" href="./data-quality-check-v2.html">Качество данных</a><a class="btn light" href="./team-profile-quality-check-v2.html">Качество команды</a></div>`;
+  }
+  return safeDiagnosticActions();
+}
 function accessNotice() {
-  if (!profile || canRunOwnerHealth()) return '';
+  if (canRunOwnerHealth()) return '';
+  if (!profile) {
+    return `<section class="card">
+      <h2>Доступ ограничен</h2>
+      <div class="status warn">Operations overview требует подтвержденный активный owner/admin профиль.</div>
+      <div class="list">
+        <div class="list-item"><b>Текущий профиль</b><p class="muted">Профиль не определен. Owner/admin health RPC не запускаются.</p></div>
+        <div class="list-item"><b>Что делать</b><p class="muted">Используйте общую диагностику и системную проверку, чтобы проверить вход, сессию и запись пользователя в nav_user_profiles.</p></div>
+      </div>
+    </section>`;
+  }
   const reason = isAdmin()
     ? 'Operations overview требует активный owner/admin профиль.'
     : 'Operations overview доступен только владельцу и администратору.';
