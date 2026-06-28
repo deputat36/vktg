@@ -1,5 +1,9 @@
+import { rpc } from './supabase-v2.js';
+
 const OPERATIONS_URL = './operations-health-check-v2.html';
 const SHORTCUT_ATTR = 'data-nav-operations-shortcut';
+const ADMIN_ROLES = new Set(['owner', 'admin']);
+let accessState = 'pending';
 
 function cardTitle(card) {
   return (card?.querySelector('h2')?.textContent || '').trim();
@@ -12,6 +16,10 @@ function createShortcutLink() {
   link.setAttribute(SHORTCUT_ATTR, 'true');
   link.textContent = 'Обзор операций';
   return link;
+}
+
+function removeShortcuts(app) {
+  app.querySelectorAll(`[${SHORTCUT_ATTR}]`).forEach((node) => node.remove());
 }
 
 function addQuickAction(app) {
@@ -36,8 +44,22 @@ function addStaticCheckHint(app) {
 function injectOperationsShortcut() {
   const app = document.getElementById('app');
   if (!app) return;
+  if (accessState !== 'allowed') {
+    removeShortcuts(app);
+    return;
+  }
   addQuickAction(app);
   addStaticCheckHint(app);
+}
+
+async function resolveAccess() {
+  try {
+    const data = await rpc('nav_v2_get_my_profile', {}, 8000);
+    accessState = ADMIN_ROLES.has(data?.profile?.role) ? 'allowed' : 'denied';
+  } catch (_) {
+    accessState = 'denied';
+  }
+  injectOperationsShortcut();
 }
 
 const app = document.getElementById('app');
@@ -46,4 +68,4 @@ if (app) {
   observer.observe(app, { childList: true, subtree: true });
 }
 
-injectOperationsShortcut();
+resolveAccess();
