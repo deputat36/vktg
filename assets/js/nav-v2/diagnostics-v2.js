@@ -23,6 +23,7 @@ function card(title, text, href, tag = '', adminOnly = false) {
 }
 function adminCards() {
   return [
+    card('Security hardening', 'Проверяет RLS таблиц и прямые grants функций/таблиц Навигатора для anon/PUBLIC.', './security-hardening-check-v2.html', 'security', true),
     card('Диагностика доступа к сделке', 'Проверяет пользователя, сделку, участников, access signals и smoke по lite/full карточке.', './deal-access-check-v2.html', 'доступ', true),
     card('RPC grants', 'Показывает missing authenticated, open anon, open PUBLIC, demo RPC и список проблемных функций.', './rpc-grant-check-v2.html', 'security', true),
     card('Команда и качество данных', 'Админка с блоками качества данных, пользователями, демо-набором и диагностикой доступа.', './admin-v2.html', 'admin', true),
@@ -61,9 +62,10 @@ function draw() {
       <h2>Рекомендуемый порядок</h2>
       <div class="list">
         <div class="list-item"><b>1. Проверка системы</b><p class="muted">Базовая проверка входа, роли и ключевых RPC.</p></div>
-        <div class="list-item"><b>2. RPC grants</b><p class="muted">Для owner/admin: убедиться, что authenticated/anon/PUBLIC выставлены корректно.</p></div>
-        <div class="list-item"><b>3. Диагностика доступа к сделке</b><p class="muted">Для проблем конкретного пользователя и конкретной сделки.</p></div>
-        <div class="list-item"><b>4. Команда и качество данных</b><p class="muted">Проверка ролей, активных профилей, demo-набора и auto-quality задач.</p></div>
+        <div class="list-item"><b>2. Security hardening</b><p class="muted">Для owner/admin: убедиться, что RLS и прямые grants закрыты для anon/PUBLIC.</p></div>
+        <div class="list-item"><b>3. RPC grants</b><p class="muted">Для owner/admin: убедиться, что authenticated/anon/PUBLIC выставлены корректно на публичных RPC.</p></div>
+        <div class="list-item"><b>4. Диагностика доступа к сделке</b><p class="muted">Для проблем конкретного пользователя и конкретной сделки.</p></div>
+        <div class="list-item"><b>5. Команда и качество данных</b><p class="muted">Проверка ролей, активных профилей, demo-набора и auto-quality задач.</p></div>
       </div>
     </section>
   </main>`;
