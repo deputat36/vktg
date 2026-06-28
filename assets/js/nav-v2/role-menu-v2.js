@@ -15,6 +15,7 @@ function getActivePage() {
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
   if (
     path.includes('diagnostics-v2') ||
+    path.includes('operations-health-check-v2') ||
     path.includes('security-hardening-check-v2') ||
     path.includes('frontend-rpc-coverage-check-v2') ||
     path.includes('data-quality-check-v2') ||
