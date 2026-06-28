@@ -67,7 +67,7 @@ function addStaticCheckHint(app) {
   const item = document.createElement('div');
   item.className = 'list-item';
   item.setAttribute(SHORTCUT_ATTR, 'true');
-  item.innerHTML = '<b>Operations overview</b><p class="muted">Для owner/admin доступен единый обзор security, RPC, качества данных, качества профилей и frontend coverage.</p>';
+  item.innerHTML = '<b>Operations overview</b><p class="muted">Для активного owner/admin доступен единый обзор security, RPC, качества данных, качества профилей и frontend coverage.</p>';
   list.appendChild(item);
 }
 
@@ -124,7 +124,7 @@ async function checkOperationsPage() {
     } else {
       pageCheck = {
         status: 'ok',
-        details: 'Operations overview доступен как owner/admin диагностическая страница.',
+        details: 'Operations overview доступен как диагностическая страница для активного owner/admin профиля.',
         meta: OPERATIONS_URL
       };
     }
@@ -141,7 +141,8 @@ async function checkOperationsPage() {
 async function resolveAccess() {
   try {
     const data = await rpc('nav_v2_get_my_profile', {}, 8000);
-    accessState = ADMIN_ROLES.has(data?.profile?.role) ? 'allowed' : 'denied';
+    const profile = data?.profile || {};
+    accessState = ADMIN_ROLES.has(profile.role) && profile.is_active === true ? 'allowed' : 'denied';
   } catch (_) {
     accessState = 'denied';
   }
