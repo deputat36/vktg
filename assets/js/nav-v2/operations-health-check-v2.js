@@ -12,6 +12,14 @@ function roleName(role) {
   return ({ owner: 'Владелец', admin: 'Администратор', manager: 'Менеджер', spn: 'СПН', lawyer: 'Юрист', broker: 'Брокер', viewer: 'Наблюдатель' })[role] || role || 'не определена';
 }
 function isAdmin() { return ['owner', 'admin'].includes(profile?.role); }
+function hasOwn(obj, key) { return Object.prototype.hasOwnProperty.call(obj || {}, key); }
+function profileActiveText() {
+  if (!profile) return 'профиль не определен';
+  if (profile.is_active === true) return 'активен';
+  if (profile.is_active === false) return 'выключен';
+  return 'статус активности не передан';
+}
+function canRunOwnerHealth() { return isAdmin() && profile?.is_active === true; }
 function ok(value) { return value === true || value === 'true'; }
 function metric(label, value, tone = '') {
   return `<div class="metric ${tone}"><span>${esc(label)}</span><b>${esc(String(value))}</b></div>`;
@@ -32,13 +40,16 @@ function diagnosticActions() {
   return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a></div>`;
 }
 function accessNotice() {
-  if (!profile || isAdmin()) return '';
+  if (!profile || canRunOwnerHealth()) return '';
+  const reason = isAdmin()
+    ? 'Operations overview требует активный owner/admin профиль.'
+    : 'Operations overview доступен только владельцу и администратору.';
   return `<section class="card">
     <h2>Доступ ограничен</h2>
-    <div class="status warn">Operations overview доступен только владельцу и администратору.</div>
+    <div class="status warn">${esc(reason)}</div>
     <div class="list">
-      <div class="list-item"><b>Текущая роль</b><p class="muted">${esc(roleName(profile.role))} (${esc(profile.role || '—')})</p></div>
-      <div class="list-item"><b>Что делать</b><p class="muted">Для этой роли используйте общую диагностику, системную проверку и рабочие разделы. Owner/admin health RPC не запускаются на этой странице.</p></div>
+      <div class="list-item"><b>Текущая роль</b><p class="muted">${esc(roleName(profile.role))} (${esc(profile.role || '—')}) · ${esc(profileActiveText())}</p></div>
+      <div class="list-item"><b>Что делать</b><p class="muted">Для этой роли используйте общую диагностику, системную проверку и рабочие разделы. Owner/admin health RPC не запускаются на этой странице без активного owner/admin профиля.</p></div>
     </div>
   </section>`;
 }
@@ -67,15 +78,17 @@ function warnings() {
   return result;
 }
 function overallTone() {
-  if (errorText) return 'error';
-  if (!health) return isAdmin() ? 'warn' : 'error';
+  if (errorText || profile?.is_active === false) return 'error';
+  if (!hasOwn(profile, 'is_active')) return 'warn';
+  if (!health) return canRunOwnerHealth() ? 'warn' : 'error';
   if (blockers().length) return 'error';
   if (warnings().length) return 'warn';
   return 'ok';
 }
 function overallText() {
   if (errorText) return errorText;
-  if (!health) return isAdmin() ? 'Запустите общий health overview.' : 'Проверка доступна только owner/admin.';
+  if (profile?.is_active === false) return 'Профиль выключен. Operations health overview не запускается.';
+  if (!health) return canRunOwnerHealth() ? 'Запустите общий health overview.' : 'Проверка доступна только активному owner/admin профилю.';
   if (blockers().length) return `Есть блокеры: ${blockers().length}. Откройте детальные диагностики.`;
   if (warnings().length) return `Технических блокеров нет, есть операционные предупреждения: ${warnings().length}.`;
   return 'Операционный health overview в норме.';
@@ -84,7 +97,7 @@ function reportText() {
   const quality = health?.quality?.summary || {};
   return [
     'CRM Навигатор сделок v2 — operations health overview',
-    `profile: ${profile?.email || 'unknown'} · ${roleName(profile?.role)}`,
+    `profile: ${profile?.email || 'unknown'} · ${roleName(profile?.role)} · ${profileActiveText()}`,
     `blockers: ${blockers().length}`,
     `warnings: ${warnings().length}`,
     `security_ok: ${ok(health?.security?.ok)}`,
@@ -119,7 +132,7 @@ async function copyReport() {
   }
 }
 function draw() {
-  const profileText = profile ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))}` : 'профиль не определен';
+  const profileText = profile ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))} · ${esc(profileActiveText())}` : 'профиль не определен';
   const quality = health?.quality?.summary || {};
   const block = blockers();
   const warn = warnings();
@@ -131,7 +144,7 @@ function draw() {
         <div><h2>Проверка</h2><p class="muted">Текущий профиль: ${profileText}</p></div>
         <div class="actions" style="justify-content:flex-end">
           <button id="copyReport" class="btn light" type="button" ${health ? '' : 'disabled'}>${copied ? 'Скопировано' : 'Скопировать отчет'}</button>
-          <button id="runCheck" class="btn primary" type="button" ${busy || !isAdmin() ? 'disabled' : ''}>${busy ? 'Проверяю...' : 'Запустить overview'}</button>
+          <button id="runCheck" class="btn primary" type="button" ${busy || !canRunOwnerHealth() ? 'disabled' : ''}>${busy ? 'Проверяю...' : 'Запустить overview'}</button>
         </div>
       </div>
       ${diagnosticActions()}
@@ -171,7 +184,7 @@ function draw() {
   document.getElementById('copyReport')?.addEventListener('click', copyReport);
 }
 async function runCheck() {
-  if (busy || !isAdmin()) return;
+  if (busy || !canRunOwnerHealth()) return;
   busy = true;
   errorText = '';
   draw();
@@ -207,7 +220,7 @@ async function init() {
     errorText = 'Ошибка проверки профиля: ' + (error.message || error);
   }
   draw();
-  if (isAdmin()) await runCheck();
+  if (canRunOwnerHealth()) await runCheck();
 }
 
 init();
