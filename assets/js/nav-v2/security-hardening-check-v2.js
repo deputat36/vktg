@@ -42,6 +42,13 @@ function problemRow(item, type) {
       <p class="muted">PUBLIC: ${esc(JSON.stringify(pub))}</p>
     </div>`;
   }
+  if (type === 'view') {
+    return `<div class="list-item">
+      <b>${esc(item.view_name || 'unknown')}</b>
+      <p class="muted">type: ${esc(item.kind || 'view')} · reason: ${esc(item.reason || 'unknown')}</p>
+      <p class="muted">security_invoker=${item.security_invoker ? 'true' : 'false'} · anon_select=${item.anon_select ? 'true' : 'false'} · public_select=${item.public_select ? 'true' : 'false'} · authenticated_select=${item.authenticated_select ? 'true' : 'false'}</p>
+    </div>`;
+  }
   return `<div class="list-item">
     <b>${esc(item.function_name || 'unknown')}(${esc(item.identity_args || '')})</b>
     <p class="muted">SECURITY DEFINER: ${item.security_definer ? 'yes' : 'no'} · auth.uid(): ${item.has_auth_uid_check ? 'yes' : 'no'} · owner/admin: ${item.has_owner_admin_check ? 'yes' : 'no'}</p>
@@ -54,7 +61,7 @@ function problemList(title, items, type) {
     return `<section class="card"><div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Проблем не найдено.</p></div><span class="pill ok">0</span></div></section>`;
   }
   return `<section class="card">
-    <div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Нужно исправить права или RLS.</p></div><span class="pill red">${items.length}</span></div>
+    <div class="section-title"><div><h2>${esc(title)}</h2><p class="muted">Нужно исправить права или RLS/security_invoker.</p></div><span class="pill red">${items.length}</span></div>
     <div class="list">${items.map((item) => problemRow(item, type)).join('')}</div>
   </section>`;
 }
@@ -67,10 +74,16 @@ function buildReport() {
     `tables.checked_count: ${result.tables?.checked_count ?? 0}`,
     `tables.rls_disabled_count: ${result.tables?.rls_disabled_count ?? 0}`,
     `tables.anon_or_public_open_count: ${result.tables?.anon_or_public_open_count ?? 0}`,
+    `views.checked_count: ${result.views?.checked_count ?? 0}`,
+    `views.security_invoker_count: ${result.views?.security_invoker_count ?? 0}`,
+    `views.anon_or_public_open_count: ${result.views?.anon_or_public_open_count ?? 0}`,
+    `views.authenticated_non_invoker_view_count: ${result.views?.authenticated_non_invoker_view_count ?? 0}`,
+    `views.authenticated_materialized_view_count: ${result.views?.authenticated_materialized_view_count ?? 0}`,
     `functions.checked_count: ${result.functions?.checked_count ?? 0}`,
     `functions.security_definer_count: ${result.functions?.security_definer_count ?? 0}`,
     `functions.anon_or_public_open_count: ${result.functions?.anon_or_public_open_count ?? 0}`,
     `table_problems: ${JSON.stringify(result.tables?.problems || [])}`,
+    `view_problems: ${JSON.stringify(result.views?.problems || [])}`,
     `function_problems: ${JSON.stringify(result.functions?.problems || [])}`
   ].join('\n');
 }
@@ -91,14 +104,16 @@ function draw() {
     ? `${esc(profile.email || 'без email')} · ${esc(roleName(profile.role))} · ${profile.is_active ? 'активен' : 'статус уточняется'}`
     : 'профиль не определен';
   const tables = result?.tables || {};
+  const views = result?.views || {};
   const functions = result?.functions || {};
+  const viewProblemCount = Number(views.anon_or_public_open_count || 0) + Number(views.authenticated_non_invoker_view_count || 0) + Number(views.authenticated_materialized_view_count || 0);
   const statusClass = errorText ? 'error' : result?.ok ? 'ok' : result ? 'warn' : 'warn';
   const statusText = errorText || (result ? `Security hardening: ${result.ok ? 'OK' : 'есть проблемы'} · проверено ${esc(fmtDate(result.checked_at))}` : `Текущий профиль: ${profileLine}`);
 
   app.innerHTML = `<main class="nav-v2-shell">
     <section class="hero">
       <h1>Security hardening</h1>
-      <p>Проверка RLS и прямых grants для таблиц и функций Навигатора. CRM «Лидер» не используется.</p>
+      <p>Проверка RLS, views и прямых grants для таблиц и функций Навигатора. CRM «Лидер» не используется.</p>
     </section>
     <div class="status ${statusClass}">${statusText}</div>
     <section class="card">
@@ -121,6 +136,15 @@ function draw() {
         </div>
       </div>
       <div class="card">
+        <div class="section-title"><div><h2>Views</h2><p class="muted">security_invoker и SELECT grants.</p></div><span class="pill ${viewProblemCount ? 'red' : 'ok'}">${Number(views.checked_count || 0)}</span></div>
+        <div class="list">
+          ${metric('security_invoker views', views.security_invoker_count ?? 0, 'blue')}
+          ${metric('Открытые anon/PUBLIC SELECT', views.anon_or_public_open_count ?? 0, Number(views.anon_or_public_open_count || 0) ? 'red' : 'ok')}
+          ${metric('Authenticated без security_invoker', views.authenticated_non_invoker_view_count ?? 0, Number(views.authenticated_non_invoker_view_count || 0) ? 'red' : 'ok')}
+          ${metric('Authenticated materialized views', views.authenticated_materialized_view_count ?? 0, Number(views.authenticated_materialized_view_count || 0) ? 'red' : 'ok')}
+        </div>
+      </div>
+      <div class="card">
         <div class="section-title"><div><h2>Функции</h2><p class="muted">EXECUTE для anon/PUBLIC и SECURITY DEFINER.</p></div><span class="pill ${Number(functions.anon_or_public_open_count || 0) ? 'red' : 'ok'}">${Number(functions.checked_count || 0)}</span></div>
         <div class="list">
           ${metric('SECURITY DEFINER функций', functions.security_definer_count ?? 0, 'blue')}
@@ -129,6 +153,7 @@ function draw() {
       </div>
     </section>
     ${problemList('Проблемные таблицы', tables.problems || [], 'table')}
+    ${problemList('Проблемные views', views.problems || [], 'view')}
     ${problemList('Проблемные функции', functions.problems || [], 'function')}` : ''}
   </main>`;
 
