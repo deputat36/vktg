@@ -2,7 +2,7 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
-const CHECK_VERSION = '20260627-0505';
+const CHECK_VERSION = '20260628-1300';
 let checks = [];
 let currentProfile = null;
 let profileSources = {};
@@ -17,7 +17,18 @@ const COMMON_STATIC_PAGES = [
   ['Карточка сделки', './deal-card-v2.html'],
   ['Создать доступ', './nav-access-v2.html'],
   ['Принять приглашение / восстановить пароль', './nav-accept-invite-v2.html'],
-  ['Проверка системы', './nav-system-check-v2.html']
+  ['Проверка системы', './nav-system-check-v2.html'],
+  ['Диагностика', './diagnostics-v2.html']
+];
+
+const OWNER_ADMIN_DIAGNOSTIC_PAGES = [
+  ['RPC grants', './rpc-grant-check-v2.html'],
+  ['Security hardening', './security-hardening-check-v2.html'],
+  ['Frontend RPC coverage', './frontend-rpc-coverage-check-v2.html'],
+  ['Качество данных сделок', './data-quality-check-v2.html'],
+  ['Качество профилей команды', './team-profile-quality-check-v2.html'],
+  ['Диагностика доступа к сделке', './deal-access-check-v2.html'],
+  ['Диагностика карточки', './deal-card-diag-v2.html']
 ];
 
 function session() {
@@ -133,13 +144,14 @@ function roleActions() {
   const common = [
     ['Рабочий стол', './dashboard-v2.html'],
     ['Сделки', './deals-v2.html'],
-    ['Проверка', './nav-system-check-v2.html']
+    ['Проверка', './nav-system-check-v2.html'],
+    ['Диагностика', './diagnostics-v2.html']
   ];
   if (role === 'spn') return [...common, ['Новая сделка', './spn-v2.html']];
   if (role === 'lawyer') return [...common, ['Юридическая очередь', './deals-v2.html?filter=lawyer']];
   if (role === 'broker') return [...common, ['Брокерская очередь', './deals-v2.html?filter=broker']];
   if (role === 'owner' || role === 'admin') {
-    return [...common, ['Новая сделка', './spn-v2.html'], ['Команда', './admin-v2.html'], ['Создать доступ', './nav-access-v2.html'], ['Аудит доступов', './nav-access-audit-v2.html']];
+    return [...common, ['Качество данных', './data-quality-check-v2.html'], ['Качество команды', './team-profile-quality-check-v2.html'], ['Новая сделка', './spn-v2.html'], ['Команда', './admin-v2.html'], ['Создать доступ', './nav-access-v2.html'], ['Аудит доступов', './nav-access-audit-v2.html']];
   }
   return common;
 }
@@ -150,7 +162,7 @@ function staticPagesForRole() {
   if (role === 'owner' || role === 'admin') {
     pages.push(['Команда', './admin-v2.html']);
     pages.push(['Аудит доступов', './nav-access-audit-v2.html']);
-    pages.push(['Диагностика карточки', './deal-card-diag-v2.html']);
+    pages.push(...OWNER_ADMIN_DIAGNOSTIC_PAGES);
   }
   if (role === 'lawyer') {
     pages.push(['Кабинет юриста', './queue-v2.html']);
@@ -174,6 +186,7 @@ function manualSteps() {
       'Скопируйте ссылку доступа и откройте её в инкогнито или другом браузере.',
       'Задайте пароль, затем войдите через рабочий стол.',
       'Проверьте, что новый СПН видит рабочий стол, список сделок и форму новой сделки.',
+      'Откройте «Диагностика» и проверьте standalone-страницы качества данных, качества команды, grants и доступа к сделке.',
       'После проверки отключите или удалите тестовый профиль, если он не нужен.'
     ];
   }
@@ -332,7 +345,7 @@ function render() {
           <div class="list-item"><b>CRM</b><p class="muted">Загрузка рабочего стола и списка сделок по текущей роли.</p></div>
           <div class="list-item"><b>RPC права</b><p class="muted">Для owner/admin проверяется, что клиентские RPC доступны authenticated и закрыты для anon.</p></div>
           <div class="list-item"><b>Внутренние RPC</b><p class="muted">Для owner/admin проверяется, что helper-функции закрыты для браузерных ролей.</p></div>
-          <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных и ролевых HTML-страниц на GitHub Pages.</p></div>
+          <div class="list-item"><b>Страницы</b><p class="muted">Доступность основных, ролевых и owner/admin диагностических HTML-страниц на GitHub Pages.</p></div>
           <div class="list-item"><b>Админка</b><p class="muted">Команда и доступы проверяются только для owner/admin.</p></div>
           <div class="list-item"><b>Доступы</b><p class="muted">Edge Function проверяется через безопасный POST dry_run без создания пользователя.</p></div>
         </div>
@@ -600,7 +613,7 @@ async function checkStaticPages() {
   if (failed.length) {
     updateCheck('Страницы GitHub Pages', 'warn', 'Некоторые страницы роли не ответили на статическую проверку.', failed.join('; '));
   } else {
-    updateCheck('Страницы GitHub Pages', 'ok', `Все основные и ролевые страницы доступны: ${pages.length}.`, `Роль: ${roleName(currentProfile?.role)}`);
+    updateCheck('Страницы GitHub Pages', 'ok', `Все основные, ролевые и диагностические страницы доступны: ${pages.length}.`, `Роль: ${roleName(currentProfile?.role)}`);
   }
 }
 
