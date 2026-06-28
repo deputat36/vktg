@@ -3,6 +3,7 @@ import { rpc } from './supabase-v2.js';
 const OPERATIONS_URL = './operations-health-check-v2.html';
 const SHORTCUT_ATTR = 'data-nav-operations-shortcut';
 const PAGE_CHECK_ATTR = 'data-nav-operations-page-check';
+const PAGE_CHECK_RENDER_ATTR = 'data-nav-operations-page-check-render';
 const ADMIN_ROLES = new Set(['owner', 'admin']);
 let accessState = 'pending';
 let pageCheckStarted = false;
@@ -32,6 +33,10 @@ function statusText(status) {
   if (status === 'warn') return 'Внимание';
   if (status === 'error') return 'Ошибка';
   return 'Проверка';
+}
+
+function pageCheckRenderKey() {
+  return [pageCheck.status, pageCheck.details, pageCheck.meta].join('|');
 }
 
 function createShortcutLink() {
@@ -79,6 +84,9 @@ function addOperationsPageCheck(app) {
     list.appendChild(item);
   }
 
+  const renderKey = pageCheckRenderKey();
+  if (item.getAttribute(PAGE_CHECK_RENDER_ATTR) === renderKey) return;
+  item.setAttribute(PAGE_CHECK_RENDER_ATTR, renderKey);
   item.innerHTML = `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
     <div>
       <b>Operations overview page</b>
