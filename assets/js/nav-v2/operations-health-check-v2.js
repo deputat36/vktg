@@ -25,6 +25,23 @@ function boolCard(title, isOk, details, href, toneWhenWarn = 'red') {
     ${href ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="${esc(href)}">Открыть</a></div>` : ''}
   </div>`;
 }
+function diagnosticActions() {
+  if (!profile || isAdmin()) {
+    return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./security-hardening-check-v2.html">Security</a><a class="btn light" href="./data-quality-check-v2.html">Качество данных</a><a class="btn light" href="./team-profile-quality-check-v2.html">Качество команды</a></div>`;
+  }
+  return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a></div>`;
+}
+function accessNotice() {
+  if (!profile || isAdmin()) return '';
+  return `<section class="card">
+    <h2>Доступ ограничен</h2>
+    <div class="status warn">Operations overview доступен только владельцу и администратору.</div>
+    <div class="list">
+      <div class="list-item"><b>Текущая роль</b><p class="muted">${esc(roleName(profile.role))} (${esc(profile.role || '—')})</p></div>
+      <div class="list-item"><b>Что делать</b><p class="muted">Для этой роли используйте общую диагностику, системную проверку и рабочие разделы. Owner/admin health RPC не запускаются на этой странице.</p></div>
+    </div>
+  </section>`;
+}
 function blockers() {
   if (!health) return [];
   const items = [];
@@ -117,8 +134,9 @@ function draw() {
           <button id="runCheck" class="btn primary" type="button" ${busy || !isAdmin() ? 'disabled' : ''}>${busy ? 'Проверяю...' : 'Запустить overview'}</button>
         </div>
       </div>
-      <div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./security-hardening-check-v2.html">Security</a><a class="btn light" href="./data-quality-check-v2.html">Качество данных</a><a class="btn light" href="./team-profile-quality-check-v2.html">Качество команды</a></div>
+      ${diagnosticActions()}
     </section>
+    ${accessNotice()}
     ${health ? `<section class="kpi-row">
       ${metric('Блокеры', block.length, block.length ? 'red' : 'green')}
       ${metric('Предупреждения', warn.length, warn.length ? 'yellow' : 'green')}
