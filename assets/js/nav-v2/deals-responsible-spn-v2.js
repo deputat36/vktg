@@ -1,5 +1,5 @@
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
-const VISIBLE_ROLES = new Set(['owner', 'admin', 'lawyer', 'spn']);
+const VISIBLE_ROLES = new Set(['owner', 'admin', 'manager', 'lawyer', 'broker', 'spn']);
 
 let data = null;
 let applyQueued = false;
