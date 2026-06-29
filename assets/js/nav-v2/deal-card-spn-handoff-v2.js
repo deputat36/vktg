@@ -1,3 +1,4 @@
+import './deal-card-spn-responsibility-v2.js';
 import { rpc, esc } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
