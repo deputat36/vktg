@@ -12,6 +12,16 @@ function text(value) {
   return String(value || '').trim();
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
 function nameOf(person) {
   return text(person?.name) || text(person?.email) || '';
 }
@@ -24,7 +34,7 @@ function target() {
 
 function line(title, value, ok) {
   const cls = ok ? 'status ok' : 'status warn';
-  return `<div class="${cls}"><b>${title}:</b> ${value || 'не назначен'}</div>`;
+  return `<div class="${cls}"><b>${escapeHtml(title)}:</b> ${escapeHtml(value || 'не назначен')}</div>`;
 }
 
 function draw(snapshot) {
