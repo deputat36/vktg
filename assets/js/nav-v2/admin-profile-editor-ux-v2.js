@@ -13,19 +13,45 @@ function ensureEditHint() {
   </div>`);
 }
 
+function isActiveRow(row) {
+  return [...(row?.querySelectorAll('.pill') || [])]
+    .some((pill) => pill.textContent.trim() === 'активен');
+}
+
+function setFieldHint(field, marker, html, shouldShow) {
+  if (!field) return;
+  const existing = field.querySelector(`[${marker}]`);
+  if (shouldShow) {
+    if (!existing) field.insertAdjacentHTML('beforeend', html);
+  } else {
+    existing?.remove();
+  }
+}
+
 function markMissingManager() {
   document.querySelectorAll('[data-manager]').forEach((select) => {
     const row = select.closest('.list-item');
     const role = row?.querySelector('[data-role]')?.value;
     const hasManager = Boolean(select.value);
-    const existing = row?.querySelector('[data-missing-manager-hint]');
-    if (role === 'spn' && !hasManager) {
-      if (!existing) {
-        select.closest('.field')?.insertAdjacentHTML('beforeend', '<p class="muted" data-missing-manager-hint="true"><span class="pill yellow">нужно назначить менеджера</span></p>');
-      }
-    } else {
-      existing?.remove();
-    }
+    setFieldHint(
+      select.closest('.field'),
+      'data-missing-manager-hint',
+      '<p class="muted" data-missing-manager-hint="true"><span class="pill yellow">нужно назначить менеджера</span></p>',
+      role === 'spn' && !hasManager
+    );
+  });
+}
+
+function markMissingPhone() {
+  document.querySelectorAll('[data-phone]').forEach((input) => {
+    const row = input.closest('.list-item');
+    const hasPhone = Boolean(input.value.trim());
+    setFieldHint(
+      input.closest('.field'),
+      'data-missing-phone-hint',
+      '<p class="muted" data-missing-phone-hint="true"><span class="pill yellow">заполните телефон</span></p>',
+      isActiveRow(row) && !hasPhone
+    );
   });
 }
 
@@ -42,6 +68,7 @@ function apply() {
 
   ensureEditHint();
   markMissingManager();
+  markMissingPhone();
 }
 
 function schedule() {
@@ -56,6 +83,9 @@ function schedule() {
 const app = document.getElementById('app') || document.body;
 new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
 document.addEventListener('change', (event) => {
-  if (event.target?.matches?.('[data-role], [data-manager]')) schedule();
+  if (event.target?.matches?.('[data-role], [data-manager], [data-phone]')) schedule();
+});
+document.addEventListener('input', (event) => {
+  if (event.target?.matches?.('[data-phone]')) schedule();
 });
 apply();
