@@ -18,6 +18,14 @@ function isActiveRow(row) {
     .some((pill) => pill.textContent.trim() === 'активен');
 }
 
+function activeUserMap() {
+  const map = new Map();
+  document.querySelectorAll('[data-toggle-user]').forEach((button) => {
+    map.set(button.dataset.toggleUser, button.dataset.active === 'false');
+  });
+  return map;
+}
+
 function setFieldHint(field, marker, html, shouldShow) {
   if (!field) return;
   const existing = field.querySelector(`[${marker}]`);
@@ -55,6 +63,30 @@ function markMissingPhone() {
   });
 }
 
+function markInactiveManagerOptions() {
+  const activeById = activeUserMap();
+  document.querySelectorAll('[data-manager]').forEach((select) => {
+    let selectedInactive = false;
+    [...select.options].forEach((option) => {
+      if (!option.value || !activeById.has(option.value)) return;
+      const isActive = activeById.get(option.value);
+      if (isActive) return;
+      if (option.selected) {
+        selectedInactive = true;
+        if (!option.textContent.includes('выключен')) option.textContent = option.textContent + ' (выключен)';
+      } else {
+        option.remove();
+      }
+    });
+    setFieldHint(
+      select.closest('.field'),
+      'data-inactive-manager-hint',
+      '<p class="muted" data-inactive-manager-hint="true"><span class="pill red">выбранный менеджер выключен</span></p>',
+      selectedInactive
+    );
+  });
+}
+
 function apply() {
   document.querySelectorAll('[data-save-user]').forEach((button) => {
     if (button.textContent !== 'Сохранить данные') button.textContent = 'Сохранить данные';
@@ -69,6 +101,7 @@ function apply() {
   ensureEditHint();
   markMissingManager();
   markMissingPhone();
+  markInactiveManagerOptions();
 }
 
 function schedule() {
