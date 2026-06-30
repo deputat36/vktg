@@ -63,6 +63,21 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function errorMessageFromRpcBody(data: unknown, fallback: string): string {
+  if (data && typeof data === "object" && "message" in data && typeof (data as { message?: unknown }).message === "string") {
+    return (data as { message: string }).message;
+  }
+  return fallback;
+}
+
 function getBearerToken(req: Request): string | null {
   const auth = req.headers.get("Authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
@@ -180,10 +195,9 @@ async function callUserRpc<T>(req: Request, rpcName: string, payload: Record<str
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  const data = text ? safeJsonParse(text) : null;
   if (!response.ok) {
-    const message = typeof data?.message === "string" ? data.message : `RPC ${rpcName} failed`;
-    throw new Error(message);
+    throw new Error(errorMessageFromRpcBody(data, `RPC ${rpcName} failed`));
   }
   return data as T;
 }
