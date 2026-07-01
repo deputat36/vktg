@@ -37,13 +37,11 @@ function safeMenu() {
   return [
     makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'),
     makeLink(active, 'deals', './deals-v2.html', 'Сделки'),
-    makeLink(active, 'check', './nav-system-check-v2.html', 'Проверка'),
-    makeLink(active, 'diagnostics', './diagnostics-v2.html', 'Диагностика'),
     '<button id="navLogout" type="button">Выйти</button>'
   ].join('');
 }
 
-function addCommonDiagnosticsLinks(links, active) {
+function addAdminDiagnosticsLinks(links, active) {
   links.push(makeLink(active, 'check', './nav-system-check-v2.html', 'Проверка'));
   links.push(makeLink(active, 'diagnostics', './diagnostics-v2.html', 'Диагностика'));
 }
@@ -56,24 +54,19 @@ function buildMenu(role) {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'queue', './queue-v2.html', 'Кабинет юриста'));
     links.push(makeLink(active, 'deals', './deals-v2.html?filter=lawyer', 'Все сделки'));
-    addCommonDiagnosticsLinks(links, active);
   } else if (role === 'broker') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'deals', './deals-v2.html?filter=broker', 'Брокерская очередь'));
-    addCommonDiagnosticsLinks(links, active);
   } else if (role === 'spn') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Мои сделки'));
-    addCommonDiagnosticsLinks(links, active);
   } else if (role === 'manager') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки команды'));
-    addCommonDiagnosticsLinks(links, active);
   } else if (role === 'viewer') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки'));
-    addCommonDiagnosticsLinks(links, active);
   } else if (role === 'owner' || role === 'admin') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'));
@@ -82,7 +75,7 @@ function buildMenu(role) {
     links.push(makeLink(active, 'admin', './admin-v2.html', 'Команда'));
     links.push(makeLink(active, 'access', './nav-access-v2.html', 'Создать доступ'));
     links.push(makeLink(active, 'audit', './nav-access-audit-v2.html', 'Аудит'));
-    addCommonDiagnosticsLinks(links, active);
+    addAdminDiagnosticsLinks(links, active);
   } else {
     return safeMenu();
   }
