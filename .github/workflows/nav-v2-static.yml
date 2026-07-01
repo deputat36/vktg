@@ -55,6 +55,16 @@ jobs:
               if bad:
                   errors.append('SPN menu block appears to include diagnostics link')
 
+          start_page = root / 'nav-v2.html'
+          if start_page.exists():
+              text = start_page.read_text(encoding='utf-8')
+              if 'diagnostics-v2.html' in text or 'nav-system-check-v2.html' in text:
+                  errors.append('Start page must not expose technical links')
+
+          dashboard = root / 'assets/js/nav-v2/dashboard-v2.js'
+          if dashboard.exists() and 'canSeeSystemCheck' not in dashboard.read_text(encoding='utf-8'):
+              errors.append('Dashboard must gate system check by role')
+
           cleanup = root / 'assets/js/nav-v2/nav-base-menu-cleanup-v2.js'
           if not cleanup.exists():
               errors.append('Missing base menu cleanup helper')
