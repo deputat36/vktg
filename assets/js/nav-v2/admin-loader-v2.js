@@ -30,12 +30,11 @@ function noAccess(profile) {
         </div>
 
         <p class="muted">
-          Для вашей роли открыт только рабочий функционал. Управление командой, доступами и аудитом скрыто.
+          Для вашей роли открыт только рабочий функционал. Управление командой, доступами, аудитом и техническими проверками скрыто.
         </p>
 
         <div class="actions" style="justify-content:flex-start">
           <a class="btn primary" href="./dashboard-v2.html">Вернуться на рабочий стол</a>
-          <a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a>
         </div>
       </section>
     </main>
