@@ -58,7 +58,7 @@ jobs:
           cleanup = root / 'assets/js/nav-v2/nav-base-menu-cleanup-v2.js'
           if not cleanup.exists():
               errors.append('Missing base menu cleanup helper')
-          for rel in ['deals-v2.html', 'deal-card-v2.html']:
+          for rel in ['deals-v2.html', 'deal-card-v2.html', 'admin-v2.html', 'nav-access-audit-v2.html']:
               page = root / rel
               if page.exists() and 'nav-base-menu-cleanup-v2.js' not in page.read_text(encoding='utf-8'):
                   errors.append(f'{rel}: missing base menu cleanup helper')
