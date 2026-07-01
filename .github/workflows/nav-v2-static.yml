@@ -7,6 +7,7 @@ on:
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
       - 'docs/NAV_V2_*.md'
+      - 'supabase/functions/nav-v2-deal-api/**'
       - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
