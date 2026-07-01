@@ -8,6 +8,8 @@ on:
       - 'assets/css/**'
       - 'docs/NAV_V2_*.md'
       - 'supabase/functions/nav-v2-deal-api/**'
+      - 'supabase/functions/nav-invite-user/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
