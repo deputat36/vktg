@@ -1,0 +1,83 @@
+name: Navigator v2 static checks
+
+on:
+  pull_request:
+    paths:
+      - '**.html'
+      - 'assets/js/nav-v2/**'
+      - 'assets/css/**'
+      - 'docs/NAV_V2_*.md'
+      - 'supabase/functions/nav-v2-deal-api/**'
+      - 'supabase/functions/nav-invite-user/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/nav-v2-static.yml'
+  push:
+    branches:
+      - main
+      - fix/nav-v2-audit-remediations
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Navigator v2 files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          root = Path('.')
+          errors = []
+
+          required_docs = [
+              'docs/NAV_V2_MANUAL_QA.md',
+              'docs/NAV_V2_DESIGN_AUDIT.md',
+              'docs/NAV_V2_AUDIT_SHORT_20260630.md',
+              'docs/NAV_V2_ROLE_MATRIX_20260701.md',
+              'docs/NAV_V2_MODULE_MAP_20260701.md',
+          ]
+          for rel in required_docs:
+              if not (root / rel).exists():
+                  errors.append(f'Missing required doc: {rel}')
+
+          html_files = sorted(root.glob('*-v2.html')) + sorted(root.glob('nav-v2.html'))
+          asset_re = re.compile(r'(?:src|href)="(\./assets/(?:js/nav-v2|css)/[^"?#]+)')
+          for html in html_files:
+              text = html.read_text(encoding='utf-8')
+              for match in asset_re.finditer(text):
+                  rel = match.group(1).replace('./', '')
+                  if not (root / rel).exists():
+                      errors.append(f'{html}: missing asset {rel}')
+
+          role_menu = root / 'assets/js/nav-v2/role-menu-v2.js'
+          if role_menu.exists():
+              text = role_menu.read_text(encoding='utf-8')
+              bad = "role === 'spn'" in text and "diagnostics-v2.html', 'Диагностика'" in text.split("role === 'spn'")[-1].split("role === 'manager'")[0]
+              if bad:
+                  errors.append('SPN menu block appears to include diagnostics link')
+
+          start_page = root / 'nav-v2.html'
+          if start_page.exists():
+              text = start_page.read_text(encoding='utf-8')
+              if 'diagnostics-v2.html' in text or 'nav-system-check-v2.html' in text:
+                  errors.append('Start page must not expose technical links')
+
+          dashboard = root / 'assets/js/nav-v2/dashboard-v2.js'
+          if dashboard.exists() and 'canSeeSystemCheck' not in dashboard.read_text(encoding='utf-8'):
+              errors.append('Dashboard must gate system check by role')
+
+          cleanup = root / 'assets/js/nav-v2/nav-base-menu-cleanup-v2.js'
+          if not cleanup.exists():
+              errors.append('Missing base menu cleanup helper')
+          for rel in ['deals-v2.html', 'deal-card-v2.html', 'admin-v2.html', 'nav-access-audit-v2.html']:
+              page = root / rel
+              if page.exists() and 'nav-base-menu-cleanup-v2.js' not in page.read_text(encoding='utf-8'):
+                  errors.append(f'{rel}: missing base menu cleanup helper')
+
+          if errors:
+              print('\n'.join(errors))
+              sys.exit(1)
+          print('Navigator v2 static checks passed')
+          PY

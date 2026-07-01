@@ -1,5 +1,7 @@
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
-const VISIBLE_ROLES = new Set(['owner', 'admin', 'lawyer', 'spn']);
+const VISIBLE_ROLES = new Set(['owner', 'admin', 'manager', 'lawyer', 'broker', 'spn']);
+const SEARCH_FALLBACK_ATTR = 'data-responsible-spn-search';
+const SEARCH_FALLBACK_KEY_ATTR = 'data-responsible-spn-search-key';
 
 let data = null;
 let applyQueued = false;
@@ -55,6 +57,16 @@ function responsibleText(deal) {
   return 'СПН пока не назначен';
 }
 
+function searchText(deal) {
+  return [deal?.seller_spn, deal?.buyer_spn, responsibleText(deal), deal?.manager, deal?.lawyer, deal?.broker]
+    .join(' ')
+    .toLocaleLowerCase('ru-RU');
+}
+
+function dealTitle(deal) {
+  return clean(deal?.display_title) || clean(deal?.title) || clean(deal?.address) || `Сделка ${String(deal?.id || '').slice(0, 8).toUpperCase()}`;
+}
+
 function renderResponsible(card, deal) {
   if (!card) return;
   const text = responsibleText(deal);
@@ -76,12 +88,45 @@ function renderResponsible(card, deal) {
   if (head) head.insertAdjacentHTML('afterend', html);
 }
 
+function removeSearchFallback() {
+  document.querySelector(`[${SEARCH_FALLBACK_ATTR}]`)?.remove();
+}
+
+function renderSearchFallback() {
+  if (!data || !Array.isArray(data.items)) return removeSearchFallback();
+  const query = clean(document.getElementById('dealSearch')?.value);
+  if (!query) return removeSearchFallback();
+
+  const queryLower = query.toLocaleLowerCase('ru-RU');
+  const matches = data.items
+    .filter((deal) => deal?.id && searchText(deal).includes(queryLower) && !findDealCard(deal.id))
+    .slice(0, 8);
+
+  if (!matches.length) return removeSearchFallback();
+
+  const key = `${queryLower}|${matches.map((deal) => deal.id).join(',')}`;
+  let host = document.querySelector(`[${SEARCH_FALLBACK_ATTR}]`);
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'status warn';
+    host.setAttribute(SEARCH_FALLBACK_ATTR, 'true');
+    const list = document.querySelector('.deal-list');
+    if (!list) return;
+    list.insertAdjacentElement('beforebegin', host);
+  }
+
+  if (host.getAttribute(SEARCH_FALLBACK_KEY_ATTR) === key) return;
+  host.setAttribute(SEARCH_FALLBACK_KEY_ATTR, key);
+  host.innerHTML = `<b>Найдены совпадения по СПН:</b> ${matches.map((deal) => `<a href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">${esc(dealTitle(deal))}</a>`).join(' · ')}`;
+}
+
 function apply() {
   if (!data || !VISIBLE_ROLES.has(data.profile?.role) || !Array.isArray(data.items)) return;
   data.items.forEach((deal) => {
     if (!deal?.id) return;
     renderResponsible(findDealCard(deal.id), deal);
   });
+  renderSearchFallback();
 }
 
 function scheduleApply() {
@@ -101,5 +146,8 @@ function setData(next) {
 
 const app = document.getElementById('app') || document.body;
 new MutationObserver(scheduleApply).observe(app, { childList: true, subtree: true });
+window.addEventListener('input', (event) => {
+  if (event.target?.id === 'dealSearch') scheduleApply();
+});
 window.addEventListener(DEALS_LOADED_EVENT, (event) => setData(event.detail));
 if (window.navV2Deals) setData(window.navV2Deals);
