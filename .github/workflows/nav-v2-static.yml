@@ -47,6 +47,7 @@ jobs:
               qa_text = manual_qa.read_text(encoding='utf-8')
               required_qa_markers = [
                   '## Создание доступа и вход',
+                  '#16',
                   'manager_id',
                   'nav-accept-invite-v2.html',
                   '## Edge Functions',
