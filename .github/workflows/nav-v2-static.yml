@@ -42,6 +42,22 @@ jobs:
               if not (root / rel).exists():
                   errors.append(f'Missing required doc: {rel}')
 
+          manual_qa = root / 'docs/NAV_V2_MANUAL_QA.md'
+          if manual_qa.exists():
+              qa_text = manual_qa.read_text(encoding='utf-8')
+              required_qa_markers = [
+                  '## Создание доступа и вход',
+                  'manager_id',
+                  'nav-accept-invite-v2.html',
+                  '## Edge Functions',
+                  'nav-v2-deal-api',
+                  'nav-invite-user',
+                  '#158',
+              ]
+              for marker in required_qa_markers:
+                  if marker not in qa_text:
+                      errors.append(f'docs/NAV_V2_MANUAL_QA.md: missing QA marker {marker!r}')
+
           html_files = sorted(root.glob('*-v2.html')) + sorted(root.glob('nav-v2.html'))
           asset_re = re.compile(r'(?:src|href)="(\./assets/(?:js/nav-v2|css)/[^"?#]+)')
           for html in html_files:
