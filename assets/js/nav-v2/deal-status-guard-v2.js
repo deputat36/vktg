@@ -1,10 +1,14 @@
-import { rpc } from './supabase-v2.js';
+import { getMyProfile, rpc } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
+const RAW_STATUS_ROLES = new Set(['owner', 'admin', 'manager']);
+const QUICK_STATUS_ROLES = new Set(['owner', 'admin', 'manager', 'spn']);
+let currentRole = '';
 let options = new Map();
 let loaded = false;
 let applyQueued = false;
 let reloadQueued = false;
+let profileLoading = null;
 
 function boolValue(value) {
   return value === true || value === 'true';
@@ -15,13 +19,59 @@ function allowed(status) {
   return !item || boolValue(item.allowed);
 }
 
+function roleName(role) {
+  return ({
+    owner: 'владелец',
+    admin: 'администратор',
+    manager: 'менеджер',
+    spn: 'СПН',
+    lawyer: 'юрист',
+    broker: 'брокер',
+    viewer: 'наблюдатель'
+  })[role] || role || 'пользователь';
+}
+
+function canUseRawStatus() {
+  return RAW_STATUS_ROLES.has(currentRole);
+}
+
+function canUseQuickStatus() {
+  return QUICK_STATUS_ROLES.has(currentRole);
+}
+
 function ensureStatusHint(container) {
   if (!container || container.querySelector('[data-status-permission-hint]')) return;
   const hint = document.createElement('div');
   hint.dataset.statusPermissionHint = 'true';
   hint.className = 'status warn';
-  hint.textContent = 'Финальные статусы сделки фиксирует руководитель или ответственный управленец. СПН управляет рабочей подготовкой сделки.';
+  hint.textContent = 'Финальные статусы сделки фиксирует руководитель или ответственный управленец. Остальные роли работают через свои задачи, документы и комментарии.';
   container.appendChild(hint);
+}
+
+function ensureRoleHint(container) {
+  if (!container || container.querySelector('[data-role-status-hint]')) return;
+  const hint = document.createElement('div');
+  hint.dataset.roleStatusHint = 'true';
+  hint.className = 'status warn';
+  hint.textContent = `Для роли «${roleName(currentRole)}» общие статусы скрыты. Используйте действия своей зоны ответственности в карточке сделки.`;
+  container.appendChild(hint);
+}
+
+function applyRoleStatusUi() {
+  if (!currentRole) return;
+
+  const select = document.getElementById('dealStatus');
+  const statusCard = select?.closest('.card');
+  if (statusCard && !canUseRawStatus()) {
+    statusCard.style.display = 'none';
+    ensureRoleHint(statusCard.parentElement || document.querySelector('.nav-v2-shell'));
+  }
+
+  if (!canUseQuickStatus()) {
+    document.querySelectorAll('button[data-quick-status]').forEach((button) => {
+      button.style.display = 'none';
+    });
+  }
 }
 
 function applySelectOptions(select) {
@@ -59,9 +109,11 @@ function applyQuickButtons() {
 }
 
 function applyStatusPermissions() {
+  applyRoleStatusUi();
   if (!loaded) return;
   applySelectOptions(document.getElementById('dealStatus'));
   applyQuickButtons();
+  applyRoleStatusUi();
 }
 
 function queueApply() {
@@ -80,6 +132,21 @@ function queueReloadOptions() {
     reloadQueued = false;
     await loadOptions();
   }, 900);
+}
+
+async function loadProfileRole() {
+  if (currentRole) return currentRole;
+  if (profileLoading) return profileLoading;
+  profileLoading = getMyProfile({ timeout: 8000 })
+    .then((profile) => {
+      currentRole = profile?.role || '';
+      document.body.dataset.navDealStatusRole = currentRole;
+      applyStatusPermissions();
+      return currentRole;
+    })
+    .catch(() => '')
+    .finally(() => { profileLoading = null; });
+  return profileLoading;
 }
 
 async function loadOptions() {
@@ -103,5 +170,6 @@ if (app) {
   }, true);
 }
 
+loadProfileRole();
 loadOptions();
 window.addEventListener('hashchange', queueApply);

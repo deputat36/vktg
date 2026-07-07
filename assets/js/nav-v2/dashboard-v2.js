@@ -92,6 +92,7 @@ function dealCard(deal) {
 function renderShell(profile, bodyHtml) {
   const role = profile?.role || '';
   const email = profile?.email || getCachedUser()?.email || '';
+  const canSeeSystemCheck = role === 'owner' || role === 'admin';
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
     <section class="hero">
       <h1>${role === 'spn' ? 'Рабочий стол СПН' : 'Рабочий стол v2'}</h1>
@@ -102,8 +103,8 @@ function renderShell(profile, bodyHtml) {
         <a class="btn primary" href="./dashboard-v2.html">Рабочий стол</a>
         ${role === 'spn' ? '<a class="btn green" href="./spn-v2.html">Новая сделка</a>' : ''}
         <a class="btn light" href="./deals-v2.html">Сделки</a>
-        <a class="btn light" href="./nav-system-check-v2.html">Проверка</a>
-        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+        ${canSeeSystemCheck ? '<a class="btn light" href="./nav-system-check-v2.html">Проверка</a>' : ''}
+        ${canSeeSystemCheck ? '<a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>' : ''}
         <button id="dashLogout" class="btn light" type="button">Выйти</button>
       </div>
     </section>

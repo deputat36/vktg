@@ -82,6 +82,28 @@ function dealPartiesText(deal) {
   return parts.join(' · ') || 'Стороны пока не указаны';
 }
 
+function dealResponsibleSearchText(deal) {
+  const sellerSpn = clean(deal?.seller_spn);
+  const buyerSpn = clean(deal?.buyer_spn);
+  const manager = clean(deal?.manager);
+  const lawyer = clean(deal?.lawyer);
+  const broker = clean(deal?.broker);
+  const parts = [];
+
+  // Этот текст используется только для основного поиска, чтобы совпадения по ответственным
+  // попадали в обычный список, а fallback-поиск по СПН оставался лишь страховкой.
+  if (sellerSpn && buyerSpn && sellerSpn === buyerSpn) parts.push(`СПН: ${sellerSpn}`);
+  else {
+    if (sellerSpn) parts.push(`СПН продавца: ${sellerSpn}`);
+    if (buyerSpn) parts.push(`СПН покупателя: ${buyerSpn}`);
+  }
+  if (manager) parts.push(`менеджер: ${manager}`);
+  if (lawyer) parts.push(`юрист: ${lawyer}`);
+  if (broker) parts.push(`брокер: ${broker}`);
+
+  return parts.join(' ');
+}
+
 function missingDocs(deal) {
   return Number(deal?.missing_documents_count || 0);
 }
@@ -175,14 +197,15 @@ function filterDeal(deal) {
       deal?.title,
       dealDisplayTitle(deal),
       dealPartiesText(deal),
+      dealResponsibleSearchText(deal),
       deal?.address,
       objectTypeName(deal?.object_type),
       deal?.next_action,
       statusText(deal?.status),
       isDemoDeal(deal) ? 'демо demo' : 'рабочая реальная',
       isReworkDeal(deal) ? 'доработка need_info нужно дозаполнить' : ''
-    ].join(' ').toLowerCase();
-    return text.includes(searchQuery.trim().toLowerCase());
+    ].join(' ').toLocaleLowerCase('ru-RU');
+    return text.includes(searchQuery.trim().toLocaleLowerCase('ru-RU'));
   }
 
   return true;

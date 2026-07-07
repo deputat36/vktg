@@ -1,8 +1,9 @@
-import { setupTop, getCachedUser, renderAuthBox, esc } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
 const ACCEPT_PAGE = 'https://deputat36.github.io/vktg/nav-accept-invite-v2.html';
+let managers = [];
 
 function session() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
@@ -65,6 +66,23 @@ async function copyText(value) {
   }
 }
 
+function managerOptions() {
+  const rows = managers
+    .filter((user) => ['owner', 'admin', 'manager'].includes(user.role) && user.is_active !== false)
+    .map((user) => `<option value="${esc(user.id)}">${esc(user.full_name || user.email || user.id)} · ${esc(user.role)}</option>`)
+    .join('');
+  return `<option value="">Без менеджера</option>${rows}`;
+}
+
+async function loadManagers() {
+  try {
+    const data = await rpc('nav_v2_list_users', {}, 12000);
+    managers = Array.isArray(data?.items) ? data.items : [];
+  } catch (_) {
+    managers = [];
+  }
+}
+
 function render() {
   const user = getCachedUser();
   document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
@@ -74,13 +92,14 @@ function render() {
     </section>
     <section class="card auth-card">
       <h2>Ссылка доступа</h2>
-      <p class="muted">Сотрудник откроет ссылку, задаст пароль и попадет в Навигатор. Роль хранится только в nav_user_profiles.</p>
+      <p class="muted">Сотрудник откроет ссылку, задаст пароль и попадет в Навигатор. Роль и менеджер сохраняются в nav_user_profiles.</p>
       <div class="status ok">Вход выполнен: ${esc(user?.email || '')}</div>
       <div class="field"><label>Email сотрудника</label><input id="email" type="email" placeholder="user@example.ru"></div>
       <div class="field"><label>ФИО</label><input id="fullName" placeholder="ФИО сотрудника"></div>
       <div class="field"><label>Телефон</label><input id="phone" placeholder="Можно оставить пустым"></div>
       <div class="field"><label>Роль</label><select id="role"><option value="spn">СПН</option><option value="lawyer">Юрист</option><option value="broker">Брокер</option><option value="manager">Менеджер</option><option value="viewer">Наблюдатель</option><option value="admin">Админ</option></select></div>
-      <div id="status" class="status">Введите email сотрудника.</div>
+      <div class="field"><label>Менеджер</label><select id="managerId">${managerOptions()}</select></div>
+      <div id="status" class="status">Введите email сотрудника. Для СПН желательно сразу назначить менеджера.</div>
       <div id="result"></div>
       <div class="actions" style="justify-content:flex-start">
         <button id="createAccessLink" class="btn primary" type="button">Создать ссылку доступа</button>
@@ -129,7 +148,8 @@ async function createAccessLink() {
     email: document.getElementById('email').value.trim(),
     full_name: document.getElementById('fullName').value.trim(),
     phone: document.getElementById('phone').value.trim() || null,
-    role: document.getElementById('role').value
+    role: document.getElementById('role').value,
+    manager_id: document.getElementById('managerId').value || null
   };
 
   try {
@@ -144,12 +164,14 @@ async function createAccessLink() {
     const data = await parseResponse(response);
     if (!data.action_link) throw new Error('Supabase не вернул ссылку доступа. Попробуйте создать новую ссылку позже.');
     const safeLink = makeSafeAccessLink(data.action_link);
+    const manager = managers.find((item) => item.id === data.manager_id) || null;
     setStatus('Ссылка доступа создана. Скопируйте ее и откройте в инкогнито для теста.', 'ok');
     document.getElementById('result').innerHTML = `<div class="card" style="box-shadow:none;margin:14px 0;border:2px solid rgba(22,163,74,.25)">
       <h3>Ссылка доступа</h3>
       <div class="list">
         <div class="list-item"><b>Email</b>${esc(data.email || payload.email)}</div>
         <div class="list-item"><b>Роль</b>${esc(data.role || payload.role)}</div>
+        <div class="list-item"><b>Менеджер</b>${esc(manager?.full_name || manager?.email || (data.manager_id ? data.manager_id : 'не назначен'))}</div>
         <div class="list-item"><b>Безопасная ссылка для сотрудника</b><textarea id="safeAccessLink" readonly style="min-height:120px">${esc(safeLink)}</textarea></div>
       </div>
       <div class="status warn">Не открывайте ссылку в обычной вкладке владельца. Для теста скопируйте ее и откройте в инкогнито или в другом браузере.</div>
@@ -167,6 +189,7 @@ async function createAccessLink() {
 async function init() {
   setupTop('admin');
   if (!getCachedUser()) return renderAuthBox(document.getElementById('app'), async () => location.reload());
+  await loadManagers();
   render();
 }
 
