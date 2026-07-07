@@ -104,7 +104,7 @@ function renderShell(profile, bodyHtml) {
         ${role === 'spn' ? '<a class="btn green" href="./spn-v2.html">Новая сделка</a>' : ''}
         <a class="btn light" href="./deals-v2.html">Сделки</a>
         ${canSeeSystemCheck ? '<a class="btn light" href="./nav-system-check-v2.html">Проверка</a>' : ''}
-        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
+        ${canSeeSystemCheck ? '<a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>' : ''}
         <button id="dashLogout" class="btn light" type="button">Выйти</button>
       </div>
     </section>
