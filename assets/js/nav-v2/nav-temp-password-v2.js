@@ -71,7 +71,7 @@ function managerOptions() {
     .filter((user) => ['owner', 'admin', 'manager'].includes(user.role) && user.is_active !== false)
     .map((user) => `<option value="${esc(user.id)}">${esc(user.full_name || user.email || user.id)} · ${esc(user.role)}</option>`)
     .join('');
-  return `<option value="">Без менеджера</option>${rows}`;
+  return `<option value="">Выберите менеджера</option>${rows}`;
 }
 
 async function loadManagers() {
@@ -80,6 +80,21 @@ async function loadManagers() {
     managers = Array.isArray(data?.items) ? data.items : [];
   } catch (_) {
     managers = [];
+  }
+}
+
+function syncManagerRequirement() {
+  const role = document.getElementById('role');
+  const manager = document.getElementById('managerId');
+  const hint = document.getElementById('managerHint');
+  if (!role || !manager) return;
+  const required = role.value === 'spn';
+  manager.required = required;
+  if (hint) {
+    hint.textContent = required
+      ? 'Для СПН менеджер обязателен.'
+      : 'Для этой роли менеджера можно не выбирать.';
+    hint.className = required ? 'small' : 'small muted';
   }
 }
 
@@ -98,8 +113,8 @@ function render() {
       <div class="field"><label>ФИО</label><input id="fullName" placeholder="ФИО сотрудника"></div>
       <div class="field"><label>Телефон</label><input id="phone" placeholder="Можно оставить пустым"></div>
       <div class="field"><label>Роль</label><select id="role"><option value="spn">СПН</option><option value="lawyer">Юрист</option><option value="broker">Брокер</option><option value="manager">Менеджер</option><option value="viewer">Наблюдатель</option><option value="admin">Админ</option></select></div>
-      <div class="field"><label>Менеджер</label><select id="managerId">${managerOptions()}</select></div>
-      <div id="status" class="status">Введите email сотрудника. Для СПН желательно сразу назначить менеджера.</div>
+      <div class="field"><label>Менеджер</label><select id="managerId">${managerOptions()}</select><span id="managerHint" class="small">Для СПН менеджер обязателен.</span></div>
+      <div id="status" class="status">Введите email сотрудника и выберите менеджера для роли СПН.</div>
       <div id="result"></div>
       <div class="actions" style="justify-content:flex-start">
         <button id="createAccessLink" class="btn primary" type="button">Создать ссылку доступа</button>
@@ -109,6 +124,7 @@ function render() {
     </section>
   </main>`;
   document.getElementById('createAccessLink').onclick = createAccessLink;
+  document.getElementById('role').onchange = syncManagerRequirement;
   document.getElementById('refreshLogin').onclick = async () => {
     try {
       setStatus('Обновляю сессию...');
@@ -118,6 +134,7 @@ function render() {
       setStatus('Не удалось обновить сессию: ' + e.message, 'error');
     }
   };
+  syncManagerRequirement();
 }
 
 async function callAccessLink(payload) {
@@ -151,6 +168,12 @@ async function createAccessLink() {
     role: document.getElementById('role').value,
     manager_id: document.getElementById('managerId').value || null
   };
+
+  if (payload.role === 'spn' && !payload.manager_id) {
+    setStatus('Для СПН обязательно выберите менеджера.', 'error');
+    document.getElementById('managerId').focus();
+    return;
+  }
 
   try {
     setStatus('Создаю ссылку доступа...');
