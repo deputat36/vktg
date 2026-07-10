@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUDGET_PATH = ROOT / "config/nav-v2-module-budget.json"
 CSP_RE = re.compile(
-    r'<meta\s+http-equiv=["\']Content-Security-Policy["\']\s+content=["\']([^"\']+)["\']\s*/?>',
+    r'<meta\s+http-equiv=["\']Content-Security-Policy["\']\s+content="([^"]+)"\s*/?>',
     re.IGNORECASE,
 )
 REQUIRED_DIRECTIVES = {
