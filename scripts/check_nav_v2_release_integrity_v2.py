@@ -67,6 +67,15 @@ migration_markers = {
         "Expected 16 private can_edit policies",
         "grant execute on function nav_v2_private.nav_v2_can_edit_deal(uuid,uuid) to authenticated, service_role",
     ),
+    "20260710184255_nav_v2_private_helper_lockdown_health.sql": (
+        "'private_problem_count', v_private_problem_count",
+        "'private_items_count', jsonb_array_length(v_private_items)",
+        "'private_schema_ok', v_private_schema_ok",
+        "'nav_v2_private.nav_v2_can_view_deal(uuid, uuid)'",
+        "'nav_v2_private.nav_v2_can_edit_deal(uuid, uuid)'",
+        "'trigger_helper', false",
+        "'rls_helper', true",
+    ),
 }
 
 for name, markers in migration_markers.items():
