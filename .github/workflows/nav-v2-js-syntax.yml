@@ -1,0 +1,28 @@
+name: Navigator v2 JavaScript syntax
+
+on:
+  pull_request:
+    paths:
+      - 'assets/js/nav-v2/**'
+      - '.github/workflows/nav-v2-js-syntax.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'assets/js/nav-v2/**'
+      - '.github/workflows/nav-v2-js-syntax.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Navigator v2 JavaScript syntax
+        run: |
+          find assets/js/nav-v2 -type f -name '*.js' -print0 \
+            | sort -z \
+            | xargs -0 -n1 node --check
