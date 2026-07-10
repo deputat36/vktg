@@ -6,12 +6,14 @@ on:
       - '**.html'
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
+      - 'config/nav-v2-module-budget.json'
       - 'config/nav-v2-rpc-surface.json'
       - 'docs/NAV_V2_*.md'
       - 'supabase/config.toml'
       - 'supabase/functions/nav-v2-deal-api/**'
       - 'supabase/functions/nav-invite-user/**'
       - 'supabase/migrations/**'
+      - 'scripts/check_nav_v2_module_budget.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
       - '.github/workflows/nav-v2-static.yml'
@@ -106,3 +108,5 @@ jobs:
         run: python3 scripts/check_nav_v2_release_integrity_v2.py
       - name: Check RPC surface registry
         run: python3 scripts/check_nav_v2_rpc_surface.py
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
