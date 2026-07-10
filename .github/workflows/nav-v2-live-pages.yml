@@ -1,9 +1,14 @@
-name: Navigator v2 live Pages smoke
+name: Navigator v2 live production smoke
 
 on:
   workflow_dispatch:
   schedule:
     - cron: '17 5 * * *'
+  pull_request:
+    paths:
+      - 'scripts/check_nav_v2_edge_auth.py'
+      - 'scripts/check_nav_v2_live_pages.py'
+      - '.github/workflows/nav-v2-live-pages.yml'
   push:
     branches:
       - main
@@ -13,14 +18,18 @@ on:
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
       - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_edge_auth.py'
       - 'scripts/check_nav_v2_live_pages.py'
+      - 'supabase/config.toml'
+      - 'supabase/functions/nav-v2-deal-api/**'
+      - 'supabase/functions/nav-invite-user/**'
       - '.github/workflows/nav-v2-live-pages.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: nav-v2-live-pages-smoke
+  group: nav-v2-live-production-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,3 +42,7 @@ jobs:
         env:
           NAV_V2_BASE_URL: https://deputat36.github.io/vktg/
         run: python3 scripts/check_nav_v2_live_pages.py
+      - name: Check live Navigator v2 Edge authentication
+        env:
+          NAV_V2_SUPABASE_URL: https://ofewxuqfjhamgerwzull.supabase.co
+        run: python3 scripts/check_nav_v2_edge_auth.py
