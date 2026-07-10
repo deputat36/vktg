@@ -1,0 +1,27 @@
+name: Navigator v2 BAZA checks
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-baza-hints-v2.js'
+      - 'assets/data/nav-v2/baza-hints.json'
+      - 'scripts/check_nav_v2_baza.py'
+      - '.github/workflows/nav-v2-baza-static.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-baza-hints-v2.js'
+      - 'assets/data/nav-v2/baza-hints.json'
+      - 'scripts/check_nav_v2_baza.py'
+      - '.github/workflows/nav-v2-baza-static.yml'
+
+jobs:
+  validate-baza-hints:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate BAZA hints
+        run: python3 scripts/check_nav_v2_baza.py
