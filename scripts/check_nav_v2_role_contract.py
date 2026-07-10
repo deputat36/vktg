@@ -63,6 +63,17 @@ def main() -> int:
 
     menu_source = ROLE_MENU_PATH.read_text(encoding="utf-8")
     admin_only = set(contract.get("admin_only_routes") or [])
+    diagnostics_block = extract_block(
+        menu_source,
+        "function addAdminDiagnosticsLinks(links, active) {",
+        "function buildMenu(role) {",
+    )
+    diagnostics_routes = route_set(diagnostics_block or "")
+    if diagnostics_routes != {"nav-system-check-v2.html", "diagnostics-v2.html"}:
+        errors.append(
+            "role-menu-v2.js: delegated admin diagnostics routes differ: "
+            f"got {sorted(diagnostics_routes)}"
+        )
 
     for role, markers in ROLE_BLOCKS.items():
         block = extract_block(menu_source, markers[0], markers[1])
@@ -71,6 +82,9 @@ def main() -> int:
             continue
 
         actual = route_set(block)
+        if role == "owner_admin" and "addAdminDiagnosticsLinks(links, active);" in block:
+            actual |= diagnostics_routes
+
         expected = set((contract.get("roles") or {}).get(role, {}).get("menu_routes") or [])
         if actual != expected:
             errors.append(
