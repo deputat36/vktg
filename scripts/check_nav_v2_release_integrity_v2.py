@@ -35,10 +35,24 @@ required = (
     "20260710155703_nav_v2_revoke_authenticated_jsonb_has.sql",
     "20260710173438_nav_v2_revoke_active_spn_manager_guard.sql",
     "20260710175128_nav_v2_private_schema_move_spn_manager_guard.sql",
+    "20260710181623_nav_v2_private_active_user_and_rpc_health.sql",
 )
 for name in required:
     if not (root / "supabase/migrations" / name).exists():
         errors.append(f"Missing migration: {name}")
+
+private_active_user_path = root / "supabase/migrations/20260710181623_nav_v2_private_active_user_and_rpc_health.sql"
+if private_active_user_path.exists():
+    private_active_user_sql = private_active_user_path.read_text(encoding="utf-8")
+    for marker in (
+        "alter function public.nav_v2_is_active_user(uuid) set schema nav_v2_private",
+        "nav_v2_private.nav_v2_is_active_user((select auth.uid()))",
+        "'scope', 'browser_callable_only'",
+        "revoke all on function nav_v2_private.nav_v2_is_active_user(uuid) from public, anon, authenticated",
+        "grant execute on function nav_v2_private.nav_v2_is_active_user(uuid) to authenticated, service_role",
+    ):
+        if marker not in private_active_user_sql:
+            errors.append(f"Private active-user migration missing marker: {marker}")
 
 invite_path = root / "supabase/functions/nav-invite-user/index.ts"
 if not invite_path.exists():

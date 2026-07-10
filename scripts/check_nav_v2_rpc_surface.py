@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "config/nav-v2-rpc-surface.json"
 BROWSER_ROOT = ROOT / "assets/js/nav-v2"
+DB_HEALTH_MIGRATION = ROOT / "supabase/migrations/20260710181623_nav_v2_private_active_user_and_rpc_health.sql"
 SCAN_ROOTS = (
     BROWSER_ROOT,
     ROOT / "supabase/functions/nav-v2-deal-api",
@@ -23,7 +24,11 @@ DIRECT_TABLE_PATTERNS = (
     re.compile(r"\.from\s*\(\s*['\"`](nav_[a-z0-9_]+)['\"`]"),
     re.compile(r"/rest/v1/(nav_[a-z0-9_]+)(?:[/?'\"`]|$)"),
 )
+DB_HEALTH_ENTRY_PATTERN = re.compile(
+    r"\('(frontend_api|admin_api|demo_api)',\s*'(nav_v2_[a-z0-9_]+)'\)"
+)
 CATEGORIES = ("frontend_api", "admin_api", "demo_api", "internal_only")
+BROWSER_CATEGORIES = ("frontend_api", "admin_api", "demo_api")
 
 
 def fail(message: str, errors: list[str]) -> None:
@@ -72,6 +77,44 @@ def main() -> int:
                 fail(f"RPC {value} is classified twice: {previous} and {category}", errors)
             classified[value] = category
 
+    if not DB_HEALTH_MIGRATION.exists():
+        fail(
+            f"Missing DB RPC health migration: {DB_HEALTH_MIGRATION.relative_to(ROOT)}",
+            errors,
+        )
+    else:
+        health_sql = DB_HEALTH_MIGRATION.read_text(encoding="utf-8")
+        health_entries: dict[str, set[str]] = defaultdict(set)
+        for category, name in DB_HEALTH_ENTRY_PATTERN.findall(health_sql):
+            health_entries[category].add(name)
+
+        for category in BROWSER_CATEGORIES:
+            registry_names = set(registry.get(category, []))
+            health_names = health_entries.get(category, set())
+            missing = sorted(registry_names - health_names)
+            extra = sorted(health_names - registry_names)
+            if missing:
+                fail(
+                    f"DB RPC health is missing {category} entries: {', '.join(missing)}",
+                    errors,
+                )
+            if extra:
+                fail(
+                    f"DB RPC health has unregistered {category} entries: {', '.join(extra)}",
+                    errors,
+                )
+
+        internal_in_health = sorted(
+            set(registry.get("internal_only", []))
+            & set().union(*(health_entries.get(category, set()) for category in BROWSER_CATEGORIES))
+        )
+        if internal_in_health:
+            fail(
+                "Internal-only RPCs must not appear in browser grant health: "
+                + ", ".join(internal_in_health),
+                errors,
+            )
+
     calls: dict[str, set[str]] = defaultdict(set)
     for path in iter_source_files():
         text = path.read_text(encoding="utf-8")
@@ -107,7 +150,7 @@ def main() -> int:
         )
 
     used = set(calls)
-    for category in ("frontend_api", "admin_api", "demo_api"):
+    for category in BROWSER_CATEGORIES:
         for name in registry.get(category, []):
             if name not in used:
                 warnings.append(f"Registered {category} RPC is not found in scanned sources: {name}")
