@@ -33,6 +33,7 @@ required = (
     "20260710134911_harden_postgres_public_default_privileges.sql",
     "20260710134932_revoke_postgres_default_table_maintain.sql",
     "20260710155703_nav_v2_revoke_authenticated_jsonb_has.sql",
+    "20260710173438_nav_v2_revoke_active_spn_manager_guard.sql",
 )
 for name in required:
     if not (root / "supabase/migrations" / name).exists():
