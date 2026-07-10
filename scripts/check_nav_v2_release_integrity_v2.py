@@ -52,6 +52,39 @@ else:
         if marker not in source:
             errors.append(f"Invite source missing required marker: {marker}")
 
+smoke_workflow_path = root / ".github/workflows/nav-v2-live-pages.yml"
+if not smoke_workflow_path.exists():
+    errors.append("Missing Navigator v2 live production smoke workflow")
+else:
+    smoke_workflow = smoke_workflow_path.read_text(encoding="utf-8")
+    for marker in (
+        "workflow_dispatch:",
+        "schedule:",
+        "pull_request:",
+        "push:",
+        "python3 scripts/check_nav_v2_live_pages.py",
+        "python3 scripts/check_nav_v2_edge_auth.py",
+    ):
+        if marker not in smoke_workflow:
+            errors.append(f"Live production smoke workflow missing marker: {marker}")
+
+edge_smoke_path = root / "scripts/check_nav_v2_edge_auth.py"
+if not edge_smoke_path.exists():
+    errors.append("Missing Navigator v2 Edge auth smoke script")
+else:
+    edge_smoke = edge_smoke_path.read_text(encoding="utf-8")
+    for marker in (
+        'FUNCTIONS = ("nav-invite-user", "nav-v2-deal-api")',
+        "if status != 401:",
+        'method="POST"',
+    ):
+        if marker not in edge_smoke:
+            errors.append(f"Edge auth smoke missing marker: {marker}")
+
+pages_smoke_path = root / "scripts/check_nav_v2_live_pages.py"
+if not pages_smoke_path.exists():
+    errors.append("Missing Navigator v2 live Pages smoke script")
+
 if legacy_count:
     print(f"WARNING: {legacy_count} legacy migration filenames are outside the current convention")
 if errors:
