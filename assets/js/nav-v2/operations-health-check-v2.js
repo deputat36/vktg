@@ -33,6 +33,11 @@ function boolCard(title, isOk, details, href, toneWhenWarn = 'red') {
     ${href ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><a class="btn light" href="${esc(href)}">Открыть</a></div>` : ''}
   </div>`;
 }
+function internalHealthDetails() {
+  const internal = health?.internal || {};
+  const schemaState = ok(internal.private_schema_ok) ? 'OK' : 'FAIL';
+  return `public=${n(internal.items_count)}; open=${n(internal.open_count)}; private=${n(internal.private_items_count)}; private problems=${n(internal.private_problem_count)}; schema=${schemaState}`;
+}
 function safeDiagnosticActions() {
   return `<div class="actions" style="justify-content:flex-start"><a class="btn light" href="./diagnostics-v2.html">Диагностика</a><a class="btn light" href="./nav-system-check-v2.html">Проверка системы</a><a class="btn light" href="./dashboard-v2.html">Рабочий стол</a></div>`;
 }
@@ -118,6 +123,11 @@ function reportText() {
     `storage_ok: ${ok(health?.storage?.ok)}`,
     `index_ok: ${ok(health?.indexes?.ok)}`,
     `internal_ok: ${ok(health?.internal?.ok)}`,
+    `internal_public_items_count: ${n(health?.internal?.items_count)}`,
+    `internal_public_open_count: ${n(health?.internal?.open_count)}`,
+    `internal_private_items_count: ${n(health?.internal?.private_items_count)}`,
+    `internal_private_problem_count: ${n(health?.internal?.private_problem_count)}`,
+    `internal_private_schema_ok: ${ok(health?.internal?.private_schema_ok)}`,
     `integrity_ok: ${ok(health?.integrity?.ok)}`,
     `frontend_ok: ${ok(health?.frontend?.ok)}`,
     `frontend_items_count: ${n(health?.frontend?.items_count)}`,
@@ -169,6 +179,7 @@ function draw() {
       ${metric('Security', ok(health.security?.ok) ? 'OK' : 'FAIL', ok(health.security?.ok) ? 'green' : 'red')}
       ${metric('Frontend RPC', n(health.frontend?.items_count), ok(health.frontend?.ok) ? 'green' : 'red')}
       ${metric('RPC grants', n(health.grants?.items_count), ok(health.grants?.ok) ? 'green' : 'red')}
+      ${metric('Private helpers', n(health.internal?.private_items_count), ok(health.internal?.private_schema_ok) && n(health.internal?.private_problem_count) === 0 ? 'green' : 'red')}
       ${metric('Сделок', n(quality.total_deals), 'blue')}
       ${metric('Quality задач', n(quality.open_quality_tasks), n(quality.open_quality_tasks) ? 'yellow' : 'green')}
       ${metric('Срочных quality', n(quality.urgent_quality_tasks), n(quality.urgent_quality_tasks) ? 'red' : 'green')}
@@ -180,7 +191,7 @@ function draw() {
         ${boolCard('RLS policies', ok(health.rls?.ok), `policies=${health.rls?.policy_count ?? 'n/a'}; problems=${health.rls?.problem_count ?? 'n/a'}`, './security-hardening-check-v2.html')}
         ${boolCard('Storage security', ok(health.storage?.ok), `buckets=${health.storage?.bucket_count ?? 'n/a'}; public=${health.storage?.public_bucket_count ?? 'n/a'}`, './security-hardening-check-v2.html')}
         ${boolCard('Indexes', ok(health.indexes?.ok), `expected=${health.indexes?.expected_count ?? 'n/a'}; missing=${health.indexes?.missing_count ?? 'n/a'}`, './security-hardening-check-v2.html')}
-        ${boolCard('Internal RPC lockdown', ok(health.internal?.ok), `items=${health.internal?.items_count ?? 'n/a'}; open=${health.internal?.open_count ?? 'n/a'}`, './security-hardening-check-v2.html')}
+        ${boolCard('Internal RPC lockdown', ok(health.internal?.ok), internalHealthDetails(), './security-hardening-check-v2.html')}
         ${boolCard('Data integrity', ok(health.integrity?.ok), `checks=${health.integrity?.check_count ?? 'n/a'}; problems=${health.integrity?.problem_count ?? 'n/a'}`, './security-hardening-check-v2.html')}
         ${boolCard('Frontend RPC coverage', ok(health.frontend?.ok), `items=${n(health.frontend?.items_count)}; problems=${n(health.frontend?.problem_count)}`, './frontend-rpc-coverage-check-v2.html')}
         ${boolCard('RPC grants', ok(health.grants?.ok), `items=${n(health.grants?.items_count)}; anon=${n(health.grants?.anon_open_count)}; public=${n(health.grants?.public_open_count)}`, './rpc-grant-check-v2.html')}
