@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "roles": {
+    "owner_admin": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "spn-v2.html",
+        "deals-v2.html",
+        "queue-v2.html",
+        "admin-v2.html",
+        "nav-access-v2.html",
+        "nav-access-audit-v2.html",
+        "nav-system-check-v2.html",
+        "diagnostics-v2.html"
+      ]
+    },
+    "manager": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "deals-v2.html"
+      ]
+    },
+    "spn": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "spn-v2.html",
+        "deals-v2.html"
+      ]
+    },
+    "lawyer": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "queue-v2.html",
+        "deals-v2.html"
+      ]
+    },
+    "broker": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "deals-v2.html"
+      ]
+    },
+    "viewer": {
+      "menu_routes": [
+        "dashboard-v2.html",
+        "deals-v2.html"
+      ]
+    }
+  },
+  "safe_menu_routes": [
+    "dashboard-v2.html",
+    "deals-v2.html"
+  ],
+  "admin_guarded_pages": {
+    "admin-v2.html": "admin",
+    "nav-access-v2.html": "access",
+    "nav-access-audit-v2.html": "audit"
+  },
+  "admin_only_routes": [
+    "admin-v2.html",
+    "nav-access-v2.html",
+    "nav-access-audit-v2.html",
+    "nav-system-check-v2.html",
+    "diagnostics-v2.html"
+  ]
+}
