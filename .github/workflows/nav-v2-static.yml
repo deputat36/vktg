@@ -92,6 +92,14 @@ jobs:
           if dashboard.exists() and 'canSeeSystemCheck' not in dashboard.read_text(encoding='utf-8'):
               errors.append('Dashboard must gate system check by role')
 
+          start_module = root / 'assets/js/nav-v2/start-v2.js'
+          if start_module.exists():
+              start_text = start_module.read_text(encoding='utf-8')
+              required_start_gate = "const canSeeSystemCheck = role === 'owner' || role === 'admin';"
+              required_start_link = "${canSeeSystemCheck ? '<a class=\"btn light\" href=\"./nav-system-check-v2.html\">Проверка</a>' : ''}"
+              if required_start_gate not in start_text or required_start_link not in start_text:
+                  errors.append('Start module must gate system check by owner/admin role')
+
           cleanup = root / 'assets/js/nav-v2/nav-base-menu-cleanup-v2.js'
           if not cleanup.exists():
               errors.append('Missing base menu cleanup helper')
