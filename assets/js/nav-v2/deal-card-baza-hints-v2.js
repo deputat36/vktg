@@ -5,20 +5,47 @@ const dealId = new URLSearchParams(location.search).get('id');
 const hintsUrl = './assets/data/nav-v2/baza-hints.json?v=20260710-0700';
 
 let loading = false;
+let observedMain = null;
+let settledForCurrentMain = false;
 
 function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
 }
 
-function safeSnapshotText(deal) {
-  try {
-    return JSON.stringify({
-      deal_summary: deal?.deal_summary || {},
-      wizard_snapshot: deal?.wizard_snapshot || {}
-    }).toLowerCase();
-  } catch (_) {
-    return '';
+function isNegativeText(value) {
+  const text = String(value || '').trim().toLowerCase();
+  return !text
+    || /^(false|0|no|none|нет)$/i.test(text)
+    || /не требуется|не используется|отсутств|без ипотек|ипотеки нет|капитал не используется/.test(text);
+}
+
+function valueAffirmsSignal(value, textPattern) {
+  if (value === true) return true;
+  if (value === false || value === null || value === undefined) return false;
+  if (typeof value === 'number') return value > 0;
+  if (typeof value === 'string') {
+    if (isNegativeText(value)) return false;
+    const text = value.trim().toLowerCase();
+    return /^(true|1|yes|да|есть)$/i.test(text) || textPattern.test(text);
   }
+  if (Array.isArray(value)) return value.some((item) => valueAffirmsSignal(item, textPattern));
+  if (typeof value === 'object') return Object.values(value).some((item) => valueAffirmsSignal(item, textPattern));
+  return false;
+}
+
+function objectHasSignal(value, keyPattern, textPattern) {
+  if (Array.isArray(value)) {
+    return value.some((item) => objectHasSignal(item, keyPattern, textPattern));
+  }
+  if (!value || typeof value !== 'object') {
+    return typeof value === 'string' && !isNegativeText(value) && textPattern.test(value.toLowerCase());
+  }
+
+  return Object.entries(value).some(([key, item]) => {
+    const normalizedKey = String(key || '').toLowerCase();
+    if (keyPattern.test(normalizedKey) && valueAffirmsSignal(item, textPattern)) return true;
+    return objectHasSignal(item, keyPattern, textPattern);
+  });
 }
 
 function isOpenTask(task) {
@@ -40,14 +67,20 @@ function collectSignals(card) {
   const documents = list(card, 'documents');
   const risks = list(card, 'risks');
   const tasks = list(card, 'tasks');
-  const snapshotText = safeSnapshotText(deal);
+  const snapshot = {
+    deal_summary: deal.deal_summary || {},
+    wizard_snapshot: deal.wizard_snapshot || {}
+  };
   const signals = new Set();
 
-  if (deal.has_mortgage === true || /ипотек|mortgage/.test(snapshotText)) {
+  if (
+    deal.has_mortgage === true
+    || objectHasSignal(snapshot, /mortgage|ипотек/, /mortgage|ипотек/)
+  ) {
     signals.add('mortgage');
   }
 
-  if (/материн|маткап|maternity_capital|matcap/.test(snapshotText)) {
+  if (objectHasSignal(snapshot, /maternity.*capital|matcap|материн|маткап/, /maternity.*capital|matcap|материн|маткап/)) {
     signals.add('maternity_capital');
   }
 
@@ -128,7 +161,7 @@ function renderHints(hints) {
 }
 
 async function loadHints() {
-  if (!app || !dealId || !getCachedUser() || loading || document.getElementById('bazaHintsBox')) return;
+  if (!app || !dealId || !getCachedUser() || loading || settledForCurrentMain) return;
   loading = true;
 
   try {
@@ -155,16 +188,22 @@ async function loadHints() {
   } catch (error) {
     console.warn('BAZA hints unavailable:', error);
   } finally {
+    settledForCurrentMain = true;
     loading = false;
   }
 }
 
-if (app) {
-  new MutationObserver(() => {
-    if (app.querySelector('main.nav-v2-shell') && !document.getElementById('bazaHintsBox')) {
-      loadHints();
-    }
-  }).observe(app, { childList: true, subtree: true });
-
+function ensureHintsForCurrentCard() {
+  const main = app?.querySelector('main.nav-v2-shell');
+  if (!main) return;
+  if (main !== observedMain) {
+    observedMain = main;
+    settledForCurrentMain = false;
+  }
   loadHints();
+}
+
+if (app) {
+  new MutationObserver(ensureHintsForCurrentCard).observe(app, { childList: true, subtree: true });
+  ensureHintsForCurrentCard();
 }
