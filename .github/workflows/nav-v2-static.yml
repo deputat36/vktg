@@ -11,7 +11,7 @@ on:
       - 'supabase/functions/nav-v2-deal-api/**'
       - 'supabase/functions/nav-invite-user/**'
       - 'supabase/migrations/**'
-      - 'scripts/check_nav_v2_release_integrity.py'
+      - 'scripts/check_nav_v2_release_integrity_v2.py'
       - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
@@ -101,4 +101,4 @@ jobs:
           print('Navigator v2 static checks passed')
           PY
       - name: Check release integrity
-        run: python3 scripts/check_nav_v2_release_integrity.py
+        run: python3 scripts/check_nav_v2_release_integrity_v2.py
