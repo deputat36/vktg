@@ -37,6 +37,7 @@ required = (
     "20260710175128_nav_v2_private_schema_move_spn_manager_guard.sql",
     "20260710181623_nav_v2_private_active_user_and_rpc_health.sql",
     "20260710182320_nav_v2_private_my_role_helper.sql",
+    "20260710182808_nav_v2_private_owner_admin_helper.sql",
 )
 for name in required:
     if not (root / "supabase/migrations" / name).exists():
@@ -67,6 +68,19 @@ if private_my_role_path.exists():
     ):
         if marker not in private_my_role_sql:
             errors.append(f"Private my-role migration missing marker: {marker}")
+
+private_owner_admin_path = root / "supabase/migrations/20260710182808_nav_v2_private_owner_admin_helper.sql"
+if private_owner_admin_path.exists():
+    private_owner_admin_sql = private_owner_admin_path.read_text(encoding="utf-8")
+    for marker in (
+        "alter function public.nav_v2_is_owner_or_admin(uuid) set schema nav_v2_private",
+        "'public.nav_v2_is_owner_or_admin',",
+        "'nav_v2_private.nav_v2_is_owner_or_admin'",
+        "Expected 3 policies using private owner/admin helper",
+        "grant execute on function nav_v2_private.nav_v2_is_owner_or_admin(uuid) to authenticated, service_role",
+    ):
+        if marker not in private_owner_admin_sql:
+            errors.append(f"Private owner-admin migration missing marker: {marker}")
 
 invite_path = root / "supabase/functions/nav-invite-user/index.ts"
 if not invite_path.exists():
