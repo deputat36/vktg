@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ERRORS: list[str] = []
+
+JSON_PATH = ROOT / "assets/data/nav-v2/baza-hints.json"
+HELPER_PATH = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
+PAGE_PATH = ROOT / "deal-card-v2.html"
+
+REQUIRED_FIELDS = {
+    "id", "title", "role", "reason", "body",
+    "material_url", "priority", "is_active", "signals",
+}
+ALLOWED_ROLES = {"spn", "lawyer", "broker", "manager", "owner", "admin", "all"}
+ALLOWED_PRIORITIES = {"low", "normal", "high"}
+FORBIDDEN_KEYS = {
+    "full_name", "fio", "phone", "address", "passport", "passport_data",
+    "bank_details", "contract_number", "personal_comment", "employee_comment",
+}
+ALLOWED_RPC = {"nav_v2_get_my_profile", "nav_v2_get_deal_card"}
+
+
+def check_files() -> None:
+    for path in (JSON_PATH, HELPER_PATH, PAGE_PATH):
+        if not path.exists():
+            ERRORS.append(f"Missing required BAZA file: {path.relative_to(ROOT)}")
+
+
+def check_json() -> None:
+    if not JSON_PATH.exists():
+        return
+    try:
+        hints = json.loads(JSON_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        ERRORS.append(f"Invalid BAZA hints JSON: {exc}")
+        return
+
+    if not isinstance(hints, list) or not hints:
+        ERRORS.append("BAZA hints JSON must be a non-empty list")
+        return
+
+    seen_ids: set[str] = set()
+    for index, hint in enumerate(hints, start=1):
+        label = f"BAZA hint #{index}"
+        if not isinstance(hint, dict):
+            ERRORS.append(f"{label}: item must be an object")
+            continue
+
+        missing = sorted(REQUIRED_FIELDS - set(hint))
+        if missing:
+            ERRORS.append(f"{label}: missing fields {missing}")
+
+        forbidden = sorted(FORBIDDEN_KEYS & set(hint))
+        if forbidden:
+            ERRORS.append(f"{label}: forbidden keys {forbidden}")
+
+        hint_id = hint.get("id")
+        if not isinstance(hint_id, str) or not hint_id.strip():
+            ERRORS.append(f"{label}: id must be a non-empty string")
+        elif hint_id in seen_ids:
+            ERRORS.append(f"{label}: duplicate id {hint_id!r}")
+        else:
+            seen_ids.add(hint_id)
+
+        if hint.get("role") not in ALLOWED_ROLES:
+            ERRORS.append(f"{label}: unsupported role {hint.get('role')!r}")
+        if hint.get("priority") not in ALLOWED_PRIORITIES:
+            ERRORS.append(f"{label}: unsupported priority {hint.get('priority')!r}")
+        if not isinstance(hint.get("is_active"), bool):
+            ERRORS.append(f"{label}: is_active must be boolean")
+
+        signals = hint.get("signals")
+        valid_signals = isinstance(signals, list) and bool(signals) and all(
+            isinstance(item, str) and bool(item.strip()) for item in signals
+        )
+        if not valid_signals:
+            ERRORS.append(f"{label}: signals must be a non-empty string list")
+
+
+def check_helper() -> None:
+    if not HELPER_PATH.exists():
+        return
+    text = HELPER_PATH.read_text(encoding="utf-8")
+    for marker in (
+        "assets/data/nav-v2/baza-hints.json",
+        "Подсказки по сделке",
+        "slice(0, 5)",
+        "rpc('nav_v2_get_my_profile'",
+        "rpc('nav_v2_get_deal_card'",
+    ):
+        if marker not in text:
+            ERRORS.append(f"BAZA helper missing marker {marker!r}")
+
+    rpc_calls = set(re.findall(r"rpc\('([^']+)'", text))
+    unexpected = sorted(rpc_calls - ALLOWED_RPC)
+    if unexpected:
+        ERRORS.append(f"BAZA helper must be read-only; unexpected RPC calls: {unexpected}")
+
+
+def check_page() -> None:
+    if PAGE_PATH.exists() and "deal-card-baza-hints-v2.js" not in PAGE_PATH.read_text(encoding="utf-8"):
+        ERRORS.append("deal-card-v2.html must connect deal-card-baza-hints-v2.js")
+
+
+def main() -> int:
+    check_files()
+    check_json()
+    check_helper()
+    check_page()
+    if ERRORS:
+        print("\n".join(ERRORS))
+        return 1
+    print("Navigator v2 BAZA checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
