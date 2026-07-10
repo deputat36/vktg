@@ -15,10 +15,12 @@ on:
       - 'supabase/functions/nav-invite-user/**'
       - 'supabase/migrations/**'
       - 'scripts/check_nav_v2_csp.py'
+      - 'scripts/check_nav_v2_live_pages.py'
       - 'scripts/check_nav_v2_module_budget.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
       - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
+      - '.github/workflows/nav-v2-live-pages.yml'
       - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
@@ -125,3 +127,5 @@ jobs:
         run: python3 scripts/check_nav_v2_csp.py
       - name: Check role route contract
         run: python3 scripts/check_nav_v2_role_contract.py
+      - name: Compile live Pages smoke script
+        run: python3 -m py_compile scripts/check_nav_v2_live_pages.py
