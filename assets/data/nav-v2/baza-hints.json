@@ -1,0 +1,57 @@
+[
+  {
+    "id": "mortgage-docs-basic",
+    "title": "Проверьте пакет документов по ипотеке",
+    "role": "spn",
+    "reason": "В сделке отмечена ипотека",
+    "body": "Уточните у клиента готовность базового пакета документов и сроки передачи юристу или брокеру.",
+    "material_url": "",
+    "priority": "normal",
+    "is_active": true,
+    "signals": ["mortgage"]
+  },
+  {
+    "id": "matcap-basic-check",
+    "title": "Проверьте условия материнского капитала",
+    "role": "spn",
+    "reason": "В сделке отмечен материнский капитал",
+    "body": "Проверьте, кто участвует в сделке, какие документы нужны и когда их должен увидеть юрист.",
+    "material_url": "",
+    "priority": "high",
+    "is_active": true,
+    "signals": ["maternity_capital"]
+  },
+  {
+    "id": "lawyer-risk-summary",
+    "title": "Сформулируйте юридический риск без персональных данных",
+    "role": "lawyer",
+    "reason": "В сделке есть юридический риск",
+    "body": "Опишите тип риска и рекомендуемое действие без ФИО, телефона, адреса и договорных номеров.",
+    "material_url": "",
+    "priority": "high",
+    "is_active": true,
+    "signals": ["legal_risk"]
+  },
+  {
+    "id": "missing-documents-followup",
+    "title": "Проверьте недостающие документы",
+    "role": "all",
+    "reason": "В сделке есть документы со статусом missing или requested",
+    "body": "Согласуйте ответственного, срок получения и следующий контрольный шаг по каждому недостающему документу.",
+    "material_url": "",
+    "priority": "normal",
+    "is_active": true,
+    "signals": ["documents_missing"]
+  },
+  {
+    "id": "manager-overdue-quality-tasks",
+    "title": "Разберите просроченные задачи качества",
+    "role": "manager",
+    "reason": "В сделке есть просроченные задачи качества данных",
+    "body": "Проверьте, какие поля мешают подготовке сделки, и назначьте ответственного за заполнение.",
+    "material_url": "",
+    "priority": "high",
+    "is_active": true,
+    "signals": ["overdue_quality_tasks"]
+  }
+]
