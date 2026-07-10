@@ -1,0 +1,24 @@
+name: Navigator v2 live Pages smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-live-pages-smoke
+  cancel-in-progress: true
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deployed Navigator v2 pages
+        env:
+          NAV_V2_BASE_URL: https://deputat36.github.io/vktg/
+        run: python3 scripts/check_nav_v2_live_pages.py
