@@ -8,8 +8,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "config/nav-v2-rpc-surface.json"
+BROWSER_ROOT = ROOT / "assets/js/nav-v2"
 SCAN_ROOTS = (
-    ROOT / "assets/js/nav-v2",
+    BROWSER_ROOT,
     ROOT / "supabase/functions/nav-v2-deal-api",
     ROOT / "supabase/functions/nav-invite-user",
 )
@@ -17,6 +18,10 @@ SCAN_ROOTS = (
 RPC_PATTERNS = (
     re.compile(r"\brpc\s*\(\s*['\"](nav(?:_v2)?_[a-z0-9_]+)['\"]"),
     re.compile(r"/rest/v1/rpc/(nav(?:_v2)?_[a-z0-9_]+)"),
+)
+DIRECT_TABLE_PATTERNS = (
+    re.compile(r"\.from\s*\(\s*['\"`](nav_[a-z0-9_]+)['\"`]"),
+    re.compile(r"/rest/v1/(nav_[a-z0-9_]+)(?:[/?'\"`]|$)"),
 )
 CATEGORIES = ("frontend_api", "admin_api", "demo_api", "internal_only")
 
@@ -32,6 +37,12 @@ def iter_source_files() -> list[Path]:
             continue
         files.extend(path for path in root.rglob("*") if path.suffix in {".js", ".ts", ".html"})
     return sorted(set(files))
+
+
+def iter_browser_files() -> list[Path]:
+    if not BROWSER_ROOT.exists():
+        return []
+    return sorted(path for path in BROWSER_ROOT.rglob("*") if path.suffix in {".js", ".ts", ".html"})
 
 
 def main() -> int:
@@ -80,6 +91,21 @@ def main() -> int:
         elif category == "internal_only":
             fail(f"Internal-only RPC {name} is called from browser/Edge sources: {joined}", errors)
 
+    direct_tables: dict[str, set[str]] = defaultdict(set)
+    for path in iter_browser_files():
+        text = path.read_text(encoding="utf-8")
+        relative = str(path.relative_to(ROOT))
+        for pattern in DIRECT_TABLE_PATTERNS:
+            for match in pattern.finditer(text):
+                direct_tables[match.group(1)].add(relative)
+
+    for table_name, locations in sorted(direct_tables.items()):
+        fail(
+            "Browser code must use the curated RPC layer instead of direct table access: "
+            f"{table_name} in {', '.join(sorted(locations))}",
+            errors,
+        )
+
     used = set(calls)
     for category in ("frontend_api", "admin_api", "demo_api"):
         for name in registry.get(category, []):
@@ -99,7 +125,8 @@ def main() -> int:
 
     print(
         "Navigator v2 RPC surface passed: "
-        f"{len(calls)} calls found, {len(classified)} RPCs classified"
+        f"{len(calls)} calls found, {len(classified)} RPCs classified, "
+        f"{len(direct_tables)} direct browser table calls"
     )
     return 0
 
