@@ -13,6 +13,7 @@ on:
       - 'supabase/functions/nav-v2-deal-api/**'
       - 'supabase/functions/nav-invite-user/**'
       - 'supabase/migrations/**'
+      - 'scripts/check_nav_v2_csp.py'
       - 'scripts/check_nav_v2_module_budget.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
@@ -110,3 +111,5 @@ jobs:
         run: python3 scripts/check_nav_v2_rpc_surface.py
       - name: Check page module budgets
         run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check baseline CSP
+        run: python3 scripts/check_nav_v2_csp.py
