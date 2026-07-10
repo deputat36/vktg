@@ -7,9 +7,11 @@ on:
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
       - 'docs/NAV_V2_*.md'
+      - 'supabase/config.toml'
       - 'supabase/functions/nav-v2-deal-api/**'
       - 'supabase/functions/nav-invite-user/**'
       - 'supabase/migrations/**'
+      - 'scripts/check_nav_v2_release_integrity.py'
       - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
@@ -98,3 +100,5 @@ jobs:
               sys.exit(1)
           print('Navigator v2 static checks passed')
           PY
+      - name: Check release integrity
+        run: python3 scripts/check_nav_v2_release_integrity.py
