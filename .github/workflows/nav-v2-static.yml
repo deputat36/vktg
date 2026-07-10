@@ -7,6 +7,7 @@ on:
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
       - 'config/nav-v2-module-budget.json'
+      - 'config/nav-v2-role-contract.json'
       - 'config/nav-v2-rpc-surface.json'
       - 'docs/NAV_V2_*.md'
       - 'supabase/config.toml'
@@ -16,6 +17,7 @@ on:
       - 'scripts/check_nav_v2_csp.py'
       - 'scripts/check_nav_v2_module_budget.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
+      - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
       - '.github/workflows/nav-v2-static.yml'
   push:
@@ -121,3 +123,5 @@ jobs:
         run: python3 scripts/check_nav_v2_module_budget.py
       - name: Check baseline CSP
         run: python3 scripts/check_nav_v2_csp.py
+      - name: Check role route contract
+        run: python3 scripts/check_nav_v2_role_contract.py
