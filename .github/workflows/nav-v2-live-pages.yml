@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 5 * * *'
+  pull_request:
+    paths:
+      - 'scripts/check_nav_v2_edge_auth.py'
+      - 'scripts/check_nav_v2_live_pages.py'
+      - '.github/workflows/nav-v2-live-pages.yml'
   push:
     branches:
       - main
@@ -24,7 +29,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nav-v2-live-production-smoke
+  group: nav-v2-live-production-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
