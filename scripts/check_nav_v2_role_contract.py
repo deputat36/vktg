@@ -20,10 +20,13 @@ ROLE_BLOCKS = {
 }
 
 HREF_RE = re.compile(r'href="\.\/([^"?#]+)')
+MAKE_LINK_RE = re.compile(
+    r"makeLink\(\s*[^,]+,\s*['\"][^'\"]+['\"],\s*['\"]\.\/([^'\"?]+)"
+)
 
 
 def route_set(text: str) -> set[str]:
-    return set(HREF_RE.findall(text))
+    return set(HREF_RE.findall(text)) | set(MAKE_LINK_RE.findall(text))
 
 
 def extract_block(source: str, start: str, end: str) -> str | None:
