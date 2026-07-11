@@ -137,6 +137,18 @@ pages_smoke_path = root / "scripts/check_nav_v2_live_pages.py"
 if not pages_smoke_path.exists():
     errors.append("Missing Navigator v2 live Pages smoke script")
 
+build_config_path = root / "config/nav-v2-build.json"
+build_check_path = root / "scripts/check_nav_v2_build_version.py"
+static_workflow_path = root / ".github/workflows/nav-v2-static.yml"
+if not build_config_path.exists():
+    errors.append("Missing Navigator v2 build version config")
+if not build_check_path.exists():
+    errors.append("Missing Navigator v2 build version check")
+if not static_workflow_path.exists():
+    errors.append("Missing Navigator v2 static workflow")
+elif "python3 scripts/check_nav_v2_build_version.py" not in static_workflow_path.read_text(encoding="utf-8"):
+    errors.append("Navigator v2 static workflow does not run build version check")
+
 rpc_auth_smoke_path = root / "scripts/check_nav_v2_rpc_auth.py"
 if not rpc_auth_smoke_path.exists():
     errors.append("Missing Navigator v2 RPC auth smoke script")
