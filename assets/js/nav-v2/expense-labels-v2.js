@@ -32,8 +32,6 @@ const PAYER_LABELS = {
   not_agreed: 'не согласован'
 };
 
-let queued = false;
-
 function label(map, value, fallback) {
   const key = String(value || '').trim();
   return map[key] || key || fallback;
@@ -53,21 +51,10 @@ function normalizeExpenseMeta(node) {
   node.dataset.expenseLabelsReady = '1';
 }
 
-function applyExpenseLabels() {
-  document.querySelectorAll('span.small').forEach(normalizeExpenseMeta);
+export function applyDealCardExpenseLabels() {
+  try {
+    document.querySelectorAll('span.small').forEach(normalizeExpenseMeta);
+  } catch (_) {
+    // Подписи расходов не должны ломать основную карточку сделки.
+  }
 }
-
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    applyExpenseLabels();
-  });
-}
-
-const app = document.getElementById('app') || document.body;
-new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
-
-applyExpenseLabels();
-window.addEventListener('hashchange', schedule);

@@ -13,6 +13,7 @@ RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-responsibility-snapshot-v2
 SPN_RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-responsibility-v2.js"
 DOC_WORKFLOW_MODULE = ROOT / "assets/js/nav-v2/deal-card-doc-workflow-v2.js"
 TASK_DUE_MODULE = ROOT / "assets/js/nav-v2/deal-card-task-due-date-v2.js"
+EXPENSE_LABELS_MODULE = ROOT / "assets/js/nav-v2/expense-labels-v2.js"
 PAGE = ROOT / "deal-card-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 
@@ -28,6 +29,7 @@ def main() -> int:
         SPN_RESPONSIBILITY_MODULE,
         DOC_WORKFLOW_MODULE,
         TASK_DUE_MODULE,
+        EXPENSE_LABELS_MODULE,
         PAGE,
         BUDGET,
     )
@@ -44,6 +46,7 @@ def main() -> int:
         spn_responsibility = SPN_RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
         doc_workflow = DOC_WORKFLOW_MODULE.read_text(encoding="utf-8")
         task_due = TASK_DUE_MODULE.read_text(encoding="utf-8")
+        expense_labels = EXPENSE_LABELS_MODULE.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
@@ -65,9 +68,11 @@ def main() -> int:
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
             "import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';",
             "import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';",
+            "import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
+            "applyDealCardExpenseLabels();",
             "applyDealResponsibilitySnapshot(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
@@ -191,6 +196,20 @@ def main() -> int:
         if task_due_rpc_count != 1:
             errors.append(f"task due-date helper must contain only its mutation RPC, got {task_due_rpc_count}")
 
+        if "export function applyDealCardExpenseLabels()" not in expense_labels:
+            errors.append("expense labels helper must export its explicit lifecycle hook")
+        forbidden_expense_markers = (
+            "new MutationObserver",
+            "requestAnimationFrame",
+            "window.addEventListener('hashchange'",
+            "const app =",
+            "applyExpenseLabels();",
+            "rpc(",
+        )
+        for marker in forbidden_expense_markers:
+            if marker in expense_labels:
+                errors.append(f"expense labels helper still contains legacy bootstrap behavior: {marker}")
+
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
@@ -200,18 +219,19 @@ def main() -> int:
             "deal-responsibility-snapshot-v2.js",
             "deal-card-doc-workflow-v2.js",
             "deal-card-task-due-date-v2.js",
+            "expense-labels-v2.js",
         )
         for module in standalone_modules:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-07"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-08"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 24:
-            errors.append(f"deal-card module budget must be 24 after task due-date consolidation, got {max_modules!r}")
+        if max_modules != 23:
+            errors.append(f"deal-card module budget must be 23 after expense labels consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -219,7 +239,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: task due dates use supplied card data and one mutation RPC")
+    print("Navigator v2 deal-card hook passed: expense labels use the shared explicit lifecycle")
     return 0
 
 

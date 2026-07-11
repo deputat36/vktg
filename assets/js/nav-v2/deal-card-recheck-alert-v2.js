@@ -4,6 +4,7 @@ import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=2026071
 import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
 import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';
 import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';
+import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';
 
 let userRole = '';
 let cardData = null;
@@ -124,6 +125,7 @@ function applyCardEnhancements() {
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);
   applyDealCardTaskDueDate(cardData);
+  applyDealCardExpenseLabels();
   applyDealResponsibilitySnapshot(cardData);
   void applyDealCardBazaHints(cardData, profileData);
 }
