@@ -2,39 +2,41 @@
 
 ## 1. Дата и время
 
-- 2026-07-11 16:10 CEST / 14:10 UTC.
+- 2026-07-11 17:35 CEST / 15:35 UTC.
 
 ## 2. Текущий main SHA
 
-- Рабочий code baseline: `34c8f4ce328b62b99703073a0f1f42e23ce1c1f5` — squash merge PR #206.
-- Документ публикуется отдельным docs-only PR #207; его merge SHA новее baseline, но не меняет код, Supabase или результаты smoke.
+- Рабочий code baseline: `92bce2f62cca72cad5dad4455c966383dd52a949` — merge PR #210.
+- Этот документ публикуется отдельным docs-only PR; его merge SHA будет новее baseline, но не изменит runtime-код, Supabase или результаты smoke.
 
 ## 3. Последняя live Supabase migration
 
 - `20260710184255_nav_v2_private_helper_lockdown_health`.
-- Новых migrations в этом запуске нет.
-- Последняя серия критичных Navigator v2 migrations присутствует и в репозитории, и live. Полная историческая migration history не является точной копией репозитория: в live есть старые и относящиеся к другим контурам migrations, а у части старых Navigator migrations отличаются исторические имена.
+- Новых migrations в текущем диалоге после Work-handoff нет.
+- Критичная последняя серия Navigator v2 migrations присутствует и в репозитории, и live.
 
 ## 4. Версии Edge Functions
 
-- `nav-invite-user`: v10, ACTIVE, `verify_jwt=true`; live source совпадает с репозиторием.
-- `nav-v2-deal-api`: v4, ACTIVE, `verify_jwt=true`; live source совпадает с репозиторием, кроме завершающего перевода строки.
+- `nav-invite-user`: v10, ACTIVE, `verify_jwt=true`.
+- `nav-v2-deal-api`: v4, ACTIVE, `verify_jwt=true`.
+- В текущем frontend-only цикле Edge Functions не изменялись и не деплоились.
+- Последние Edge logs продолжают показывать ожидаемый HTTP 401 без JWT и не содержат новых 5xx Navigator.
 
-## 5. Смерженные PR этого запуска
+## 5. Смерженные PR текущего цикла
 
-- #203 — `Fix owner/admin SPN dry-run manager`.
-- #204 — `Add canonical Navigator v2 build marker`.
-- #205 — docs-only актуализация этого handoff.
-- #206 — `Replace recheck patch with explicit deal-card hook`.
-- #207 — docs-only актуализация этого handoff.
+- #208 — `Consolidate BAZA hints into deal-card lifecycle`.
+- #209 — `Move SPN handoff into deal-card lifecycle`.
+- #210 — `Consolidate responsibility lifecycle`.
+
+До этого Work смержил #203–#207.
 
 ## 6. Открытые PR
 
-- Нет после merge #207.
+- Нет после merge #210.
 
 ## 7. Закрытые issues
 
-- В этом запуске issues не закрывались: критерии полного authenticated browser и invite/recovery QA ещё не выполнены.
+- В этом цикле issues не закрывались: authenticated browser и invite/recovery критерии ещё не выполнены.
 
 ## 8. Открытые issues
 
@@ -47,97 +49,127 @@
 
 ## 9. Role smoke matrix
 
-| Роль | Фактически проверено | Результат | Доказательство / ограничение |
+| Роль | Фактически проверено | Результат | Ограничение |
 |---|---|---|---|
-| owner | `get_my_profile`, dashboard, 21 доступная сделка, разрешённая карточка, list users, access audit | PASS на DB/API уровне; browser BLOCKED | Выполнено под `SET LOCAL ROLE authenticated` и JWT claims активного owner. Authenticated browser запрещён доступным browser workflow и нет тестовых credentials. |
-| admin | Точный route/menu contract и admin page guards | Static PASS; authenticated BLOCKED | Активного live-профиля admin нет. |
-| manager | Точный route/menu contract | Static PASS; authenticated BLOCKED | Активного live-профиля manager нет. |
-| spn | `get_my_profile`, dashboard, список из 4 доступных сделок, разрешённая карточка, запрет чужой карточки, запрет admin API | PASS на DB/API уровне; browser BLOCKED | Использован активный СПН с максимальным числом доступных сделок; персональные данные не выводились. |
-| lawyer | `get_my_profile`, dashboard, 15 доступных сделок, разрешённая карточка, запрет чужой карточки, запрет admin API | PASS на DB/API уровне; browser BLOCKED | Выполнено под `authenticated`; персональные данные не выводились. |
-| broker | Точный route/menu contract | Static PASS; authenticated BLOCKED | Активного live-профиля broker нет. |
-| viewer | Точный route/menu contract | Static PASS; authenticated BLOCKED | Активного live-профиля viewer нет. |
-
-Дополнительно: role-route contract проверяет 6 меню-групп (owner/admin объединены), safe fallback, 3 admin guards и отсутствие admin routes у обычных ролей.
+| owner | Profile/dashboard/deals/card/admin API на DB/API уровне | PASS DB/API; browser BLOCKED | Нет безопасных browser credentials. |
+| admin | Route/menu contract и admin guards | Static PASS; authenticated BLOCKED | Активного тестового профиля нет. |
+| manager | Route/menu contract | Static PASS; authenticated BLOCKED | Активного тестового профиля нет. |
+| spn | Profile/dashboard/deals/своя карточка/запрет чужой/admin API на DB/API уровне | PASS DB/API; browser BLOCKED | Нет безопасных browser credentials. |
+| lawyer | Profile/dashboard/deals/карточка/admin API на DB/API уровне | PASS DB/API; browser BLOCKED | Нет безопасных browser credentials. |
+| broker | Route/menu contract | Static PASS; authenticated BLOCKED | Активного тестового профиля нет. |
+| viewer | Route/menu contract | Static PASS; authenticated BLOCKED | Активного тестового профиля нет. |
 
 ## 10. Auth invite/recovery result
 
 - Static invite/recovery validator: PASS.
-- Live `nav-invite-user` v10 и source sync: PASS.
+- `nav-invite-user` v10 и source sync: PASS.
 - POST без JWT: PASS, HTTP 401.
-- Owner/admin диагностика исправлена: безопасный SPN `dry_run` теперь передаёт обязательный `manager_id` текущего owner/admin. Invite regression workflow контролирует payload и cache-bust.
-- Реальные `dry_run`, access link, invite email, установка пароля, повторное использование/invalid link, recovery, повторный вход: BLOCKED — нет безопасного owner JWT, тестового почтового ящика и браузерной authenticated-сессии.
-- Тестовые Auth users и production profiles в этом запуске не создавались.
+- Реальные access link, invite email, установка пароля, invalid/expired/reused link, recovery и повторный вход: BLOCKED.
+- Причина: нет безопасного owner JWT, disposable mailbox и browser authenticated session.
+- Тестовые Auth users и production profiles в текущем диалоге не создавались.
 
 ## 11. Security Advisor result
 
-- 48 WARN всего.
-- 42 предупреждения относятся к рабочим browser/admin `nav_v2_*` SECURITY DEFINER RPC и остаются ожидаемыми до пофункционального authenticated E2E.
-- 5 предупреждений относятся к legacy `nav_*`.
-- 1 предупреждение: leaked password protection выключена.
-- Основные private access helpers больше не показываются как public RPC.
-- Leaked password protection не включалась до завершения invite/recovery/password E2E.
-- Официальная настройка: Supabase Dashboard → Auth settings → Email provider → Prevent use of leaked passwords; функция доступна на Pro и выше.
+- После private-helper cleanup основные access helpers отсутствуют в public RPC warnings.
+- Ожидаемо остаются рабочие browser/admin `nav_v2_*` SECURITY DEFINER RPC, пять legacy `nav_*` helper и выключенная leaked-password protection.
+- Leaked-password protection не включалась до завершения invite/recovery/password E2E.
+- В текущем frontend-only цикле DDL и grants не менялись.
 
 ## 12. Performance Advisor result
 
-- 168 notices: 29 WARN и 139 INFO.
-- По Navigator v2 найдено 14 INFO об unused indexes; новых v2 WARN и новых multiple permissive policies нет.
-- Legacy, `leader_*` и `parket_*` notices не изменялись.
+- Новых Navigator v2 WARN после текущих frontend-изменений нет.
+- Остаются INFO об unused indexes и предупреждения legacy/generic/других подсистем.
+- Индексы не удалялись без накопленной статистики и EXPLAIN.
 
 ## 13. Browser RPC health
 
-- `nav_v2_get_rpc_grant_health`: `ok=true`, 44 items, 0 problems.
-- Новый live regression smoke: 9 browser-callable RPC без JWT возвращают HTTP 401 / `42501`.
-- Frontend RPC coverage: `ok=true`, 38 items, 0 problems, 0 anon/public-open, 0 missing authenticated grants.
+- Последний подтверждённый `nav_v2_get_rpc_grant_health`: `ok=true`, 44 items, 0 problems.
+- Frontend RPC coverage: `ok=true`, 38 items, 0 problems.
+- Текущий цикл не добавлял новые frontend RPC.
 
 ## 14. Private helper health
 
-- `ok=true`, 6 private items, 0 missing, 0 problems.
-- `nav_v2_private` недоступна `anon`; доступ `authenticated`/`service_role` соответствует health contract.
-- Новый live regression smoke: 6 private access/trigger helpers отсутствуют в public PostgREST schema и возвращают HTTP 404 / `PGRST202`.
+- Последний подтверждённый результат: `ok=true`, 6 private items, 0 missing, 0 problems.
+- `nav_v2_private` и RLS helpers в текущем цикле не изменялись.
 
-## 15. Найденные ошибки
+## 15. Найденные ошибки и архитектурный долг
 
-- Owner/admin диагностика формировала SPN `dry_run` без обязательного `manager_id`; live v10 должна была отклонять такой payload.
-- 22 Navigator import maps не имели единого build contract и не нормализовали legacy specifier `supabase-v2.js?v=20260625-1320` на общий URL.
-- Alert повторной проверки карточки выполнял собственные deal-card/profile RPC, наблюдал весь DOM через `MutationObserver` и подключался отдельным HTML entry module.
-- Полный authenticated browser smoke невозможно выполнить без тестовых credentials; активные live-профили есть только у owner, lawyer и spn.
-- Историческая migration history live шире и местами отличается именами от репозитория; критичная последняя серия Navigator v2 синхронизирована.
-- Post-merge Pages fetch заблокирован сетевыми правилами среды; фактическую публикацию build `20260711-01` снаружи этого запуска подтвердить не удалось.
+- BAZA helper повторно вызывал `nav_v2_get_my_profile` и `nav_v2_get_deal_card`, наблюдал весь DOM и имел отдельный HTML entry.
+- SPN handoff повторно вызывал `nav_v2_get_deal_card`, имел MutationObserver, hashchange/bootstrap и отдельный entry.
+- Два responsibility renderer независимо вызывали один `nav_v2_get_deal_responsibility_snapshot` RPC и использовали собственные observers/bootstrap.
+- Responsibility-модули слушали `nav-v2:document-workflow-updated`, но document assignment workflow не отправлял это событие.
+- `deal-card-doc-workflow-v2.js` всё ещё имеет собственный card RPC и MutationObserver; это следующий самостоятельный consolidation candidate.
+- Полный authenticated browser smoke остаётся невозможен без безопасных credentials.
 
 ## 16. Что исправлено
 
-- PR #203 добавил обязательный `manager_id` в owner/admin SPN dry-run и постоянную invite regression-проверку.
-- PR #204 добавил canonical config `config/nav-v2-build.json` с build ID `20260711-01`.
-- `NAV_V2_BUILD_ID` экспортируется общим модулем, доступен в `document.documentElement.dataset.navV2Build` и выводится в системной диагностике.
-- 22 import maps направляют bare и две legacy-версии `supabase-v2.js` на один cache-busted URL.
-- `scripts/check_nav_v2_build_version.py` и static workflow закрепляют build contract.
-- PR #206 перевёл recheck alert на явный hook после `renderCard(cardData)`, удалил повторные RPC, `MutationObserver`, самостоятельный bootstrap и отдельный HTML entry module.
-- Entry-module budget `deal-card-v2.html` снижен с 30 до 29; новый `check_nav_v2_deal_card_hooks.py` закрепляет контракт в CI.
-- CI: PR #203 — invite/static/JS success; PR #204 — static/JS/invite/BAZA success; PR #206 — static/JS/BAZA success.
+### PR #208
 
-## 17. Что не удалось проверить
+- BAZA hints получают card/profile из основного lifecycle.
+- Удалены повторные profile/card RPC, MutationObserver и самостоятельный bootstrap.
+- Static JSON загружается один раз через cached promise.
+- Удалён отдельный HTML entry.
+- Module budget карточки снижен 29 → 28.
 
-- Браузерный вход, console errors, refresh session и redirect loops под реальными ролями.
-- Authenticated страницы на mobile/desktop viewport.
+### PR #209
+
+- `deal-card-spn-handoff-v2.js` получает supplied cardData.
+- Удалены повторный card RPC, MutationObserver, hashchange и самостоятельный bootstrap.
+- Удалён отдельный HTML entry.
+- Module budget снижен 28 → 27.
+
+### PR #210
+
+- Два responsibility renderer объединены вокруг одного snapshot RPC.
+- `deal-card-spn-responsibility-v2.js` стал чистым renderer без RPC/observer/bootstrap.
+- Основной snapshot helper подключён к общему explicit lifecycle.
+- Document workflow отправляет явное событие refresh после изменения назначения/срока.
+- Удалён отдельный responsibility HTML entry.
+- Module budget снижен 27 → 26.
+
+Итог цикла:
+
+- budget `deal-card-v2.html` снижен 29 → 26;
+- устранены два повторных `nav_v2_get_deal_card` RPC;
+- устранён повторный `nav_v2_get_my_profile` RPC;
+- устранён повторный responsibility snapshot RPC;
+- удалены несколько MutationObserver и самостоятельных bootstrap-процедур;
+- CI-контракт требует общий lifecycle, единственный snapshot RPC и refresh event.
+
+## 17. CI и production checks
+
+Для PR #208, #209 и #210 успешно завершились:
+
+- Navigator v2 static checks;
+- Navigator v2 JavaScript syntax;
+- Navigator v2 BAZA checks.
+
+Supabase production runtime не изменялся. Edge smoke продолжает фиксировать 401 без JWT для обеих Navigator функций.
+
+## 18. Что не удалось проверить
+
+- Браузерный вход и console errors под реальными ролями.
+- Mobile/desktop authenticated visual smoke.
 - Полный invite/recovery/password flow и email delivery.
-- Роли admin, manager, broker, viewer на live данных — активных профилей нет.
-- Leaked-password protection после включения — настройка не включалась.
-- Post-merge GitHub Pages ещё не подтверждён прямым fetch из-за сетевой блокировки среды.
+- Роли admin, manager, broker, viewer на live/test данных.
+- Leaked-password protection после включения.
+- Прямой post-merge Pages fetch из текущей среды.
+- Визуальное расположение трёх объединённых enhancement-блоков в authenticated карточке — CI проверяет lifecycle и синтаксис, но не заменяет browser smoke.
 
-## 18. Ручные действия владельца проекта
+## 19. Ручные действия владельца проекта
 
-1. Создать или выделить безопасные тестовые аккаунты для owner/admin/manager/spn/lawyer/broker/viewer; не передавать пароли или токены в issues/репозиторий.
-2. Пройти `docs/NAV_V2_MANUAL_QA.md` в чистых браузерных профилях минимум для owner, СПН и юриста.
-3. Owner: выполнить `dry_run`, затем invite/access-link/recovery для одноразового тестового СПН с назначенным менеджером; после теста отключить профиль.
-4. Только после успешного E2E включить leaked password protection в Auth settings и повторить invite/recovery/password smoke.
+1. Выделить безопасные тестовые аккаунты для role/browser smoke; не публиковать пароли и JWT в GitHub.
+2. Пройти карточку сделки под owner, СПН и lawyer: overview, переключение вкладок, BAZA hints, текст передачи СПН, responsibility-блоки.
+3. Проверить изменение назначения документа: после сохранения responsibility snapshot должен обновиться без reload.
+4. Пройти disposable invite/recovery/password E2E.
+5. Только после успешного E2E включить leaked-password protection и повторить auth smoke.
 
-## 19. Три следующие задачи по приоритету
+## 20. Три следующие задачи по приоритету
 
-1. Реальный authenticated browser smoke для owner, СПН и lawyer; затем для четырёх отсутствующих ролей на тестовых профилях.
-2. Полный disposable invite/recovery/password E2E и последующее включение leaked password protection.
-3. Следующий frontend consolidation slice по #179: выбрать ещё один самостоятельный deal-card patch-модуль, перевести на явный lifecycle hook и снова снизить module budget.
+1. Authenticated browser smoke owner/spn/lawyer, включая визуальную проверку объединённого deal-card lifecycle.
+2. Disposable invite/recovery/password E2E; затем решение по leaked-password protection.
+3. Следующий #179 slice: перевести `deal-card-doc-workflow-v2.js` на supplied cardData/explicit hook и убрать его повторный card RPC/MutationObserver, не меняя write RPC.
 
-## 20. Точная рекомендуемая команда для следующего запуска
+## 21. Точная рекомендуемая команда для следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала проверь публикацию build 20260711-01 и authenticated browser smoke owner/spn/lawyer; затем пройди invite/recovery на одноразовом тестовом СПН, не отмечай PASS без браузерной проверки; если credentials всё ещё недоступны, выполни следующий explicit-hook consolidation slice по #179.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала попробуй authenticated browser smoke owner/spn/lawyer и disposable invite/recovery; если безопасные credentials всё ещё недоступны, переведи deal-card-doc-workflow-v2.js на supplied cardData через общий explicit lifecycle, сохрани write RPC и refresh event, снизь module budget и обнови CI.`
