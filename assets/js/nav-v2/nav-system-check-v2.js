@@ -643,6 +643,11 @@ async function checkEdgeFunction() {
     updateCheck('Edge Function доступа', 'error', 'Нет access_token.');
     return;
   }
+  const managerId = currentProfile?.id || getCachedUser()?.id || null;
+  if (!managerId) {
+    updateCheck('Edge Function доступа', 'error', 'Не удалось определить manager_id текущего owner/admin для безопасного dry_run.');
+    return;
+  }
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/nav-invite-user`, {
       method: 'POST',
@@ -651,7 +656,8 @@ async function checkEdgeFunction() {
         action: 'dry_run',
         email: 'nav-dry-run-check@example.test',
         full_name: 'Проверка диагностики Навигатора',
-        role: 'spn'
+        role: 'spn',
+        manager_id: managerId
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -660,7 +666,7 @@ async function checkEdgeFunction() {
     updateCheck(
       'Edge Function доступа',
       'ok',
-      'POST dry_run прошел. Пользователь не создан, профиль не изменен, письмо и ссылка доступа не создавались.',
+      'POST dry_run с обязательным менеджером СПН прошел. Пользователь не создан, профиль не изменен, письмо и ссылка доступа не создавались.',
       `existing_user: ${data.existing_user ? 'да' : 'нет'}; would_create_auth_user: ${data.would_create_auth_user ? 'да' : 'нет'}`
     );
   } catch (e) {
