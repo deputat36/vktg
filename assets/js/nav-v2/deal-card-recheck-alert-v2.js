@@ -1,7 +1,5 @@
-import { rpc, esc, getCachedUser, getMyProfile } from './supabase-v2.js?v=20260625-1230';
+import { esc } from './supabase-v2.js';
 
-const dealId = new URLSearchParams(location.search).get('id');
-let loaded = false;
 let userRole = '';
 let cardData = null;
 
@@ -114,21 +112,12 @@ function placeAlert() {
   bindAlertActions();
 }
 
-async function loadRecheckAlert() {
-  if (loaded || !dealId || !getCachedUser()) return;
-  loaded = true;
+export function applyDealCardRecheckAlert(data, profile) {
   try {
-    const [data, profile] = await Promise.all([
-      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }),
-      getMyProfile({ timeout: 6000 }).catch(() => null)
-    ]);
     cardData = data;
-    userRole = profile?.role || '';
+    userRole = profile?.role || data?.profile?.role || '';
     placeAlert();
   } catch (_) {
-    // Этот helper не должен ломать карточку сделки.
+    // Этот explicit hook не должен ломать основную карточку сделки.
   }
 }
-
-new MutationObserver(placeAlert).observe(document.body, { childList: true, subtree: true });
-loadRecheckAlert();

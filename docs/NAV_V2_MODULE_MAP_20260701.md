@@ -72,6 +72,8 @@ Rules:
 
 ## Temporary or guard modules
 
+Первый consolidation slice завершён: `deal-card-recheck-alert-v2.js` подключается через явный вызов из основного lifecycle `deal-card-v2.js`, без собственного RPC, `MutationObserver` и отдельного HTML entry module. Budget карточки снижен до 29.
+
 These modules should be reviewed later:
 
 - timeout recovery;

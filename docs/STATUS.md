@@ -1,5 +1,12 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 11 июля 2026 — explicit deal-card hook
+
+- Alert повторной проверки СПН больше не загружает карточку и профиль отдельными RPC.
+- `deal-card-v2.js` явно вызывает `applyDealCardRecheckAlert(...)` после основного render lifecycle.
+- Удалены самостоятельный HTML entry module и `MutationObserver` этого patch-модуля.
+- Entry-module budget карточки снижен с 30 до 29 и закреплён отдельным CI validator.
+
 ## Актуально на 11 июля 2026 — единая версия сборки
 
 - Добавлен канонический build ID Navigator v2: `20260711-01`.
