@@ -1,10 +1,7 @@
 import './deal-card-spn-responsibility-v2.js';
-import { rpc, esc } from './supabase-v2.js';
+import { esc } from './supabase-v2.js';
 
-const dealId = new URLSearchParams(location.search).get('id');
 let cardData = null;
-let loaded = false;
-let queued = false;
 
 const LABELS = {
   preparationMode: {
@@ -178,7 +175,6 @@ function bindCopy() {
 }
 
 function render() {
-  if (!loaded) return;
   const existing = document.querySelector('[data-spn-handoff-snapshot]');
   const view = snapshotViewModel();
   const key = snapshotKey(view);
@@ -202,28 +198,11 @@ function render() {
   bindCopy();
 }
 
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    render();
-  });
-}
-
-async function loadData() {
-  if (!dealId) return;
+export function applyDealCardSpnHandoff(data) {
   try {
-    cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000);
-    loaded = true;
+    cardData = data;
     render();
   } catch (_) {
-    loaded = false;
+    // Этот helper является необязательным дополнением и не должен ломать карточку.
   }
 }
-
-const app = document.getElementById('app') || document.body;
-new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
-
-loadData();
-window.addEventListener('hashchange', schedule);
