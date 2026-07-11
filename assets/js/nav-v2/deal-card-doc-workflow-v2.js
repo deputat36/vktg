@@ -1,10 +1,9 @@
-import { rpc, esc } from './supabase-v2.js?v=20260625-1230';
+import { rpc, esc } from './supabase-v2.js';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let cardData = null;
-let loading = false;
-let scheduled = false;
-let observerStarted = false;
+let lifecycleSource = null;
+let refreshing = false;
 
 const ROLE_LABELS = {
   owner: 'owner',
@@ -111,23 +110,6 @@ function panelHtml(doc) {
   </div>`;
 }
 
-async function loadCard(force = false) {
-  if (!dealId || loading) return false;
-  if (cardData && !force) return true;
-  loading = true;
-  try {
-    cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
-    return true;
-  }
-  catch (e) {
-    setStatus('Не удалось загрузить данные документов: ' + e.message, 'error');
-    return false;
-  }
-  finally {
-    loading = false;
-  }
-}
-
 function documentById(docId) {
   return list(cardData, 'documents').find((doc) => doc.id === docId);
 }
@@ -153,12 +135,8 @@ function refreshDocumentUi(docId) {
   if (meta) meta.innerHTML = docMetaHtml(doc);
 
   const panel = item.querySelector(`[data-doc-workflow-panel="${docId}"]`);
-  if (panel) {
-    panel.outerHTML = panelHtml(doc);
-  }
-  else {
-    item.insertAdjacentHTML('beforeend', panelHtml(doc));
-  }
+  if (panel) panel.outerHTML = panelHtml(doc);
+  else item.insertAdjacentHTML('beforeend', panelHtml(doc));
   bindWorkflowButton(docId);
 }
 
@@ -179,7 +157,7 @@ async function saveWorkflow(docId) {
       p_clear_assigned_to: !assignedTo,
       p_clear_due_date: !dueDate
     });
-    const refreshed = await loadCard(true);
+    const refreshed = await refreshCardAfterMutation();
     if (!refreshed) return;
     refreshDocumentUi(docId);
     window.dispatchEvent(new CustomEvent('nav-v2:document-workflow-updated'));
@@ -190,42 +168,41 @@ async function saveWorkflow(docId) {
   }
 }
 
+async function refreshCardAfterMutation() {
+  if (!dealId || refreshing) return false;
+  refreshing = true;
+  try {
+    cardData = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId });
+    return true;
+  }
+  catch (e) {
+    setStatus('Изменение сохранено, но карточку не удалось обновить: ' + e.message, 'error');
+    return false;
+  }
+  finally {
+    refreshing = false;
+  }
+}
+
 function enhanceDocuments() {
   if (!cardData) return;
   const docsById = new Map(list(cardData, 'documents').map((doc) => [doc.id, doc]));
-
   document.querySelectorAll('[data-doc-id]').forEach((button) => {
-    const docId = button.dataset.docId;
-    const item = button.closest('.list-item');
-    const doc = docsById.get(docId);
-    if (!item || !doc || item.querySelector(`[data-doc-workflow-panel="${docId}"]`)) return;
-    item.insertAdjacentHTML('beforeend', panelHtml(doc));
-    bindWorkflowButton(docId);
+    const doc = docsById.get(button.dataset.docId);
+    if (doc) refreshDocumentUi(doc.id);
   });
 }
 
-function hasDocumentButtons() {
-  return Boolean(document.querySelector('[data-doc-id]'));
-}
-
-async function scheduleEnhance() {
-  if (scheduled) return;
-  scheduled = true;
-  requestAnimationFrame(async () => {
-    scheduled = false;
-    if (!hasDocumentButtons()) return;
-    const loaded = await loadCard();
-    if (loaded) enhanceDocuments();
-  });
-}
-
-function boot() {
-  const app = document.getElementById('app') || document.body;
-  if (!observerStarted) {
-    observerStarted = true;
-    new MutationObserver(scheduleEnhance).observe(app, { childList: true, subtree: true });
+export function applyDealCardDocumentWorkflow(data) {
+  try {
+    if (data && data !== lifecycleSource) {
+      lifecycleSource = data;
+      cardData = data;
+    } else if (!cardData && data) {
+      cardData = data;
+    }
+    enhanceDocuments();
+  } catch (_) {
+    // Вспомогательный workflow не должен ломать основную карточку сделки.
   }
-  scheduleEnhance();
 }
-
-boot();
