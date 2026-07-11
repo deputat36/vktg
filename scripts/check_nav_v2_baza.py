@@ -10,6 +10,7 @@ ERRORS: list[str] = []
 
 JSON_PATH = ROOT / "assets/data/nav-v2/baza-hints.json"
 HELPER_PATH = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
+LIFECYCLE_PATH = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 PAGE_PATH = ROOT / "deal-card-v2.html"
 
 REQUIRED_FIELDS = {
@@ -22,11 +23,10 @@ FORBIDDEN_KEYS = {
     "full_name", "fio", "phone", "address", "passport", "passport_data",
     "bank_details", "contract_number", "personal_comment", "employee_comment",
 }
-ALLOWED_RPC = {"nav_v2_get_my_profile", "nav_v2_get_deal_card"}
 
 
 def check_files() -> None:
-    for path in (JSON_PATH, HELPER_PATH, PAGE_PATH):
+    for path in (JSON_PATH, HELPER_PATH, LIFECYCLE_PATH, PAGE_PATH):
         if not path.exists():
             ERRORS.append(f"Missing required BAZA file: {path.relative_to(ROOT)}")
 
@@ -90,32 +90,61 @@ def check_helper() -> None:
         "assets/data/nav-v2/baza-hints.json",
         "Подсказки по сделке",
         "slice(0, 5)",
-        "rpc('nav_v2_get_my_profile'",
-        "rpc('nav_v2_get_deal_card'",
+        "export async function applyDealCardBazaHints(card, profile)",
     ):
         if marker not in text:
             ERRORS.append(f"BAZA helper missing marker {marker!r}")
 
+    forbidden = (
+        "rpc(",
+        "getCachedUser",
+        "new MutationObserver",
+        "nav_v2_get_my_profile",
+        "nav_v2_get_deal_card",
+    )
+    for marker in forbidden:
+        if marker in text:
+            ERRORS.append(f"BAZA helper must use supplied lifecycle data; forbidden marker: {marker}")
+
     rpc_calls = set(re.findall(r"rpc\('([^']+)'", text))
-    unexpected = sorted(rpc_calls - ALLOWED_RPC)
-    if unexpected:
-        ERRORS.append(f"BAZA helper must be read-only; unexpected RPC calls: {unexpected}")
+    if rpc_calls:
+        ERRORS.append(f"BAZA helper must be read-only and RPC-free; found: {sorted(rpc_calls)}")
+
+
+def check_lifecycle() -> None:
+    if not LIFECYCLE_PATH.exists():
+        return
+    text = LIFECYCLE_PATH.read_text(encoding="utf-8")
+    for marker in (
+        "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
+        "void applyDealCardBazaHints(cardData, profileData);",
+        "queueMicrotask(applyCardEnhancements);",
+    ):
+        if marker not in text:
+            ERRORS.append(f"deal-card lifecycle missing BAZA marker {marker!r}")
 
 
 def check_page() -> None:
-    if PAGE_PATH.exists() and "deal-card-baza-hints-v2.js" not in PAGE_PATH.read_text(encoding="utf-8"):
-        ERRORS.append("deal-card-v2.html must connect deal-card-baza-hints-v2.js")
+    if not PAGE_PATH.exists():
+        return
+    page = PAGE_PATH.read_text(encoding="utf-8")
+    if '<script type="module" src="./assets/js/nav-v2/deal-card-baza-hints-v2.js' in page:
+        ERRORS.append("BAZA helper must not remain a standalone HTML entry module")
+    cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-03"'
+    if cache_mapping not in page:
+        ERRORS.append("deal-card page must cache-bust the consolidated enhancement hook")
 
 
 def main() -> int:
     check_files()
     check_json()
     check_helper()
+    check_lifecycle()
     check_page()
     if ERRORS:
         print("\n".join(ERRORS))
         return 1
-    print("Navigator v2 BAZA checks passed")
+    print("Navigator v2 BAZA checks passed: hints use explicit card data and no duplicate RPC")
     return 0
 
 
