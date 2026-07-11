@@ -1,4 +1,4 @@
-import { setupTop, getCachedUser, renderAuthBox, rpc, esc } from './supabase-v2.js';
+import { setupTop, getCachedUser, renderAuthBox, rpc, esc, NAV_V2_BUILD_ID } from './supabase-v2.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
 const SESSION_KEY = 'nav_session_v2';
@@ -230,6 +230,7 @@ function reportText() {
   const sourceLines = Object.entries(profileSources).map(sourceProfileLine);
   const lines = [
     'CRM Навигатор сделок v2 — отчет диагностики',
+    `Сборка Navigator v2: ${NAV_V2_BUILD_ID}`,
     `Версия проверки: ${CHECK_VERSION}`,
     `Время проверки: ${lastRunAt || 'не запускалась'}`,
     `Профиль: ${profile}`,
@@ -681,7 +682,7 @@ async function runAllChecks() {
   dashboardOk = false;
   lastRunAt = new Date().toLocaleString('ru-RU');
   render();
-  updateCheck('Старт проверки', 'ok', 'Проверка запущена.', `Версия: ${CHECK_VERSION}`);
+  updateCheck('Старт проверки', 'ok', 'Проверка запущена.', `Сборка: ${NAV_V2_BUILD_ID} · Проверка: ${CHECK_VERSION}`);
   await checkBrowserStorage();
   await checkConfig();
   const user = await checkAuth();
@@ -696,7 +697,7 @@ async function runAllChecks() {
   await checkTeam();
   await checkEdgeFunction();
   downgradeTransientErrors();
-  updateCheck('Старт проверки', 'ok', 'Проверка завершена.', `Версия: ${CHECK_VERSION}`);
+  updateCheck('Старт проверки', 'ok', 'Проверка завершена.', `Сборка: ${NAV_V2_BUILD_ID} · Проверка: ${CHECK_VERSION}`);
 }
 
 async function init() {

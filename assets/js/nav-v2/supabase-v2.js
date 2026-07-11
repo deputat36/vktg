@@ -1,5 +1,10 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 
+export const NAV_V2_BUILD_ID = '20260711-01';
+if (typeof document !== 'undefined') {
+  document.documentElement.dataset.navV2Build = NAV_V2_BUILD_ID;
+}
+
 const SESSION_KEY = 'nav_session_v2';
 const PROFILE_CACHE_KEY = 'nav_profile_v2';
 const PROFILE_CACHE_PREFIX = `${PROFILE_CACHE_KEY}:`;

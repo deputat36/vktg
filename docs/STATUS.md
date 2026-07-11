@@ -1,5 +1,12 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 11 июля 2026 — единая версия сборки
+
+- Добавлен канонический build ID Navigator v2: `20260711-01`.
+- Все HTML import maps направляют bare и две legacy-версии `supabase-v2.js` на один общий URL сборки.
+- Build ID экспортируется из общего модуля, доступен в `document.documentElement.dataset.navV2Build` и выводится в системной диагностике.
+- Постоянный CI проверяет build config, import maps, runtime marker и cache-bust диагностики.
+
 ## Актуально на 11 июля 2026 — owner/admin dry_run
 
 - Диагностика `nav-system-check-v2` передаёт обязательный `manager_id` при безопасном `dry_run` тестового СПН.

@@ -74,7 +74,7 @@ if not errors:
         if marker not in system_check:
             errors.append(f"nav-system-check-v2.js missing safe SPN dry_run marker: {marker}")
 
-    if "nav-system-check-v2.js?v=20260711-1100" not in system_check_page:
+    if "nav-system-check-v2.js?v=20260711-01" not in system_check_page:
         errors.append("nav-system-check-v2.html missing dry_run fix cache-bust")
 
 if errors:

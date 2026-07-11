@@ -7,6 +7,7 @@ on:
       - 'assets/js/nav-v2/**'
       - 'assets/css/**'
       - 'config/nav-v2-module-budget.json'
+      - 'config/nav-v2-build.json'
       - 'config/nav-v2-role-contract.json'
       - 'config/nav-v2-rpc-surface.json'
       - 'docs/NAV_V2_*.md'
@@ -17,6 +18,7 @@ on:
       - 'scripts/check_nav_v2_csp.py'
       - 'scripts/check_nav_v2_live_pages.py'
       - 'scripts/check_nav_v2_module_budget.py'
+      - 'scripts/check_nav_v2_build_version.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
       - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
@@ -123,6 +125,8 @@ jobs:
         run: python3 scripts/check_nav_v2_rpc_surface.py
       - name: Check page module budgets
         run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check shared Navigator build version
+        run: python3 scripts/check_nav_v2_build_version.py
       - name: Check baseline CSP
         run: python3 scripts/check_nav_v2_csp.py
       - name: Check role route contract

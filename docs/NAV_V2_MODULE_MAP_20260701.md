@@ -62,6 +62,14 @@ Rules:
 - keep escaping for user-visible names and comments;
 - keep cache-bust updated after visible UI changes.
 
+## Shared build marker
+
+- Canonical config: `config/nav-v2-build.json`.
+- Runtime export: `NAV_V2_BUILD_ID` from `assets/js/nav-v2/supabase-v2.js`.
+- Browser marker: `document.documentElement.dataset.navV2Build`.
+- All Navigator import maps must resolve bare and legacy `supabase-v2.js` specifiers to the canonical build URL.
+- `scripts/check_nav_v2_build_version.py` enforces this contract in GitHub Actions.
+
 ## Temporary or guard modules
 
 These modules should be reviewed later:
