@@ -12,6 +12,7 @@ SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-responsibility-snapshot-v2.js"
 SPN_RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-responsibility-v2.js"
 DOC_WORKFLOW_MODULE = ROOT / "assets/js/nav-v2/deal-card-doc-workflow-v2.js"
+TASK_DUE_MODULE = ROOT / "assets/js/nav-v2/deal-card-task-due-date-v2.js"
 PAGE = ROOT / "deal-card-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 
@@ -26,6 +27,7 @@ def main() -> int:
         RESPONSIBILITY_MODULE,
         SPN_RESPONSIBILITY_MODULE,
         DOC_WORKFLOW_MODULE,
+        TASK_DUE_MODULE,
         PAGE,
         BUDGET,
     )
@@ -41,6 +43,7 @@ def main() -> int:
         responsibility = RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
         spn_responsibility = SPN_RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
         doc_workflow = DOC_WORKFLOW_MODULE.read_text(encoding="utf-8")
+        task_due = TASK_DUE_MODULE.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
@@ -61,8 +64,10 @@ def main() -> int:
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
             "import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';",
+            "import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
+            "applyDealCardTaskDueDate(cardData);",
             "applyDealResponsibilitySnapshot(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
@@ -162,6 +167,30 @@ def main() -> int:
         if doc_workflow.find(refresh_marker) < doc_workflow.find(update_marker):
             errors.append("document workflow card refresh must remain after the assignment mutation path")
 
+        task_due_markers = (
+            "export function applyDealCardTaskDueDate(data)",
+            "rpc('nav_v2_update_task_due_date'",
+            "if (!(target instanceof Element)) return;",
+            "setTimeout(() => location.reload(), 250);",
+        )
+        for marker in task_due_markers:
+            if marker not in task_due:
+                errors.append(f"task due-date lifecycle missing marker: {marker}")
+        forbidden_task_due_markers = (
+            "nav_v2_get_deal_card",
+            "ensureCardData",
+            "let loading",
+            "window.addEventListener('hashchange'",
+            "setTimeout(ensureCardData",
+            "const dealId",
+        )
+        for marker in forbidden_task_due_markers:
+            if marker in task_due:
+                errors.append(f"task due-date helper still contains duplicate loading behavior: {marker}")
+        task_due_rpc_count = task_due.count("rpc(")
+        if task_due_rpc_count != 1:
+            errors.append(f"task due-date helper must contain only its mutation RPC, got {task_due_rpc_count}")
+
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
@@ -170,18 +199,19 @@ def main() -> int:
             "deal-card-spn-handoff-v2.js",
             "deal-responsibility-snapshot-v2.js",
             "deal-card-doc-workflow-v2.js",
+            "deal-card-task-due-date-v2.js",
         )
         for module in standalone_modules:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-06"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-07"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 25:
-            errors.append(f"deal-card module budget must be 25 after document workflow consolidation, got {max_modules!r}")
+        if max_modules != 24:
+            errors.append(f"deal-card module budget must be 24 after task due-date consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -189,7 +219,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: document workflow uses supplied card data and post-mutation refresh only")
+    print("Navigator v2 deal-card hook passed: task due dates use supplied card data and one mutation RPC")
     return 0
 
 
