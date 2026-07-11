@@ -1,8 +1,7 @@
-import { rpc, esc } from './supabase-v2.js?v=20260625-1320';
+import { rpc, esc } from './supabase-v2.js';
 
-const dealId = new URLSearchParams(location.search).get('id');
 let cardData = null;
-let loading = null;
+let lifecycleSource = null;
 
 function isTasksTab() {
   return location.hash === '#tasks' || document.querySelector('[data-tab="tasks"].active');
@@ -123,22 +122,6 @@ function injectEditors() {
   });
 }
 
-async function ensureCardData() {
-  if (!dealId || !isTasksTab()) return;
-  if (cardData) return injectEditors();
-  if (!loading) {
-    loading = rpc('nav_v2_get_deal_card', { p_deal_id: dealId })
-      .then((data) => { cardData = data; return data; })
-      .finally(() => { loading = null; });
-  }
-  try {
-    await loading;
-    injectEditors();
-  } catch (error) {
-    setPageStatus(`Не удалось загрузить управление сроками: ${error.message}`, 'error');
-  }
-}
-
 function updateDuePreview(taskId) {
   const input = document.querySelector(`[data-task-due-input="${taskId}"]`);
   const label = document.querySelector(`[data-task-due-label="${taskId}"]`);
@@ -175,10 +158,10 @@ async function saveDueDate(taskId, value, button) {
 }
 
 document.addEventListener('click', (event) => {
-  const tab = event.target.closest('[data-tab="tasks"], [data-tab-shortcut="tasks"]');
-  if (tab) setTimeout(ensureCardData, 0);
+  const target = event.target;
+  if (!(target instanceof Element)) return;
 
-  const preset = event.target.closest('[data-task-due-preset]');
+  const preset = target.closest('[data-task-due-preset]');
   if (preset) {
     const taskId = preset.dataset.taskDuePreset;
     const input = document.querySelector(`[data-task-due-input="${taskId}"]`);
@@ -189,7 +172,7 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  const save = event.target.closest('[data-task-due-save]');
+  const save = target.closest('[data-task-due-save]');
   if (save) {
     const taskId = save.dataset.taskDueSave;
     const input = document.querySelector(`[data-task-due-input="${taskId}"]`);
@@ -197,14 +180,27 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  const clear = event.target.closest('[data-task-due-clear]');
+  const clear = target.closest('[data-task-due-clear]');
   if (clear) saveDueDate(clear.dataset.taskDueClear, null, clear);
 });
 
 document.addEventListener('input', (event) => {
-  const input = event.target.closest('[data-task-due-input]');
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const input = target.closest('[data-task-due-input]');
   if (input) updateDuePreview(input.dataset.taskDueInput);
 });
 
-window.addEventListener('hashchange', ensureCardData);
-if (location.hash === '#tasks') setTimeout(ensureCardData, 100);
+export function applyDealCardTaskDueDate(data) {
+  try {
+    if (data && data !== lifecycleSource) {
+      lifecycleSource = data;
+      cardData = data;
+    } else if (!cardData && data) {
+      cardData = data;
+    }
+    injectEditors();
+  } catch (_) {
+    // Управление сроками задач не должно ломать основную карточку сделки.
+  }
+}
