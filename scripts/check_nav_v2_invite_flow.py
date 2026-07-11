@@ -8,8 +8,10 @@ edge_path = root / "supabase/functions/nav-invite-user/index.ts"
 access_path = root / "assets/js/nav-v2/nav-temp-password-v2.js"
 accept_path = root / "assets/js/nav-v2/nav-accept-invite-v2.js"
 loader_path = root / "assets/js/nav-v2/admin-loader-v2.js"
+system_check_path = root / "assets/js/nav-v2/nav-system-check-v2.js"
+system_check_page_path = root / "nav-system-check-v2.html"
 
-for path in (edge_path, access_path, accept_path, loader_path):
+for path in (edge_path, access_path, accept_path, loader_path, system_check_path, system_check_page_path):
     if not path.exists():
         errors.append(f"Missing invite-flow file: {path.relative_to(root)}")
 
@@ -18,6 +20,8 @@ if not errors:
     access = access_path.read_text(encoding="utf-8")
     accept = accept_path.read_text(encoding="utf-8")
     loader = loader_path.read_text(encoding="utf-8")
+    system_check = system_check_path.read_text(encoding="utf-8")
+    system_check_page = system_check_page_path.read_text(encoding="utf-8")
 
     edge_markers = [
         'const ACTIONS = new Set(["access_link", "invite_email", "dry_run"])',
@@ -60,6 +64,18 @@ if not errors:
 
     if "nav-temp-password-v2.js?v=20260710-1510" not in loader:
         errors.append("admin-loader-v2.js missing invite module cache-bust")
+
+    system_check_markers = [
+        "const managerId = currentProfile?.id || getCachedUser()?.id || null",
+        "manager_id: managerId",
+        "dry_run с обязательным менеджером СПН",
+    ]
+    for marker in system_check_markers:
+        if marker not in system_check:
+            errors.append(f"nav-system-check-v2.js missing safe SPN dry_run marker: {marker}")
+
+    if "nav-system-check-v2.js?v=20260711-1100" not in system_check_page:
+        errors.append("nav-system-check-v2.html missing dry_run fix cache-bust")
 
 if errors:
     print("\n".join(errors))
