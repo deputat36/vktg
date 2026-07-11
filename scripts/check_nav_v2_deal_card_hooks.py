@@ -8,13 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
+SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 PAGE = ROOT / "deal-card-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (BASE_MODULE, RECHECK_MODULE, BAZA_MODULE, PAGE, BUDGET):
+    for path in (BASE_MODULE, RECHECK_MODULE, BAZA_MODULE, SPN_HANDOFF_MODULE, PAGE, BUDGET):
         if not path.exists():
             errors.append(f"Missing deal-card hook file: {path.relative_to(ROOT)}")
 
@@ -22,6 +23,7 @@ def main() -> int:
         base = BASE_MODULE.read_text(encoding="utf-8")
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
+        spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
@@ -39,6 +41,8 @@ def main() -> int:
         recheck_markers = (
             "export function applyDealCardRecheckAlert(data, profile)",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
+            "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
+            "applyDealCardSpnHandoff(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
         )
@@ -69,19 +73,34 @@ def main() -> int:
             if marker in baza:
                 errors.append(f"deal-card BAZA helper still contains duplicate loading behavior: {marker}")
 
+        if "export function applyDealCardSpnHandoff(data)" not in spn_handoff:
+            errors.append("deal-card SPN handoff helper must export its explicit lifecycle hook")
+        forbidden_handoff_markers = (
+            "rpc(",
+            "new MutationObserver",
+            "loadData()",
+            "requestAnimationFrame",
+            "window.addEventListener('hashchange'",
+        )
+        for marker in forbidden_handoff_markers:
+            if marker in spn_handoff:
+                errors.append(f"deal-card SPN handoff helper still contains duplicate bootstrap behavior: {marker}")
+
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         if '<script type="module" src="./assets/js/nav-v2/deal-card-recheck-alert-v2.js' in page:
             errors.append("deal-card recheck helper must not remain a standalone HTML entry module")
         if '<script type="module" src="./assets/js/nav-v2/deal-card-baza-hints-v2.js' in page:
             errors.append("deal-card BAZA helper must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-03"'
+        if '<script type="module" src="./assets/js/nav-v2/deal-card-spn-handoff-v2.js' in page:
+            errors.append("deal-card SPN handoff helper must not remain a standalone HTML entry module")
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-04"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the legacy enhancement specifier to the current cache-busted hook")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 28:
-            errors.append(f"deal-card module budget must be 28 after BAZA consolidation, got {max_modules!r}")
+        if max_modules != 27:
+            errors.append(f"deal-card module budget must be 27 after SPN handoff consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -89,7 +108,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: recheck and BAZA use the explicit lifecycle")
+    print("Navigator v2 deal-card hook passed: recheck, BAZA and SPN handoff use the explicit lifecycle")
     return 0
 
 
