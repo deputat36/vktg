@@ -60,7 +60,9 @@ def main() -> int:
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
+            "import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';",
             "applyDealCardSpnHandoff(cardData);",
+            "applyDealCardDocumentWorkflow(cardData);",
             "applyDealResponsibilitySnapshot(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
@@ -130,8 +132,35 @@ def main() -> int:
         if snapshot_rpc_count != 1:
             errors.append(f"responsibility modules must contain exactly one snapshot RPC call, got {snapshot_rpc_count}")
 
-        if "window.dispatchEvent(new CustomEvent('nav-v2:document-workflow-updated'))" not in doc_workflow:
-            errors.append("document workflow must emit the explicit responsibility refresh event")
+        doc_workflow_markers = (
+            "export function applyDealCardDocumentWorkflow(data)",
+            "await rpc('nav_v2_update_document_assignment'",
+            "const refreshed = await refreshCardAfterMutation();",
+            "cardData = await rpc('nav_v2_get_deal_card'",
+            "window.dispatchEvent(new CustomEvent('nav-v2:document-workflow-updated'))",
+        )
+        for marker in doc_workflow_markers:
+            if marker not in doc_workflow:
+                errors.append(f"document workflow lifecycle missing marker: {marker}")
+        forbidden_doc_workflow_markers = (
+            "new MutationObserver",
+            "scheduleEnhance",
+            "function boot",
+            "boot();",
+            "observerStarted",
+            "requestAnimationFrame",
+            "async function loadCard",
+        )
+        for marker in forbidden_doc_workflow_markers:
+            if marker in doc_workflow:
+                errors.append(f"document workflow still contains legacy bootstrap behavior: {marker}")
+        card_rpc_count = doc_workflow.count("nav_v2_get_deal_card")
+        if card_rpc_count != 1:
+            errors.append(f"document workflow must contain one post-mutation card refresh RPC, got {card_rpc_count}")
+        update_marker = "await rpc('nav_v2_update_document_assignment'"
+        refresh_marker = "cardData = await rpc('nav_v2_get_deal_card'"
+        if doc_workflow.find(refresh_marker) < doc_workflow.find(update_marker):
+            errors.append("document workflow card refresh must remain after the assignment mutation path")
 
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
@@ -140,20 +169,19 @@ def main() -> int:
             "deal-card-baza-hints-v2.js",
             "deal-card-spn-handoff-v2.js",
             "deal-responsibility-snapshot-v2.js",
+            "deal-card-doc-workflow-v2.js",
         )
         for module in standalone_modules:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-05"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-06"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
-        if 'deal-card-doc-workflow-v2.js?v=20260711-05' not in page:
-            errors.append("deal-card document workflow must use the refresh-event cache-bust")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 26:
-            errors.append(f"deal-card module budget must be 26 after responsibility consolidation, got {max_modules!r}")
+        if max_modules != 25:
+            errors.append(f"deal-card module budget must be 25 after document workflow consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -161,7 +189,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: enhancements share one lifecycle and one responsibility RPC")
+    print("Navigator v2 deal-card hook passed: document workflow uses supplied card data and post-mutation refresh only")
     return 0
 
 
