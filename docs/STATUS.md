@@ -1,5 +1,13 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 11 июля 2026
+
+- Добавлен live smoke для PostgREST/RPC без пользовательского JWT.
+- Проверка охватывает 9 browser-callable RPC: они обязаны отвечать HTTP 401 / PostgreSQL `42501`.
+- Проверка охватывает 6 access/trigger helpers, перенесённых в `nav_v2_private`: публичная RPC-схема обязана отвечать HTTP 404 / `PGRST202`.
+- Smoke запускается в постоянном workflow `Navigator v2 live production smoke` вместе с проверкой GitHub Pages и JWT Edge Functions.
+- Проверка не использует пароли, access/refresh tokens или service-role key; применяется только публичный publishable key.
+
 ## Актуально на 23 июня 2026
 
 - Репозиторий: `deputat36/vktg`.
