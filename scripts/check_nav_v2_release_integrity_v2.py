@@ -115,6 +115,7 @@ else:
         "push:",
         "python3 scripts/check_nav_v2_live_pages.py",
         "python3 scripts/check_nav_v2_edge_auth.py",
+        "python3 scripts/check_nav_v2_rpc_auth.py",
     ):
         if marker not in smoke_workflow:
             errors.append(f"Live production smoke workflow missing marker: {marker}")
@@ -135,6 +136,22 @@ else:
 pages_smoke_path = root / "scripts/check_nav_v2_live_pages.py"
 if not pages_smoke_path.exists():
     errors.append("Missing Navigator v2 live Pages smoke script")
+
+rpc_auth_smoke_path = root / "scripts/check_nav_v2_rpc_auth.py"
+if not rpc_auth_smoke_path.exists():
+    errors.append("Missing Navigator v2 RPC auth smoke script")
+else:
+    rpc_auth_smoke = rpc_auth_smoke_path.read_text(encoding="utf-8")
+    for marker in (
+        "PUBLIC_RPC_CASES",
+        "PRIVATE_HELPER_CASES",
+        "if status != 401",
+        "if status != 404",
+        'body.get("code") != "42501"',
+        'body.get("code") != "PGRST202"',
+    ):
+        if marker not in rpc_auth_smoke:
+            errors.append(f"RPC auth smoke missing marker: {marker}")
 
 if legacy_count:
     print(f"WARNING: {legacy_count} legacy migration filenames are outside the current convention")
