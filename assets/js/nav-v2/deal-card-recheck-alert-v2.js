@@ -5,6 +5,7 @@ import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-
 import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';
 import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';
 import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';
+import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';
 
 let userRole = '';
 let cardData = null;
@@ -126,6 +127,7 @@ function applyCardEnhancements() {
   applyDealCardDocumentWorkflow(cardData);
   applyDealCardTaskDueDate(cardData);
   applyDealCardExpenseLabels();
+  applyDealCardReadableValues();
   applyDealResponsibilitySnapshot(cardData);
   void applyDealCardBazaHints(cardData, profileData);
 }
