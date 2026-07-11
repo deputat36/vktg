@@ -9,13 +9,27 @@ BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
+RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-responsibility-snapshot-v2.js"
+SPN_RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-responsibility-v2.js"
+DOC_WORKFLOW_MODULE = ROOT / "assets/js/nav-v2/deal-card-doc-workflow-v2.js"
 PAGE = ROOT / "deal-card-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (BASE_MODULE, RECHECK_MODULE, BAZA_MODULE, SPN_HANDOFF_MODULE, PAGE, BUDGET):
+    paths = (
+        BASE_MODULE,
+        RECHECK_MODULE,
+        BAZA_MODULE,
+        SPN_HANDOFF_MODULE,
+        RESPONSIBILITY_MODULE,
+        SPN_RESPONSIBILITY_MODULE,
+        DOC_WORKFLOW_MODULE,
+        PAGE,
+        BUDGET,
+    )
+    for path in paths:
         if not path.exists():
             errors.append(f"Missing deal-card hook file: {path.relative_to(ROOT)}")
 
@@ -24,6 +38,9 @@ def main() -> int:
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
+        responsibility = RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
+        spn_responsibility = SPN_RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
+        doc_workflow = DOC_WORKFLOW_MODULE.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
@@ -34,7 +51,7 @@ def main() -> int:
         )
         for marker in base_markers:
             if marker not in base:
-                errors.append(f"deal-card-v2.js missing explicit recheck hook marker: {marker}")
+                errors.append(f"deal-card-v2.js missing explicit hook marker: {marker}")
         if base.find("applyDealCardRecheckAlert(cardData, currentProfile);") < base.find("renderCard(cardData);"):
             errors.append("deal-card-v2.js must run enhancement hook after the card DOM is rendered")
 
@@ -42,7 +59,9 @@ def main() -> int:
             "export function applyDealCardRecheckAlert(data, profile)",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
+            "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
             "applyDealCardSpnHandoff(cardData);",
+            "applyDealResponsibilitySnapshot(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
         )
@@ -81,26 +100,60 @@ def main() -> int:
             "loadData()",
             "requestAnimationFrame",
             "window.addEventListener('hashchange'",
+            "import './deal-card-spn-responsibility-v2.js'",
         )
         for marker in forbidden_handoff_markers:
             if marker in spn_handoff:
                 errors.append(f"deal-card SPN handoff helper still contains duplicate bootstrap behavior: {marker}")
 
+        responsibility_markers = (
+            "export function applyDealResponsibilitySnapshot(cardData)",
+            "import { renderDealCardSpnResponsibility } from './deal-card-spn-responsibility-v2.js?v=20260711-05';",
+            "rpc('nav_v2_get_deal_responsibility_snapshot'",
+            "renderDealCardSpnResponsibility(snapshot);",
+            "window.addEventListener('nav-v2:document-workflow-updated'",
+        )
+        for marker in responsibility_markers:
+            if marker not in responsibility:
+                errors.append(f"responsibility lifecycle missing marker: {marker}")
+        for marker in ("new MutationObserver", "load();", "nav-v2:deal-card-updated"):
+            if marker in responsibility:
+                errors.append(f"responsibility lifecycle still contains legacy bootstrap behavior: {marker}")
+
+        if "export function renderDealCardSpnResponsibility(snapshot)" not in spn_responsibility:
+            errors.append("SPN responsibility helper must export a pure snapshot renderer")
+        for marker in ("rpc(", "new MutationObserver", "load();", "window.addEventListener"):
+            if marker in spn_responsibility:
+                errors.append(f"SPN responsibility helper must remain renderer-only: {marker}")
+
+        snapshot_rpc_count = responsibility.count("nav_v2_get_deal_responsibility_snapshot") + spn_responsibility.count("nav_v2_get_deal_responsibility_snapshot")
+        if snapshot_rpc_count != 1:
+            errors.append(f"responsibility modules must contain exactly one snapshot RPC call, got {snapshot_rpc_count}")
+
+        if "window.dispatchEvent(new CustomEvent('nav-v2:document-workflow-updated'))" not in doc_workflow:
+            errors.append("document workflow must emit the explicit responsibility refresh event")
+
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
-        if '<script type="module" src="./assets/js/nav-v2/deal-card-recheck-alert-v2.js' in page:
-            errors.append("deal-card recheck helper must not remain a standalone HTML entry module")
-        if '<script type="module" src="./assets/js/nav-v2/deal-card-baza-hints-v2.js' in page:
-            errors.append("deal-card BAZA helper must not remain a standalone HTML entry module")
-        if '<script type="module" src="./assets/js/nav-v2/deal-card-spn-handoff-v2.js' in page:
-            errors.append("deal-card SPN handoff helper must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-04"'
+        standalone_modules = (
+            "deal-card-recheck-alert-v2.js",
+            "deal-card-baza-hints-v2.js",
+            "deal-card-spn-handoff-v2.js",
+            "deal-responsibility-snapshot-v2.js",
+        )
+        for module in standalone_modules:
+            marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
+            if marker in page:
+                errors.append(f"{module} must not remain a standalone HTML entry module")
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-05"'
         if cache_mapping not in page:
-            errors.append("deal-card page must map the legacy enhancement specifier to the current cache-busted hook")
+            errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
+        if 'deal-card-doc-workflow-v2.js?v=20260711-05' not in page:
+            errors.append("deal-card document workflow must use the refresh-event cache-bust")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 27:
-            errors.append(f"deal-card module budget must be 27 after SPN handoff consolidation, got {max_modules!r}")
+        if max_modules != 26:
+            errors.append(f"deal-card module budget must be 26 after responsibility consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -108,7 +161,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: recheck, BAZA and SPN handoff use the explicit lifecycle")
+    print("Navigator v2 deal-card hook passed: enhancements share one lifecycle and one responsibility RPC")
     return 0
 
 
