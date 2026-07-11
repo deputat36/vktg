@@ -7,6 +7,8 @@ on:
       - 'assets/js/nav-v2/nav-temp-password-v2.js'
       - 'assets/js/nav-v2/nav-accept-invite-v2.js'
       - 'assets/js/nav-v2/admin-loader-v2.js'
+      - 'assets/js/nav-v2/nav-system-check-v2.js'
+      - 'nav-system-check-v2.html'
       - 'scripts/check_nav_v2_invite_flow.py'
       - '.github/workflows/nav-v2-invite-static.yml'
   push:
@@ -17,6 +19,8 @@ on:
       - 'assets/js/nav-v2/nav-temp-password-v2.js'
       - 'assets/js/nav-v2/nav-accept-invite-v2.js'
       - 'assets/js/nav-v2/admin-loader-v2.js'
+      - 'assets/js/nav-v2/nav-system-check-v2.js'
+      - 'nav-system-check-v2.html'
       - 'scripts/check_nav_v2_invite_flow.py'
       - '.github/workflows/nav-v2-invite-static.yml'
 
