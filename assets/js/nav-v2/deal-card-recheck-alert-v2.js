@@ -3,6 +3,7 @@ import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-
 import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';
 import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
 import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';
+import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';
 
 let userRole = '';
 let cardData = null;
@@ -122,6 +123,7 @@ function applyCardEnhancements() {
   placeAlert();
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);
+  applyDealCardTaskDueDate(cardData);
   applyDealResponsibilitySnapshot(cardData);
   void applyDealCardBazaHints(cardData, profileData);
 }
