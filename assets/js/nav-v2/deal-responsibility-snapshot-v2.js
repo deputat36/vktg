@@ -1,9 +1,11 @@
 import { rpc } from './supabase-v2.js';
+import { renderDealCardSpnResponsibility } from './deal-card-spn-responsibility-v2.js?v=20260711-05';
 
 const ID = 'dealResponsibilitySnapshotV2';
 let cachedSnapshot = null;
-let loading = false;
+let loadingPromise = null;
 let lastKey = '';
+let lastCardData = null;
 
 function dealId() {
   return new URLSearchParams(location.search).get('id') || '';
@@ -99,7 +101,10 @@ function draw(snapshot, force = false) {
   const place = target();
   if (!place) return false;
   const key = snapshotKey(snapshot);
-  if (!force && key === lastKey && document.getElementById(ID)) return true;
+  if (!force && key === lastKey && document.getElementById(ID)) {
+    renderDealCardSpnResponsibility(snapshot);
+    return true;
+  }
   lastKey = key;
   const box = ensureBox(place);
   box.innerHTML = '';
@@ -119,35 +124,38 @@ function draw(snapshot, force = false) {
   appendList(box, 'Что СПН передает юристу', contract.spn_must_provide);
   appendList(box, 'Что юрист возвращает СПН', contract.lawyer_must_provide);
   appendList(box, 'Что СПН делает после ответа юриста', contract.spn_after_lawyer);
+  renderDealCardSpnResponsibility(snapshot);
   return true;
 }
 
-async function load() {
+async function refreshSnapshot() {
   const id = dealId();
-  if (!id || loading) return;
-  loading = true;
+  if (!id) return;
+  if (!loadingPromise) {
+    loadingPromise = rpc('nav_v2_get_deal_responsibility_snapshot', { p_deal_id: id }, 10000)
+      .then((snapshot) => {
+        cachedSnapshot = snapshot || {};
+        draw(cachedSnapshot, true);
+        return cachedSnapshot;
+      })
+      .catch(() => null)
+      .finally(() => {
+        loadingPromise = null;
+      });
+  }
+  await loadingPromise;
+}
+
+export function applyDealResponsibilitySnapshot(cardData) {
   try {
-    cachedSnapshot = await rpc('nav_v2_get_deal_responsibility_snapshot', { p_deal_id: id }, 10000);
-    draw(cachedSnapshot || {}, true);
+    const shouldRefresh = !cachedSnapshot || (cardData && cardData !== lastCardData);
+    lastCardData = cardData || lastCardData;
+    if (cachedSnapshot) draw(cachedSnapshot, true);
+    if (shouldRefresh) void refreshSnapshot();
   } catch (_) {
-    // Карточка может быть еще не авторизована или сессия может обновляться основным модулем.
-  } finally {
-    loading = false;
+    // Основная карточка сама показывает ошибки доступа; snapshot является дополнением.
   }
 }
 
-function ensureRendered() {
-  if (cachedSnapshot && !document.getElementById(ID)) draw(cachedSnapshot, true);
-  if (!cachedSnapshot && !loading && target()) load();
-}
-
-window.addEventListener('nav-v2:deal-card-updated', load);
-window.addEventListener('nav-v2:document-workflow-updated', load);
-window.addEventListener('nav-v2:task-updated', load);
-
-const app = document.getElementById('app');
-if (app) {
-  new MutationObserver(ensureRendered).observe(app, { childList: true, subtree: true });
-}
-
-load();
+window.addEventListener('nav-v2:document-workflow-updated', () => void refreshSnapshot());
+window.addEventListener('nav-v2:task-updated', () => void refreshSnapshot());
