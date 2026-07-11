@@ -1,12 +1,9 @@
-import { getCachedUser, rpc, esc } from './supabase-v2.js';
+import { esc } from './supabase-v2.js';
 
 const app = document.getElementById('app');
-const dealId = new URLSearchParams(location.search).get('id');
 const hintsUrl = './assets/data/nav-v2/baza-hints.json?v=20260710-0700';
 
-let loading = false;
-let observedMain = null;
-let settledForCurrentMain = false;
+let sourceHintsPromise = null;
 
 function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
@@ -160,24 +157,29 @@ function renderHints(hints) {
   else main?.appendChild(panel);
 }
 
-async function loadHints() {
-  if (!app || !dealId || !getCachedUser() || loading || settledForCurrentMain) return;
-  loading = true;
+async function getSourceHints() {
+  if (!sourceHintsPromise) {
+    sourceHintsPromise = fetch(hintsUrl, { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`BAZA hints HTTP ${response.status}`);
+        const payload = await response.json();
+        return Array.isArray(payload) ? payload : [];
+      })
+      .catch((error) => {
+        sourceHintsPromise = null;
+        throw error;
+      });
+  }
+  return sourceHintsPromise;
+}
 
+export async function applyDealCardBazaHints(card, profile) {
   try {
-    const [profilePayload, card, response] = await Promise.all([
-      rpc('nav_v2_get_my_profile', {}, 12000),
-      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 15000),
-      fetch(hintsUrl, { cache: 'no-store' })
-    ]);
-
-    if (!response.ok) throw new Error(`BAZA hints HTTP ${response.status}`);
-    const sourceHints = await response.json();
-    const profile = profilePayload?.profile || profilePayload || {};
-    const role = String(profile.role || '').trim();
+    const sourceHints = await getSourceHints();
+    const role = String(profile?.role || card?.profile?.role || '').trim();
     const signals = collectSignals(card);
 
-    const matched = (Array.isArray(sourceHints) ? sourceHints : [])
+    const matched = sourceHints
       .filter((hint) => hint?.is_active === true)
       .filter((hint) => hint.role === 'all' || hint.role === role)
       .filter((hint) => Array.isArray(hint.signals) && hint.signals.some((signal) => signals.has(signal)))
@@ -187,23 +189,5 @@ async function loadHints() {
     renderHints(matched);
   } catch (error) {
     console.warn('BAZA hints unavailable:', error);
-  } finally {
-    settledForCurrentMain = true;
-    loading = false;
   }
-}
-
-function ensureHintsForCurrentCard() {
-  const main = app?.querySelector('main.nav-v2-shell');
-  if (!main) return;
-  if (main !== observedMain) {
-    observedMain = main;
-    settledForCurrentMain = false;
-  }
-  loadHints();
-}
-
-if (app) {
-  new MutationObserver(ensureHintsForCurrentCard).observe(app, { childList: true, subtree: true });
-  ensureHintsForCurrentCard();
 }
