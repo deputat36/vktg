@@ -1,7 +1,10 @@
 import { esc } from './supabase-v2.js';
+import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';
 
 let userRole = '';
 let cardData = null;
+let profileData = null;
+let rerenderHookBound = false;
 
 function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
@@ -112,11 +115,27 @@ function placeAlert() {
   bindAlertActions();
 }
 
+function applyCardEnhancements() {
+  placeAlert();
+  void applyDealCardBazaHints(cardData, profileData);
+}
+
+function bindRerenderHook() {
+  if (rerenderHookBound) return;
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-tab], [data-tab-shortcut]')) return;
+    queueMicrotask(applyCardEnhancements);
+  });
+  rerenderHookBound = true;
+}
+
 export function applyDealCardRecheckAlert(data, profile) {
   try {
     cardData = data;
-    userRole = profile?.role || data?.profile?.role || '';
-    placeAlert();
+    profileData = profile || data?.profile || null;
+    userRole = profileData?.role || '';
+    applyCardEnhancements();
+    bindRerenderHook();
   } catch (_) {
     // Этот explicit hook не должен ломать основную карточку сделки.
   }
