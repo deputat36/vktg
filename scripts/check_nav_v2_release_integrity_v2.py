@@ -139,15 +139,20 @@ if not pages_smoke_path.exists():
 
 build_config_path = root / "config/nav-v2-build.json"
 build_check_path = root / "scripts/check_nav_v2_build_version.py"
+deal_card_hook_check_path = root / "scripts/check_nav_v2_deal_card_hooks.py"
 static_workflow_path = root / ".github/workflows/nav-v2-static.yml"
 if not build_config_path.exists():
     errors.append("Missing Navigator v2 build version config")
 if not build_check_path.exists():
     errors.append("Missing Navigator v2 build version check")
+if not deal_card_hook_check_path.exists():
+    errors.append("Missing Navigator v2 deal-card hook check")
 if not static_workflow_path.exists():
     errors.append("Missing Navigator v2 static workflow")
 elif "python3 scripts/check_nav_v2_build_version.py" not in static_workflow_path.read_text(encoding="utf-8"):
     errors.append("Navigator v2 static workflow does not run build version check")
+elif "python3 scripts/check_nav_v2_deal_card_hooks.py" not in static_workflow_path.read_text(encoding="utf-8"):
+    errors.append("Navigator v2 static workflow does not run deal-card hook check")
 
 rpc_auth_smoke_path = root / "scripts/check_nav_v2_rpc_auth.py"
 if not rpc_auth_smoke_path.exists():
