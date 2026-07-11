@@ -182,6 +182,7 @@ async function saveWorkflow(docId) {
     const refreshed = await loadCard(true);
     if (!refreshed) return;
     refreshDocumentUi(docId);
+    window.dispatchEvent(new CustomEvent('nav-v2:document-workflow-updated'));
     setStatus('Документ обновлен.');
   }
   catch (e) {
