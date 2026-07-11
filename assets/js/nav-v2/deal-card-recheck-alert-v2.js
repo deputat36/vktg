@@ -1,6 +1,7 @@
 import { esc } from './supabase-v2.js';
 import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';
 import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';
+import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
 
 let userRole = '';
 let cardData = null;
@@ -119,6 +120,7 @@ function placeAlert() {
 function applyCardEnhancements() {
   placeAlert();
   applyDealCardSpnHandoff(cardData);
+  applyDealResponsibilitySnapshot(cardData);
   void applyDealCardBazaHints(cardData, profileData);
 }
 
