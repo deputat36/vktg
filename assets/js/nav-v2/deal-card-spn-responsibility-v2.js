@@ -1,12 +1,5 @@
-import { rpc } from './supabase-v2.js';
-
 const BOX_ID = 'dealCardSpnResponsibilityV2';
-let busy = false;
 let lastKey = '';
-
-function dealId() {
-  return new URLSearchParams(location.search).get('id') || '';
-}
 
 function text(value) {
   return String(value || '').trim();
@@ -37,7 +30,7 @@ function line(title, value, ok) {
   return `<div class="${cls}"><b>${escapeHtml(title)}:</b> ${escapeHtml(value || 'не назначен')}</div>`;
 }
 
-function draw(snapshot) {
+export function renderDealCardSpnResponsibility(snapshot) {
   const place = target();
   if (!place) return false;
 
@@ -64,29 +57,3 @@ function draw(snapshot) {
     ${manager ? line('Менеджер', manager, true) : ''}`;
   return true;
 }
-
-async function load() {
-  const id = dealId();
-  if (!id || busy) return;
-  busy = true;
-  try {
-    const snapshot = await rpc('nav_v2_get_deal_responsibility_snapshot', { p_deal_id: id }, 10000);
-    draw(snapshot || {});
-  } catch (_) {
-    // Основная карточка сама покажет ошибки доступа. Этот блок является вспомогательным.
-  } finally {
-    busy = false;
-  }
-}
-
-function ensure() {
-  if (!document.getElementById(BOX_ID) && !busy) load();
-}
-
-window.addEventListener('nav-v2:deal-card-updated', load);
-window.addEventListener('nav-v2:document-workflow-updated', load);
-window.addEventListener('nav-v2:task-updated', load);
-
-const app = document.getElementById('app');
-if (app) new MutationObserver(ensure).observe(app, { childList: true, subtree: true });
-load();
