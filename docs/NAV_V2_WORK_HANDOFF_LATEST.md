@@ -2,12 +2,12 @@
 
 ## 1. Дата и время
 
-- 2026-07-11 15:42 CEST / 13:42 UTC.
+- 2026-07-11 16:10 CEST / 14:10 UTC.
 
 ## 2. Текущий main SHA
 
-- Рабочий code baseline: `db0fd6731e6aae62f5fee1447d01ecb9100b9b9d` — squash merge PR #204.
-- Документ публикуется отдельным docs-only PR #205; его merge SHA новее baseline, но не меняет код, Supabase или результаты smoke.
+- Рабочий code baseline: `34c8f4ce328b62b99703073a0f1f42e23ce1c1f5` — squash merge PR #206.
+- Документ публикуется отдельным docs-only PR #207; его merge SHA новее baseline, но не меняет код, Supabase или результаты smoke.
 
 ## 3. Последняя live Supabase migration
 
@@ -25,10 +25,12 @@
 - #203 — `Fix owner/admin SPN dry-run manager`.
 - #204 — `Add canonical Navigator v2 build marker`.
 - #205 — docs-only актуализация этого handoff.
+- #206 — `Replace recheck patch with explicit deal-card hook`.
+- #207 — docs-only актуализация этого handoff.
 
 ## 6. Открытые PR
 
-- Нет после merge #205.
+- Нет после merge #207.
 
 ## 7. Закрытые issues
 
@@ -98,6 +100,7 @@
 
 - Owner/admin диагностика формировала SPN `dry_run` без обязательного `manager_id`; live v10 должна была отклонять такой payload.
 - 22 Navigator import maps не имели единого build contract и не нормализовали legacy specifier `supabase-v2.js?v=20260625-1320` на общий URL.
+- Alert повторной проверки карточки выполнял собственные deal-card/profile RPC, наблюдал весь DOM через `MutationObserver` и подключался отдельным HTML entry module.
 - Полный authenticated browser smoke невозможно выполнить без тестовых credentials; активные live-профили есть только у owner, lawyer и spn.
 - Историческая migration history live шире и местами отличается именами от репозитория; критичная последняя серия Navigator v2 синхронизирована.
 - Post-merge Pages fetch заблокирован сетевыми правилами среды; фактическую публикацию build `20260711-01` снаружи этого запуска подтвердить не удалось.
@@ -109,7 +112,9 @@
 - `NAV_V2_BUILD_ID` экспортируется общим модулем, доступен в `document.documentElement.dataset.navV2Build` и выводится в системной диагностике.
 - 22 import maps направляют bare и две legacy-версии `supabase-v2.js` на один cache-busted URL.
 - `scripts/check_nav_v2_build_version.py` и static workflow закрепляют build contract.
-- CI: PR #203 — invite/static/JS success; PR #204 — static/JS/invite/BAZA success.
+- PR #206 перевёл recheck alert на явный hook после `renderCard(cardData)`, удалил повторные RPC, `MutationObserver`, самостоятельный bootstrap и отдельный HTML entry module.
+- Entry-module budget `deal-card-v2.html` снижен с 30 до 29; новый `check_nav_v2_deal_card_hooks.py` закрепляет контракт в CI.
+- CI: PR #203 — invite/static/JS success; PR #204 — static/JS/invite/BAZA success; PR #206 — static/JS/BAZA success.
 
 ## 17. Что не удалось проверить
 
@@ -131,8 +136,8 @@
 
 1. Реальный authenticated browser smoke для owner, СПН и lawyer; затем для четырёх отсутствующих ролей на тестовых профилях.
 2. Полный disposable invite/recovery/password E2E и последующее включение leaked password protection.
-3. Следующий frontend consolidation slice по #179: заменить один deal-card monkey patch явным hook с regression test и снизить module budget.
+3. Следующий frontend consolidation slice по #179: выбрать ещё один самостоятельный deal-card patch-модуль, перевести на явный lifecycle hook и снова снизить module budget.
 
 ## 20. Точная рекомендуемая команда для следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала проверь публикацию build 20260711-01 и authenticated browser smoke owner/spn/lawyer; затем пройди invite/recovery на одноразовом тестовом СПН, не отмечай PASS без браузерной проверки и включай leaked-password protection только после успешного E2E.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала проверь публикацию build 20260711-01 и authenticated browser smoke owner/spn/lawyer; затем пройди invite/recovery на одноразовом тестовом СПН, не отмечай PASS без браузерной проверки; если credentials всё ещё недоступны, выполни следующий explicit-hook consolidation slice по #179.`
