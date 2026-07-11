@@ -123,7 +123,8 @@ function applyCardEnhancements() {
 function bindRerenderHook() {
   if (rerenderHookBound) return;
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('[data-tab], [data-tab-shortcut]')) return;
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest('[data-tab], [data-tab-shortcut]')) return;
     queueMicrotask(applyCardEnhancements);
   });
   rerenderHookBound = true;
