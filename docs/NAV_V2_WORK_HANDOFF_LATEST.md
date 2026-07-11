@@ -2,12 +2,12 @@
 
 ## 1. Дата и время
 
-- 2026-07-11 10:33 CEST / 08:33 UTC.
+- 2026-07-11 15:42 CEST / 13:42 UTC.
 
 ## 2. Текущий main SHA
 
-- Рабочий code baseline: `8f02088c7bb0cf78d50773b92903baf41df067ac` — squash merge PR #201.
-- Документ публикуется отдельным docs-only PR #202; его merge SHA новее baseline, но не меняет код, Supabase или результаты smoke.
+- Рабочий code baseline: `db0fd6731e6aae62f5fee1447d01ecb9100b9b9d` — squash merge PR #204.
+- Документ публикуется отдельным docs-only PR #205; его merge SHA новее baseline, но не меняет код, Supabase или результаты smoke.
 
 ## 3. Последняя live Supabase migration
 
@@ -22,12 +22,13 @@
 
 ## 5. Смерженные PR этого запуска
 
-- #201 — `Add live Navigator RPC auth smoke`.
-- #202 — docs-only актуализация этого handoff.
+- #203 — `Fix owner/admin SPN dry-run manager`.
+- #204 — `Add canonical Navigator v2 build marker`.
+- #205 — docs-only актуализация этого handoff.
 
 ## 6. Открытые PR
 
-- Нет после merge #202.
+- Нет после merge #205.
 
 ## 7. Закрытые issues
 
@@ -61,6 +62,7 @@
 - Static invite/recovery validator: PASS.
 - Live `nav-invite-user` v10 и source sync: PASS.
 - POST без JWT: PASS, HTTP 401.
+- Owner/admin диагностика исправлена: безопасный SPN `dry_run` теперь передаёт обязательный `manager_id` текущего owner/admin. Invite regression workflow контролирует payload и cache-bust.
 - Реальные `dry_run`, access link, invite email, установка пароля, повторное использование/invalid link, recovery, повторный вход: BLOCKED — нет безопасного owner JWT, тестового почтового ящика и браузерной authenticated-сессии.
 - Тестовые Auth users и production profiles в этом запуске не создавались.
 
@@ -94,17 +96,20 @@
 
 ## 15. Найденные ошибки
 
-- Постоянного live CI для anonymous PostgREST/RPC surface не было.
+- Owner/admin диагностика формировала SPN `dry_run` без обязательного `manager_id`; live v10 должна была отклонять такой payload.
+- 22 Navigator import maps не имели единого build contract и не нормализовали legacy specifier `supabase-v2.js?v=20260625-1320` на общий URL.
 - Полный authenticated browser smoke невозможно выполнить без тестовых credentials; активные live-профили есть только у owner, lawyer и spn.
 - Историческая migration history live шире и местами отличается именами от репозитория; критичная последняя серия Navigator v2 синхронизирована.
-- Post-merge локальный Pages smoke заблокирован allowlist среды; PR workflow проверил live Pages до merge и завершился success.
+- Post-merge Pages fetch заблокирован сетевыми правилами среды; фактическую публикацию build `20260711-01` снаружи этого запуска подтвердить не удалось.
 
 ## 16. Что исправлено
 
-- Добавлен `scripts/check_nav_v2_rpc_auth.py`.
-- В permanent workflow добавлены anonymous RPC и private-helper surface checks.
-- Release integrity теперь требует новый smoke и его ключевые инварианты.
-- `docs/STATUS.md` обновлён.
+- PR #203 добавил обязательный `manager_id` в owner/admin SPN dry-run и постоянную invite regression-проверку.
+- PR #204 добавил canonical config `config/nav-v2-build.json` с build ID `20260711-01`.
+- `NAV_V2_BUILD_ID` экспортируется общим модулем, доступен в `document.documentElement.dataset.navV2Build` и выводится в системной диагностике.
+- 22 import maps направляют bare и две legacy-версии `supabase-v2.js` на один cache-busted URL.
+- `scripts/check_nav_v2_build_version.py` и static workflow закрепляют build contract.
+- CI: PR #203 — invite/static/JS success; PR #204 — static/JS/invite/BAZA success.
 
 ## 17. Что не удалось проверить
 
@@ -113,6 +118,7 @@
 - Полный invite/recovery/password flow и email delivery.
 - Роли admin, manager, broker, viewer на live данных — активных профилей нет.
 - Leaked-password protection после включения — настройка не включалась.
+- Post-merge GitHub Pages ещё не подтверждён прямым fetch из-за сетевой блокировки среды.
 
 ## 18. Ручные действия владельца проекта
 
@@ -125,8 +131,8 @@
 
 1. Реальный authenticated browser smoke для owner, СПН и lawyer; затем для четырёх отсутствующих ролей на тестовых профилях.
 2. Полный disposable invite/recovery/password E2E и последующее включение leaked password protection.
-3. Один вертикальный frontend consolidation slice по #179: единый build/version marker либо замена одного deal-card monkey patch явным hook с regression test.
+3. Следующий frontend consolidation slice по #179: заменить один deal-card monkey patch явным hook с regression test и снизить module budget.
 
 ## 20. Точная рекомендуемая команда для следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала authenticated browser smoke owner/spn/lawyer и invite/recovery на одноразовом тестовом СПН; не отмечай PASS без браузерной проверки, затем включай leaked-password protection только после успешного E2E.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md: сначала проверь публикацию build 20260711-01 и authenticated browser smoke owner/spn/lawyer; затем пройди invite/recovery на одноразовом тестовом СПН, не отмечай PASS без браузерной проверки и включай leaked-password protection только после успешного E2E.`
