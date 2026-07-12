@@ -22,6 +22,7 @@ function setPageStatus(message, type = 'info') {
 function canAttemptMutation(risk, deal, profile) {
   const role = String(profile?.role || '').toLowerCase();
   const userId = String(profile?.id || '');
+  if (role === 'viewer') return false;
   if (!MUTATING_ROLES.has(role) || !userId) return false;
   if (role === 'owner' || role === 'admin') return true;
   if (role === 'manager') return userId === String(deal?.manager_id || '');
@@ -78,8 +79,10 @@ function appendAction(row, item, risk, deal, profile) {
 
   button.onclick = async () => {
     const actionText = nextState ? 'устранить риск' : 'вернуть риск в работу';
-    if (isDemoDeal(deal) && !confirm(`Это демо-сделка. Подтвердите действие: ${actionText}.`)) return;
-    if (!confirm(`Подтвердите действие: ${actionText}.`)) return;
+    const confirmation = isDemoDeal(deal)
+      ? `Это демо-сделка. Подтвердите действие: ${actionText}.`
+      : `Подтвердите действие: ${actionText}.`;
+    if (!confirm(confirmation)) return;
 
     const note = prompt('Комментарий к изменению риска (необязательно):', '') || '';
     button.disabled = true;
