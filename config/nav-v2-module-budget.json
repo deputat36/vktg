@@ -4,7 +4,7 @@
     "nav-v2.html": { "max_modules": 1 },
     "dashboard-v2.html": { "max_modules": 1 },
     "deals-v2.html": { "max_modules": 9 },
-    "deal-card-v2.html": { "max_modules": 23 },
+    "deal-card-v2.html": { "max_modules": 22 },
     "spn-v2.html": { "max_modules": 17 },
     "queue-v2.html": { "max_modules": 3 },
     "admin-v2.html": { "max_modules": 6 },

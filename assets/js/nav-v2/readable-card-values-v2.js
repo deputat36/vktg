@@ -17,8 +17,6 @@ const REPRESENTATION_LABELS = {
   external_party: 'внешняя сторона'
 };
 
-let queued = false;
-
 function exactLabel(map, value) {
   const key = String(value || '').trim();
   return map[key] || null;
@@ -53,22 +51,7 @@ function normalizeRoleText(node) {
   node.dataset.readableRoleReady = '1';
 }
 
-function applyReadableValues() {
+export function applyDealCardReadableValues() {
   document.querySelectorAll('.list-item').forEach(normalizeRepresentation);
   document.querySelectorAll('.list-item > b, .pill').forEach(normalizeRoleText);
 }
-
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    applyReadableValues();
-  });
-}
-
-const app = document.getElementById('app') || document.body;
-new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
-
-applyReadableValues();
-window.addEventListener('hashchange', schedule);
