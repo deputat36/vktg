@@ -132,7 +132,7 @@ function itemRow(item) {
     <details class="manager-card-details">
       <summary>Показать расчёт готовности</summary>
       <p><b>Почему нельзя двигаться к задатку:</b> ${esc(item.cannot_advance_deposit_reason || item.cannot_advance_reason || 'Причина не определена')}</p>
-      <p class="muted">Старый показатель: ${n(item.legacy_readiness_deposit)}%. Операционный показатель: ${n(item.operational_readiness_percent)}%.</p>
+      <p class="muted">Старый показатель: ${n(item.legacy_readiness_deposit_percent)}%. Операционный показатель: ${n(item.operational_readiness_percent)}%.</p>
     </details>
   </article>`;
 }
