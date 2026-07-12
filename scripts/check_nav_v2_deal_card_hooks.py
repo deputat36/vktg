@@ -239,14 +239,14 @@ def main() -> int:
 
         risk_markers = (
             "export function applyDealCardRiskResolution(data, profile)",
-            "rpc('nav_v2_update_risk_resolution'",
-            "data-risk-resolution",
+            "await rpc('nav_v2_update_risk_resolution'",
+            "button.setAttribute('data-risk-resolution'",
+            "if (role === 'viewer') return false;",
             "setTimeout(() => location.reload(), 250);",
-            "role === 'viewer'",
         )
         for marker in risk_markers:
             if marker not in risk_resolution:
-                errors.append(f"risk resolution lifecycle missing marker: {marker}")
+                errors.append(f"risk resolution lifecycle missing structural marker: {marker}")
         forbidden_risk_markers = (
             "new MutationObserver",
             "requestAnimationFrame",
@@ -262,18 +262,19 @@ def main() -> int:
 
         migration_markers = (
             "create or replace function public.nav_v2_update_risk_resolution(",
+            "select r.*",
             "for update;",
-            "is not distinct from p_is_resolved",
-            "'risk_resolved'",
-            "'risk_reopened'",
+            "v_risk.is_resolved is not distinct from p_is_resolved",
+            "v_event_type := case when p_is_resolved then 'risk_resolved' else 'risk_reopened' end;",
+            "nav_v2_private.nav_v2_can_view_deal",
             "nav_v2_private.nav_v2_can_edit_deal",
+            "revoke all on function public.nav_v2_update_risk_resolution(uuid, boolean, text) from public;",
             "revoke execute on function public.nav_v2_update_risk_resolution(uuid, boolean, text) from anon;",
             "grant execute on function public.nav_v2_update_risk_resolution(uuid, boolean, text) to authenticated, service_role;",
-            "nav_v2_update_risk_resolution",
         )
         for marker in migration_markers:
             if marker not in risk_migration:
-                errors.append(f"risk resolution migration missing marker: {marker}")
+                errors.append(f"risk resolution migration missing structural marker: {marker}")
 
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
