@@ -73,7 +73,7 @@ function appendAction(row, item, risk, deal, profile) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = nextState ? 'btn green' : 'btn light';
-  button.dataset.riskResolution = nextState ? 'resolved' : 'reopened';
+  button.setAttribute('data-risk-resolution', nextState ? 'resolved' : 'reopened');
   button.dataset.riskId = risk.id;
   button.textContent = nextState ? 'Устранить риск' : 'Вернуть в работу';
 
