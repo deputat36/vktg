@@ -6,6 +6,8 @@ const guestPages = [
   '/dashboard-v2.html',
   '/deals-v2.html',
   '/queue-v2.html',
+  '/manager-v2.html',
+  '/task-review-v2.html',
   '/admin-v2.html'
 ];
 
