@@ -15,16 +15,16 @@ const roleNames = {
   spn: /СПН|spn/i,
   lawyer: /Юрист|lawyer/i,
   broker: /Брокер|broker/i,
-  viewer: /Просмотр|наблюдатель|viewer/i
+  viewer: /Обзор|наблюдатель|viewer/i
 };
 const menuByRole = {
-  owner: ['Рабочий стол', 'Новая сделка', 'Сделки', 'Кабинет юриста', 'Команда', 'Создать доступ', 'Аудит', 'Проверка', 'Диагностика'],
-  admin: ['Рабочий стол', 'Новая сделка', 'Сделки', 'Кабинет юриста', 'Команда', 'Создать доступ', 'Аудит', 'Проверка', 'Диагностика'],
-  manager: ['Рабочий стол', 'Сделки команды'],
+  owner: ['Рабочий стол', 'Новая сделка', 'Сделки', 'Контроль сделок', 'Кабинет юриста', 'Команда', 'Доступы', 'Аудит доступов', 'Проверка системы', 'Диагностика'],
+  admin: ['Рабочий стол', 'Новая сделка', 'Сделки', 'Контроль сделок', 'Кабинет юриста', 'Команда', 'Доступы', 'Аудит доступов', 'Проверка системы', 'Диагностика'],
+  manager: ['Рабочий стол', 'Контроль сделок', 'Сделки команды'],
   spn: ['Рабочий стол', 'Новая сделка', 'Мои сделки'],
   lawyer: ['Рабочий стол', 'Кабинет юриста', 'Все сделки'],
   broker: ['Рабочий стол', 'Брокерская очередь'],
-  viewer: ['Рабочий стол', 'Сделки']
+  viewer: ['Обзор', 'Сделки']
 };
 
 test('authenticated role smoke with real browser evidence', async ({ page }, testInfo) => {
@@ -60,18 +60,26 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
 
   await test.step('role-specific routes', async () => {
     if (['owner', 'admin'].includes(role)) {
-      for (const path of ['/admin-v2.html', '/nav-access-v2.html', '/nav-system-check-v2.html']) {
+      for (const path of ['/admin-v2.html', '/nav-access-v2.html', '/nav-system-check-v2.html', '/manager-v2.html', '/task-review-v2.html']) {
         await openPage(page, path);
         await expect(page.locator('body')).not.toContainText('Нет доступа к разделу');
         await expectNoInfiniteLoader(page);
       }
+      await expect(page.locator('body')).toContainText(/Рабочие задачи отдельно от проверок качества|Очередь задач/i);
       return;
     }
 
     await openPage(page, '/admin-v2.html');
     await expect(page.locator('body')).toContainText('Нет доступа к разделу');
 
-    if (role === 'spn') {
+    if (role === 'manager') {
+      await openPage(page, '/manager-v2.html');
+      await expectNoInfiniteLoader(page);
+      await expect(page.locator('body')).toContainText(/Что требует решения сегодня|Очередь решений/i);
+      await openPage(page, '/task-review-v2.html');
+      await expectNoInfiniteLoader(page);
+      await expect(page.locator('body')).toContainText(/Рабочие задачи отдельно от проверок качества|Очередь задач/i);
+    } else if (role === 'spn') {
       const forbiddenId = String(process.env.NAV_E2E_SPN_FORBIDDEN_DEAL_ID || '').trim();
       await openPage(page, `/deal-card-v2.html?id=${encodeURIComponent(forbiddenId)}`);
       await expect(page.locator('body')).toContainText(/нет доступа|недоступна|не удалось/i);

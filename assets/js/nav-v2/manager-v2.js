@@ -132,7 +132,7 @@ function itemRow(item) {
     <details class="manager-card-details">
       <summary>Показать расчёт готовности</summary>
       <p><b>Почему нельзя двигаться к задатку:</b> ${esc(item.cannot_advance_deposit_reason || item.cannot_advance_reason || 'Причина не определена')}</p>
-      <p class="muted">Старый показатель: ${n(item.legacy_readiness_deposit)}%. Операционный показатель: ${n(item.operational_readiness_percent)}%.</p>
+      <p class="muted">Старый показатель: ${n(item.legacy_readiness_deposit_percent)}%. Операционный показатель: ${n(item.operational_readiness_percent)}%.</p>
     </details>
   </article>`;
 }
@@ -178,7 +178,7 @@ function draw() {
       <div class="list">${workload().map(workloadRow).join('') || '<div class="empty">Ответственные СПН не назначены.</div>'}</div>
     </details>
     <section class="card manager-queue" style="margin-top:18px">
-      <div class="section-title"><div><h2>Очередь решений</h2><p class="muted">Сделки уже отсортированы по готовности, сроку и давности активности.</p></div><span class="pill ${rows.length ? 'red' : 'green'}">${rows.length}</span></div>
+      <div class="section-title"><div><h2>Очередь решений</h2><p class="muted">Сделки уже отсортированы по готовности, сроку и давности активности.</p></div><div class="actions"><a class="btn light" href="./task-review-v2.html">Разобрать задачи</a><span class="pill ${rows.length ? 'red' : 'green'}">${rows.length}</span></div></div>
       <div class="tabs manager-tabs">${filterButton('today', 'Решить сегодня', todayCount())}${filterButton('unassigned', 'Нужно распределить', distributionCount())}${filterButton('all', 'Все на контроле', items().length)}</div>
       <div class="list">${rows.map(itemRow).join('') || '<div class="empty">В выбранной очереди нет сделок.</div>'}</div>
     </section>` : `<section class="card"><p role="status" aria-live="polite">${busy ? 'Формирую очередь решений…' : 'Очередь ещё не загружена.'}</p></section>`}

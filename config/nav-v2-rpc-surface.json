@@ -5,6 +5,7 @@
     "nav_v2_get_dashboard",
     "nav_v2_get_deals_list",
     "nav_v2_get_operational_readiness_preview",
+    "nav_v2_get_task_taxonomy_preview",
     "nav_v2_get_handoff_scores",
     "nav_v2_get_deal_card",
     "nav_v2_get_deal_card_lite",

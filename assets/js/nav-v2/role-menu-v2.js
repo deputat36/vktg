@@ -11,7 +11,7 @@ function makeLink(active, id, href, title) {
 function getActivePage() {
   const path = location.pathname;
   if (path.includes('dashboard-v2')) return 'dashboard';
-  if (path.includes('manager-v2')) return 'manager';
+  if (path.includes('manager-v2') || path.includes('task-review-v2')) return 'manager';
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('queue-v2')) return 'queue';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
@@ -170,8 +170,6 @@ async function init() {
   if (!user?.id) user = await waitForUser();
   if (!user?.id) return;
 
-  // Основной модуль страницы после входа обычно сам получает профиль.
-  // Даём ему короткое время заполнить общий кеш и не создаём второй запрос.
   await sleep(100);
   cachedProfile = getCachedProfile();
 
