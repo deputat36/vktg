@@ -23,6 +23,7 @@
     "nav_v2_update_task_status",
     "nav_v2_update_task_due_date",
     "nav_v2_add_risk",
+    "nav_v2_update_risk_resolution",
     "nav_v2_add_expense",
     "nav_v2_save_wizard_result",
     "nav_v2_get_lawyer_queue",

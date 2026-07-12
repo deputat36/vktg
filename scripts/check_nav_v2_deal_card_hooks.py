@@ -245,7 +245,7 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-09"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260712-10"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 

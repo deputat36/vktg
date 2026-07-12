@@ -130,7 +130,7 @@ def check_page() -> None:
     page = PAGE_PATH.read_text(encoding="utf-8")
     if '<script type="module" src="./assets/js/nav-v2/deal-card-baza-hints-v2.js' in page:
         ERRORS.append("BAZA helper must not remain a standalone HTML entry module")
-    cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260711-09"'
+    cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260712-10"'
     if cache_mapping not in page:
         ERRORS.append("deal-card page must cache-bust the consolidated enhancement hook")
 
