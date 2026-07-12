@@ -8,6 +8,7 @@ const guestPages = [
   '/queue-v2.html',
   '/manager-v2.html',
   '/task-review-v2.html',
+  '/broker-v2.html',
   '/admin-v2.html'
 ];
 
