@@ -15,8 +15,6 @@ DOC_WORKFLOW_MODULE = ROOT / "assets/js/nav-v2/deal-card-doc-workflow-v2.js"
 TASK_DUE_MODULE = ROOT / "assets/js/nav-v2/deal-card-task-due-date-v2.js"
 EXPENSE_LABELS_MODULE = ROOT / "assets/js/nav-v2/expense-labels-v2.js"
 READABLE_VALUES_MODULE = ROOT / "assets/js/nav-v2/readable-card-values-v2.js"
-RISK_RESOLUTION_MODULE = ROOT / "assets/js/nav-v2/deal-card-risk-resolution-v2.js"
-RISK_RESOLUTION_MIGRATION = ROOT / "supabase/migrations/20260712160000_nav_v2_risk_resolution_lifecycle.sql"
 PAGE = ROOT / "deal-card-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 
@@ -34,8 +32,6 @@ def main() -> int:
         TASK_DUE_MODULE,
         EXPENSE_LABELS_MODULE,
         READABLE_VALUES_MODULE,
-        RISK_RESOLUTION_MODULE,
-        RISK_RESOLUTION_MIGRATION,
         PAGE,
         BUDGET,
     )
@@ -54,8 +50,6 @@ def main() -> int:
         task_due = TASK_DUE_MODULE.read_text(encoding="utf-8")
         expense_labels = EXPENSE_LABELS_MODULE.read_text(encoding="utf-8")
         readable_values = READABLE_VALUES_MODULE.read_text(encoding="utf-8")
-        risk_resolution = RISK_RESOLUTION_MODULE.read_text(encoding="utf-8")
-        risk_migration = RISK_RESOLUTION_MIGRATION.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
@@ -79,13 +73,11 @@ def main() -> int:
             "import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';",
             "import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';",
             "import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';",
-            "import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260712-10';",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
             "applyDealCardExpenseLabels();",
             "applyDealCardReadableValues();",
-            "applyDealCardRiskResolution(cardData, profileData);",
             "applyDealResponsibilitySnapshot(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
@@ -237,45 +229,6 @@ def main() -> int:
             if marker in readable_values:
                 errors.append(f"readable values helper still contains legacy bootstrap behavior: {marker}")
 
-        risk_markers = (
-            "export function applyDealCardRiskResolution(data, profile)",
-            "await rpc('nav_v2_update_risk_resolution'",
-            "button.setAttribute('data-risk-resolution'",
-            "if (role === 'viewer') return false;",
-            "setTimeout(() => location.reload(), 250);",
-        )
-        for marker in risk_markers:
-            if marker not in risk_resolution:
-                errors.append(f"risk resolution lifecycle missing structural marker: {marker}")
-        forbidden_risk_markers = (
-            "new MutationObserver",
-            "requestAnimationFrame",
-            "window.addEventListener('hashchange'",
-            "nav_v2_get_deal_card",
-            ".from(",
-        )
-        for marker in forbidden_risk_markers:
-            if marker in risk_resolution:
-                errors.append(f"risk resolution helper contains forbidden bootstrap/table behavior: {marker}")
-        if risk_resolution.count("rpc(") != 1:
-            errors.append("risk resolution helper must contain exactly one mutation RPC")
-
-        migration_markers = (
-            "create or replace function public.nav_v2_update_risk_resolution(",
-            "select r.*",
-            "for update;",
-            "v_risk.is_resolved is not distinct from p_is_resolved",
-            "v_event_type := case when p_is_resolved then 'risk_resolved' else 'risk_reopened' end;",
-            "nav_v2_private.nav_v2_can_view_deal",
-            "nav_v2_private.nav_v2_can_edit_deal",
-            "revoke all on function public.nav_v2_update_risk_resolution(uuid, boolean, text) from public;",
-            "revoke execute on function public.nav_v2_update_risk_resolution(uuid, boolean, text) from anon;",
-            "grant execute on function public.nav_v2_update_risk_resolution(uuid, boolean, text) to authenticated, service_role;",
-        )
-        for marker in migration_markers:
-            if marker not in risk_migration:
-                errors.append(f"risk resolution migration missing structural marker: {marker}")
-
         if 'deal-card-v2.js?v=20260711-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
@@ -287,7 +240,6 @@ def main() -> int:
             "deal-card-task-due-date-v2.js",
             "expense-labels-v2.js",
             "readable-card-values-v2.js",
-            "deal-card-risk-resolution-v2.js",
         )
         for module in standalone_modules:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
@@ -299,7 +251,7 @@ def main() -> int:
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
         if max_modules != 22:
-            errors.append(f"deal-card module budget must remain 22 after risk lifecycle integration, got {max_modules!r}")
+            errors.append(f"deal-card module budget must be 22 after readable values consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -307,7 +259,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: risk resolution uses the shared explicit lifecycle")
+    print("Navigator v2 deal-card hook passed: readable values use the shared explicit lifecycle")
     return 0
 
 
