@@ -41,7 +41,9 @@ def main() -> int:
             "requestAnimationFrame",
             "window.addEventListener('hashchange'",
             "nav_v2_get_deal_card",
-            ".from(",
+            ".from('nav_",
+            '.from("nav_',
+            ".from(`nav_",
         )
         for marker in forbidden_module:
             if marker in module:
