@@ -81,6 +81,7 @@ begin
       ('frontend_api', 'nav_v2_update_task_status'),
       ('frontend_api', 'nav_v2_update_task_due_date'),
       ('frontend_api', 'nav_v2_add_risk'),
+      ('frontend_api', 'nav_v2_update_risk_resolution'),
       ('frontend_api', 'nav_v2_add_expense'),
       ('frontend_api', 'nav_v2_save_wizard_result'),
       ('frontend_api', 'nav_v2_get_lawyer_queue'),
