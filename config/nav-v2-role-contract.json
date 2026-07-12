@@ -39,6 +39,7 @@
     "broker": {
       "menu_routes": [
         "dashboard-v2.html",
+        "broker-v2.html",
         "deals-v2.html"
       ]
     },
