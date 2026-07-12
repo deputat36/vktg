@@ -1,5 +1,15 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 12 июля 2026 — authenticated browser E2E infrastructure
+
+- Добавлен Playwright `1.61.1` с lockfile и двумя проектами: desktop Chrome и Pixel 7 viewport.
+- Public smoke проверяет гостевые auth-gates без credentials.
+- Authenticated workflow использует GitHub Environment `navigator-e2e` и отдельный Supabase development branch.
+- Preflight запрещает production Supabase, требует технические аккаунты `nav-e2e` и не выводит secrets.
+- Role matrix охватывает admin, manager, spn, lawyer, broker, viewer; owner запускается только с явным opt-in.
+- Browser evidence сохраняет HTML/JSON report, trace, screenshot и video при ошибке.
+- Production Auth users и рабочие данные этой инфраструктурой не создаются и не изменяются.
+
 ## Актуально на 11 июля 2026 — explicit deal-card hook
 
 - Alert повторной проверки СПН больше не загружает карточку и профиль отдельными RPC.
