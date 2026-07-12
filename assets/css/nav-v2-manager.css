@@ -1,0 +1,157 @@
+.manager-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.manager-primary-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.manager-readiness-summary,
+.manager-secondary-metrics,
+.manager-workload {
+  margin-bottom: 18px;
+}
+
+.manager-secondary-metrics summary,
+.manager-workload summary,
+.manager-card-details summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.manager-secondary-metrics summary::-webkit-details-marker,
+.manager-workload summary::-webkit-details-marker,
+.manager-card-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.manager-secondary-metrics > summary,
+.manager-workload > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manager-secondary-metrics[open] > summary,
+.manager-workload[open] > summary {
+  margin-bottom: 16px;
+}
+
+.manager-secondary-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.manager-tabs {
+  margin-bottom: 16px;
+}
+
+.manager-decision-card {
+  padding: 18px;
+  border-left: 5px solid #f59e0b;
+}
+
+.manager-decision-head {
+  align-items: flex-start;
+}
+
+.manager-card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0 14px;
+}
+
+.manager-main-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 18px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.manager-main-action b {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.manager-owner-due {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  text-align: right;
+  font-weight: 800;
+}
+
+.manager-reason-box {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.manager-reasons {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.manager-reasons li + li {
+  margin-top: 6px;
+}
+
+.manager-card-actions {
+  margin-top: 14px;
+}
+
+.manager-card-details {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.manager-card-details summary {
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.manager-card-details[open] summary {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1000px) {
+  .manager-primary-metrics,
+  .manager-secondary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .manager-primary-metrics,
+  .manager-secondary-grid,
+  .manager-main-action {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-owner-due {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .manager-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .manager-tabs .tab {
+    width: 100%;
+  }
+}
