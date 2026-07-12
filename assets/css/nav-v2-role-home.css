@@ -1,0 +1,93 @@
+.role-home-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.role-home-hero::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  bottom: -120px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.role-home-eyebrow {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #eff6ff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.role-home-actions {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+}
+
+.role-home-actions .btn.green {
+  background: #ffffff;
+  color: #12316a;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.role-home-actions .btn.light {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.role-home-profile {
+  margin-bottom: 18px;
+}
+
+.role-home-profile .section-title {
+  margin-bottom: 0;
+}
+
+.role-home-profile .section-title b,
+.role-home-profile .section-title span {
+  display: block;
+}
+
+.role-home-summary {
+  margin-bottom: 18px;
+}
+
+.nav-v2 a:focus-visible,
+.nav-v2 button:focus-visible,
+.nav-v2 input:focus-visible,
+.nav-v2 select:focus-visible,
+.nav-v2 textarea:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+}
+
+.nav-v2-menu a[aria-current="page"] {
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+}
+
+@media (max-width: 860px) {
+  .role-home-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .role-home-actions .btn {
+    width: 100%;
+  }
+
+  .role-home-profile .section-title {
+    gap: 14px;
+  }
+}
