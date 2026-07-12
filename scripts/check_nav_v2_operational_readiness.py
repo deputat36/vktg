@@ -82,8 +82,12 @@ def main() -> int:
         "Правдивая готовность",
         "Дополнительные показатели контроля",
         "Показать расчёт готовности",
+        "legacy_readiness_deposit_percent",
+        'href="./task-review-v2.html">Разобрать задачи</a>',
         'aria-pressed=',
     ), MODULE.name, errors)
+    if "item.legacy_readiness_deposit)" in module:
+        errors.append("manager preview uses obsolete legacy_readiness_deposit field")
     for marker in ("nav_v2_update_", "nav_v2_add_", "nav_v2_save_"):
         if marker in module:
             errors.append(f"manager preview calls a write RPC family: {marker}")
