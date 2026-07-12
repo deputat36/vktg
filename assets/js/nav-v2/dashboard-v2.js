@@ -79,8 +79,8 @@ function roleWorkspace(role) {
     broker: {
       ...common,
       title: 'Рабочий стол брокера',
-      description: 'Откройте брокерскую очередь и проверьте сделки, где требуется ипотека, сертификат, маткапитал или банковское решение.',
-      primaryHref: './deals-v2.html?filter=broker',
+      description: 'Начните с предварительной финансовой оценки: назначение, недостающие суммы, сроки готовности денег и брокерская задача.',
+      primaryHref: './broker-v2.html',
       primaryLabel: 'Открыть брокерскую очередь',
       listTitle: 'Сделки с финансовым участием',
       firstMetric: 'Доступные сделки'
@@ -170,7 +170,7 @@ function secondaryWorkspaceLink(role) {
   if (role === 'owner' || role === 'admin') return '<a class="btn light" href="./admin-v2.html">Команда и доступы</a>';
   if (role === 'manager') return '<a class="btn light" href="./deals-v2.html">Сделки команды</a>';
   if (role === 'lawyer') return '<a class="btn light" href="./deals-v2.html?filter=lawyer">Все доступные сделки</a>';
-  if (role === 'broker') return '<a class="btn light" href="./deals-v2.html?filter=broker">Финансовые сделки</a>';
+  if (role === 'broker') return '<a class="btn light" href="./deals-v2.html?filter=broker">Все финансовые сделки</a>';
   if (role === 'spn') return '<a class="btn light" href="./deals-v2.html">Мои сделки</a>';
   return '<a class="btn light" href="./deals-v2.html">Сделки</a>';
 }
