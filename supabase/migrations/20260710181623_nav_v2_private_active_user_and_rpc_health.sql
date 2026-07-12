@@ -62,6 +62,7 @@ begin
       ('frontend_api', 'nav_v2_get_my_profile'),
       ('frontend_api', 'nav_v2_get_dashboard'),
       ('frontend_api', 'nav_v2_get_deals_list'),
+      ('frontend_api', 'nav_v2_get_operational_readiness_preview'),
       ('frontend_api', 'nav_v2_get_handoff_scores'),
       ('frontend_api', 'nav_v2_get_deal_card'),
       ('frontend_api', 'nav_v2_get_deal_card_lite'),

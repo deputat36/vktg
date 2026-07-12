@@ -10,6 +10,7 @@ function makeLink(active, id, href, title) {
 function getActivePage() {
   const path = location.pathname;
   if (path.includes('dashboard-v2')) return 'dashboard';
+  if (path.includes('manager-v2')) return 'manager';
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('queue-v2')) return 'queue';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
@@ -63,6 +64,7 @@ function buildMenu(role) {
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Мои сделки'));
   } else if (role === 'manager') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
+    links.push(makeLink(active, 'manager', './manager-v2.html', 'Контроль сегодня'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки команды'));
   } else if (role === 'viewer') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
@@ -71,6 +73,7 @@ function buildMenu(role) {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки'));
+    links.push(makeLink(active, 'manager', './manager-v2.html', 'Контроль сегодня'));
     links.push(makeLink(active, 'queue', './queue-v2.html', 'Кабинет юриста'));
     links.push(makeLink(active, 'admin', './admin-v2.html', 'Команда'));
     links.push(makeLink(active, 'access', './nav-access-v2.html', 'Создать доступ'));

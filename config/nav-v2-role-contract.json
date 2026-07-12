@@ -6,6 +6,7 @@
         "dashboard-v2.html",
         "spn-v2.html",
         "deals-v2.html",
+        "manager-v2.html",
         "queue-v2.html",
         "admin-v2.html",
         "nav-access-v2.html",
@@ -17,6 +18,7 @@
     "manager": {
       "menu_routes": [
         "dashboard-v2.html",
+        "manager-v2.html",
         "deals-v2.html"
       ]
     },
