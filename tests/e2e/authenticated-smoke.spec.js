@@ -23,7 +23,7 @@ const menuByRole = {
   manager: ['Рабочий стол', 'Контроль сделок', 'Сделки команды'],
   spn: ['Рабочий стол', 'Новая сделка', 'Мои сделки'],
   lawyer: ['Рабочий стол', 'Кабинет юриста', 'Все сделки'],
-  broker: ['Рабочий стол', 'Брокерская очередь'],
+  broker: ['Рабочий стол', 'Брокерская очередь', 'Все финансовые сделки'],
   viewer: ['Обзор', 'Сделки']
 };
 
@@ -60,12 +60,12 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
 
   await test.step('role-specific routes', async () => {
     if (['owner', 'admin'].includes(role)) {
-      for (const path of ['/admin-v2.html', '/nav-access-v2.html', '/nav-system-check-v2.html', '/manager-v2.html', '/task-review-v2.html']) {
+      for (const path of ['/admin-v2.html', '/nav-access-v2.html', '/nav-system-check-v2.html', '/manager-v2.html', '/task-review-v2.html', '/broker-v2.html']) {
         await openPage(page, path);
         await expect(page.locator('body')).not.toContainText('Нет доступа к разделу');
         await expectNoInfiniteLoader(page);
       }
-      await expect(page.locator('body')).toContainText(/Рабочие задачи отдельно от проверок качества|Очередь задач/i);
+      await expect(page.locator('body')).toContainText(/Брокерская очередь|Предварительная финансовая оценка/i);
       return;
     }
 
@@ -79,6 +79,9 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
       await openPage(page, '/task-review-v2.html');
       await expectNoInfiniteLoader(page);
       await expect(page.locator('body')).toContainText(/Рабочие задачи отдельно от проверок качества|Очередь задач/i);
+      await openPage(page, '/broker-v2.html');
+      await expectNoInfiniteLoader(page);
+      await expect(page.locator('body')).toContainText(/Брокерская очередь|Предварительная финансовая оценка/i);
     } else if (role === 'spn') {
       const forbiddenId = String(process.env.NAV_E2E_SPN_FORBIDDEN_DEAL_ID || '').trim();
       await openPage(page, `/deal-card-v2.html?id=${encodeURIComponent(forbiddenId)}`);
@@ -90,8 +93,9 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
       await expectNoInfiniteLoader(page);
       await expect(page.locator('body')).toContainText(/Кабинет юриста|очеред/i);
     } else if (role === 'broker') {
-      await openPage(page, '/deals-v2.html?filter=broker');
+      await openPage(page, '/broker-v2.html');
       await expectNoInfiniteLoader(page);
+      await expect(page.locator('body')).toContainText(/Брокерская очередь|Предварительная финансовая оценка/i);
     }
   });
 
