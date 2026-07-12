@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "config/nav-v2-role-contract.json"
 ROLE_MENU_PATH = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 ADMIN_LOADER_PATH = ROOT / "assets/js/nav-v2/admin-loader-v2.js"
+DASHBOARD_PATH = ROOT / "assets/js/nav-v2/dashboard-v2.js"
+DASHBOARD_HTML_PATH = ROOT / "dashboard-v2.html"
 
 ROLE_BLOCKS = {
     "lawyer": ("if (role === 'lawyer') {", "} else if (role === 'broker') {"),
@@ -17,6 +19,14 @@ ROLE_BLOCKS = {
     "manager": ("} else if (role === 'manager') {", "} else if (role === 'viewer') {"),
     "viewer": ("} else if (role === 'viewer') {", "} else if (role === 'owner' || role === 'admin') {"),
     "owner_admin": ("} else if (role === 'owner' || role === 'admin') {", "} else {"),
+}
+
+ROLE_DASHBOARD_DESTINATIONS = {
+    "manager": "./manager-v2.html",
+    "spn": "./spn-v2.html",
+    "lawyer": "./queue-v2.html",
+    "broker": "./deals-v2.html?filter=broker",
+    "viewer": "./deals-v2.html",
 }
 
 HREF_RE = re.compile(r'href="\.\/([^"?#]+)')
@@ -42,14 +52,13 @@ def extract_block(source: str, start: str, end: str) -> str | None:
 def main() -> int:
     errors: list[str] = []
 
-    if not CONTRACT_PATH.exists():
-        print("Missing config/nav-v2-role-contract.json")
-        return 1
-    if not ROLE_MENU_PATH.exists():
-        print("Missing assets/js/nav-v2/role-menu-v2.js")
-        return 1
-    if not ADMIN_LOADER_PATH.exists():
-        print("Missing assets/js/nav-v2/admin-loader-v2.js")
+    for path in (CONTRACT_PATH, ROLE_MENU_PATH, ADMIN_LOADER_PATH, DASHBOARD_PATH, DASHBOARD_HTML_PATH):
+        if not path.exists():
+            errors.append(f"missing required role UX file: {path.relative_to(ROOT)}")
+
+    if errors:
+        for error in errors:
+            print(error)
         return 1
 
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
@@ -78,6 +87,13 @@ def main() -> int:
             f"got {sorted(diagnostics_routes)}"
         )
 
+    if 'aria-current="page"' not in menu_source:
+        errors.append("role-menu-v2.js: active navigation item must expose aria-current=page")
+    if "admin: 'администратор'" not in menu_source:
+        errors.append("role-menu-v2.js: use consistent user-facing administrator label")
+    if "viewer: 'наблюдатель'" not in menu_source:
+        errors.append("role-menu-v2.js: use consistent user-facing viewer label")
+
     for role, markers in ROLE_BLOCKS.items():
         block = extract_block(menu_source, markers[0], markers[1])
         if block is None:
@@ -87,7 +103,6 @@ def main() -> int:
         actual = route_set(block)
         if role == "owner_admin" and "addAdminDiagnosticsLinks(links, active);" in block:
             actual |= diagnostics_routes
-
         expected = set((contract.get("roles") or {}).get(role, {}).get("menu_routes") or [])
         if actual != expected:
             errors.append(
@@ -143,9 +158,29 @@ def main() -> int:
     if "const canSeeSystemCheck = role === 'owner' || role === 'admin';" not in start_source:
         errors.append("start-v2.js: system check must be owner/admin only")
 
-    dashboard_source = (ROOT / "assets/js/nav-v2/dashboard-v2.js").read_text(encoding="utf-8")
+    dashboard_source = DASHBOARD_PATH.read_text(encoding="utf-8")
     if "const canSeeSystemCheck = role === 'owner' || role === 'admin';" not in dashboard_source:
         errors.append("dashboard-v2.js: system check must be owner/admin only")
+    if "function roleWorkspace(role)" not in dashboard_source:
+        errors.append("dashboard-v2.js: missing role-aware workspace configuration")
+    for role, destination in ROLE_DASHBOARD_DESTINATIONS.items():
+        role_marker = f"    {role}: {{"
+        start_at = dashboard_source.find(role_marker)
+        if start_at < 0:
+            errors.append(f"dashboard-v2.js: missing role workspace for {role}")
+            continue
+        next_at = dashboard_source.find("\n    },", start_at)
+        block = dashboard_source[start_at:next_at if next_at >= 0 else start_at + 1200]
+        if destination not in block:
+            errors.append(f"dashboard-v2.js: {role} primary workspace must point to {destination}")
+    if "Режим наблюдения" not in dashboard_source:
+        errors.append("dashboard-v2.js: viewer workspace must explicitly explain read-only mode")
+
+    dashboard_html = DASHBOARD_HTML_PATH.read_text(encoding="utf-8")
+    if "nav-v2-role-home.css" not in dashboard_html:
+        errors.append("dashboard-v2.html: role-aware dashboard stylesheet is not loaded")
+    if 'aria-live="polite"' not in dashboard_html:
+        errors.append("dashboard-v2.html: initial loading status must be announced")
 
     if errors:
         print("Navigator v2 role contract errors:")
@@ -155,7 +190,8 @@ def main() -> int:
 
     print(
         "Navigator v2 role contract passed: "
-        f"{len(expected_roles)} role menus and {len(guarded_pages)} admin pages checked"
+        f"{len(expected_roles)} role menus, {len(guarded_pages)} admin pages and "
+        f"{len(ROLE_DASHBOARD_DESTINATIONS)} role dashboard routes checked"
     )
     return 0
 
