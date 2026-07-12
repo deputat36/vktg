@@ -25,7 +25,7 @@ ROLE_DASHBOARD_DESTINATIONS = {
     "manager": "./manager-v2.html",
     "spn": "./spn-v2.html",
     "lawyer": "./queue-v2.html",
-    "broker": "./deals-v2.html?filter=broker",
+    "broker": "./broker-v2.html",
     "viewer": "./deals-v2.html",
 }
 
