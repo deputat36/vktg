@@ -36,6 +36,7 @@ if not ERRORS:
 
     workflow = (ROOT / ".github/workflows/nav-v2-authenticated-e2e.yml").read_text(encoding="utf-8")
     for marker in (
+        "pull_request:",
         "workflow_dispatch:",
         "environment: navigator-e2e",
         "NAV_E2E_SUPABASE_URL",

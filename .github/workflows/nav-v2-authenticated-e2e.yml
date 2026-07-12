@@ -1,6 +1,19 @@
 name: Navigator v2 authenticated browser E2E
 
 on:
+  pull_request:
+    paths:
+      - '**-v2.html'
+      - 'nav-v2.html'
+      - 'assets/js/nav-v2/**'
+      - 'config/supabase.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.mjs'
+      - 'tests/e2e/**'
+      - 'scripts/check-nav-v2-e2e-env.mjs'
+      - 'scripts/prepare-nav-v2-e2e-config.mjs'
+      - '.github/workflows/nav-v2-authenticated-e2e.yml'
   workflow_dispatch:
     inputs:
       target:
@@ -27,7 +40,7 @@ concurrency:
 
 jobs:
   public-smoke:
-    if: inputs.target != 'authenticated'
+    if: github.event_name == 'pull_request' || inputs.target != 'authenticated'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -52,7 +65,7 @@ jobs:
           retention-days: 14
 
   authenticated-smoke:
-    if: inputs.target != 'public'
+    if: github.event_name == 'workflow_dispatch' && inputs.target != 'public'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: navigator-e2e
