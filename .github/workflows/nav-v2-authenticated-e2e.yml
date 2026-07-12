@@ -1,0 +1,126 @@
+name: Navigator v2 authenticated browser E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Test scope
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - public
+          - authenticated
+      include_owner:
+        description: Run owner only when a disposable nav-e2e owner exists
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-authenticated-e2e
+  cancel-in-progress: false
+
+jobs:
+  public-smoke:
+    if: inputs.target != 'authenticated'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run guest gates on desktop and mobile
+        run: npm run test:e2e:public
+      - name: Upload public browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-public-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  authenticated-smoke:
+    if: inputs.target != 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: navigator-e2e
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - role: owner
+            email_secret: NAV_E2E_OWNER_EMAIL
+            password_secret: NAV_E2E_OWNER_PASSWORD
+          - role: admin
+            email_secret: NAV_E2E_ADMIN_EMAIL
+            password_secret: NAV_E2E_ADMIN_PASSWORD
+          - role: manager
+            email_secret: NAV_E2E_MANAGER_EMAIL
+            password_secret: NAV_E2E_MANAGER_PASSWORD
+          - role: spn
+            email_secret: NAV_E2E_SPN_EMAIL
+            password_secret: NAV_E2E_SPN_PASSWORD
+          - role: lawyer
+            email_secret: NAV_E2E_LAWYER_EMAIL
+            password_secret: NAV_E2E_LAWYER_PASSWORD
+          - role: broker
+            email_secret: NAV_E2E_BROKER_EMAIL
+            password_secret: NAV_E2E_BROKER_PASSWORD
+          - role: viewer
+            email_secret: NAV_E2E_VIEWER_EMAIL
+            password_secret: NAV_E2E_VIEWER_PASSWORD
+    env:
+      NAV_E2E_ROLE: ${{ matrix.role }}
+      NAV_E2E_EMAIL: ${{ secrets[matrix.email_secret] }}
+      NAV_E2E_PASSWORD: ${{ secrets[matrix.password_secret] }}
+      NAV_E2E_SUPABASE_URL: ${{ vars.NAV_E2E_SUPABASE_URL }}
+      NAV_E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NAV_E2E_SUPABASE_PUBLISHABLE_KEY }}
+      NAV_E2E_SPN_FORBIDDEN_DEAL_ID: ${{ vars.NAV_E2E_SPN_FORBIDDEN_DEAL_ID }}
+    steps:
+      - name: Skip owner without explicit opt-in
+        if: matrix.role == 'owner' && !inputs.include_owner
+        run: echo "Owner E2E is BLOCKED until a disposable nav-e2e owner is explicitly enabled."
+      - uses: actions/checkout@v4
+        if: matrix.role != 'owner' || inputs.include_owner
+      - uses: actions/setup-node@v4
+        if: matrix.role != 'owner' || inputs.include_owner
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate branch-only credentials contract
+        if: matrix.role != 'owner' || inputs.include_owner
+        run: node scripts/check-nav-v2-e2e-env.mjs
+      - name: Prepare ephemeral Supabase branch config
+        if: matrix.role != 'owner' || inputs.include_owner
+        run: node scripts/prepare-nav-v2-e2e-config.mjs
+      - name: Install pinned dependencies
+        if: matrix.role != 'owner' || inputs.include_owner
+        run: npm ci
+      - name: Install Chromium
+        if: matrix.role != 'owner' || inputs.include_owner
+        run: npx playwright install --with-deps chromium
+      - name: Run authenticated desktop and mobile smoke
+        if: matrix.role != 'owner' || inputs.include_owner
+        run: npm run test:e2e:authenticated
+      - name: Upload role evidence
+        if: always() && (matrix.role != 'owner' || inputs.include_owner)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-${{ matrix.role }}-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

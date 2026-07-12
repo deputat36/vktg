@@ -5,3 +5,8 @@ navigator_sdelki_deal*.json
 # OS
 .DS_Store
 Thumbs.db
+
+# local Playwright artifacts
+node_modules/
+playwright-report/
+test-results/
