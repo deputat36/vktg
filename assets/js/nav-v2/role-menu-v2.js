@@ -12,6 +12,7 @@ function getActivePage() {
   const path = location.pathname;
   if (path.includes('dashboard-v2')) return 'dashboard';
   if (path.includes('manager-v2') || path.includes('task-review-v2')) return 'manager';
+  if (path.includes('broker-v2')) return 'broker';
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('queue-v2')) return 'queue';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
@@ -58,7 +59,8 @@ function buildMenu(role) {
     links.push(makeLink(active, 'deals', './deals-v2.html?filter=lawyer', 'Все сделки'));
   } else if (role === 'broker') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
-    links.push(makeLink(active, 'deals', './deals-v2.html?filter=broker', 'Брокерская очередь'));
+    links.push(makeLink(active, 'broker', './broker-v2.html', 'Брокерская очередь'));
+    links.push(makeLink(active, 'deals', './deals-v2.html?filter=broker', 'Все финансовые сделки'));
   } else if (role === 'spn') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'));
