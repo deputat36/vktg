@@ -10,6 +10,10 @@ let periodDays = 30;
 function n(value) { return Number(value || 0); }
 function summary() { return report?.summary || {}; }
 function items() { return Array.isArray(report?.items) ? report.items : []; }
+function comparison() { return report?.comparison || {}; }
+function currentPeriod() { return comparison().current_period || {}; }
+function previousPeriod() { return comparison().previous_period || {}; }
+function periodDelta() { return comparison().delta || {}; }
 function allowed() { return ['owner', 'admin', 'manager'].includes(report?.profile?.role); }
 
 function fmtDateTime(value) {
@@ -17,6 +21,19 @@ function fmtDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function fmtDate(value) {
+  if (!value) return 'Дата не определена';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('ru-RU');
+}
+
+function signed(value, suffix = '') {
+  const number = Number(value || 0);
+  const prefix = number > 0 ? '+' : '';
+  return `${prefix}${number}${suffix}`;
 }
 
 function movementTone(state) {
@@ -64,6 +81,50 @@ function responsibilityText(item) {
 
 function resultLine(label, created, completed, resultLabel) {
   return `<div><span class="small">${esc(label)}</span><b>${n(created)} создано</b><span class="muted">${n(completed)} ${esc(resultLabel)}</span></div>`;
+}
+
+function comparisonLine(label, field, options = {}) {
+  const current = currentPeriod();
+  const previous = previousPeriod();
+  const delta = periodDelta();
+  const suffix = options.suffix || '';
+  const deltaSuffix = options.deltaSuffix ?? suffix;
+  return `<div>
+    <span class="small">${esc(label)}</span>
+    <b>${esc(`${n(current[field])}${suffix}`)}</b>
+    <span class="muted">Предыдущий период: ${esc(`${n(previous[field])}${suffix}`)}</span>
+    <span class="pill gray">Изменение: ${esc(signed(delta[field], deltaSuffix))}</span>
+  </div>`;
+}
+
+function comparisonBlock() {
+  const data = comparison();
+  if (!data.comparison_version) return '';
+  const current = currentPeriod();
+  const previous = previousPeriod();
+  return `<section class="card adoption-comparison">
+    <div class="section-title">
+      <div>
+        <h2>Текущий период и предыдущий равный период</h2>
+        <p class="muted">Текущий: ${esc(fmtDate(current.period_start))} — ${esc(fmtDate(current.period_end))}. Предыдущий: ${esc(fmtDate(previous.period_start))} — ${esc(fmtDate(previous.period_end))}.</p>
+      </div>
+      <span class="pill blue">${n(data.period_days)} дней + ${n(data.period_days)} дней</span>
+    </div>
+    <div class="status warn"><b>Выборки различаются.</b> Сейчас в расчёте ${n(current.deals_in_scope)} сделок, в предыдущем периоде — ${n(previous.deals_in_scope)}. Дельта показывает изменение факта, а не автоматически «хороший» или «плохой» результат.</div>
+    <div class="task-review-facts adoption-comparison-grid">
+      ${comparisonLine('Доля сделок с подтверждённым результатом', 'confirmed_result_rate', { suffix: '%', deltaSuffix: ' п.п.' })}
+      ${comparisonLine('Сделки с подтверждённым результатом', 'with_confirmed_results')}
+      ${comparisonLine('Активность без результата', 'active_without_result')}
+      ${comparisonLine('Подтверждённые результаты', 'confirmed_results')}
+      ${comparisonLine('Выполненные задачи', 'completed_tasks')}
+      ${comparisonLine('Закрытые риски', 'resolved_risks')}
+      ${comparisonLine('Подтверждённые документы', 'resolved_documents')}
+      ${comparisonLine('Клиентские действия созданы', 'client_actions_created')}
+      ${comparisonLine('Проверки качества созданы', 'quality_warnings_created')}
+    </div>
+    <div class="status ok"><b>Граница сравнения.</b> ${esc(data.comparison_note || 'Сравниваются только события внутри равных периодов.')}</div>
+    <div class="status warn"><b>Не рейтинг сотрудников.</b> Этот блок не оценивает отдельных специалистов и не включает реконструированный исторический backlog.</div>
+  </section>`;
 }
 
 function dealRow(item) {
@@ -138,6 +199,8 @@ function draw() {
       ${metric('Подтверждено документов', n(s.resolved_documents), n(s.resolved_documents) ? 'green' : 'yellow')}
       ${metric('Без менеджера', n(s.missing_manager), n(s.missing_manager) ? 'red' : 'green')}
     </section>
+
+    ${comparisonBlock()}
 
     <section class="card task-review-explanation">
       <h2>Как читать отчёт</h2>
