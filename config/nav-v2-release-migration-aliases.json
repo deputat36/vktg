@@ -2,6 +2,26 @@
   "schema_version": 1,
   "project_ref": "ofewxuqfjhamgerwzull",
   "live_aliases": {
+    "20260712143253": {
+      "canonical_migrations": ["20260712160000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed risk-resolution lifecycle source."
+    },
+    "20260712163919": {
+      "canonical_migrations": ["20260712162609"],
+      "reason": "Production apply assigned a live timestamp to the reviewed manager operational-readiness source."
+    },
+    "20260712200429": {
+      "canonical_migrations": ["20260712190000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed task-taxonomy preview source."
+    },
+    "20260712205117": {
+      "canonical_migrations": ["20260712203000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed broker-triage queue source."
+    },
+    "20260713091921": {
+      "canonical_migrations": ["20260713090856"],
+      "reason": "Production apply assigned a live timestamp to the reviewed viewer operational-workspace source."
+    },
     "20260713160355": {
       "canonical_migrations": ["20260713193000"],
       "reason": "Production-safe split: operational adoption report core was applied separately from health registration."
@@ -16,6 +36,31 @@
     }
   },
   "approved_repository_only": {
+    "20260712160000": {
+      "represented_by_live": ["20260712143253"],
+      "source_blob_sha": "f749635bdcbc36081975c36571c81deb41cf2ed5",
+      "reason": "Canonical fresh-install source for the already-live risk-resolution lifecycle."
+    },
+    "20260712162609": {
+      "represented_by_live": ["20260712163919"],
+      "source_blob_sha": "fa9d6a02a3c1100f1c5f6d5c3d56fc137837b729",
+      "reason": "Canonical fresh-install source for the already-live manager operational-readiness queue."
+    },
+    "20260712190000": {
+      "represented_by_live": ["20260712200429"],
+      "source_blob_sha": "62928eaef359e16d609f9b9b91af17915cbfdcd7",
+      "reason": "Canonical fresh-install source for the already-live task-taxonomy preview."
+    },
+    "20260712203000": {
+      "represented_by_live": ["20260712205117"],
+      "source_blob_sha": "cb1dc13fb010b2a55f54ab684d176006ee7ec951",
+      "reason": "Canonical fresh-install source for the already-live broker-triage queue."
+    },
+    "20260713090856": {
+      "represented_by_live": ["20260713091921"],
+      "source_blob_sha": "87c387509ada444eaa96d2aaca45578d64432a63",
+      "reason": "Canonical fresh-install source for the already-live viewer operational workspace."
+    },
     "20260713172000": {
       "represented_by_live": ["20260713151053"],
       "source_blob_sha": "f1daf3eae1042faf3917af57e3c9b1df00664d4c",
