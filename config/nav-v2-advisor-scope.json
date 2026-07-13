@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "source_registry": "config/nav-v2-rpc-surface.json",
+  "shared_project_scope": {
+    "included_schema": "public",
+    "included_function_prefix": "nav_v2_",
+    "private_schema": "nav_v2_private",
+    "legacy_prefix": "nav_",
+    "excluded_subsystem_prefixes": [
+      "leader_",
+      "parket_",
+      "broker_"
+    ]
+  },
+  "authenticated_security_definer": {
+    "advisor_lint_name": "authenticated_security_definer_function_executable",
+    "advisor_lint_code": "0029",
+    "registry_categories": [
+      "frontend_api",
+      "admin_api",
+      "demo_api"
+    ],
+    "security_invoker_exceptions": [
+      {
+        "name": "nav_v2_update_document_status",
+        "reason": "Совместимый wrapper; делегирует изменение в защищённый workflow RPC."
+      },
+      {
+        "name": "nav_v2_get_frontend_coverage_health",
+        "reason": "Совместимый диагностический wrapper; не повышает права и делегирует owner/admin health RPC."
+      }
+    ],
+    "expected_warning_count": 46,
+    "decision": "intentional_with_server_gate",
+    "never_auto_revoke": true,
+    "required_evidence": [
+      "RPC зарегистрирован ровно в одной внешней категории.",
+      "authenticated имеет EXECUTE, anon и PUBLIC не имеют EXECUTE.",
+      "frontend RPC проверяет auth.uid() и доступ к данным.",
+      "admin RPC имеет owner/admin gate.",
+      "demo RPC имеет owner/admin или service_role gate."
+    ]
+  },
+  "leaked_password_protection": {
+    "advisor_lint_name": "auth_leaked_password_protection",
+    "status": "blocked",
+    "blocked_by_issues": [
+      16,
+      159
+    ],
+    "enable_after": [
+      "invite/recovery/password E2E проходит на изолированных технических аккаунтах",
+      "authenticated role matrix проходит для admin, manager, spn, lawyer, broker и viewer"
+    ]
+  }
+}
