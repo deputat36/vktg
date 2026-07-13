@@ -1,0 +1,115 @@
+name: Navigator v2 release drift report
+
+on:
+  workflow_dispatch:
+    inputs:
+      checkout_ref:
+        description: Git ref to verify against production
+        required: true
+        default: main
+        type: string
+      allow_drift:
+        description: Save report without failing the workflow when drift is found
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-release-drift-${{ inputs.checkout_ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-drift:
+    name: Read-only production drift report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: navigator-production-readonly
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.checkout_ref }}
+          persist-credentials: false
+
+      - uses: supabase/setup-cli@v3.0.0
+        with:
+          version: 2.110.0-beta.26
+
+      - name: Validate approved release baseline
+        run: |
+          python3 scripts/check_nav_v2_release_drift.py --self-test
+          python3 scripts/check_nav_v2_release_drift.py --baseline-only
+
+      - name: Read project reference
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+          baseline = json.loads(Path('config/nav-v2-release-baseline.json').read_text(encoding='utf-8'))
+          print(f"SUPABASE_PROJECT_REF={baseline['project_ref']}")
+          PY
+
+      - name: Require read-only production credentials
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo 'SUPABASE_ACCESS_TOKEN is missing'; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo 'SUPABASE_DB_PASSWORD is missing'; exit 1; }
+
+      - name: Collect migration history
+        run: |
+          mkdir -p artifacts
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          supabase migration list > artifacts/migration-list.txt
+
+      - name: Collect Edge Function metadata
+        run: |
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/functions" \
+            > artifacts/functions.json
+
+      - name: Build release drift report
+        id: drift
+        env:
+          ALLOW_DRIFT: ${{ inputs.allow_drift }}
+        run: |
+          set +e
+          extra=""
+          if [ "$ALLOW_DRIFT" = "true" ]; then extra="--allow-drift"; fi
+          python3 scripts/check_nav_v2_release_drift.py \
+            --migration-list artifacts/migration-list.txt \
+            --functions-json artifacts/functions.json \
+            --json-output artifacts/release-drift.json \
+            --markdown-output artifacts/release-drift.md \
+            $extra
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish release summary
+        if: always()
+        run: |
+          if [ -f artifacts/release-drift.md ]; then
+            cat artifacts/release-drift.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '# Navigator v2 release drift report' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Report generation failed before an artifact was created.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload drift evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigator-v2-release-drift-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail when drift is detected
+        if: steps.drift.outputs.exit_code != '0'
+        run: exit 1
