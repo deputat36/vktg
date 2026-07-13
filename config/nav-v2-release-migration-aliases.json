@@ -33,6 +33,10 @@
     "20260713160524": {
       "canonical_migrations": ["20260713193000"],
       "reason": "Production-safe split: curated RPC grant health registration was applied after the report wrapper."
+    },
+    "20260713164757": {
+      "canonical_migrations": ["20260713203000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed exact non-overlapping operational adoption period comparison source."
     }
   },
   "approved_repository_only": {
@@ -75,6 +79,11 @@
       "represented_by_live": ["20260713160446"],
       "source_blob_sha": "2120fb849c6e555bb970d00110847ff1c411365d",
       "reason": "Canonical fresh-install source for the active-profile wrapper and private implementation."
+    },
+    "20260713203000": {
+      "represented_by_live": ["20260713164757"],
+      "source_blob_sha": "2e6ee17e2428872c523314b070c5000c6b59db29",
+      "reason": "Canonical fresh-install source for the exact non-overlapping current-versus-previous operational adoption comparison."
     }
   }
 }
