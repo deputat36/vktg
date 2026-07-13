@@ -101,6 +101,18 @@ migration_markers = {
         "nav_v2_get_operational_adoption_report'),",
         "Operational adoption report definition drifted",
     ),
+    "20260713203000_nav_v2_operational_adoption_period_comparison.sql": (
+        "nav_v2_get_operational_adoption_period_comparison_unchecked_20260713",
+        "v_current_start := v_current_end - make_interval(days => v_days)",
+        "v_previous_start := v_current_end - make_interval(days => v_days * 2)",
+        "'current_period', v_current",
+        "'previous_period', v_previous",
+        "'confirmed_result_rate_points'",
+        "'historical_backlog_included', false",
+        "'employee_score', false",
+        "'report_version', 2",
+        "Operational adoption comparison implementation must remain private",
+    ),
 }
 
 for name, markers in migration_markers.items():
@@ -170,6 +182,7 @@ e2e_workflow_path = root / ".github/workflows/nav-v2-authenticated-e2e.yml"
 static_workflow_path = root / ".github/workflows/nav-v2-static.yml"
 task_contract_check_path = root / "scripts/check_nav_v2_task_contract.py"
 adoption_check_path = root / "scripts/check_nav_v2_operational_adoption.py"
+adoption_comparison_check_path = root / "scripts/check_nav_v2_operational_adoption_comparison.py"
 advisor_check_path = root / "scripts/check_nav_v2_advisor_scope.py"
 if not build_config_path.exists():
     errors.append("Missing Navigator v2 build version config")
@@ -185,6 +198,8 @@ if not task_contract_check_path.exists():
     errors.append("Missing Navigator v2 persisted task contract check")
 if not adoption_check_path.exists():
     errors.append("Missing Navigator v2 operational adoption check")
+if not adoption_comparison_check_path.exists():
+    errors.append("Missing Navigator v2 operational adoption comparison check")
 if not advisor_check_path.exists():
     errors.append("Missing Navigator v2 Advisor scope check")
 if not static_workflow_path.exists():
@@ -197,6 +212,7 @@ else:
         ("python3 scripts/check_nav_v2_e2e_contract.py", "authenticated E2E contract"),
         ("python3 scripts/check_nav_v2_task_contract.py", "persisted task contract"),
         ("python3 scripts/check_nav_v2_operational_adoption.py", "operational adoption"),
+        ("python3 scripts/check_nav_v2_operational_adoption_comparison.py", "operational adoption comparison"),
         ("python3 scripts/check_nav_v2_advisor_scope.py --self-test", "Advisor scope"),
     ):
         if marker not in static_workflow:
@@ -256,6 +272,7 @@ if static_workflow_path.exists():
         "python3 scripts/check_nav_v2_release_drift_workflow.py",
         "python3 scripts/check_nav_v2_task_contract.py",
         "python3 scripts/check_nav_v2_operational_adoption.py",
+        "python3 scripts/check_nav_v2_operational_adoption_comparison.py",
         "python3 scripts/check_nav_v2_advisor_scope.py --self-test",
     ):
         if marker not in static_workflow:
