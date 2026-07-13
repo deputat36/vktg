@@ -7,7 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/nav-v2-release-drift.yml"
 BASELINE = ROOT / "config/nav-v2-release-baseline.json"
+ALIASES = ROOT / "config/nav-v2-release-migration-aliases.json"
 REPORTER = ROOT / "scripts/check_nav_v2_release_drift.py"
+ALIAS_REPORTER = ROOT / "scripts/check_nav_v2_release_drift_aliases.py"
 DOC = ROOT / "docs/NAV_V2_RELEASE_DRIFT.md"
 
 
@@ -19,7 +21,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (WORKFLOW, BASELINE, REPORTER, DOC):
+    for path in (WORKFLOW, BASELINE, ALIASES, REPORTER, ALIAS_REPORTER, DOC):
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
@@ -36,7 +38,10 @@ def main() -> int:
         "version: 2.110.0-beta.26",
         "supabase migration list > artifacts/migration-list.txt",
         "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/functions",
-        "python3 scripts/check_nav_v2_release_drift.py",
+        "python3 scripts/check_nav_v2_release_drift.py --self-test",
+        "python3 scripts/check_nav_v2_release_drift_aliases.py --self-test",
+        "python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only",
+        "python3 scripts/check_nav_v2_release_drift_aliases.py \\",
         "actions/upload-artifact@v4",
         "Fail when drift is detected",
     ), WORKFLOW.name, errors)
@@ -59,8 +64,22 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
+    if baseline.get("latest_live_migration") != "20260713160524":
+        errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
+
+    aliases = json.loads(ALIASES.read_text(encoding="utf-8"))
+    if aliases.get("project_ref") != baseline.get("project_ref"):
+        errors.append("migration alias project_ref differs from release baseline")
+    if set((aliases.get("live_aliases") or {})) != {
+        "20260713160355", "20260713160446", "20260713160524"
+    }:
+        errors.append("approved live migration alias set drifted")
+    if set((aliases.get("approved_repository_only") or {})) != {
+        "20260713172000", "20260713193000", "20260713193500"
+    }:
+        errors.append("approved repository-only migration set drifted")
 
     reporter = REPORTER.read_text(encoding="utf-8")
     require(reporter, (
@@ -74,6 +93,17 @@ def main() -> int:
         "production migrations missing in repository",
         "unregistered live Navigator Edge Functions",
     ), REPORTER.name, errors)
+
+    alias_reporter = ALIAS_REPORTER.read_text(encoding="utf-8")
+    require(alias_reporter, (
+        "def validate_aliases",
+        "def classify_migrations",
+        "approved_repository_only",
+        "represented_remote_aliases",
+        "unrepresented_remote_only",
+        "Any migration outside these explicit mappings still fails the workflow.",
+        "--allow-drift",
+    ), ALIAS_REPORTER.name, errors)
 
     doc = DOC.read_text(encoding="utf-8")
     require(doc, (
@@ -92,7 +122,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 release drift workflow passed: read-only approval gate, baseline and evidence contract checked")
+    print("Navigator v2 release drift workflow passed: read-only gate, alias-aware migration history and Edge baseline checked")
     return 0
 
 
