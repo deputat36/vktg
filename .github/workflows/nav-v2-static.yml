@@ -10,6 +10,7 @@ on:
       - 'config/nav-v2-build.json'
       - 'config/nav-v2-role-contract.json'
       - 'config/nav-v2-rpc-surface.json'
+      - 'config/nav-v2-advisor-scope.json'
       - 'config/nav-v2-release-baseline.json'
       - 'package.json'
       - 'package-lock.json'
@@ -27,6 +28,7 @@ on:
       - 'scripts/check_nav_v2_deal_card_hooks.py'
       - 'scripts/check_nav_v2_risk_resolution.py'
       - 'scripts/check_nav_v2_operational_readiness.py'
+      - 'scripts/check_nav_v2_operational_adoption.py'
       - 'scripts/check_nav_v2_task_taxonomy.py'
       - 'scripts/check_nav_v2_task_contract.py'
       - 'scripts/check_nav_v2_broker_queue.py'
@@ -37,6 +39,7 @@ on:
       - 'scripts/check_nav_v2_release_drift.py'
       - 'scripts/check_nav_v2_release_drift_workflow.py'
       - 'scripts/check_nav_v2_e2e_contract.py'
+      - 'scripts/check_nav_v2_advisor_scope.py'
       - 'scripts/check-nav-v2-e2e-env.mjs'
       - 'scripts/prepare-nav-v2-e2e-config.mjs'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
@@ -46,6 +49,7 @@ on:
       - '.github/workflows/nav-v2-release-drift.yml'
       - '.github/workflows/nav-v2-static.yml'
       - '.github/workflows/nav-v2-authenticated-e2e.yml'
+      - '.github/workflows/nav-v2-advisor-scope.yml'
   push:
     branches:
       - main
@@ -155,6 +159,8 @@ jobs:
         run: python3 scripts/check_nav_v2_risk_resolution.py
       - name: Check operational readiness preview
         run: python3 scripts/check_nav_v2_operational_readiness.py
+      - name: Check operational adoption report
+        run: python3 scripts/check_nav_v2_operational_adoption.py
       - name: Check task taxonomy preview
         run: python3 scripts/check_nav_v2_task_taxonomy.py
       - name: Check persisted task contract preview
@@ -181,5 +187,7 @@ jobs:
         run: python3 scripts/check_nav_v2_csp.py
       - name: Check role route contract
         run: python3 scripts/check_nav_v2_role_contract.py
+      - name: Check Advisor scope baseline
+        run: python3 scripts/check_nav_v2_advisor_scope.py --self-test
       - name: Compile live Pages smoke script
         run: python3 -m py_compile scripts/check_nav_v2_live_pages.py

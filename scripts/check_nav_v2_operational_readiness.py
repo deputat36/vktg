@@ -67,7 +67,7 @@ def main() -> int:
         "assets/css/nav-v2-role-home.css?v=20260712-01",
         "assets/css/nav-v2-manager.css?v=20260712-01",
         "assets/js/nav-v2/manager-v2.js?v=20260712-02",
-        "assets/js/nav-v2/role-menu-v2.js?v=20260712-02",
+        "assets/js/nav-v2/role-menu-v2.js?v=20260713-01",
         'aria-live="polite"',
     ), PAGE.name, errors)
 

@@ -90,6 +90,17 @@ migration_markers = {
         "'contract_version', 1",
         "Task contract preview definition drifted",
     ),
+    "20260713193000_nav_v2_operational_adoption_report.sql": (
+        "create or replace function public.nav_v2_get_operational_adoption_report(",
+        "v_role not in ('owner', 'admin', 'manager')",
+        "activity_without_result",
+        "confirmed_results",
+        "missing_manager",
+        "'preview_only', true",
+        "revoke execute on function public.nav_v2_get_operational_adoption_report(integer, integer) from anon",
+        "nav_v2_get_operational_adoption_report'),",
+        "Operational adoption report definition drifted",
+    ),
 }
 
 for name, markers in migration_markers.items():
@@ -158,6 +169,8 @@ e2e_contract_check_path = root / "scripts/check_nav_v2_e2e_contract.py"
 e2e_workflow_path = root / ".github/workflows/nav-v2-authenticated-e2e.yml"
 static_workflow_path = root / ".github/workflows/nav-v2-static.yml"
 task_contract_check_path = root / "scripts/check_nav_v2_task_contract.py"
+adoption_check_path = root / "scripts/check_nav_v2_operational_adoption.py"
+advisor_check_path = root / "scripts/check_nav_v2_advisor_scope.py"
 if not build_config_path.exists():
     errors.append("Missing Navigator v2 build version config")
 if not build_check_path.exists():
@@ -170,16 +183,24 @@ if not e2e_workflow_path.exists():
     errors.append("Missing Navigator v2 authenticated E2E workflow")
 if not task_contract_check_path.exists():
     errors.append("Missing Navigator v2 persisted task contract check")
+if not adoption_check_path.exists():
+    errors.append("Missing Navigator v2 operational adoption check")
+if not advisor_check_path.exists():
+    errors.append("Missing Navigator v2 Advisor scope check")
 if not static_workflow_path.exists():
     errors.append("Missing Navigator v2 static workflow")
-elif "python3 scripts/check_nav_v2_build_version.py" not in static_workflow_path.read_text(encoding="utf-8"):
-    errors.append("Navigator v2 static workflow does not run build version check")
-elif "python3 scripts/check_nav_v2_deal_card_hooks.py" not in static_workflow_path.read_text(encoding="utf-8"):
-    errors.append("Navigator v2 static workflow does not run deal-card hook check")
-elif "python3 scripts/check_nav_v2_e2e_contract.py" not in static_workflow_path.read_text(encoding="utf-8"):
-    errors.append("Navigator v2 static workflow does not run authenticated E2E contract check")
-elif "python3 scripts/check_nav_v2_task_contract.py" not in static_workflow_path.read_text(encoding="utf-8"):
-    errors.append("Navigator v2 static workflow does not run persisted task contract check")
+else:
+    static_workflow = static_workflow_path.read_text(encoding="utf-8")
+    for marker, label in (
+        ("python3 scripts/check_nav_v2_build_version.py", "build version"),
+        ("python3 scripts/check_nav_v2_deal_card_hooks.py", "deal-card hook"),
+        ("python3 scripts/check_nav_v2_e2e_contract.py", "authenticated E2E contract"),
+        ("python3 scripts/check_nav_v2_task_contract.py", "persisted task contract"),
+        ("python3 scripts/check_nav_v2_operational_adoption.py", "operational adoption"),
+        ("python3 scripts/check_nav_v2_advisor_scope.py --self-test", "Advisor scope"),
+    ):
+        if marker not in static_workflow:
+            errors.append(f"Navigator v2 static workflow does not run {label} check")
 
 rpc_auth_smoke_path = root / "scripts/check_nav_v2_rpc_auth.py"
 if not rpc_auth_smoke_path.exists():
@@ -234,9 +255,11 @@ if static_workflow_path.exists():
         "python3 scripts/check_nav_v2_release_drift.py --baseline-only",
         "python3 scripts/check_nav_v2_release_drift_workflow.py",
         "python3 scripts/check_nav_v2_task_contract.py",
+        "python3 scripts/check_nav_v2_operational_adoption.py",
+        "python3 scripts/check_nav_v2_advisor_scope.py --self-test",
     ):
         if marker not in static_workflow:
-            errors.append(f"Static workflow missing release/task contract check: {marker}")
+            errors.append(f"Static workflow missing release/product check: {marker}")
 
 if legacy_count:
     print(f"WARNING: {legacy_count} legacy migration filenames are outside the current convention")
