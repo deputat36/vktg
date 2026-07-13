@@ -72,7 +72,7 @@ def main() -> int:
         (
             "Content-Security-Policy",
             "assets/css/nav-v2-task-review.css?v=20260712-01",
-            "assets/js/nav-v2/task-review-v2.js?v=20260712-01",
+            "assets/js/nav-v2/task-review-v2.js?v=20260713-02",
             "assets/js/nav-v2/role-menu-v2.js?v=20260712-03",
         ),
         PAGE.name,
