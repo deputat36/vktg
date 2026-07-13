@@ -41,6 +41,10 @@
     "20260713170608": {
       "canonical_migrations": ["20260713213000"],
       "reason": "Production apply assigned a live timestamp to the reviewed read-only manager assignment proposal source."
+    },
+    "20260713173156": {
+      "canonical_migrations": ["20260713223000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed grouped manager source remediation plan source."
     }
   },
   "approved_repository_only": {
@@ -93,6 +97,11 @@
       "represented_by_live": ["20260713170608"],
       "source_blob_sha": "67a96acc8c85bc0d1d6fcbf646f1fef2f493417c",
       "reason": "Canonical fresh-install source for the read-only manager assignment proposal derived from active SPN manager links."
+    },
+    "20260713223000": {
+      "represented_by_live": ["20260713173156"],
+      "source_blob_sha": "d7af8ac6e1ad7c17d8c087e86620af9214162df6",
+      "reason": "Canonical fresh-install source for the grouped read-only manager source remediation plan."
     }
   }
 }
