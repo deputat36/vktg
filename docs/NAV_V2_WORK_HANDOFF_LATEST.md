@@ -3,20 +3,20 @@
 ## Точка продолжения
 
 - Дата: 2026-07-13.
-- Текущий product `main`: `bccd98a4760b9a60fed8994411df5ad09ed885d9` — PR #256.
-- Последняя production migration: `20260713184344_nav_v2_responsibility_confirmation_context`.
-- Canonical source: `20260713234500_nav_v2_responsibility_confirmation_context.sql`.
-- Release baseline уже синхронизирован PR #255.
+- Текущий product `main`: `9959d82dbeb89004c491b8e73be37804accffaff` — PR #258.
+- Последняя production migration: `20260713195810_nav_v2_responsibility_point_preview_guard`.
+- Canonical migrations: `20260714001500_nav_v2_responsibility_point_preview.sql` и `20260714001600_nav_v2_responsibility_point_preview_guard.sql`.
+- Release-sync: ветка `agent/nav-v2-responsibility-point-preview-release-sync`.
 - Canonical frontend build: `20260711-01`.
 - Deal-card budget: 22; механическое сокращение без новой продуктовой причины запрещено.
 
 ## Последние завершённые PR
 
-- #256 — импорт и read-only валидация JSON-пакета перед точечной коррекцией.
-- #255 — release baseline/aliases после confirmation-context deploy.
-- #254 — browser-local лист подтверждения ответственности, JSON/CSV export и read-only каталог СПН/менеджеров.
-- #253 — release baseline/aliases после responsibility-evidence deploy.
-- #252 — source-remediation UI, role-safe route, evidence-only responsibility candidates и обязательный CI gate.
+- #258 — owner/admin server-side read-only preview одной responsibility correction, fingerprint, private implementation и CI contracts.
+- #257 — handoff после package validator.
+- #256 — импорт и локальная read-only валидация JSON-пакета перед точечной коррекцией.
+- #255/#254 — release sync и browser-local лист подтверждения ответственности.
+- #253/#252 — release sync, source-remediation UI и evidence-only candidates.
 - #251/#250 — release sync и grouped source-remediation SQL.
 - #249/#248 — release sync и read-only manager assignment proposal.
 - #247/#246 — release sync и exact current/previous period comparison.
@@ -30,12 +30,14 @@
 ## Supabase production
 
 - Project: `ofewxuqfjhamgerwzull`.
-- Latest live: `20260713184344_nav_v2_responsibility_confirmation_context`.
-- Canonical blob: `c4ee976a59e2645c04c97948e234d69b8a7d03d1`.
+- Live core preview: `20260713195749_nav_v2_responsibility_point_preview`.
+- Live guard: `20260713195810_nav_v2_responsibility_point_preview_guard`.
+- Canonical core blob: `298c5093419e7cf3837b3255df170f32f60498c9`.
+- Canonical guard blob: `d92aaf30482f0fc8802f947e796ca9307cc3479f`.
 - `nav-invite-user`: v10 ACTIVE, `verify_jwt=true`.
 - `nav-v2-deal-api`: v4 ACTIVE, `verify_jwt=true`.
-- RPC grant health: 49 items, 0 problems.
-- Frontend RPC coverage: 42 items, 0 problems.
+- RPC grant health: 50 items, 0 problems.
+- Frontend RPC coverage: 43 items, 0 problems.
 - Supabase branches: только production `main`; isolated auth target отсутствует.
 
 ## Operational adoption
@@ -98,75 +100,94 @@
 - Во всех четырёх strong-evidence сделках кандидат — Овчинников А. К.
 - Evidence не определяет сторону сделки и не выполняет назначение.
 
-## PR #254 — локальный лист подтверждения
+## Локальный confirmation workflow
 
 Экран `manager-source-remediation-v2.html` позволяет:
 
-- выбрать локальный статус проверки;
-- подготовить `seller_spn_id` и `buyer_spn_id`;
+- подготовить `seller_spn_id`, `buyer_spn_id` и `manager_id` в localStorage;
 - явно выбрать сторону evidence-кандидата;
-- оставить основание или вопрос;
-- подготовить `manager_id` активного СПН;
-- сохранить черновик только в `localStorage` текущего пользователя;
-- скачать JSON и CSV;
-- скопировать текстовую сводку.
+- добавить основание решения;
+- скачать JSON/CSV;
+- импортировать JSON в local package validator;
+- получить `point_operation_ready=true` только для ровно одной свежей и однозначной операции.
 
-Live confirmation context:
-
-- active SPN options: 3;
-- SPN without manager: 1 — Овчинников А. К.;
-- manager options: 1 — Алексей Ковтун, role owner;
-- `local_storage_only=true`;
-- `server_selection_available=false`;
-- `server_mutation_available=false`.
-
-## PR #256 — проверка экспортированного JSON
-
-Добавлен отдельный модуль:
-
-`assets/js/nav-v2/manager-source-remediation-validation-v2.js`
-
-Он:
+Package validator:
 
 - принимает JSON до 2 МБ;
-- поддерживает confirmation export schema 1/2;
-- требует правильный `export_type` и safety markers;
-- повторно получает свежий `nav_v2_get_operational_adoption_report`;
-- сравнивает экспортированные `current_seller_spn_id`, `current_buyer_spn_id`, `current_manager_id` с текущим read-only отчётом;
-- проверяет, что предлагаемый СПН или менеджер всё ещё присутствует в допустимом каталоге;
-- требует `decision_status=confirmed`;
-- требует непустой комментарий-основание;
-- классифицирует операции как `ready`, `stale`, `invalid`, `not_ready`, `no_change`;
-- разрешает verdict `point_operation_ready=true` только когда есть ровно одна свежая и однозначная операция без stale/invalid/not_ready;
-- позволяет скачать отдельный validation report;
-- позволяет скопировать готовую точечную операцию;
+- повторно получает свежий adoption report;
+- сравнивает current ids с live report;
+- проверяет допустимые активные профили;
+- требует `decision_status=confirmed` и комментарий;
+- классифицирует `ready`, `stale`, `invalid`, `not_ready`, `no_change`;
 - ничего не пишет в Supabase.
 
-Импортированный JSON хранится только в памяти страницы. Новый browser RPC не добавлялся: оба frontend-модуля используют существующий read-only adoption RPC.
+## PR #258 — server responsibility point preview
 
-## Проверки PR #256
+Public RPC:
 
-- Dedicated remediation/confirmation/validation contract: PASS.
-- Полный static suite: PASS.
-- JavaScript syntax: PASS.
-- Public desktop/mobile Playwright: PASS.
-- Review threads: 0.
-- `authenticated-smoke`: `skipped`; это не authenticated PASS.
-- Supabase schema и release baseline этим PR не менялись.
+`public.nav_v2_preview_responsibility_point_correction(p_operation jsonb)`
 
-## Security и access
+Private implementation:
 
-- Public adoption wrapper: authenticated=true, anon=false, PUBLIC=false.
-- Private adoption/comparison/proposal/remediation/evidence/confirmation helpers: service_role only.
-- SPN invocation adoption report: SQLSTATE `42501`.
-- Browser validator не содержит update/add/save RPC и прямого доступа к таблицам.
-- Server selection и mutation остаются выключены.
-- Leaked-password protection не включать до invite/recovery E2E.
-- Supabase Advisors после confirmation-context DDL через connector были недоступны (`permission denied`); не считать это Advisor PASS. Advisor scope CI прошёл.
+`nav_v2_private.nav_v2_preview_responsibility_point_correction_unchecked_20260714(p_operation jsonb)`
+
+Поддерживаемые операции:
+
+- `deal_spn` → только `seller_spn_id` или `buyer_spn_id`;
+- `profile_manager` → только `manager_id`.
+
+Server preview:
+
+- доступен только owner/admin;
+- требует ровно одну нормализованную операцию;
+- требует явный ключ `expected_current_id`, включая JSON null;
+- требует основание не короче 10 символов;
+- проверяет live current value;
+- проверяет active/role целевого и предлагаемого профиля;
+- отказывает при stale, no-change, неизвестном поле, неверной роли или self-manager;
+- возвращает before/after, preconditions, fingerprint и `expires_at` через 15 минут;
+- `mutation_available=false`;
+- `execution_rpc_available=false`;
+- `requires_revalidation=true`;
+- не создаёт audit event и не изменяет таблицы.
+
+UI-модуль:
+
+`assets/js/nav-v2/manager-source-remediation-server-preview-v2.js`
+
+Он появляется после локального validation block. Manager может пользоваться локальным validator, но server fingerprint доступен только owner/admin.
+
+## Production verification PR #258
+
+Owner read-only preview:
+
+- target: Овчинников Александр Константинович;
+- operation: `profile_manager.manager_id`;
+- before: `null`;
+- proposed: Алексей Ковтун, role owner;
+- result: `ready=true`;
+- fingerprint сформирован;
+- срок действия: 15 минут;
+- пакет без `expected_current_id`: `missing_expected_current`;
+- SPN invocation: SQLSTATE `42501`.
+
+Grants:
+
+- public wrapper: authenticated=true, anon=false, PUBLIC=false;
+- private implementation: service_role=true, authenticated=false, anon=false, PUBLIC=false.
+
+## Advisors
+
+- Security Advisor после deploy получен.
+- Новый public preview присутствует как ожидаемый `authenticated_security_definer_function_executable` warning и учтён в Navigator-only Advisor baseline.
+- Private implementation наружу не утекла.
+- Leaked-password protection остаётся выключенной до invite/recovery E2E.
+- Performance Advisor не показал preview-specific проблему.
+- Общий Performance Advisor смешивает Navigator, legacy Nav, Leader, Parket и другие подсистемы; автоматическое удаление индексов или массовая правка RLS запрещены без workload evidence.
 
 ## Рабочие данные
 
-После PR #256 read-only verification:
+До и после server preview deploy:
 
 - Deals: 21.
 - Documents: 168.
@@ -174,19 +195,32 @@ Live confirmation context:
 - Risks: 49.
 - Events: 116.
 - Profiles: 5.
-- Report version: 6.
-- Latest migration: `20260713184344`.
 - Persisted task type: 0.
 - Persisted SLA: 0.
 - Реальные `seller_spn_id`, `buyer_spn_id`, `manager_id`, статусы и задачи не менялись.
 
+## Проверки PR #258
+
+- Dedicated remediation contract: PASS.
+- Responsibility point preview private-wrapper regression: PASS.
+- RPC surface health-chain contract: PASS.
+- Full static suite: PASS.
+- JavaScript syntax: PASS.
+- Advisor scope: PASS.
+- Public desktop/mobile Playwright: PASS.
+- Review threads: 0.
+- `authenticated-smoke`: `skipped`; это не authenticated PASS.
+- DDL rehearsal с полным `ROLLBACK`: PASS.
+- Production post-deploy verification: PASS.
+
 ## Release drift
 
-- Baseline latest live: `20260713184344`.
-- Live `20260713184344` связан с canonical `20260713234500`.
-- Alias manifest: 13 approved live mappings и 13 canonical repository-only sources.
-- PR #256 не менял БД, поэтому новый release-sync не требуется.
-- Первый approved workflow run в Environment `navigator-production-readonly` всё ещё требует ручной настройки владельца.
+- Baseline latest live после release-sync: `20260713195810`.
+- Live `20260713195749` связан с canonical `20260714001500` и blob `298c5093419e7cf3837b3255df170f32f60498c9`.
+- Live `20260713195810` связан с canonical `20260714001600` и blob `d92aaf30482f0fc8802f947e796ca9307cc3479f`.
+- Alias manifest: 15 approved live mappings и 15 canonical repository-only sources.
+- Неизвестный remote-only/repo-only drift продолжает ломать gate.
+- Approved workflow run в Environment `navigator-production-readonly` всё ещё требует ручной настройки владельца.
 
 ## Authenticated E2E blocker
 
@@ -194,31 +228,32 @@ Live confirmation context:
 - GitHub Environment `navigator-e2e`, disposable role accounts и mailbox отсутствуют.
 - Authenticated Playwright matrix: BLOCKED.
 - Invite/access-link/password/recovery/email delivery: BLOCKED.
-- Browser task/document/risk/status mutations: BLOCKED.
+- Browser mutation E2E: BLOCKED.
 - Workflow success при `authenticated-smoke=skipped` не является authenticated PASS.
 
 ## Ручные действия владельца
 
 1. Открыть `manager-source-remediation-v2.html` под owner/admin.
-2. Заполнить локальный лист подтверждения.
+2. Заполнить локальный confirmation draft.
 3. Скачать JSON.
-4. В блоке «Проверка JSON перед точечной операцией» импортировать этот файл.
-5. Исправить файл или локальный черновик, пока verdict не станет `point_operation_ready=true`.
-6. Скачать validation report и сохранить его как evidence решения.
-7. Только после этого передать одну готовую операцию для audited point correction.
-8. Создать Environment `navigator-production-readonly` и выполнить approved drift workflow.
-9. Для auth E2E создать отдельный test project/branch и Environment `navigator-e2e`.
+4. Импортировать JSON в local validator и получить `point_operation_ready=true`.
+5. Нажать «Получить серверный preview».
+6. Скачать server preview с актуальным fingerprint.
+7. Сохранить confirmation JSON, validation report и server preview как три evidence-файла.
+8. Только после явного подтверждения рассматривать одну audited point correction.
+9. Создать Environment `navigator-production-readonly` и выполнить approved drift workflow.
+10. Для auth E2E создать отдельный test project/branch и Environment `navigator-e2e`.
 
 ## NEXT_WORK_QUEUE
 
-- P0 MANUAL — заполнить confirmation draft, выгрузить JSON и получить `point_operation_ready=true`.
+- P0 MANUAL — получить confirmation JSON, validation report и server preview fingerprint.
 - P0 MANUAL — approved release drift workflow run с `allow_drift=false`.
 - P0 BLOCKED — isolated target + authenticated role/invite/recovery/mutation E2E.
-- P1 BLOCKED ON VALIDATED EXPORT — одна audited point correction одного SPN field либо `manager_id` с pre/post snapshot и audit evidence.
+- P1 BLOCKED ON THREE EVIDENCE FILES — одна audited point correction одного SPN field либо `manager_id`, с повторной revalidation, pre/post snapshot и audit event.
 - P1 BLOCKED ON AUTH EVIDENCE — audited synthetic task contract mutation.
 - P1 — leaked-password protection только после auth E2E.
-- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, adoption snapshot/comparison, manager proposal, grouped remediation, evidence candidates, local confirmation draft и package validator без новой причины.
+- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, adoption snapshot/comparison, manager proposal, grouped remediation, evidence candidates, local confirmation draft, package validator и server point preview без новой причины.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #256 и live migration 20260713184344. Один раз проверь Environment navigator-production-readonly, isolated auth target и наличие confirmation JSON/validation report. Если validation report содержит point_operation_ready=true — выполни только одну audited point correction с pre/post snapshot и audit evidence. Если подтверждённого файла нет — реальные назначения не менять.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #258 и live migration 20260713195810. Один раз проверь Environment navigator-production-readonly, isolated auth target и наличие трёх evidence-файлов: confirmation JSON, validation report с point_operation_ready=true и server preview с неистёкшим fingerprint. Если все три файла подтверждены владельцем — выполни только одну audited point correction с повторной server revalidation, pre/post snapshot и audit event. Если evidence нет — реальные назначения не менять.`
