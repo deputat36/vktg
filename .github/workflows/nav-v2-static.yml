@@ -29,6 +29,7 @@ on:
       - 'scripts/check_nav_v2_task_taxonomy.py'
       - 'scripts/check_nav_v2_broker_queue.py'
       - 'scripts/check_nav_v2_viewer_workspace.py'
+      - 'scripts/check_nav_v2_lawyer_focus.py'
       - 'scripts/check_nav_v2_e2e_contract.py'
       - 'scripts/check-nav-v2-e2e-env.mjs'
       - 'scripts/prepare-nav-v2-e2e-config.mjs'
@@ -153,6 +154,8 @@ jobs:
         run: python3 scripts/check_nav_v2_broker_queue.py
       - name: Check viewer workspace
         run: python3 scripts/check_nav_v2_viewer_workspace.py
+      - name: Check lawyer focus mode
+        run: python3 scripts/check_nav_v2_lawyer_focus.py
       - name: Check authenticated browser E2E contract
         run: python3 scripts/check_nav_v2_e2e_contract.py
       - name: Check baseline CSP
