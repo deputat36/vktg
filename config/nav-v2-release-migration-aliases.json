@@ -73,7 +73,7 @@
     },
     "20260712203000": {
       "represented_by_live": ["20260712205117"],
-      "source_blob_sha": "cb1dc13fb0102a55f54ab684d176006ee7ec951",
+      "source_blob_sha": "cb1dc13fb010b2a55f54ab684d176006ee7ec951",
       "reason": "Canonical fresh-install source for the already-live broker-triage queue."
     },
     "20260713090856": {
