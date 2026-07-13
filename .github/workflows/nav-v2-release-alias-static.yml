@@ -26,10 +26,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          show-progress: false
       - name: Validate release baseline and approved migration aliases
+        id: validate
+        shell: bash
         run: |
-          python3 scripts/check_nav_v2_release_drift.py --self-test
-          python3 scripts/check_nav_v2_release_drift.py --baseline-only
-          python3 scripts/check_nav_v2_release_drift_aliases.py --self-test
-          python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only
-          python3 scripts/check_nav_v2_release_drift_workflow.py
+          mkdir -p artifacts
+          set +e
+          (
+            python3 scripts/check_nav_v2_release_drift.py --self-test
+            python3 scripts/check_nav_v2_release_drift.py --baseline-only
+            python3 scripts/check_nav_v2_release_drift_aliases.py --self-test
+            python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only
+            python3 scripts/check_nav_v2_release_drift_workflow.py
+          ) 2>&1 | tee artifacts/migration-alias-check.log
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload migration alias evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigator-v2-migration-alias-check-${{ github.run_id }}
+          path: artifacts/migration-alias-check.log
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail when alias validation fails
+        if: steps.validate.outputs.exit_code != '0'
+        run: exit 1
