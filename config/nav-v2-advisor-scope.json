@@ -30,7 +30,7 @@
         "reason": "Совместимый диагностический wrapper; не повышает права и делегирует owner/admin health RPC."
       }
     ],
-    "expected_warning_count": 46,
+    "expected_warning_count": 47,
     "decision": "intentional_with_server_gate",
     "never_auto_revoke": true,
     "required_evidence": [
