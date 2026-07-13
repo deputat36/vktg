@@ -110,6 +110,15 @@ def main() -> int:
     require(module, (
         "rpc('nav_v2_get_operational_adoption_report'",
         "p_days: periodDays",
+        "p_days: periodDays * 2",
+        "Promise.all([",
+        "derivePeriodComparison",
+        "subtractMetric",
+        "additiveFields",
+        "Текущий период против предыдущего",
+        "Сделки без активности",
+        "Исторические снимки открытых задач",
+        "Без единого рейтинга",
         "['owner', 'admin', 'manager']",
         "Активность без результата",
         "Подтверждённый результат",
@@ -117,6 +126,8 @@ def main() -> int:
         "data-period",
         "data-filter",
     ), MODULE.name, errors)
+    if module.count("rpc('nav_v2_get_operational_adoption_report'") != 2:
+        errors.append("operational adoption comparison must use exactly two read-only report calls")
     for forbidden in (
         "nav_v2_update_",
         "nav_v2_add_",
@@ -179,8 +190,8 @@ def main() -> int:
         return 1
 
     print(
-        "Navigator v2 operational adoption passed: read-only report, active-profile wrapper, "
-        "private implementation, role routes and registry/Advisor alignment checked"
+        "Navigator v2 operational adoption passed: read-only report, previous-period comparison, "
+        "active-profile wrapper, private implementation, role routes and registry/Advisor alignment checked"
     )
     return 0
 
