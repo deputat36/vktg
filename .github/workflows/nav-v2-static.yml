@@ -10,6 +10,7 @@ on:
       - 'config/nav-v2-build.json'
       - 'config/nav-v2-role-contract.json'
       - 'config/nav-v2-rpc-surface.json'
+      - 'config/nav-v2-release-baseline.json'
       - 'package.json'
       - 'package-lock.json'
       - 'playwright.config.mjs'
@@ -32,6 +33,8 @@ on:
       - 'scripts/check_nav_v2_lawyer_focus.py'
       - 'scripts/check_nav_v2_spn_save_handoff.py'
       - 'scripts/check_nav_v2_owner_admin_ia.py'
+      - 'scripts/check_nav_v2_release_drift.py'
+      - 'scripts/check_nav_v2_release_drift_workflow.py'
       - 'scripts/check_nav_v2_e2e_contract.py'
       - 'scripts/check-nav-v2-e2e-env.mjs'
       - 'scripts/prepare-nav-v2-e2e-config.mjs'
@@ -39,6 +42,7 @@ on:
       - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
       - '.github/workflows/nav-v2-live-pages.yml'
+      - '.github/workflows/nav-v2-release-drift.yml'
       - '.github/workflows/nav-v2-static.yml'
       - '.github/workflows/nav-v2-authenticated-e2e.yml'
   push:
@@ -162,6 +166,12 @@ jobs:
         run: python3 scripts/check_nav_v2_spn_save_handoff.py
       - name: Check owner and admin information architecture
         run: python3 scripts/check_nav_v2_owner_admin_ia.py
+      - name: Check release drift parser and baseline
+        run: |
+          python3 scripts/check_nav_v2_release_drift.py --self-test
+          python3 scripts/check_nav_v2_release_drift.py --baseline-only
+      - name: Check controlled release drift workflow
+        run: python3 scripts/check_nav_v2_release_drift_workflow.py
       - name: Check authenticated browser E2E contract
         run: python3 scripts/check_nav_v2_e2e_contract.py
       - name: Check baseline CSP

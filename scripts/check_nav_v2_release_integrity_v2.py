@@ -178,6 +178,46 @@ else:
         if marker not in rpc_auth_smoke:
             errors.append(f"RPC auth smoke missing marker: {marker}")
 
+release_baseline_path = root / "config/nav-v2-release-baseline.json"
+release_drift_path = root / "scripts/check_nav_v2_release_drift.py"
+release_drift_contract_path = root / "scripts/check_nav_v2_release_drift_workflow.py"
+release_drift_workflow_path = root / ".github/workflows/nav-v2-release-drift.yml"
+release_drift_doc_path = root / "docs/NAV_V2_RELEASE_DRIFT.md"
+for required_path in (
+    release_baseline_path,
+    release_drift_path,
+    release_drift_contract_path,
+    release_drift_workflow_path,
+    release_drift_doc_path,
+):
+    if not required_path.exists():
+        errors.append(f"Missing Navigator release drift artifact: {required_path.relative_to(root)}")
+
+if release_drift_workflow_path.exists():
+    release_workflow = release_drift_workflow_path.read_text(encoding="utf-8")
+    for marker in (
+        "environment: navigator-production-readonly",
+        "supabase migration list > artifacts/migration-list.txt",
+        "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/functions",
+        "python3 scripts/check_nav_v2_release_drift.py",
+        "Fail when drift is detected",
+    ):
+        if marker not in release_workflow:
+            errors.append(f"Release drift workflow missing marker: {marker}")
+    for forbidden in ("supabase db push", "supabase functions deploy", "supabase migration repair"):
+        if forbidden in release_workflow.lower():
+            errors.append(f"Release drift workflow must remain read-only: {forbidden}")
+
+if static_workflow_path.exists():
+    static_workflow = static_workflow_path.read_text(encoding="utf-8")
+    for marker in (
+        "python3 scripts/check_nav_v2_release_drift.py --self-test",
+        "python3 scripts/check_nav_v2_release_drift.py --baseline-only",
+        "python3 scripts/check_nav_v2_release_drift_workflow.py",
+    ):
+        if marker not in static_workflow:
+            errors.append(f"Static workflow missing release drift check: {marker}")
+
 if legacy_count:
     print(f"WARNING: {legacy_count} legacy migration filenames are outside the current convention")
 if errors:
