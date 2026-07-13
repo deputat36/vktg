@@ -251,6 +251,7 @@ async function capturePackage(file) {
   previewResult = null;
   previewOperation = null;
   setTimeout(mount, 0);
+  setTimeout(mount, 250);
 }
 
 document.addEventListener('change', (event) => {
@@ -271,7 +272,8 @@ document.addEventListener('click', (event) => {
 async function loadProfile() {
   if (!getCachedUser()) return;
   try {
-    profile = await rpc('nav_v2_get_my_profile', {}, 15000);
+    const response = await rpc('nav_v2_get_my_profile', {}, 15000);
+    profile = response?.profile || response || null;
   } catch (error) {
     profile = null;
     statusText = `Профиль для server preview не загружен: ${error.message || error}`;
@@ -282,7 +284,11 @@ async function loadProfile() {
 
 const observer = new MutationObserver(() => {
   const localSection = document.getElementById(LOCAL_VALIDATION_ID);
-  if (localSection && !document.getElementById(CONTAINER_ID)) mount();
+  if (!localSection) return;
+  const previewSection = document.getElementById(CONTAINER_ID);
+  const previewButton = document.getElementById('runResponsibilityServerPreview');
+  const shouldEnable = Boolean(ownerAdminAllowed() && readyOperation() && !busy);
+  if (!previewSection || (previewButton && previewButton.disabled === shouldEnable)) mount();
 });
 observer.observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
 
