@@ -1,0 +1,35 @@
+name: Navigator v2 migration alias checks
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-release-baseline.json'
+      - 'config/nav-v2-release-migration-aliases.json'
+      - 'scripts/check_nav_v2_release_drift.py'
+      - 'scripts/check_nav_v2_release_drift_aliases.py'
+      - 'scripts/check_nav_v2_release_drift_workflow.py'
+      - '.github/workflows/nav-v2-release-drift.yml'
+      - '.github/workflows/nav-v2-release-alias-static.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-release-baseline.json'
+      - 'config/nav-v2-release-migration-aliases.json'
+      - 'scripts/check_nav_v2_release_drift_aliases.py'
+      - 'scripts/check_nav_v2_release_drift_workflow.py'
+      - '.github/workflows/nav-v2-release-drift.yml'
+      - '.github/workflows/nav-v2-release-alias-static.yml'
+
+jobs:
+  migration-aliases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release baseline and approved migration aliases
+        run: |
+          python3 scripts/check_nav_v2_release_drift.py --self-test
+          python3 scripts/check_nav_v2_release_drift.py --baseline-only
+          python3 scripts/check_nav_v2_release_drift_aliases.py --self-test
+          python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only
+          python3 scripts/check_nav_v2_release_drift_workflow.py
