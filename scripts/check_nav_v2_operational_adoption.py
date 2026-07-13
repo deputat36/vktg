@@ -131,7 +131,7 @@ def main() -> int:
     require(menu, (
         "path.includes('operational-adoption-v2')",
         "makeLink(active, 'adoption', './operational-adoption-v2.html', 'Движение и результат')",
-        "'dashboard', 'spn', 'deals', 'manager', 'adoption', 'queue'",
+        "'dashboard', 'spn', 'deals', 'manager', 'adoption', 'remediation', 'queue'",
     ), ROLE_MENU.name, errors)
 
     role_contract = json.loads(ROLE_CONTRACT.read_text(encoding="utf-8"))
