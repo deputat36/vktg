@@ -74,6 +74,7 @@
     "nav_v2_get_manager_assignment_proposal_unchecked_20260713",
     "nav_v2_get_manager_source_remediation_plan_unchecked_20260713",
     "nav_v2_get_responsibility_evidence_unchecked_20260713",
+    "nav_v2_get_responsibility_confirmation_context_unchecked_20260713",
     "nav_v2_touch_updated_at",
     "nav_v2_set_auto_task_due_date",
     "nav_v2_guard_active_spn_manager"
