@@ -1,0 +1,37 @@
+name: Navigator v2 Advisor scope
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-rpc-surface.json'
+      - 'config/nav-v2-advisor-scope.json'
+      - 'scripts/check_nav_v2_advisor_scope.py'
+      - 'docs/NAV_V2_ADVISOR_TRIAGE.md'
+      - 'docs/NAV_V2_AUTONOMOUS_AUDIT_PLAN_20260713.md'
+      - '.github/workflows/nav-v2-advisor-scope.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-rpc-surface.json'
+      - 'config/nav-v2-advisor-scope.json'
+      - 'scripts/check_nav_v2_advisor_scope.py'
+      - '.github/workflows/nav-v2-advisor-scope.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisor-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Advisor policy JSON
+        run: python3 -m json.tool config/nav-v2-advisor-scope.json > /dev/null
+      - name: Compile Advisor validator
+        run: python3 -m py_compile scripts/check_nav_v2_advisor_scope.py
+      - name: Check Navigator-only Advisor baseline
+        run: python3 scripts/check_nav_v2_advisor_scope.py
+      - name: Test Advisor drift detection
+        run: python3 scripts/check_nav_v2_advisor_scope.py --self-test
