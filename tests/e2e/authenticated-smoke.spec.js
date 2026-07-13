@@ -96,6 +96,11 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
       await openPage(page, '/broker-v2.html');
       await expectNoInfiniteLoader(page);
       await expect(page.locator('body')).toContainText(/Брокерская очередь|Предварительная финансовая оценка/i);
+    } else if (role === 'viewer') {
+      await openPage(page, '/viewer-v2.html');
+      await expectNoInfiniteLoader(page);
+      await expect(page.locator('body')).toContainText(/Обзор сделок|Режим наблюдения/i);
+      await expect(page.locator('body')).not.toContainText(/Назначить|Закрыть задачу|Сменить статус/i);
     }
   });
 

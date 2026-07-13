@@ -89,7 +89,7 @@ function roleWorkspace(role) {
       ...common,
       title: 'Обзор сделок',
       description: 'Режим наблюдения: статусы, готовность, препятствия и ближайшие действия без изменения данных.',
-      primaryHref: './deals-v2.html',
+      primaryHref: './viewer-v2.html',
       primaryLabel: 'Открыть обзор сделок',
       listTitle: 'Доступные для просмотра сделки',
       firstMetric: 'Доступно для просмотра'

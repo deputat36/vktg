@@ -26,7 +26,7 @@ ROLE_DASHBOARD_DESTINATIONS = {
     "spn": "./spn-v2.html",
     "lawyer": "./queue-v2.html",
     "broker": "./broker-v2.html",
-    "viewer": "./deals-v2.html",
+    "viewer": "./viewer-v2.html",
 }
 
 HREF_RE = re.compile(r'href="\.\/([^"?#]+)')

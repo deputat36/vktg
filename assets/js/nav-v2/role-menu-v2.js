@@ -13,6 +13,7 @@ function getActivePage() {
   if (path.includes('dashboard-v2')) return 'dashboard';
   if (path.includes('manager-v2') || path.includes('task-review-v2')) return 'manager';
   if (path.includes('broker-v2')) return 'broker';
+  if (path.includes('viewer-v2')) return 'viewer';
   if (path.includes('spn-v2')) return 'spn';
   if (path.includes('queue-v2')) return 'queue';
   if (path.includes('deals-v2') || path.includes('deal-card-v2')) return 'deals';
@@ -70,7 +71,7 @@ function buildMenu(role) {
     links.push(makeLink(active, 'manager', './manager-v2.html', 'Контроль сделок'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки команды'));
   } else if (role === 'viewer') {
-    links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Обзор'));
+    links.push(makeLink(active, 'viewer', './viewer-v2.html', 'Обзор'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки'));
   } else if (role === 'owner' || role === 'admin') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
