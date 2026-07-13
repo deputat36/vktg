@@ -5,13 +5,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "supabase/migrations/20260713223000_nav_v2_manager_source_remediation_plan.sql"
+REMEDIATION_MIGRATION = ROOT / "supabase/migrations/20260713223000_nav_v2_manager_source_remediation_plan.sql"
+EVIDENCE_MIGRATION = ROOT / "supabase/migrations/20260713233000_nav_v2_responsibility_evidence_candidates.sql"
 PAGE = ROOT / "manager-source-remediation-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-v2.js"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
 RPC_REGISTRY = ROOT / "config/nav-v2-rpc-surface.json"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-manager-source-remediation.yml"
+STATIC_WORKFLOW = ROOT / ".github/workflows/nav-v2-static.yml"
 
 
 def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) -> None:
@@ -22,15 +24,26 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (MIGRATION, PAGE, MODULE, MENU, ROLE_CONTRACT, RPC_REGISTRY, WORKFLOW):
+    required = (
+        REMEDIATION_MIGRATION,
+        EVIDENCE_MIGRATION,
+        PAGE,
+        MODULE,
+        MENU,
+        ROLE_CONTRACT,
+        RPC_REGISTRY,
+        WORKFLOW,
+        STATIC_WORKFLOW,
+    )
+    for path in required:
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
         print("\n".join(errors))
         return 1
 
-    sql = MIGRATION.read_text(encoding="utf-8")
-    require(sql, (
+    remediation_sql = REMEDIATION_MIGRATION.read_text(encoding="utf-8")
+    require(remediation_sql, (
         "nav_v2_private.nav_v2_get_manager_source_remediation_plan_unchecked_20260713(",
         "security definer",
         "set search_path = public, pg_temp",
@@ -40,49 +53,77 @@ def main() -> int:
         "'deal_spn_missing'",
         "'execution_order'",
         "'mutation_available', false",
-        "'report_version', 4",
         "'manager_source_remediation_plan', v_remediation_plan",
-        "revoke execute on function nav_v2_private.nav_v2_get_manager_source_remediation_plan_unchecked_20260713(integer) from anon, authenticated",
-        "grant execute on function nav_v2_private.nav_v2_get_manager_source_remediation_plan_unchecked_20260713(integer) to service_role",
         "Manager source remediation implementation must remain private",
-    ), MIGRATION.name, errors)
+    ), REMEDIATION_MIGRATION.name, errors)
 
-    lowered = sql.lower()
-    for forbidden in (
-        "update public.nav_deals_v2",
-        "update public.nav_user_profiles",
-        "insert into public.nav_deals_v2",
-        "insert into public.nav_user_profiles",
-        "delete from public.nav_deals_v2",
-        "delete from public.nav_user_profiles",
-    ):
-        if forbidden in lowered:
-            errors.append(f"source remediation migration must remain read-only: {forbidden}")
+    evidence_sql = EVIDENCE_MIGRATION.read_text(encoding="utf-8")
+    require(evidence_sql, (
+        "nav_v2_private.nav_v2_get_responsibility_evidence_unchecked_20260713(",
+        "security definer",
+        "set search_path = public, pg_temp",
+        "v_role is null or v_role not in ('owner', 'admin', 'manager')",
+        "'deal_creator'::text",
+        "'participant'::text",
+        "'event_actor'::text",
+        "'task_creator'::text",
+        "'task_assignee'::text",
+        "'task_completer'::text",
+        "'document_assignee'::text",
+        "'document_checker'::text",
+        "'strong_single_evidence'",
+        "'no_active_spn_evidence'",
+        "'selection_available', false",
+        "'mutation_available', false",
+        "'report_version', 5",
+        "'responsibility_evidence', v_responsibility_evidence",
+        "revoke execute on function nav_v2_private.nav_v2_get_responsibility_evidence_unchecked_20260713(integer) from anon, authenticated",
+        "grant execute on function nav_v2_private.nav_v2_get_responsibility_evidence_unchecked_20260713(integer) to service_role",
+        "Responsibility evidence implementation must remain private",
+    ), EVIDENCE_MIGRATION.name, errors)
+
+    for label, sql in ((REMEDIATION_MIGRATION.name, remediation_sql), (EVIDENCE_MIGRATION.name, evidence_sql)):
+        lowered = sql.lower()
+        for forbidden in (
+            "update public.nav_deals_v2",
+            "update public.nav_user_profiles",
+            "insert into public.nav_deals_v2",
+            "insert into public.nav_user_profiles",
+            "delete from public.nav_deals_v2",
+            "delete from public.nav_user_profiles",
+        ):
+            if forbidden in lowered:
+                errors.append(f"{label}: read-only workflow contains mutation {forbidden}")
 
     page = PAGE.read_text(encoding="utf-8")
     require(page, (
         "Content-Security-Policy",
         'aria-live="polite"',
-        "manager-source-remediation-v2.js?v=20260713-01",
+        "manager-source-remediation-v2.js?v=20260713-02",
         "role-menu-v2.js?v=20260713-02",
+        "nav-base-menu-cleanup-v2.js",
     ), PAGE.name, errors)
 
     module = MODULE.read_text(encoding="utf-8")
     require(module, (
         "rpc('nav_v2_get_operational_adoption_report'",
         "manager_source_remediation_plan",
+        "responsibility_evidence",
         "Что исправить до назначения менеджера",
         "Порядок исправления",
         "Группы ручного исправления",
         "Автоматические исправления и массовые назначения отключены",
-        "Затронутые сделки",
-        "mutation_available",
+        "Подтверждающие действия активных СПН",
+        "Evidence-only candidates",
+        "История действий — не назначение",
+        "Выбор и запись отключены",
         "operational-adoption-v2.html",
     ), MODULE.name, errors)
     if module.count("rpc('nav_v2_get_operational_adoption_report'") != 1:
         errors.append("remediation UI must use exactly one existing adoption report RPC call")
     for forbidden in (
         "nav_v2_get_manager_source_remediation_plan_unchecked_20260713",
+        "nav_v2_get_responsibility_evidence_unchecked_20260713",
         "nav_v2_update_",
         "nav_v2_add_",
         "nav_v2_save_",
@@ -96,7 +137,7 @@ def main() -> int:
     require(menu, (
         "path.includes('manager-source-remediation-v2')",
         "makeLink(active, 'remediation', './manager-source-remediation-v2.html', 'Исправить источники')",
-        "'dashboard', 'spn', 'deals', 'manager', 'adoption', 'queue', 'remediation'",
+        "'dashboard', 'spn', 'deals', 'manager', 'adoption', 'remediation', 'queue'",
     ), MENU.name, errors)
 
     contract = json.loads(ROLE_CONTRACT.read_text(encoding="utf-8"))
@@ -109,20 +150,31 @@ def main() -> int:
             errors.append(f"role contract exposes remediation route to {role}")
 
     registry = json.loads(RPC_REGISTRY.read_text(encoding="utf-8"))
-    helper = "nav_v2_get_manager_source_remediation_plan_unchecked_20260713"
-    for category in ("frontend_api", "admin_api", "demo_api"):
-        if helper in registry.get(category, []):
-            errors.append(f"private remediation helper leaked into {category}")
+    for helper in (
+        "nav_v2_get_manager_source_remediation_plan_unchecked_20260713",
+        "nav_v2_get_responsibility_evidence_unchecked_20260713",
+    ):
+        for category in ("frontend_api", "admin_api", "demo_api"):
+            if helper in registry.get(category, []):
+                errors.append(f"private helper {helper} leaked into {category}")
     if registry.get("frontend_api", []).count("nav_v2_get_operational_adoption_report") != 1:
-        errors.append("existing adoption report RPC must remain the only remediation browser endpoint")
+        errors.append("existing adoption report RPC must remain the only browser endpoint")
 
     workflow = WORKFLOW.read_text(encoding="utf-8")
     require(workflow, (
+        "20260713233000_nav_v2_responsibility_evidence_candidates.sql",
         "python3 scripts/check_nav_v2_manager_source_remediation.py",
         "python3 scripts/check_nav_v2_role_contract.py",
         "python3 scripts/check_nav_v2_rpc_surface.py",
         "python3 scripts/check_nav_v2_release_integrity_v2.py",
     ), WORKFLOW.name, errors)
+
+    static_workflow = STATIC_WORKFLOW.read_text(encoding="utf-8")
+    require(static_workflow, (
+        "scripts/check_nav_v2_manager_source_remediation.py",
+        "Check manager source remediation and responsibility evidence",
+        "python3 scripts/check_nav_v2_manager_source_remediation.py",
+    ), STATIC_WORKFLOW.name, errors)
 
     if errors:
         print("Navigator v2 manager source remediation errors:")
@@ -131,8 +183,8 @@ def main() -> int:
         return 1
 
     print(
-        "Navigator v2 manager source remediation passed: grouped manual actions, "
-        "one existing browser RPC, role-safe route and mutation disabled"
+        "Navigator v2 manager source remediation passed: delivered page, grouped manual actions, "
+        "evidence-only candidates, one existing browser RPC, role-safe route and mutation disabled"
     )
     return 0
 
