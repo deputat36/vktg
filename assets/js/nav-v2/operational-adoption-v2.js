@@ -2,15 +2,30 @@ import { setupTop, getCachedUser, renderAuthBox, rpc, esc, statusText } from './
 
 const app = document.getElementById('app');
 let report = null;
+let comparison = null;
 let busy = false;
 let errorText = '';
 let activeFilter = 'attention';
 let periodDays = 30;
 
+const additiveFields = [
+  'meaningful_events',
+  'created_tasks',
+  'client_actions_created',
+  'quality_warnings_created',
+  'completed_tasks',
+  'created_risks',
+  'resolved_risks',
+  'created_documents',
+  'resolved_documents',
+  'confirmed_results',
+  'activity_signals'
+];
+
 function n(value) { return Number(value || 0); }
 function summary() { return report?.summary || {}; }
 function items() { return Array.isArray(report?.items) ? report.items : []; }
-function allowed() { return ['owner', 'admin', 'manager'].includes(report?.profile?.role); }
+function allowed(value = report) { return ['owner', 'admin', 'manager'].includes(value?.profile?.role); }
 
 function fmtDateTime(value) {
   if (!value) return 'Не зафиксировано';
@@ -52,6 +67,130 @@ function periodButton(days) {
 
 function metric(label, value, tone = '') {
   return `<div class="metric ${tone}"><span>${esc(label)}</span><b>${esc(String(value))}</b></div>`;
+}
+
+function itemMap(value) {
+  return new Map((Array.isArray(value?.items) ? value.items : []).map((item) => [String(item.deal_id || ''), item]));
+}
+
+function subtractMetric(longItem, currentItem, field) {
+  return Math.max(0, n(longItem?.[field]) - n(currentItem?.[field]));
+}
+
+function derivePeriodComparison(currentReport, doubledReport) {
+  const currentItems = itemMap(currentReport);
+  const previous = {
+    deals_in_scope: 0,
+    with_confirmed_results: 0,
+    activity_without_result: 0,
+    no_activity: 0,
+    meaningful_events: 0,
+    created_tasks: 0,
+    client_actions_created: 0,
+    quality_warnings_created: 0,
+    completed_tasks: 0,
+    created_risks: 0,
+    resolved_risks: 0,
+    created_documents: 0,
+    resolved_documents: 0,
+    confirmed_results: 0,
+    activity_signals: 0
+  };
+
+  for (const longItem of Array.isArray(doubledReport?.items) ? doubledReport.items : []) {
+    const currentItem = currentItems.get(String(longItem.deal_id || '')) || {};
+    const periodItem = {};
+    for (const field of additiveFields) {
+      periodItem[field] = subtractMetric(longItem, currentItem, field);
+      previous[field] += periodItem[field];
+    }
+    previous.deals_in_scope += 1;
+    if (periodItem.confirmed_results > 0) previous.with_confirmed_results += 1;
+    else if (periodItem.activity_signals > 0) previous.activity_without_result += 1;
+    else previous.no_activity += 1;
+  }
+
+  const currentSummary = currentReport?.summary || {};
+  const current = {
+    deals_in_scope: n(currentSummary.deals_in_scope),
+    with_confirmed_results: n(currentSummary.with_confirmed_results),
+    activity_without_result: n(currentSummary.active_without_result),
+    no_activity: n(currentSummary.no_recent_activity),
+    meaningful_events: n(currentSummary.meaningful_events),
+    created_tasks: n(currentSummary.created_tasks),
+    client_actions_created: n(currentSummary.client_actions_created),
+    quality_warnings_created: n(currentSummary.quality_warnings_created),
+    completed_tasks: n(currentSummary.completed_tasks),
+    created_risks: n(currentSummary.created_risks),
+    resolved_risks: n(currentSummary.resolved_risks),
+    created_documents: n(currentSummary.created_documents),
+    resolved_documents: n(currentSummary.resolved_documents),
+    confirmed_results: n(currentSummary.confirmed_results),
+    activity_signals: n(currentSummary.activity_signals)
+  };
+
+  return {
+    period_days: periodDays,
+    current,
+    previous,
+    generated_at: currentReport?.generated_at || null
+  };
+}
+
+function trendDelta(currentValue, previousValue) {
+  return n(currentValue) - n(previousValue);
+}
+
+function trendTone(delta, preferredDirection = 'neutral') {
+  if (!delta || preferredDirection === 'neutral') return delta ? 'blue' : 'gray';
+  const improved = preferredDirection === 'higher' ? delta > 0 : delta < 0;
+  return improved ? 'green' : 'red';
+}
+
+function deltaLabel(delta) {
+  if (delta > 0) return `+${delta}`;
+  return String(delta);
+}
+
+function comparisonMetric(label, key, preferredDirection = 'neutral') {
+  const currentValue = n(comparison?.current?.[key]);
+  const previousValue = n(comparison?.previous?.[key]);
+  const delta = trendDelta(currentValue, previousValue);
+  return `<div class="metric ${trendTone(delta, preferredDirection)}">
+    <span>${esc(label)}</span>
+    <b>${currentValue}</b>
+    <span class="muted">предыдущий период: ${previousValue} · изменение: ${esc(deltaLabel(delta))}</span>
+  </div>`;
+}
+
+function comparisonSection() {
+  if (!comparison) return '';
+  return `<section class="card adoption-comparison">
+    <div class="section-title">
+      <div>
+        <h2>Текущий период против предыдущего</h2>
+        <p class="muted">Сравниваются последние ${periodDays} дней и непосредственно предшествующие им ${periodDays} дней.</p>
+      </div>
+      <span class="pill blue">${periodDays} + ${periodDays} дней</span>
+    </div>
+    <div class="kpi-row task-review-metrics" aria-label="Сравнение периодов">
+      ${comparisonMetric('Сделки с подтверждённым результатом', 'with_confirmed_results', 'higher')}
+      ${comparisonMetric('Подтверждённые результаты', 'confirmed_results', 'higher')}
+      ${comparisonMetric('Выполненные задачи', 'completed_tasks', 'higher')}
+      ${comparisonMetric('Закрытые риски', 'resolved_risks', 'higher')}
+      ${comparisonMetric('Подтверждённые документы', 'resolved_documents', 'higher')}
+      ${comparisonMetric('Сделки без активности', 'no_activity', 'lower')}
+      ${comparisonMetric('Активность без результата', 'activity_without_result', 'neutral')}
+      ${comparisonMetric('Клиентские действия', 'client_actions_created', 'neutral')}
+      ${comparisonMetric('Проверки качества', 'quality_warnings_created', 'neutral')}
+    </div>
+    <div class="status warn">
+      <b>Граница сравнения.</b> Исторические снимки открытых задач, рисков и просроченных документов ранее не сохранялись. Поэтому backlog ниже остаётся текущим состоянием, а сравнение показывает только созданные действия и подтверждённые результаты за два равных периода.
+    </div>
+    <div class="status ok">
+      <b>Без единого рейтинга.</b> Рост клиентских действий или quality warnings сам по себе не считается улучшением. Руководитель видит отдельные изменения и проверяет их вместе с подтверждённым результатом.
+    </div>
+  </section>`;
 }
 
 function responsibilityText(item) {
@@ -139,6 +278,8 @@ function draw() {
       ${metric('Без менеджера', n(s.missing_manager), n(s.missing_manager) ? 'red' : 'green')}
     </section>
 
+    ${comparisonSection()}
+
     <section class="card task-review-explanation">
       <h2>Как читать отчёт</h2>
       <div class="task-review-legend">
@@ -179,10 +320,18 @@ async function loadReport() {
   errorText = '';
   draw();
   try {
-    report = await rpc('nav_v2_get_operational_adoption_report', { p_days: periodDays, p_limit: 500 }, 30000);
-    if (!allowed()) throw new Error('Отчёт внедрения доступен владельцу, администратору и менеджеру.');
+    const [currentReport, doubledReport] = await Promise.all([
+      rpc('nav_v2_get_operational_adoption_report', { p_days: periodDays, p_limit: 500 }, 30000),
+      rpc('nav_v2_get_operational_adoption_report', { p_days: periodDays * 2, p_limit: 500 }, 30000)
+    ]);
+    if (!allowed(currentReport) || !allowed(doubledReport)) {
+      throw new Error('Отчёт внедрения доступен владельцу, администратору и менеджеру.');
+    }
+    report = currentReport;
+    comparison = derivePeriodComparison(currentReport, doubledReport);
   } catch (error) {
     report = null;
+    comparison = null;
     errorText = error.message || String(error);
   } finally {
     busy = false;
