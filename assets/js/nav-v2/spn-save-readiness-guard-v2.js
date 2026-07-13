@@ -157,10 +157,7 @@ function savedPayload(data) {
   if (!dealId) return null;
   return {
     deal_id: dealId,
-    title: String(value?.title || '').trim(),
     next_action: String(value?.next_action || '').trim(),
-    status: String(value?.status || '').trim(),
-    risk_level: String(value?.risk_level || '').trim(),
     saved_at: Date.now()
   };
 }
