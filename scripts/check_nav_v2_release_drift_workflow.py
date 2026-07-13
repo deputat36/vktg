@@ -64,7 +64,7 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
-    if baseline.get("latest_live_migration") != "20260713160524":
+    if baseline.get("latest_live_migration") != "20260713164757":
         errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
@@ -81,6 +81,7 @@ def main() -> int:
         "20260713160355",
         "20260713160446",
         "20260713160524",
+        "20260713164757",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
@@ -92,6 +93,7 @@ def main() -> int:
         "20260713172000",
         "20260713193000",
         "20260713193500",
+        "20260713203000",
     }:
         errors.append("approved repository-only migration set drifted")
 
