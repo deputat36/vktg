@@ -53,6 +53,14 @@
     "20260713184344": {
       "canonical_migrations": ["20260713234500"],
       "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility confirmation context source."
+    },
+    "20260713195749": {
+      "canonical_migrations": ["20260714001500"],
+      "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility point preview core and health registration source."
+    },
+    "20260713195810": {
+      "canonical_migrations": ["20260714001600"],
+      "reason": "Production apply assigned a live timestamp to the reviewed explicit-precondition wrapper and private implementation source."
     }
   },
   "approved_repository_only": {
@@ -120,6 +128,16 @@
       "represented_by_live": ["20260713184344"],
       "source_blob_sha": "c4ee976a59e2645c04c97948e234d69b8a7d03d1",
       "reason": "Canonical fresh-install source for the read-only responsibility confirmation catalog used by browser-local drafts and exports."
+    },
+    "20260714001500": {
+      "represented_by_live": ["20260713195749"],
+      "source_blob_sha": "298c5093419e7cf3837b3255df170f32f60498c9",
+      "reason": "Canonical fresh-install source for the read-only responsibility point preview and health registration."
+    },
+    "20260714001600": {
+      "represented_by_live": ["20260713195810"],
+      "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f",
+      "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private preview implementation."
     }
   }
 }
