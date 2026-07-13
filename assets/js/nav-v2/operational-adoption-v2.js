@@ -89,11 +89,12 @@ function comparisonLine(label, field, options = {}) {
   const delta = periodDelta();
   const suffix = options.suffix || '';
   const deltaSuffix = options.deltaSuffix ?? suffix;
+  const deltaField = options.deltaField || field;
   return `<div>
     <span class="small">${esc(label)}</span>
     <b>${esc(`${n(current[field])}${suffix}`)}</b>
     <span class="muted">Предыдущий период: ${esc(`${n(previous[field])}${suffix}`)}</span>
-    <span class="pill gray">Изменение: ${esc(signed(delta[field], deltaSuffix))}</span>
+    <span class="pill gray">Изменение: ${esc(signed(delta[deltaField], deltaSuffix))}</span>
   </div>`;
 }
 
@@ -112,7 +113,7 @@ function comparisonBlock() {
     </div>
     <div class="status warn"><b>Выборки различаются.</b> Сейчас в расчёте ${n(current.deals_in_scope)} сделок, в предыдущем периоде — ${n(previous.deals_in_scope)}. Дельта показывает изменение факта, а не автоматически «хороший» или «плохой» результат.</div>
     <div class="task-review-facts adoption-comparison-grid">
-      ${comparisonLine('Доля сделок с подтверждённым результатом', 'confirmed_result_rate', { suffix: '%', deltaSuffix: ' п.п.' })}
+      ${comparisonLine('Доля сделок с подтверждённым результатом', 'confirmed_result_rate', { suffix: '%', deltaSuffix: ' п.п.', deltaField: 'confirmed_result_rate_points' })}
       ${comparisonLine('Сделки с подтверждённым результатом', 'with_confirmed_results')}
       ${comparisonLine('Активность без результата', 'active_without_result')}
       ${comparisonLine('Подтверждённые результаты', 'confirmed_results')}
