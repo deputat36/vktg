@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "config/nav-v2-rpc-surface.json"
 BROWSER_ROOT = ROOT / "assets/js/nav-v2"
-DB_HEALTH_MIGRATION = ROOT / "supabase/migrations/20260710181623_nav_v2_private_active_user_and_rpc_health.sql"
+MIGRATIONS_ROOT = ROOT / "supabase/migrations"
 SCAN_ROOTS = (
     BROWSER_ROOT,
     ROOT / "supabase/functions/nav-v2-deal-api",
@@ -27,6 +27,7 @@ DIRECT_TABLE_PATTERNS = (
 DB_HEALTH_ENTRY_PATTERN = re.compile(
     r"\('(frontend_api|admin_api|demo_api)',\s*'(nav_v2_[a-z0-9_]+)'\)"
 )
+DB_HEALTH_FUNCTION_MARKER = "create or replace function public.nav_v2_get_rpc_grant_health()"
 CATEGORIES = ("frontend_api", "admin_api", "demo_api", "internal_only")
 BROWSER_CATEGORIES = ("frontend_api", "admin_api", "demo_api")
 
@@ -48,6 +49,17 @@ def iter_browser_files() -> list[Path]:
     if not BROWSER_ROOT.exists():
         return []
     return sorted(path for path in BROWSER_ROOT.rglob("*") if path.suffix in {".js", ".ts", ".html"})
+
+
+def latest_db_health_migration() -> Path | None:
+    if not MIGRATIONS_ROOT.exists():
+        return None
+    candidates: list[Path] = []
+    for path in sorted(MIGRATIONS_ROOT.glob("*.sql")):
+        text = path.read_text(encoding="utf-8").lower()
+        if DB_HEALTH_FUNCTION_MARKER in text:
+            candidates.append(path)
+    return candidates[-1] if candidates else None
 
 
 def main() -> int:
@@ -77,13 +89,11 @@ def main() -> int:
                 fail(f"RPC {value} is classified twice: {previous} and {category}", errors)
             classified[value] = category
 
-    if not DB_HEALTH_MIGRATION.exists():
-        fail(
-            f"Missing DB RPC health migration: {DB_HEALTH_MIGRATION.relative_to(ROOT)}",
-            errors,
-        )
+    db_health_migration = latest_db_health_migration()
+    if db_health_migration is None:
+        fail("Missing migration defining nav_v2_get_rpc_grant_health()", errors)
     else:
-        health_sql = DB_HEALTH_MIGRATION.read_text(encoding="utf-8")
+        health_sql = db_health_migration.read_text(encoding="utf-8")
         health_entries: dict[str, set[str]] = defaultdict(set)
         for category, name in DB_HEALTH_ENTRY_PATTERN.findall(health_sql):
             health_entries[category].add(name)
@@ -95,12 +105,14 @@ def main() -> int:
             extra = sorted(health_names - registry_names)
             if missing:
                 fail(
-                    f"DB RPC health is missing {category} entries: {', '.join(missing)}",
+                    f"Latest DB RPC health ({db_health_migration.name}) is missing {category} entries: "
+                    + ", ".join(missing),
                     errors,
                 )
             if extra:
                 fail(
-                    f"DB RPC health has unregistered {category} entries: {', '.join(extra)}",
+                    f"Latest DB RPC health ({db_health_migration.name}) has unregistered {category} entries: "
+                    + ", ".join(extra),
                     errors,
                 )
 
@@ -169,7 +181,8 @@ def main() -> int:
     print(
         "Navigator v2 RPC surface passed: "
         f"{len(calls)} calls found, {len(classified)} RPCs classified, "
-        f"{len(direct_tables)} direct browser table calls"
+        f"{len(direct_tables)} direct browser table calls, "
+        f"health source {db_health_migration.name if db_health_migration else 'missing'}"
     )
     return 0
 
