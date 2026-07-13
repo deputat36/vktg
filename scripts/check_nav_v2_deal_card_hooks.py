@@ -9,6 +9,7 @@ BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
+SPN_SAVE_CONFIRMATION_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-save-confirmation-v2.js"
 RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-responsibility-snapshot-v2.js"
 SPN_RESPONSIBILITY_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-responsibility-v2.js"
 DOC_WORKFLOW_MODULE = ROOT / "assets/js/nav-v2/deal-card-doc-workflow-v2.js"
@@ -26,6 +27,7 @@ def main() -> int:
         RECHECK_MODULE,
         BAZA_MODULE,
         SPN_HANDOFF_MODULE,
+        SPN_SAVE_CONFIRMATION_MODULE,
         RESPONSIBILITY_MODULE,
         SPN_RESPONSIBILITY_MODULE,
         DOC_WORKFLOW_MODULE,
@@ -44,6 +46,7 @@ def main() -> int:
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
+        spn_save_confirmation = SPN_SAVE_CONFIRMATION_MODULE.read_text(encoding="utf-8")
         responsibility = RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
         spn_responsibility = SPN_RESPONSIBILITY_MODULE.read_text(encoding="utf-8")
         doc_workflow = DOC_WORKFLOW_MODULE.read_text(encoding="utf-8")
@@ -73,12 +76,14 @@ def main() -> int:
             "import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';",
             "import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';",
             "import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';",
+            "import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
             "applyDealCardExpenseLabels();",
             "applyDealCardReadableValues();",
             "applyDealResponsibilitySnapshot(cardData);",
+            "void applySpnSaveConfirmation(cardData);",
             "void applyDealCardBazaHints(cardData, profileData);",
             "queueMicrotask(applyCardEnhancements);",
         )
@@ -122,6 +127,14 @@ def main() -> int:
         for marker in forbidden_handoff_markers:
             if marker in spn_handoff:
                 errors.append(f"deal-card SPN handoff helper still contains duplicate bootstrap behavior: {marker}")
+
+        if "export async function applySpnSaveConfirmation(cardData)" not in spn_save_confirmation:
+            errors.append("SPN save confirmation helper must export its explicit lifecycle hook")
+        if spn_save_confirmation.count("rpc(") != 1 or "nav_v2_get_deal_responsibility_snapshot" not in spn_save_confirmation:
+            errors.append("SPN save confirmation must use exactly one existing responsibility read RPC")
+        for marker in ("nav_v2_update_", "nav_v2_add_", "nav_v2_save_", "new MutationObserver"):
+            if marker in spn_save_confirmation:
+                errors.append(f"SPN save confirmation must remain read-only and explicit-hook based: {marker}")
 
         responsibility_markers = (
             "export function applyDealResponsibilitySnapshot(cardData)",
@@ -235,6 +248,7 @@ def main() -> int:
             "deal-card-recheck-alert-v2.js",
             "deal-card-baza-hints-v2.js",
             "deal-card-spn-handoff-v2.js",
+            "deal-card-spn-save-confirmation-v2.js",
             "deal-responsibility-snapshot-v2.js",
             "deal-card-doc-workflow-v2.js",
             "deal-card-task-due-date-v2.js",
@@ -245,13 +259,13 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260712-10"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260713-11"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
         if max_modules != 22:
-            errors.append(f"deal-card module budget must be 22 after readable values consolidation, got {max_modules!r}")
+            errors.append(f"deal-card module budget must remain 22, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -259,7 +273,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: readable values use the shared explicit lifecycle")
+    print("Navigator v2 deal-card hook passed: shared lifecycle includes read-only SPN save confirmation")
     return 0
 
 
