@@ -11,6 +11,7 @@
     "task-review-v2.html": { "max_modules": 3 },
     "broker-v2.html": { "max_modules": 3 },
     "viewer-v2.html": { "max_modules": 3 },
+    "manager-source-remediation-v2.html": { "max_modules": 3 },
     "admin-v2.html": { "max_modules": 6 },
     "nav-access-v2.html": { "max_modules": 3 }
   },
