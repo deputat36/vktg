@@ -37,6 +37,10 @@
     "20260713164757": {
       "canonical_migrations": ["20260713203000"],
       "reason": "Production apply assigned a live timestamp to the reviewed exact non-overlapping operational adoption period comparison source."
+    },
+    "20260713170608": {
+      "canonical_migrations": ["20260713213000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed read-only manager assignment proposal source."
     }
   },
   "approved_repository_only": {
@@ -84,6 +88,11 @@
       "represented_by_live": ["20260713164757"],
       "source_blob_sha": "2e6ee17e2428872c523314b070c5000c6b59db29",
       "reason": "Canonical fresh-install source for the exact non-overlapping current-versus-previous operational adoption comparison."
+    },
+    "20260713213000": {
+      "represented_by_live": ["20260713170608"],
+      "source_blob_sha": "67a96acc8c85bc0d1d6fcbf646f1fef2f493417c",
+      "reason": "Canonical fresh-install source for the read-only manager assignment proposal derived from active SPN manager links."
     }
   }
 }
