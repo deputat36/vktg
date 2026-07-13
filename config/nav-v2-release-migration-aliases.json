@@ -45,6 +45,10 @@
     "20260713173156": {
       "canonical_migrations": ["20260713223000"],
       "reason": "Production apply assigned a live timestamp to the reviewed grouped manager source remediation plan source."
+    },
+    "20260713180701": {
+      "canonical_migrations": ["20260713233000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed responsibility evidence candidates source."
     }
   },
   "approved_repository_only": {
@@ -102,6 +106,11 @@
       "represented_by_live": ["20260713173156"],
       "source_blob_sha": "d7af8ac6e1ad7c17d8c087e86620af9214162df6",
       "reason": "Canonical fresh-install source for the grouped read-only manager source remediation plan."
+    },
+    "20260713233000": {
+      "represented_by_live": ["20260713180701"],
+      "source_blob_sha": "7d540b25b8e9127e058e44a05a6123b781c934c3",
+      "reason": "Canonical fresh-install source for read-only responsibility evidence candidates and the delivered remediation screen contract."
     }
   }
 }
