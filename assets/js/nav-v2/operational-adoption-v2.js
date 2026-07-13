@@ -14,6 +14,9 @@ function comparison() { return report?.comparison || {}; }
 function currentPeriod() { return comparison().current_period || {}; }
 function previousPeriod() { return comparison().previous_period || {}; }
 function periodDelta() { return comparison().delta || {}; }
+function managerProposal() { return report?.manager_assignment_proposal || {}; }
+function proposalSummary() { return managerProposal().summary || {}; }
+function proposalItems() { return Array.isArray(managerProposal().items) ? managerProposal().items : []; }
 function allowed() { return ['owner', 'admin', 'manager'].includes(report?.profile?.role); }
 
 function fmtDateTime(value) {
@@ -38,6 +41,10 @@ function signed(value, suffix = '') {
 
 function movementTone(state) {
   return ({ confirmed_result: 'green', activity_without_result: 'yellow', no_recent_activity: 'red' })[state] || 'gray';
+}
+
+function proposalTone(state) {
+  return ({ already_assigned: 'green', single_candidate: 'blue', conflict: 'red', missing_source: 'yellow' })[state] || 'gray';
 }
 
 function filterItems() {
@@ -128,6 +135,75 @@ function comparisonBlock() {
   </section>`;
 }
 
+function proposalIssueList(item) {
+  const issues = Array.isArray(item.source_issue_details) ? item.source_issue_details : [];
+  if (!issues.length) return '<span class="muted">Проблемы источника не найдены</span>';
+  return `<ul>${issues.map((issue) => `<li>${esc(issue.label || issue.code || 'Неизвестная проблема')}</li>`).join('')}</ul>`;
+}
+
+function proposalCandidateText(item) {
+  if (item.proposal_state === 'already_assigned') return item.current_manager_name || 'Менеджер указан, профиль не найден';
+  if (item.proposal_state === 'single_candidate') return item.proposed_manager_name || 'Кандидат найден, профиль не отображается';
+  const candidates = Array.isArray(item.candidates) ? item.candidates : [];
+  if (candidates.length) return candidates.map((candidate) => candidate.full_name || candidate.id).join(' / ');
+  return 'Кандидат отсутствует';
+}
+
+function proposalCard(item) {
+  return `<article class="list-item task-review-card manager-proposal-card">
+    <div class="section-title task-review-head">
+      <div>
+        <div class="task-review-labels">
+          <span class="pill ${proposalTone(item.proposal_state)}">${esc(item.proposal_state_label || item.proposal_state || 'Состояние не определено')}</span>
+          <span class="pill gray">Только предложение</span>
+        </div>
+        <h3>${esc(item.deal_title || item.address || 'Сделка')}</h3>
+        <p class="muted">${esc(item.address || 'Адрес не указан')} · ${esc(statusText(item.deal_status))}</p>
+      </div>
+      <span class="pill ${item.mutation_available ? 'red' : 'green'}">${item.mutation_available ? 'Изменение доступно' : 'Автоназначение отключено'}</span>
+    </div>
+    <div class="task-review-facts">
+      <div><span class="small">Текущий менеджер</span><b>${esc(item.current_manager_name || 'Не назначен')}</b></div>
+      <div><span class="small">Кандидат</span><b>${esc(proposalCandidateText(item))}</b><span class="muted">Кандидатов: ${n(item.candidate_count)}</span></div>
+      <div><span class="small">СПН продавца</span><b>${esc(item.seller_spn_name || 'Не назначен')}</b><span class="muted">Роль профиля: ${esc(item.seller_profile_role || 'нет профиля')}</span></div>
+      <div><span class="small">СПН покупателя</span><b>${esc(item.buyer_spn_name || 'Не назначен')}</b><span class="muted">Роль профиля: ${esc(item.buyer_profile_role || 'нет профиля')}</span></div>
+    </div>
+    <div class="status ${item.proposal_state === 'single_candidate' || item.proposal_state === 'already_assigned' ? 'ok' : 'warn'}"><b>Почему:</b> ${esc(item.proposal_reason || 'Причина не указана')}</div>
+    <details class="task-review-contract"><summary>Проблемы источника</summary>${proposalIssueList(item)}</details>
+    <div class="status warn"><b>Следующее безопасное действие:</b> ${esc(item.suggested_action || 'Требуется ручная проверка')}</div>
+    <div class="actions task-review-actions" style="justify-content:flex-start">
+      <a class="btn primary" href="${esc(item.card_url || `./deal-card-v2.html?id=${encodeURIComponent(item.deal_id)}`)}">Открыть карточку</a>
+    </div>
+  </article>`;
+}
+
+function managerProposalBlock() {
+  const data = managerProposal();
+  if (!data.proposal_version) return '';
+  const s = proposalSummary();
+  const rows = proposalItems().filter((item) => item.proposal_state !== 'already_assigned');
+  return `<section class="card manager-assignment-proposal">
+    <div class="section-title">
+      <div>
+        <h2>Кого можно предложить менеджером</h2>
+        <p class="muted">Источник — только <code>manager_id</code> корректных активных СПН, уже назначенных на стороны сделки.</p>
+      </div>
+      <span class="pill red">Решение владельца</span>
+    </div>
+    <div class="status warn"><b>Никаких назначений.</b> Этот блок не меняет сделки и профили. Даже единственный кандидат должен быть подтверждён вручную после проверки.</div>
+    <div class="kpi-row task-review-metrics" aria-label="Сводка предложений по менеджеру">
+      ${metric('Сделок в выборке', n(s.deals_in_scope), 'blue')}
+      ${metric('Уже назначен', n(s.already_assigned), 'green')}
+      ${metric('Один кандидат', n(s.single_candidate), n(s.single_candidate) ? 'blue' : 'gray')}
+      ${metric('Конфликт', n(s.conflict), n(s.conflict) ? 'red' : 'green')}
+      ${metric('Нет источника', n(s.missing_source), n(s.missing_source) ? 'yellow' : 'green')}
+      ${metric('Требуют решения', n(s.needs_owner_decision), n(s.needs_owner_decision) ? 'red' : 'green')}
+    </div>
+    <div class="status ok"><b>Правило.</b> ${esc(data.decision_note || 'Предложение строится только из подтверждённых связей СПН с менеджером.')}</div>
+    <div class="list">${rows.map(proposalCard).join('') || '<div class="empty">Все сделки уже имеют менеджера или безопасный кандидат не требуется.</div>'}</div>
+  </section>`;
+}
+
 function dealRow(item) {
   const responsibility = responsibilityText(item);
   const staleTone = n(item.stale_days) >= 7 ? 'red' : n(item.stale_days) >= 3 ? 'yellow' : 'green';
@@ -179,7 +255,7 @@ function draw() {
     <section class="hero task-review-hero">
       <span class="role-home-eyebrow">Внедрение и результат</span>
       <h1>Движение сделок, а не только накопленные проблемы</h1>
-      <p>Отчёт отделяет созданную активность от подтверждённого результата. Никакие сделки, задачи, риски и документы здесь не изменяются.</p>
+      <p>Отчёт отделяет созданную активность от подтверждённого результата. Никакие сделки, задачи, риски, документы и назначения здесь не изменяются.</p>
     </section>
 
     ${errorText ? `<div class="status error" role="alert">${esc(errorText)}</div>` : ''}
@@ -202,6 +278,7 @@ function draw() {
     </section>
 
     ${comparisonBlock()}
+    ${managerProposalBlock()}
 
     <section class="card task-review-explanation">
       <h2>Как читать отчёт</h2>

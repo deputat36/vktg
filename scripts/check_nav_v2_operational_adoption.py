@@ -102,7 +102,7 @@ def main() -> int:
     require(page, (
         "Content-Security-Policy",
         "aria-live=\"polite\"",
-        "assets/js/nav-v2/operational-adoption-v2.js?v=20260713-02",
+        "assets/js/nav-v2/operational-adoption-v2.js?v=20260713-03",
         "assets/js/nav-v2/role-menu-v2.js?v=20260713-01",
     ), PAGE.name, errors)
 
@@ -113,7 +113,7 @@ def main() -> int:
         "['owner', 'admin', 'manager']",
         "Активность без результата",
         "Подтверждённый результат",
-        "Никакие сделки, задачи, риски и документы здесь не изменяются",
+        "Никакие сделки, задачи, риски, документы и назначения здесь не изменяются",
         "data-period",
         "data-filter",
     ), MODULE.name, errors)
