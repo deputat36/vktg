@@ -39,8 +39,9 @@ def main() -> int:
         "data-active=\"${isActive ? 'true' : 'false'}\"",
         "aria-current=\"page\"",
     ), ROLE_MENU.name, errors)
-    if menu.count("makeGroup('") != 3:
-        errors.append(f"owner/admin menu must contain exactly three purpose groups, got {menu.count('makeGroup(\'')} ")
+    group_count = menu.count("makeGroup('")
+    if group_count != 3:
+        errors.append(f"owner/admin menu must contain exactly three purpose groups, got {group_count}")
     for label in ("Рабочий стол", "Новая сделка", "Сделки", "Контроль сделок", "Кабинет юриста", "Команда", "Доступы", "Аудит доступов", "Проверка системы", "Диагностика"):
         if label not in menu:
             errors.append(f"owner/admin grouped menu lost label {label!r}")
