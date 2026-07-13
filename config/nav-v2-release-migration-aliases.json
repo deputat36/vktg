@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "live_aliases": {
+    "20260713160355": {
+      "canonical_migrations": ["20260713193000"],
+      "reason": "Production-safe split: operational adoption report core was applied separately from health registration."
+    },
+    "20260713160446": {
+      "canonical_migrations": ["20260713193500"],
+      "reason": "Production-safe split: active-profile wrapper and private implementation were applied as a separate atomic migration."
+    },
+    "20260713160524": {
+      "canonical_migrations": ["20260713193000"],
+      "reason": "Production-safe split: curated RPC grant health registration was applied after the report wrapper."
+    }
+  },
+  "approved_repository_only": {
+    "20260713172000": {
+      "represented_by_live": ["20260713151053"],
+      "source_blob_sha": "f1daf3eae1042faf3917af57e3c9b1df00664d4c",
+      "reason": "Idempotent forward copy of the already-live task contract migration; retained for fresh-install ordering."
+    },
+    "20260713193000": {
+      "represented_by_live": ["20260713160355", "20260713160524"],
+      "source_blob_sha": "30db0d8145077db291dc0510c8a5b5c1cab5f8ac",
+      "reason": "Canonical fresh-install source for the adoption report core and curated health registration."
+    },
+    "20260713193500": {
+      "represented_by_live": ["20260713160446"],
+      "source_blob_sha": "2120fb849c6e555bb970d00110847ff1c411365d",
+      "reason": "Canonical fresh-install source for the active-profile wrapper and private implementation."
+    }
+  }
+}
