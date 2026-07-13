@@ -10,6 +10,7 @@ declare
   v_uid uuid := auth.uid();
   v_role public.nav_v2_user_role;
   v_limit integer := greatest(1, least(coalesce(p_limit, 100), 500));
+  v_all_items jsonb := '[]'::jsonb;
   v_items jsonb := '[]'::jsonb;
   v_summary jsonb := '{}'::jsonb;
   v_issue_counts jsonb := '[]'::jsonb;
@@ -75,16 +76,12 @@ begin
       seller.is_active as seller_profile_active,
       seller.manager_id as seller_manager_id,
       seller_manager.full_name as seller_manager_name,
-      seller_manager.role::text as seller_manager_role,
-      seller_manager.is_active as seller_manager_active,
       deal.buyer_spn_id,
       buyer.full_name as buyer_spn_name,
       buyer.role::text as buyer_profile_role,
       buyer.is_active as buyer_profile_active,
       buyer.manager_id as buyer_manager_id,
       buyer_manager.full_name as buyer_manager_name,
-      buyer_manager.role::text as buyer_manager_role,
-      buyer_manager.is_active as buyer_manager_active,
       array(
         select distinct candidate_id
         from unnest(array[
@@ -225,19 +222,6 @@ begin
     from classified
     left join public.nav_user_profiles proposed_manager
       on proposed_manager.id = classified.proposed_manager_id
-  ), limited as (
-    select prepared.*
-    from prepared
-    order by
-      case prepared.proposal_state
-        when 'conflict' then 0
-        when 'single_candidate' then 1
-        when 'missing_source' then 2
-        else 3
-      end,
-      prepared.deal_updated_at desc,
-      prepared.deal_id
-    limit v_limit
   )
   select coalesce(
     jsonb_agg(
@@ -291,137 +275,43 @@ begin
     ),
     '[]'::jsonb
   )
-  into v_items
-  from limited item;
+  into v_all_items
+  from prepared item;
 
-  with scoped_deals as (
-    select deal.*
-    from public.nav_deals_v2 deal
-    where not (
-      coalesce((deal.deal_summary ->> 'demo') = 'true', false)
-      or coalesce((deal.wizard_snapshot ->> 'demo') = 'true', false)
-      or coalesce(deal.title, '') like 'ДЕМО:%'
-    )
-      and (
-        v_role in ('owner', 'admin')
-        or deal.created_by = v_uid
-        or deal.manager_id = v_uid
-        or deal.seller_spn_id = v_uid
-        or deal.buyer_spn_id = v_uid
-        or exists (
-          select 1
-          from public.nav_deal_participants_v2 participant
-          where participant.deal_id = deal.id
-            and participant.user_id = v_uid
-        )
-        or exists (
-          select 1
-          from public.nav_user_profiles spn
-          where spn.id in (deal.seller_spn_id, deal.buyer_spn_id)
-            and spn.manager_id = v_uid
-            and spn.is_active is true
-        )
-      )
-  ), evaluated as (
-    select
-      deal.id,
-      deal.manager_id,
-      array(
-        select distinct candidate_id
-        from unnest(array[
-          case
-            when seller.role = 'spn'
-              and seller.is_active is true
-              and seller_manager.is_active is true
-              and seller_manager.role in ('owner', 'admin', 'manager')
-            then seller.manager_id
-          end,
-          case
-            when buyer.role = 'spn'
-              and buyer.is_active is true
-              and buyer_manager.is_active is true
-              and buyer_manager.role in ('owner', 'admin', 'manager')
-            then buyer.manager_id
-          end
-        ]::uuid[]) candidate_id
-        where candidate_id is not null
-      ) as candidate_ids,
-      array_remove(array[
-        case
-          when deal.seller_spn_id is null then 'seller_spn_missing'
-          when seller.id is null then 'seller_profile_missing'
-          when seller.is_active is not true then 'seller_profile_inactive'
-          when seller.role <> 'spn' then 'seller_role_not_spn'
-          when seller.manager_id is null then 'seller_manager_missing'
-          when seller_manager.id is null then 'seller_manager_profile_missing'
-          when seller_manager.is_active is not true then 'seller_manager_inactive'
-          when seller_manager.role not in ('owner', 'admin', 'manager') then 'seller_manager_role_invalid'
-        end,
-        case
-          when deal.buyer_spn_id is null then 'buyer_spn_missing'
-          when buyer.id is null then 'buyer_profile_missing'
-          when buyer.is_active is not true then 'buyer_profile_inactive'
-          when buyer.role <> 'spn' then 'buyer_role_not_spn'
-          when buyer.manager_id is null then 'buyer_manager_missing'
-          when buyer_manager.id is null then 'buyer_manager_profile_missing'
-          when buyer_manager.is_active is not true then 'buyer_manager_inactive'
-          when buyer_manager.role not in ('owner', 'admin', 'manager') then 'buyer_manager_role_invalid'
-        end
-      ]::text[], null) as source_issues
-    from scoped_deals deal
-    left join public.nav_user_profiles seller on seller.id = deal.seller_spn_id
-    left join public.nav_user_profiles seller_manager on seller_manager.id = seller.manager_id
-    left join public.nav_user_profiles buyer on buyer.id = deal.buyer_spn_id
-    left join public.nav_user_profiles buyer_manager on buyer_manager.id = buyer.manager_id
-  ), classified as (
-    select
-      evaluated.*,
-      case
-        when evaluated.manager_id is not null then 'already_assigned'
-        when cardinality(evaluated.candidate_ids) = 1 then 'single_candidate'
-        when cardinality(evaluated.candidate_ids) > 1 then 'conflict'
-        else 'missing_source'
-      end as proposal_state
-    from evaluated
+  with expanded as (
+    select value, ordinality
+    from jsonb_array_elements(v_all_items) with ordinality
+    order by ordinality
+    limit v_limit
+  )
+  select coalesce(jsonb_agg(value order by ordinality), '[]'::jsonb)
+  into v_items
+  from expanded;
+
+  with expanded as (
+    select value as item
+    from jsonb_array_elements(v_all_items)
   )
   select jsonb_build_object(
     'deals_in_scope', count(*)::integer,
-    'already_assigned', count(*) filter (where proposal_state = 'already_assigned')::integer,
-    'single_candidate', count(*) filter (where proposal_state = 'single_candidate')::integer,
-    'conflict', count(*) filter (where proposal_state = 'conflict')::integer,
-    'missing_source', count(*) filter (where proposal_state = 'missing_source')::integer,
-    'needs_owner_decision', count(*) filter (where proposal_state in ('conflict', 'missing_source'))::integer,
-    'safe_candidate_available', count(*) filter (where proposal_state = 'single_candidate')::integer
+    'already_assigned', count(*) filter (where item ->> 'proposal_state' = 'already_assigned')::integer,
+    'single_candidate', count(*) filter (where item ->> 'proposal_state' = 'single_candidate')::integer,
+    'conflict', count(*) filter (where item ->> 'proposal_state' = 'conflict')::integer,
+    'missing_source', count(*) filter (where item ->> 'proposal_state' = 'missing_source')::integer,
+    'needs_owner_decision', count(*) filter (where item ->> 'proposal_state' in ('conflict', 'missing_source'))::integer,
+    'safe_candidate_available', count(*) filter (where item ->> 'proposal_state' = 'single_candidate')::integer
   )
   into v_summary
-  from classified;
+  from expanded;
 
   with item_issues as (
-    select value ->> 'code' as issue_code
-    from jsonb_array_elements(v_items) item
-    cross join lateral jsonb_array_elements(item -> 'source_issue_details') value
+    select issue ->> 'code' as issue_code, issue ->> 'label' as issue_label
+    from jsonb_array_elements(v_all_items) item
+    cross join lateral jsonb_array_elements(item -> 'source_issue_details') issue
   ), grouped as (
     select
       issue_code,
-      max(case issue_code
-        when 'seller_spn_missing' then 'СПН продавца не назначен'
-        when 'seller_profile_missing' then 'Профиль СПН продавца не найден'
-        when 'seller_profile_inactive' then 'Профиль СПН продавца неактивен'
-        when 'seller_role_not_spn' then 'В поле СПН продавца указан профиль другой роли'
-        when 'seller_manager_missing' then 'У СПН продавца не указан менеджер'
-        when 'seller_manager_profile_missing' then 'Профиль менеджера СПН продавца не найден'
-        when 'seller_manager_inactive' then 'Менеджер СПН продавца неактивен'
-        when 'seller_manager_role_invalid' then 'У менеджера СПН продавца неподходящая роль'
-        when 'buyer_spn_missing' then 'СПН покупателя не назначен'
-        when 'buyer_profile_missing' then 'Профиль СПН покупателя не найден'
-        when 'buyer_profile_inactive' then 'Профиль СПН покупателя неактивен'
-        when 'buyer_role_not_spn' then 'В поле СПН покупателя указан профиль другой роли'
-        when 'buyer_manager_missing' then 'У СПН покупателя не указан менеджер'
-        when 'buyer_manager_profile_missing' then 'Профиль менеджера СПН покупателя не найден'
-        when 'buyer_manager_inactive' then 'Менеджер СПН покупателя неактивен'
-        when 'buyer_manager_role_invalid' then 'У менеджера СПН покупателя неподходящая роль'
-        else issue_code
-      end) as issue_label,
+      max(issue_label) as issue_label,
       count(*)::integer as deal_count
     from item_issues
     group by issue_code
