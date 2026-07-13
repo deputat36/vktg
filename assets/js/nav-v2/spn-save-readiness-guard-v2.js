@@ -1,6 +1,8 @@
 const DRAFT_KEY = 'nav_deal_draft_v2';
 const CONFIRMED_KEY = 'nav_spn_save_confirmed_at_v2';
 const CONFIRMED_GAPS_KEY = 'nav_spn_save_confirmed_gaps_v2';
+const SAVED_HANDOFF_KEY = 'nav_spn_saved_deal_handoff_v2';
+const SAVE_RPC_PATH = '/rest/v1/rpc/nav_v2_save_wizard_result';
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -137,10 +139,50 @@ function syncFromDraft() {
   syncConfirmation(key, gaps.length > 0);
 }
 
+function requestUrl(input) {
+  if (typeof input === 'string') return input;
+  return String(input?.url || '');
+}
+
+function savedPayload(data) {
+  const value = Array.isArray(data) ? data[0] : data;
+  const dealId = String(value?.id || '').trim();
+  if (!dealId) return null;
+  return {
+    deal_id: dealId,
+    title: String(value?.title || '').trim(),
+    next_action: String(value?.next_action || '').trim(),
+    status: String(value?.status || '').trim(),
+    risk_level: String(value?.risk_level || '').trim(),
+    saved_at: Date.now()
+  };
+}
+
+function rememberSavedDeal(data) {
+  const payload = savedPayload(data);
+  if (!payload) return;
+  try { sessionStorage.setItem(SAVED_HANDOFF_KEY, JSON.stringify(payload)); } catch (_) {}
+}
+
+function observeSuccessfulWizardSave() {
+  if (window.__navSpnSaveObserverV2) return;
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+    const url = requestUrl(args[0]);
+    if (response.ok && url.includes(SAVE_RPC_PATH)) {
+      response.clone().json().then(rememberSavedDeal).catch(() => {});
+    }
+    return response;
+  };
+  window.__navSpnSaveObserverV2 = true;
+}
+
 document.addEventListener('input', syncFromDraft, true);
 document.addEventListener('click', syncFromDraft, true);
 document.addEventListener('pointerup', guardSave, true);
 document.addEventListener('click', guardSave, true);
 window.addEventListener('storage', syncFromDraft);
 
+observeSuccessfulWizardSave();
 syncFromDraft();
