@@ -3,6 +3,9 @@ const CONFIRMED_KEY = 'nav_spn_save_confirmed_at_v2';
 const CONFIRMED_GAPS_KEY = 'nav_spn_save_confirmed_gaps_v2';
 const SAVED_HANDOFF_KEY = 'nav_spn_saved_deal_handoff_v2';
 const SAVE_RPC_PATH = '/rest/v1/rpc/nav_v2_save_wizard_result';
+const DEALS_LIST_RPC_PATH = '/rest/v1/rpc/nav_v2_get_deals_list';
+const SAVE_RECOVERY_TTL_MS = 2 * 60 * 1000;
+let pendingSaveStartedAt = 0;
 
 function readDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (_) { return {}; }
@@ -144,6 +147,10 @@ function requestUrl(input) {
   return String(input?.url || '');
 }
 
+function normalized(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function savedPayload(data) {
   const value = Array.isArray(data) ? data[0] : data;
   const dealId = String(value?.id || '').trim();
@@ -160,18 +167,34 @@ function savedPayload(data) {
 
 function rememberSavedDeal(data) {
   const payload = savedPayload(data);
-  if (!payload) return;
+  if (!payload) return false;
   try { sessionStorage.setItem(SAVED_HANDOFF_KEY, JSON.stringify(payload)); } catch (_) {}
+  pendingSaveStartedAt = 0;
+  return true;
+}
+
+function recoverSavedDealFromList(data) {
+  if (!pendingSaveStartedAt || Date.now() - pendingSaveStartedAt > SAVE_RECOVERY_TTL_MS) return;
+  const draft = readDraft();
+  const address = normalized(draft.address);
+  const objectType = normalized(draft.objectType);
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const match = (address && items.find((deal) => normalized(deal.address) === address))
+    || (objectType && items.find((deal) => normalized(deal.object_type) === objectType));
+  if (match) rememberSavedDeal(match);
 }
 
 function observeSuccessfulWizardSave() {
   if (window.__navSpnSaveObserverV2) return;
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (...args) => {
-    const response = await originalFetch(...args);
     const url = requestUrl(args[0]);
+    if (url.includes(SAVE_RPC_PATH)) pendingSaveStartedAt = Date.now();
+    const response = await originalFetch(...args);
     if (response.ok && url.includes(SAVE_RPC_PATH)) {
-      response.clone().json().then(rememberSavedDeal).catch(() => {});
+      try { rememberSavedDeal(await response.clone().json()); } catch (_) {}
+    } else if (response.ok && url.includes(DEALS_LIST_RPC_PATH)) {
+      try { recoverSavedDealFromList(await response.clone().json()); } catch (_) {}
     }
     return response;
   };
