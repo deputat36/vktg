@@ -9,11 +9,13 @@ on:
       - 'config/nav-v2-role-contract.json'
       - 'config/nav-v2-rpc-surface.json'
       - 'supabase/migrations/20260713223000_nav_v2_manager_source_remediation_plan.sql'
+      - 'supabase/migrations/20260713233000_nav_v2_responsibility_evidence_candidates.sql'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
       - '.github/workflows/nav-v2-manager-source-remediation.yml'
+      - '.github/workflows/nav-v2-static.yml'
   push:
     branches:
       - main
@@ -23,8 +25,10 @@ on:
       - 'assets/js/nav-v2/role-menu-v2.js'
       - 'config/nav-v2-role-contract.json'
       - 'supabase/migrations/20260713223000_nav_v2_manager_source_remediation_plan.sql'
+      - 'supabase/migrations/20260713233000_nav_v2_responsibility_evidence_candidates.sql'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - '.github/workflows/nav-v2-manager-source-remediation.yml'
+      - '.github/workflows/nav-v2-static.yml'
 
 permissions:
   contents: read
@@ -34,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check grouped remediation plan
+      - name: Check grouped remediation and responsibility evidence
         run: python3 scripts/check_nav_v2_manager_source_remediation.py
       - name: Check role route contract
         run: python3 scripts/check_nav_v2_role_contract.py
