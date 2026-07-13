@@ -118,10 +118,9 @@ function buildMenu(role) {
     ];
     const systemLinks = [];
     addAdminDiagnosticsLinks(systemLinks, active);
-    const noActiveGroup = !OWNER_WORK_PAGES.has(active) && !OWNER_TEAM_PAGES.has(active) && !OWNER_SYSTEM_PAGES.has(active);
-    links.push(makeGroup('Работа', workLinks, OWNER_WORK_PAGES.has(active), OWNER_WORK_PAGES.has(active) || noActiveGroup));
-    links.push(makeGroup('Команда и доступы', teamLinks, OWNER_TEAM_PAGES.has(active), OWNER_TEAM_PAGES.has(active)));
-    links.push(makeGroup('Система', systemLinks, OWNER_SYSTEM_PAGES.has(active), OWNER_SYSTEM_PAGES.has(active)));
+    links.push(makeGroup('Работа', workLinks, OWNER_WORK_PAGES.has(active)));
+    links.push(makeGroup('Команда и доступы', teamLinks, OWNER_TEAM_PAGES.has(active)));
+    links.push(makeGroup('Система', systemLinks, OWNER_SYSTEM_PAGES.has(active)));
   } else {
     return safeMenu();
   }
