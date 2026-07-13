@@ -91,7 +91,7 @@ test('authenticated role smoke with real browser evidence', async ({ page }, tes
     } else if (role === 'lawyer') {
       await openPage(page, '/queue-v2.html');
       await expectNoInfiniteLoader(page);
-      await expect(page.locator('body')).toContainText(/Кабинет юриста|очеред/i);
+      await expect(page.locator('body')).toContainText(/Следующая важная сделка|Кабинет юриста/i);
     } else if (role === 'broker') {
       await openPage(page, '/broker-v2.html');
       await expectNoInfiniteLoader(page);
