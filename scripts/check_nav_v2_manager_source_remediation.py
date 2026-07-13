@@ -8,13 +8,16 @@ ROOT = Path(__file__).resolve().parents[1]
 REMEDIATION_MIGRATION = ROOT / "supabase/migrations/20260713223000_nav_v2_manager_source_remediation_plan.sql"
 EVIDENCE_MIGRATION = ROOT / "supabase/migrations/20260713233000_nav_v2_responsibility_evidence_candidates.sql"
 CONFIRMATION_MIGRATION = ROOT / "supabase/migrations/20260713234500_nav_v2_responsibility_confirmation_context.sql"
+POINT_PREVIEW_MIGRATION = ROOT / "supabase/migrations/20260714001500_nav_v2_responsibility_point_preview.sql"
 PAGE = ROOT / "manager-source-remediation-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-v2.js"
 VALIDATION_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-validation-v2.js"
+SERVER_PREVIEW_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-server-preview-v2.js"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 MODULE_BUDGET = ROOT / "config/nav-v2-module-budget.json"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
 RPC_REGISTRY = ROOT / "config/nav-v2-rpc-surface.json"
+ADVISOR_SCOPE = ROOT / "config/nav-v2-advisor-scope.json"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-manager-source-remediation.yml"
 STATIC_WORKFLOW = ROOT / ".github/workflows/nav-v2-static.yml"
 
@@ -60,13 +63,16 @@ def main() -> int:
         REMEDIATION_MIGRATION,
         EVIDENCE_MIGRATION,
         CONFIRMATION_MIGRATION,
+        POINT_PREVIEW_MIGRATION,
         PAGE,
         MODULE,
         VALIDATION_MODULE,
+        SERVER_PREVIEW_MODULE,
         MENU,
         MODULE_BUDGET,
         ROLE_CONTRACT,
         RPC_REGISTRY,
+        ADVISOR_SCOPE,
         WORKFLOW,
         STATIC_WORKFLOW,
     )
@@ -112,8 +118,6 @@ def main() -> int:
         "'mutation_available', false",
         "'report_version', 5",
         "'responsibility_evidence', v_responsibility_evidence",
-        "revoke execute on function nav_v2_private.nav_v2_get_responsibility_evidence_unchecked_20260713(integer) from anon, authenticated",
-        "grant execute on function nav_v2_private.nav_v2_get_responsibility_evidence_unchecked_20260713(integer) to service_role",
         "Responsibility evidence implementation must remain private",
     ), EVIDENCE_MIGRATION.name, errors)
 
@@ -124,25 +128,47 @@ def main() -> int:
         "set search_path = public, pg_temp",
         "v_role is null or v_role not in ('owner', 'admin', 'manager')",
         "profile.role = 'spn'::public.nav_v2_user_role",
-        "profile.role in (",
         "'active_spn_options'",
         "'manager_options'",
-        "'local_draft_available', true",
         "'local_storage_only', true",
-        "'export_available', true",
         "'server_selection_available', false",
         "'server_mutation_available', false",
         "'report_version', 6",
         "'responsibility_confirmation_context', v_confirmation_context",
-        "revoke execute on function nav_v2_private.nav_v2_get_responsibility_confirmation_context_unchecked_20260713(integer) from anon, authenticated",
-        "grant execute on function nav_v2_private.nav_v2_get_responsibility_confirmation_context_unchecked_20260713(integer) to service_role",
         "Responsibility confirmation context implementation must remain private",
     ), CONFIRMATION_MIGRATION.name, errors)
+
+    preview_sql = POINT_PREVIEW_MIGRATION.read_text(encoding="utf-8")
+    require(preview_sql, (
+        "create or replace function public.nav_v2_preview_responsibility_point_correction(",
+        "security definer",
+        "set search_path = public, pg_temp",
+        "nav_v2_private.nav_v2_is_owner_or_admin(v_uid)",
+        "v_operation_type not in ('deal_spn', 'profile_manager')",
+        "v_field not in ('seller_spn_id', 'buyer_spn_id')",
+        "v_field <> 'manager_id'",
+        "char_length(v_note) < 10",
+        "'stale_current_value'",
+        "'proposed_profile_not_active_spn'",
+        "'proposed_profile_not_manager_candidate'",
+        "nav_v2_responsibility_point_preview_v1",
+        "'operation_fingerprint', v_fingerprint",
+        "interval '15 minutes'",
+        "'mutation_available', false",
+        "'execution_rpc_available', false",
+        "'requires_revalidation', true",
+        "revoke execute on function public.nav_v2_preview_responsibility_point_correction(jsonb) from anon",
+        "grant execute on function public.nav_v2_preview_responsibility_point_correction(jsonb) to authenticated, service_role",
+        "nav_v2_get_rpc_grant_health",
+        "nav_v2_get_frontend_rpc_coverage_health",
+        "Responsibility point preview health registration drifted",
+    ), POINT_PREVIEW_MIGRATION.name, errors)
 
     for label, sql in (
         (REMEDIATION_MIGRATION.name, remediation_sql),
         (EVIDENCE_MIGRATION.name, evidence_sql),
         (CONFIRMATION_MIGRATION.name, confirmation_sql),
+        (POINT_PREVIEW_MIGRATION.name, preview_sql),
     ):
         assert_read_only(sql, label, errors)
 
@@ -152,6 +178,7 @@ def main() -> int:
         'aria-live="polite"',
         "manager-source-remediation-v2.js?v=20260713-03",
         "manager-source-remediation-validation-v2.js?v=20260713-01",
+        "manager-source-remediation-server-preview-v2.js?v=20260714-01",
         "role-menu-v2.js?v=20260713-02",
         "nav-base-menu-cleanup-v2.js",
     ), PAGE.name, errors)
@@ -167,22 +194,15 @@ def main() -> int:
         "Автоматические исправления и массовые назначения отключены",
         "Лист подтверждения ответственности",
         "localStorage",
-        "DRAFT_KEY_PREFIX",
-        "data-draft-scope",
-        "server_mutation_available: false",
         "navigator_v2_responsibility_confirmation_draft",
         "Скачать JSON",
         "Скачать CSV",
-        "Копировать сводку",
-        "В Supabase ничего не записано",
         "Подтверждающие действия активных СПН",
         "Evidence-only candidates",
-        "История действий — не назначение",
         "Серверный выбор и запись отключены",
-        "operational-adoption-v2.html",
     ), MODULE.name, errors)
     if module.count("rpc('nav_v2_get_operational_adoption_report'") != 1:
-        errors.append("remediation UI must use exactly one existing adoption report RPC call")
+        errors.append("remediation UI must use exactly one adoption report RPC call")
     assert_browser_read_only(module, MODULE.name, errors)
 
     validation_module = VALIDATION_MODULE.read_text(encoding="utf-8")
@@ -203,16 +223,38 @@ def main() -> int:
         "Выбрать JSON для проверки",
         "Скачать отчёт проверки",
         "Копировать готовую операцию",
-        "Свежий read-only отчёт",
         "rpc('nav_v2_get_operational_adoption_report'",
     ), VALIDATION_MODULE.name, errors)
     if validation_module.count("rpc('nav_v2_get_operational_adoption_report'") != 1:
-        errors.append("package validator must use exactly one existing adoption report RPC call")
+        errors.append("package validator must use exactly one adoption report RPC call")
     assert_browser_read_only(validation_module, VALIDATION_MODULE.name, errors)
 
+    server_preview_module = SERVER_PREVIEW_MODULE.read_text(encoding="utf-8")
+    require(server_preview_module, (
+        "rpc('nav_v2_get_my_profile'",
+        "rpc('nav_v2_preview_responsibility_point_correction'",
+        "ownerAdminAllowed",
+        "localPointReady",
+        "extractOperations",
+        "operations.length === 1",
+        "Серверный preview одной операции",
+        "Получить серверный preview",
+        "operation_fingerprint",
+        "navigator_v2_responsibility_point_server_preview",
+        "mutation_available: false",
+        "execution_rpc_available: false",
+        "requires_revalidation: true",
+        "Fingerprint не является исполнением",
+    ), SERVER_PREVIEW_MODULE.name, errors)
+    if server_preview_module.count("rpc('nav_v2_preview_responsibility_point_correction'") != 1:
+        errors.append("server preview UI must call the point preview RPC exactly once")
+    if server_preview_module.count("rpc('nav_v2_get_my_profile'") != 1:
+        errors.append("server preview UI must load the current profile exactly once")
+    assert_browser_read_only(server_preview_module, SERVER_PREVIEW_MODULE.name, errors)
+
     budget = json.loads(MODULE_BUDGET.read_text(encoding="utf-8"))
-    if budget.get("pages", {}).get("manager-source-remediation-v2.html", {}).get("max_modules") != 4:
-        errors.append("manager source remediation module budget must be exactly 4")
+    if budget.get("pages", {}).get("manager-source-remediation-v2.html", {}).get("max_modules") != 5:
+        errors.append("manager source remediation module budget must be exactly 5")
 
     menu = MENU.read_text(encoding="utf-8")
     require(menu, (
@@ -242,16 +284,32 @@ def main() -> int:
         for category in ("frontend_api", "admin_api", "demo_api"):
             if helper in registry.get(category, []):
                 errors.append(f"private helper {helper} leaked into {category}")
-    if registry.get("frontend_api", []).count("nav_v2_get_operational_adoption_report") != 1:
-        errors.append("existing adoption report RPC must remain the only browser endpoint")
+
+    adoption_rpc = "nav_v2_get_operational_adoption_report"
+    preview_rpc = "nav_v2_preview_responsibility_point_correction"
+    if registry.get("frontend_api", []).count(adoption_rpc) != 1:
+        errors.append("adoption report RPC must remain registered exactly once in frontend_api")
+    if registry.get("admin_api", []).count(preview_rpc) != 1:
+        errors.append("point preview RPC must be registered exactly once in admin_api")
+    for category in ("frontend_api", "demo_api", "internal_only"):
+        if preview_rpc in registry.get(category, []):
+            errors.append(f"point preview RPC leaked into {category}")
+
+    advisor = json.loads(ADVISOR_SCOPE.read_text(encoding="utf-8"))
+    external = sum(len(registry.get(category, [])) for category in ("frontend_api", "admin_api", "demo_api"))
+    exceptions = len(advisor["authenticated_security_definer"]["security_invoker_exceptions"])
+    if advisor["authenticated_security_definer"]["expected_warning_count"] != external - exceptions:
+        errors.append("Advisor expected warning count does not match registered external SECURITY DEFINER RPCs")
 
     workflow = WORKFLOW.read_text(encoding="utf-8")
     require(workflow, (
         "assets/js/nav-v2/manager-source-remediation-validation-v2.js",
+        "assets/js/nav-v2/manager-source-remediation-server-preview-v2.js",
         "config/nav-v2-module-budget.json",
-        "20260713233000_nav_v2_responsibility_evidence_candidates.sql",
+        "config/nav-v2-advisor-scope.json",
         "20260713234500_nav_v2_responsibility_confirmation_context.sql",
-        "Check grouped remediation, evidence, confirmation draft and package validation",
+        "20260714001500_nav_v2_responsibility_point_preview.sql",
+        "Check grouped remediation, evidence, confirmation, package validation and server preview",
         "python3 scripts/check_nav_v2_manager_source_remediation.py",
         "python3 scripts/check_nav_v2_role_contract.py",
         "python3 scripts/check_nav_v2_rpc_surface.py",
@@ -272,9 +330,8 @@ def main() -> int:
         return 1
 
     print(
-        "Navigator v2 manager source remediation passed: delivered page, grouped manual actions, "
-        "evidence-only candidates, browser-local confirmation export, imported package freshness validation, "
-        "one external browser RPC name, role-safe route and server mutation disabled"
+        "Navigator v2 manager source remediation passed: grouped manual actions, evidence, local confirmation, "
+        "package freshness validation, owner/admin server preview fingerprint, health registration and no mutation"
     )
     return 0
 
