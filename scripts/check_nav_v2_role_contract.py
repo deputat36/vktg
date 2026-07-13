@@ -101,8 +101,14 @@ def main() -> int:
             continue
 
         actual = route_set(block)
-        if role == "owner_admin" and "addAdminDiagnosticsLinks(links, active);" in block:
+        delegated_diagnostics_calls = block.count("addAdminDiagnosticsLinks(")
+        if role == "owner_admin" and delegated_diagnostics_calls:
             actual |= diagnostics_routes
+            if delegated_diagnostics_calls != 1:
+                errors.append(
+                    "role-menu-v2.js: owner/admin must delegate diagnostics links exactly once, "
+                    f"got {delegated_diagnostics_calls}"
+                )
         expected = set((contract.get("roles") or {}).get(role, {}).get("menu_routes") or [])
         if actual != expected:
             errors.append(
