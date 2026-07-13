@@ -7,19 +7,16 @@
   <title>Кабинет юриста — Навигатор v2</title>
   <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260701-0815">
   <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260617-118">
+  <link rel="stylesheet" href="./assets/css/nav-v2-lawyer-focus.css?v=20260713-01">
 </head>
 <body class="nav-v2">
   <div id="app">
     <main class="nav-v2-shell">
       <section class="hero">
         <h1>Кабинет юриста</h1>
-        <p>Загружаю юридическую очередь сделок...</p>
+        <p>Определяю следующую наиболее важную сделку...</p>
       </section>
-      <div class="status">Если загрузка длится долго, откройте чистый вход и повторите.</div>
-      <div class="actions" style="justify-content:flex-start">
-        <a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a>
-        <a class="btn light" href="./deals-v2.html?filter=lawyer&test=20260625-1020">Сделки</a>
-      </div>
+      <div class="status" role="status" aria-live="polite">Проверяю доступ и юридические приоритеты.</div>
     </main>
   </div>
   <script type="importmap">
@@ -34,7 +31,7 @@
     }
   </script>
   <script type="module" src="./assets/js/nav-v2/nav-base-menu-cleanup-v2.js?v=20260702-queue"></script>
-  <script type="module" src="./assets/js/nav-v2/queue-v2.js?v=20260627-0355"></script>
+  <script type="module" src="./assets/js/nav-v2/queue-v2.js?v=20260713-01"></script>
   <script type="module" src="./assets/js/nav-v2/queue-safe-card-links-v2.js?v=20260701-role-queue"></script>
 </body>
 </html>
