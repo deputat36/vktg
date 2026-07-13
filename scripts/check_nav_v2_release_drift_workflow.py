@@ -64,7 +64,7 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
-    if baseline.get("latest_live_migration") != "20260713180701":
+    if baseline.get("latest_live_migration") != "20260713184344":
         errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
@@ -85,6 +85,7 @@ def main() -> int:
         "20260713170608",
         "20260713173156",
         "20260713180701",
+        "20260713184344",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
@@ -100,8 +101,18 @@ def main() -> int:
         "20260713213000",
         "20260713223000",
         "20260713233000",
+        "20260713234500",
     }:
         errors.append("approved repository-only migration set drifted")
+
+    live_entry = (aliases.get("live_aliases") or {}).get("20260713184344") or {}
+    if live_entry.get("canonical_migrations") != ["20260713234500"]:
+        errors.append("confirmation context live migration mapping drifted")
+    canonical_entry = (aliases.get("approved_repository_only") or {}).get("20260713234500") or {}
+    if canonical_entry.get("represented_by_live") != ["20260713184344"]:
+        errors.append("confirmation context canonical reverse mapping drifted")
+    if canonical_entry.get("source_blob_sha") != "c4ee976a59e2645c04c97948e234d69b8a7d03d1":
+        errors.append("confirmation context canonical blob drifted")
 
     reporter = REPORTER.read_text(encoding="utf-8")
     require(reporter, (

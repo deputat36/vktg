@@ -49,6 +49,10 @@
     "20260713180701": {
       "canonical_migrations": ["20260713233000"],
       "reason": "Production apply assigned a live timestamp to the reviewed responsibility evidence candidates source."
+    },
+    "20260713184344": {
+      "canonical_migrations": ["20260713234500"],
+      "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility confirmation context source."
     }
   },
   "approved_repository_only": {
@@ -111,6 +115,11 @@
       "represented_by_live": ["20260713180701"],
       "source_blob_sha": "7d540b25b8e9127e058e44a05a6123b781c934c3",
       "reason": "Canonical fresh-install source for read-only responsibility evidence candidates and the delivered remediation screen contract."
+    },
+    "20260713234500": {
+      "represented_by_live": ["20260713184344"],
+      "source_blob_sha": "c4ee976a59e2645c04c97948e234d69b8a7d03d1",
+      "reason": "Canonical fresh-install source for the read-only responsibility confirmation catalog used by browser-local drafts and exports."
     }
   }
 }
