@@ -73,11 +73,25 @@ def main() -> int:
     if aliases.get("project_ref") != baseline.get("project_ref"):
         errors.append("migration alias project_ref differs from release baseline")
     if set((aliases.get("live_aliases") or {})) != {
-        "20260713160355", "20260713160446", "20260713160524"
+        "20260712143253",
+        "20260712163919",
+        "20260712200429",
+        "20260712205117",
+        "20260713091921",
+        "20260713160355",
+        "20260713160446",
+        "20260713160524",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
-        "20260713172000", "20260713193000", "20260713193500"
+        "20260712160000",
+        "20260712162609",
+        "20260712190000",
+        "20260712203000",
+        "20260713090856",
+        "20260713172000",
+        "20260713193000",
+        "20260713193500",
     }:
         errors.append("approved repository-only migration set drifted")
 
