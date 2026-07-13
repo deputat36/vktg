@@ -1,10 +1,11 @@
 import { getCachedUser, renderAuthBox, rpc, esc, riskPill, statusText } from './supabase-v2.js';
 
-const V = '20260625-1020';
+const V = '20260713-01';
 const app = document.getElementById('app');
 let items = [];
 let profile = {};
 let queue = new URLSearchParams(location.search).get('queue') || 'all';
+let focusIndex = 0;
 
 const names = {
   all: 'Все',
@@ -28,6 +29,7 @@ function cnt(q) { return q === 'all' ? items.length : items.filter((x) => x.lawy
 function cls(q) { return (q === 'urgent' || q === 'problem_docs' || q === 'overdue_docs') ? 'red' : (q === 'resubmitted' || q === 'rework' || q === 'docs') ? 'yellow' : q === 'deposit' ? 'blue' : 'green'; }
 function waitDays(v) { const d = v ? new Date(v) : null; if (!d || Number.isNaN(d.getTime())) return 0; return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)); }
 function clean(v) { return String(v || '').trim(); }
+function shownItems() { return queue === 'all' ? items : items.filter((x) => x.lawyer_queue === queue); }
 
 function reviewSummary(x) {
   const fallback = x.review_summary || {};
@@ -51,7 +53,7 @@ function blockingReviewsCount(q = 'all') {
 }
 
 function roleLabel(role) {
-  return ({ owner: 'owner', admin: 'admin', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'роль не указана';
+  return ({ owner: 'владелец', admin: 'администратор', manager: 'менеджер', spn: 'СПН', lawyer: 'юрист', broker: 'брокер', viewer: 'наблюдатель' })[role] || role || 'роль не указана';
 }
 
 function reviewMeta(decision) {
@@ -64,8 +66,8 @@ function docPills(x) {
   if (n(x.problem_documents_count)) p.push(`<span class="pill red">проблемы: ${n(x.problem_documents_count)}</span>`);
   if (n(x.overdue_requested_documents_count)) p.push(`<span class="pill red">просрочено: ${n(x.overdue_requested_documents_count)}</span>`);
   if (n(x.not_requested_documents_count)) p.push(`<span class="pill yellow">не запрошено: ${n(x.not_requested_documents_count)}</span>`);
-  if (n(x.requested_documents_count)) p.push(`<span class="pill blue">ждём клиента: ${n(x.requested_documents_count)}${days ? ' · ' + days + ' дн.' : ''}</span>`);
-  return p.length ? `<div style="margin:10px 0">${p.join(' ')}</div>` : '';
+  if (n(x.requested_documents_count)) p.push(`<span class="pill blue">ждём клиента: ${n(x.requested_documents_count)}${days ? ` · ${days} дн.` : ''}</span>`);
+  return p.length ? `<div class="lawyer-pill-row">${p.join(' ')}</div>` : '';
 }
 
 function reviewPills(x) {
@@ -78,27 +80,89 @@ function reviewPills(x) {
   ];
   if (n(r.blocking_reviews_count)) p.push(`<span class="pill red">блокирующих: ${n(r.blocking_reviews_count)}</span>`);
   if (r.latest_reviewer_role) p.push(`<span class="pill">${esc(roleLabel(r.latest_reviewer_role))}</span>`);
-  return `<div style="margin:10px 0">${p.join(' ')}</div>`;
+  return `<div class="lawyer-pill-row">${p.join(' ')}</div>`;
 }
 
 function spnClientLine(x) {
   const seller = clean(x.seller_spn);
   const buyer = clean(x.buyer_spn);
-  if (seller && buyer && seller === buyer) return `${seller} ведёт продавца и покупателя. СПН отвечает за коммуникацию и сбор данных для юриста.`;
-  if (seller && buyer) return `Продавца ведёт: ${seller}. Покупателя ведёт: ${buyer}. СПН отвечают за коммуникацию и сбор данных для юриста.`;
-  if (seller) return `Продавца ведёт: ${seller}. СПН отвечает за коммуникацию и сбор данных для юриста.`;
-  if (buyer) return `Покупателя ведёт: ${buyer}. СПН отвечает за коммуникацию и сбор данных для юриста.`;
-  return 'СПН по клиентам не назначен. Перед юридической проверкой нужно назначить ответственного за коммуникацию.';
+  if (seller && buyer && seller === buyer) return `${seller} ведёт продавца и покупателя.`;
+  if (seller && buyer) return `Продавца ведёт ${seller}. Покупателя ведёт ${buyer}.`;
+  if (seller) return `Продавца ведёт ${seller}.`;
+  if (buyer) return `Покупателя ведёт ${buyer}.`;
+  return 'СПН по клиентам не назначен.';
+}
+
+function focusReason(x) {
+  const reasons = list(x.focus_reasons).map(clean).filter(Boolean);
+  if (reasons.length) return reasons[0];
+  const q = x.lawyer_queue || 'other';
+  if (q === 'urgent') return 'Есть юридический стоп-фактор.';
+  if (q === 'problem_docs') return 'Есть документ с проблемой или отказом.';
+  if (q === 'overdue_docs') return 'Обязательные документы просрочены.';
+  if (q === 'resubmitted') return 'СПН повторно передал сделку после доработки.';
+  if (q === 'rework') return 'СПН ожидает конкретного юридического замечания.';
+  return 'Сделка следующая в серверной очереди юридической проверки.';
+}
+
+function primaryAction(x) {
+  const q = x.lawyer_queue || 'other';
+  const r = reviewSummary(x);
+  if (n(r.blocking_reviews_count)) return { label: 'Открыть решение', anchor: 'reviews' };
+  if (q === 'problem_docs') return { label: 'Разобрать проблемный документ', anchor: 'problemDocsV2' };
+  if (q === 'overdue_docs' || q === 'docs') return { label: 'Проверить документы', anchor: 'docs' };
+  if (q === 'resubmitted' || q === 'rework') return { label: 'Проверить доработку СПН', anchor: 'comments' };
+  return { label: 'Провести юридическую проверку', anchor: 'risks' };
+}
+
+function focusCard(x, position, total) {
+  if (!x) return `<section class="card lawyer-focus-empty"><h2>Следующая важная сделка</h2><p>В выбранной очереди сделок нет.</p></section>`;
+  const id = encodeURIComponent(x.id || '');
+  const q = x.lawyer_queue || 'other';
+  const r = reviewSummary(x);
+  const action = primaryAction(x);
+  const nextAction = clean(x.lawyer_next_action || x.next_action) || 'Открыть карточку и проверить сделку.';
+  const nextButton = total > 1 ? '<button class="btn light" type="button" data-lawyer-next>Следующая сделка</button>' : '';
+  return `<section class="card lawyer-focus" aria-labelledby="lawyerFocusTitle" aria-live="polite">
+    <div class="lawyer-focus-kicker">Следующая важная сделка · ${position + 1} из ${total}</div>
+    <div class="lawyer-focus-head">
+      <div>
+        <h2 id="lawyerFocusTitle">${esc(x.title || 'Сделка без названия')}</h2>
+        <p class="muted">${esc(x.address || 'Адрес не указан')} · ${esc(x.object_type || 'тип не указан')}</p>
+      </div>
+      <div class="lawyer-focus-badges">${riskPill(x.risk_level)} <span class="pill ${cls(q)}">${esc(names[q] || q)}</span></div>
+    </div>
+    <div class="lawyer-focus-reason"><span>Почему сейчас</span><strong>${esc(focusReason(x))}</strong></div>
+    <div class="lawyer-focus-action"><span>Главное действие</span><strong>${esc(nextAction)}</strong></div>
+    <div class="lawyer-focus-owner"><b>СПН по клиентам:</b> ${esc(spnClientLine(x))}</div>
+    <div class="actions lawyer-focus-actions">
+      <a class="btn primary" href="./deal-card-v2.html?id=${id}&test=${V}#${action.anchor}">${esc(action.label)}</a>
+      ${nextButton}
+    </div>
+    <details class="lawyer-focus-details">
+      <summary>Показать детали сделки</summary>
+      <div class="deal-meta lawyer-focus-metrics">
+        <div><span class="small">К задатку</span><b>${n(x.readiness_deposit)}%</b></div>
+        <div><span class="small">К сделке</span><b>${n(x.readiness_deal)}%</b></div>
+        <div><span class="small">Документы</span><b>${n(x.missing_documents_count)}</b></div>
+        <div><span class="small">Просрочено</span><b>${n(x.overdue_requested_documents_count)}</b></div>
+        <div><span class="small">Проблемы</span><b>${n(x.problem_documents_count)}</b></div>
+        <div><span class="small">Блокирует</span><b>${n(r.blocking_reviews_count)}</b></div>
+      </div>
+      ${docPills(x)}
+      ${reviewPills(x)}
+      <p class="muted">ID ${sid(x.id)} · серверный приоритет ${n(x.priority_score)} · ${esc(statusText(x.status))}</p>
+    </details>
+  </section>`;
 }
 
 function card(x) {
   const id = encodeURIComponent(x.id || '');
   const q = x.lawyer_queue || 'other';
   const r = reviewSummary(x);
-  const f = list(x.focus_reasons).join('; ') || 'критичных признаков не найдено';
-  const problemBtn = n(x.problem_documents_count) ? `<a class="btn light" href="./deal-card-v2.html?id=${id}&test=${V}#problemDocsV2">Проблемы</a>` : '';
-  const reviewBtn = n(r.reviews_count) ? `<a class="btn light" href="./deal-card-v2.html?id=${id}&test=${V}#reviews">Решения</a>` : '';
-  return `<article class="deal-card">
+  const reasons = list(x.focus_reasons).map(clean).filter(Boolean).join('; ') || 'Критичных признаков не найдено.';
+  const action = primaryAction(x);
+  return `<article class="deal-card lawyer-queue-card">
     <div class="deal-head">
       <div>
         <div class="small">ID ${sid(x.id)} · приоритет ${n(x.priority_score)}</div>
@@ -107,67 +171,79 @@ function card(x) {
       </div>
       ${riskPill(x.risk_level)}
     </div>
-    <div class="status" style="margin:10px 0"><b>СПН по клиентам:</b> ${esc(spnClientLine(x))}</div>
-    <div class="deal-meta">
-      <div><span class="small">К задатку</span><b>${n(x.readiness_deposit)}%</b></div>
-      <div><span class="small">К сделке</span><b>${n(x.readiness_deal)}%</b></div>
-      <div><span class="small">Документы</span><b>${n(x.missing_documents_count)}</b></div>
-      <div><span class="small">Не запрошено</span><b>${n(x.not_requested_documents_count)}</b></div>
-      <div><span class="small">Запрошено</span><b>${n(x.requested_documents_count)}</b></div>
-      <div><span class="small">Просрочено</span><b>${n(x.overdue_requested_documents_count)}</b></div>
-      <div><span class="small">Проблемы</span><b>${n(x.problem_documents_count)}</b></div>
-      <div><span class="small">Блокирует</span><b>${n(r.blocking_reviews_count)}</b></div>
-    </div>
-    <div style="margin:10px 0"><span class="pill ${cls(q)}">${esc(names[q] || q)}</span> <span class="pill">${esc(statusText(x.status))}</span></div>
-    ${docPills(x)}
-    ${reviewPills(x)}
-    <div class="status ${q === 'urgent' || q === 'problem_docs' || q === 'overdue_docs' || n(r.blocking_reviews_count) ? 'error' : f ? 'warn' : 'ok'}"><b>Фокус:</b> ${esc(f)}</div>
-    <p><b>Что сделать:</b><br>${esc(x.lawyer_next_action || x.next_action || 'Открыть карточку и проверить сделку.')}</p>
-    <div class="actions" style="justify-content:flex-start">
-      <a class="btn primary" href="./deal-card-v2.html?id=${id}&test=${V}#risks">Проверка</a>
-      ${problemBtn}
-      ${reviewBtn}
+    <div class="lawyer-queue-reason"><b>Причина:</b> ${esc(reasons)}</div>
+    <p><b>Следующее действие:</b><br>${esc(x.lawyer_next_action || x.next_action || 'Открыть карточку и проверить сделку.')}</p>
+    <div class="actions lawyer-queue-actions">
+      <a class="btn primary" href="./deal-card-v2.html?id=${id}&test=${V}#${action.anchor}">${esc(action.label)}</a>
       <a class="btn light" href="./deal-card-v2.html?id=${id}&test=${V}#docs">Документы</a>
       <a class="btn light" href="./deal-card-v2.html?id=${id}&test=${V}#comments">Комментарии</a>
     </div>
+    ${n(r.blocking_reviews_count) ? `<span class="pill red">блокирующих решений: ${n(r.blocking_reviews_count)}</span>` : ''}
   </article>`;
 }
 
 function render() {
-  const shown = queue === 'all' ? items : items.filter((x) => x.lawyer_queue === queue);
+  const shown = shownItems();
+  if (!shown.length) focusIndex = 0;
+  else if (focusIndex >= shown.length) focusIndex = 0;
+  const focused = shown[focusIndex] || null;
+
   app.innerHTML = `<main class="nav-v2-shell">
-    <section class="hero"><h1>Кабинет юриста</h1><p>${esc(profile.full_name || 'Пользователь')} · ${esc(profile.email || '')}</p></section>
-    <section class="card"><div class="actions" style="justify-content:flex-start"><a class="btn primary" href="./queue-v2.html?test=${V}">Кабинет юриста</a><a class="btn light" href="./deals-v2.html?filter=lawyer">Сделки</a><a class="btn light" href="./dashboard-v2.html?test=${V}">Рабочий стол</a><a class="btn light" href="./nav-v2.html?clean=1">Чистый вход</a></div></section>
-    <section class="kpi-row">${metric('Всего', cnt('all'))}${metric('Стоп-факторы', cnt('urgent'), cnt('urgent') ? 'red' : 'green')}${metric('Проблемы документов', cnt('problem_docs'), cnt('problem_docs') ? 'red' : 'green')}${metric('Просрочка документов', cnt('overdue_docs'), cnt('overdue_docs') ? 'red' : 'green')}${metric('Блокирующие решения', blockingReviewsCount('all'), blockingReviewsCount('all') ? 'red' : 'green')}${metric('Повторно от СПН', cnt('resubmitted'), cnt('resubmitted') ? 'yellow' : 'green')}${metric('Документы', cnt('docs'), cnt('docs') ? 'yellow' : 'green')}${metric('Задатки', cnt('deposit'), 'blue')}</section>
-    <section class="card"><h2>Очереди</h2><div class="actions" style="justify-content:flex-start">${Object.keys(names).map((k) => `<button class="btn ${queue === k ? 'primary' : 'light'}" data-q="${k}" type="button">${esc(names[k])} · ${cnt(k)}</button>`).join('')}</div><div class="status ok" style="margin-top:12px">Приоритет: стоп-факторы → блокирующие решения → проблемы документов → просрочка документов → повторно от СПН → документы → задатки → возвраты СПН → основной договор.</div></section>
-    <section class="card"><div class="section-title"><div><h2>${esc(names[queue] || 'Очередь')}</h2><p class="muted">Сделки распределены сервером по юридическому фокусу и приоритету. Решения учитываются в серверной очереди; fallback summary нужен только для совместимости.</p></div><span class="pill blue">${shown.length}</span></div><div class="deal-list">${shown.map(card).join('') || '<div class="empty">В этой очереди сделок нет.</div>'}</div></section>
+    <section class="hero"><h1>Кабинет юриста</h1><p>${esc(profile.full_name || 'Пользователь')} · сначала одна наиболее важная сделка, затем следующая.</p></section>
+    <section class="card"><div class="actions lawyer-top-actions"><a class="btn primary" href="./queue-v2.html?test=${V}">Кабинет юриста</a><a class="btn light" href="./deals-v2.html?filter=lawyer">Все сделки</a><a class="btn light" href="./dashboard-v2.html?test=${V}">Рабочий стол</a><a class="btn light" href="./nav-v2.html?clean=1">Сбросить сессию</a></div></section>
+    ${focusCard(focused, focusIndex, shown.length)}
+    <section class="card lawyer-filter-card">
+      <div class="section-title"><div><h2>Выбрать очередь</h2><p class="muted">Сервер уже расставил сделки по юридическому приоритету. Фильтр меняет только текущий фокус.</p></div><span class="pill blue">${shown.length}</span></div>
+      <div class="actions lawyer-queue-filters">${Object.keys(names).map((k) => `<button class="btn ${queue === k ? 'primary' : 'light'}" data-q="${k}" type="button" aria-pressed="${queue === k}">${esc(names[k])} · ${cnt(k)}</button>`).join('')}</div>
+    </section>
+    <details class="card lawyer-secondary-summary">
+      <summary>Показать сводные показатели</summary>
+      <section class="kpi-row lawyer-kpi-row">${metric('Всего', cnt('all'))}${metric('Стоп-факторы', cnt('urgent'), cnt('urgent') ? 'red' : 'green')}${metric('Проблемы документов', cnt('problem_docs'), cnt('problem_docs') ? 'red' : 'green')}${metric('Просрочка документов', cnt('overdue_docs'), cnt('overdue_docs') ? 'red' : 'green')}${metric('Блокирующие решения', blockingReviewsCount('all'), blockingReviewsCount('all') ? 'red' : 'green')}${metric('Повторно от СПН', cnt('resubmitted'), cnt('resubmitted') ? 'yellow' : 'green')}${metric('Документы', cnt('docs'), cnt('docs') ? 'yellow' : 'green')}${metric('Задатки', cnt('deposit'), 'blue')}</section>
+    </details>
+    <details class="card lawyer-full-queue">
+      <summary>Показать всю очередь · ${shown.length}</summary>
+      <div class="section-title"><div><h2>${esc(names[queue] || 'Очередь')}</h2><p class="muted">Используйте полный список для сверки и перехода к другой сделке. Основной рабочий маршрут начинается с фокус-карточки выше.</p></div></div>
+      <div class="deal-list lawyer-deal-list">${shown.map(card).join('') || '<div class="empty">В этой очереди сделок нет.</div>'}</div>
+    </details>
   </main>`;
-  document.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => {
-    queue = b.dataset.q || 'all';
-    history.replaceState(null, '', `./queue-v2.html?test=${V}&queue=${queue}`);
+
+  document.querySelectorAll('[data-q]').forEach((button) => {
+    button.addEventListener('click', () => {
+      queue = button.dataset.q || 'all';
+      focusIndex = 0;
+      history.replaceState(null, '', `./queue-v2.html?test=${V}&queue=${encodeURIComponent(queue)}`);
+      render();
+    });
+  });
+
+  document.querySelector('[data-lawyer-next]')?.addEventListener('click', () => {
+    const current = shownItems();
+    if (!current.length) return;
+    focusIndex = (focusIndex + 1) % current.length;
     render();
+    document.getElementById('lawyerFocusTitle')?.focus?.();
   });
 }
 
 function login(msg = '') {
   app.innerHTML = '<main class="nav-v2-shell"><div id="authHost"></div></main>';
   renderAuthBox(document.getElementById('authHost'), async () => location.reload());
-  const s = document.getElementById('authStatus');
-  if (s && msg) { s.className = 'status warn'; s.textContent = msg; }
+  const status = document.getElementById('authStatus');
+  if (status && msg) { status.className = 'status warn'; status.textContent = msg; }
 }
 
 async function load() {
   if (!getCachedUser()?.id) return login('Сначала войдите в Навигатор.');
-  app.innerHTML = '<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1><p>Загружаю очередь...</p></section><div class="status">Получаю данные.</div></main>';
+  app.innerHTML = '<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1><p>Определяю следующую важную сделку...</p></section><div class="status" role="status" aria-live="polite">Получаю юридическую очередь.</div></main>';
   try {
-    const d = await rpc('nav_v2_get_lawyer_queue', { p_limit: 100 }, 45000);
+    const data = await rpc('nav_v2_get_lawyer_queue', { p_limit: 100 }, 45000);
     const reviewData = await rpc('nav_v2_get_lawyer_review_summary', {}, 15000).catch(() => ({ items: [] }));
-    const reviewsByDeal = new Map(list(reviewData?.items).map((r) => [r.deal_id, r]));
-    profile = d?.profile || {};
-    items = list(d?.items).map((x) => ({ ...x, review_summary: reviewsByDeal.get(x.id) || {} }));
+    const reviewsByDeal = new Map(list(reviewData?.items).map((review) => [review.deal_id, review]));
+    profile = data?.profile || {};
+    items = list(data?.items).map((item) => ({ ...item, review_summary: reviewsByDeal.get(item.id) || {} }));
     render();
-  } catch (e) {
-    app.innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1></section><div class="status error">${esc(e.message || e)}</div></main>`;
+  } catch (error) {
+    app.innerHTML = `<main class="nav-v2-shell"><section class="hero"><h1>Кабинет юриста</h1></section><div class="status error" role="alert">${esc(error.message || error)}</div></main>`;
   }
 }
 
