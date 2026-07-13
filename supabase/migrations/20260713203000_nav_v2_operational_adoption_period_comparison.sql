@@ -28,7 +28,7 @@ begin
     and p.is_active is true
   limit 1;
 
-  if v_role not in ('owner', 'admin', 'manager') then
+  if v_role is null or v_role not in ('owner', 'admin', 'manager') then
     raise exception 'Сравнение внедрения доступно владельцу, администратору и менеджеру' using errcode = '42501';
   end if;
 
@@ -148,15 +148,8 @@ begin
             ) = 'quality_warning'
         )::integer as quality_warnings_created,
         count(*) filter (
-          where (
-            task.completed_at >= period_deal.period_start
+          where task.completed_at >= period_deal.period_start
             and task.completed_at < period_deal.period_end
-          )
-          or (
-            task.status = 'done'
-            and task.updated_at >= period_deal.period_start
-            and task.updated_at < period_deal.period_end
-          )
         )::integer as completed_tasks
       from public.nav_deal_tasks_v2 task
       where task.deal_id = period_deal.deal_id
@@ -416,7 +409,8 @@ begin
   if position('previous_period' in v_private_definition) = 0
     or position('confirmed_result_rate_points' in v_private_definition) = 0
     or position('historical_backlog_included' in v_private_definition) = 0
-    or position('employee_score' in v_private_definition) = 0 then
+    or position('employee_score' in v_private_definition) = 0
+    or position('task.completed_at >= period_deal.period_start' in v_private_definition) = 0 then
     raise exception 'Operational adoption period comparison definition drifted';
   end if;
 
