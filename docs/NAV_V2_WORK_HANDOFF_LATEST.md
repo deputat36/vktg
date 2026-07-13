@@ -3,23 +3,25 @@
 ## Точка продолжения
 
 - Дата: 2026-07-13.
-- Текущий `main`: `ab71ee03da1df448f28d47aaef28b7ecfb281bb8` — PR #241.
-- Последний product runtime: `6a56c7b59df04171e8dc364c2eda39a74e01b1ea` — PR #240.
-- Открытых PR после #241: 0.
+- Текущий product `main`: `02ee2f3cb0b941a3a7a7a895a344c6c3671cc591` — PR #244.
+- Открытых runtime PR после #244: 0.
 - Canonical frontend build: `20260711-01`.
 - Deal-card budget: 22; механическое сокращение без новой продуктовой причины запрещено.
 
 ## Последние завершённые PR
 
-- #241 — синхронизация production adoption history, alias-aware release drift и baseline.
-- #240 — read-only отчёт внедрения «Движение и результат».
-- #239 — Navigator-only Supabase Advisor scope gate.
+- #244 — read-only сравнение operational adoption текущего и предыдущего равного периода.
+- #243 — reconciliation исторических migration aliases для risk/readiness/task/broker/viewer/adoption.
+- #242 — предыдущий handoff.
+- #241 — adoption split-deploy history, alias-aware release drift и baseline.
+- #240 — отчёт «Движение и результат».
+- #239 — Navigator-only Advisor scope gate.
 - #238 — source history для live task contract migration.
-- #237 — release baseline и предыдущий handoff.
-- #236 — nullable persisted `task_type` / `sla_days` и read-only contract preview.
+- #237 — release baseline.
+- #236 — persisted nullable `task_type` / `sla_days` preview.
 - #235 — controlled read-only migration/Edge drift report.
 - #233 — owner/admin information architecture.
-- #232 — явный SPN handoff после сохранения.
+- #232 — SPN handoff после сохранения.
 - #230 — lawyer focus mode.
 - #228 — viewer workspace.
 - #227 — broker triage.
@@ -33,21 +35,22 @@
 
 - Project: `ofewxuqfjhamgerwzull`.
 - Последняя live migration: `20260713160524_nav_v2_operational_adoption_health_registration`.
-- Adoption report был применён безопасным split-deploy:
+- Adoption report split-deploy:
   - `20260713160355_nav_v2_operational_adoption_report_core`;
   - `20260713160446_nav_v2_operational_adoption_active_profile_guard`;
   - `20260713160524_nav_v2_operational_adoption_health_registration`.
-- Canonical fresh-install SQL сохранён в:
+- Canonical fresh-install SQL:
   - `20260713193000_nav_v2_operational_adoption_report.sql`;
   - `20260713193500_nav_v2_operational_adoption_active_profile_guard.sql`.
-- Split history описана в `config/nav-v2-release-migration-aliases.json` с canonical Git blob SHA и причинами.
-- Release baseline: `config/nav-v2-release-baseline.json`, latest live `20260713160524`.
 - `nav-invite-user`: v10 ACTIVE, `verify_jwt=true`, SHA `14020dac054cadf3ca86d19313cf2bc2b012aca9d634e76e8dd0ffde11b05a5f`.
 - `nav-v2-deal-api`: v4 ACTIVE, `verify_jwt=true`, SHA `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
+- RPC grant health: 49 items, 0 problems.
+- Frontend RPC coverage: 42 items, 0 problems.
+- Рабочие строки после adoption deployment и PR #244 не менялись.
 
-## Operational adoption report
+## Operational adoption: текущий снимок
 
-Read-only owner/admin/manager report for 30 days after live deployment:
+Read-only owner/admin/manager report за последние 30 дней:
 
 - Deals in scope: 16.
 - With confirmed result: 1.
@@ -60,49 +63,45 @@ Read-only owner/admin/manager report for 30 days after live deployment:
 - Created tasks: 52.
 - Client actions created: 18.
 - Quality warnings created: 34.
-- Created risks: 18.
+- Open tasks: 76; overdue tasks: 76.
 - Open risks: 44.
-- Open tasks: 76.
-- Overdue tasks: 76.
 - Overdue required documents: 119.
 - Missing manager: 16.
 - Missing SPN: 2.
 - Needs attention: 16.
 - Stale 7+ days: 16.
 
-Interpretation:
+## PR #244 — сравнение периодов
 
-- Система фиксирует активность, но почти не получает подтверждённого завершения.
-- Quality warnings не считаются клиентским результатом.
-- Рабочие строки отчётом не изменяются.
-- SPN получает серверный запрет SQLSTATE `42501`.
+- Используется существующий read-only RPC без новой migration.
+- Экран параллельно запрашивает `N` и `2N` дней.
+- Предыдущий равный период выводится вычитанием только аддитивных метрик.
+- Сравниваются подтверждённые результаты, выполненные задачи, закрытые риски, подтверждённые документы, сделки без активности, клиентские действия и quality warnings.
+- Единого рейтинга сотрудника или команды нет.
+- Исторический backlog не сравнивается: прошлые snapshots открытых задач, рисков и документов не сохранялись.
+- Current 30 days: 1 deal with result, 15 activity without result, 0 no activity, 18 client actions, 34 quality warnings.
+- Previous 30 days: 1 deal with result, 8 activity without result, 7 no activity, 24 client actions, 0 quality warnings.
+- Interpretation: активность распространилась на большее число сделок, но подтверждённый результат не вырос; число клиентских действий снизилось, а quality warnings выросли.
+- PR #244 checks: static PASS; JavaScript PASS; public desktop/mobile PASS; review threads 0.
+- `authenticated-smoke` был `skipped`, это не authenticated PASS.
 
-## Security и RPC health
+## Security и access
 
-- RPC grant health: 49 items, 0 problems, `ok=true`.
-- Frontend RPC coverage: 42 items, 0 problems, `ok=true`.
 - Public adoption wrapper: authenticated EXECUTE=true; anon=false; PUBLIC=false.
-- Private adoption implementation: authenticated=false; anon=false; PUBLIC=false; service_role only.
+- Private adoption implementation: service_role only; authenticated/anon/PUBLIC=false.
+- SPN invocation: SQLSTATE `42501`, PASS.
 - Access helpers остаются в `nav_v2_private`; публичные дубли не восстановлены.
-- Новый Advisor WARN для `nav_v2_get_operational_adoption_report` ожидаем: curated browser RPC с active-profile и role gate.
-- `config/nav-v2-advisor-scope.json` и CI запрещают неизвестные Navigator warnings и массовый auto-revoke.
-- Leaked-password protection остаётся выключенной до успешного invite/recovery E2E.
-- Performance Advisor не показал новой Navigator v2 проблемы от adoption report; оставшийся шум относится legacy/generic/другим подсистемам и unused indexes.
+- Advisor warning для adoption RPC ожидаем и зарегистрирован в Navigator-only scope gate.
+- Массовый revoke запрещён.
+- Leaked-password protection остаётся выключенной до invite/recovery E2E.
+- Performance Advisor не показал новой Navigator v2 проблемы от adoption report.
 
 ## Release drift
 
-- PR #241 добавил alias-aware reporter `scripts/check_nav_v2_release_drift_aliases.py`.
-- Approved split-deploy versions:
-  - `20260713160355` → canonical `20260713193000`;
-  - `20260713160446` → canonical `20260713193500`;
-  - `20260713160524` → canonical `20260713193000` health section.
-- Approved repository-only canonical/forward versions:
-  - `20260713172000` represented by live `20260713151053`;
-  - `20260713193000` represented by live `20260713160355` + `20260713160524`;
-  - `20260713193500` represented by live `20260713160446`.
-- Любая другая repository-only или remote-only migration продолжает падать.
-- Alias blob SHA проверяются в CI.
-- PR #241 checks: migration alias workflow PASS; общий static suite PASS; review threads 0.
+- Baseline latest live: `20260713160524`.
+- `config/nav-v2-release-migration-aliases.json` связывает live timestamp versions с reviewed canonical SQL и Git blob SHA.
+- PR #243 добавил aliases для risk resolution, manager readiness, task taxonomy, broker queue и viewer workspace.
+- PR #241/#243 alias workflows сохраняют evidence artifact и падают на неизвестном repository-only/remote-only drift.
 - Первый approved production workflow run с Environment secrets ещё требует ручной настройки владельца.
 
 ## Рабочие данные
@@ -119,18 +118,18 @@ Interpretation:
 - 2 сделки без SPN.
 - Lawyer waiting: 11; broker waiting: 5.
 - Все 76 открытых рабочих задач просрочены.
-- Persisted task contracts: 0; текущий preview использует безопасный inference.
+- Persisted task contracts: 0; preview использует inference.
 - Реальные назначения, статусы, task types и SLA автоматически не менялись.
 
 ## Authenticated E2E blocker
 
-- Supabase development branch отсутствует: текущий план ранее вернул `Branching is supported only on the Pro plan or above`.
+- Supabase development branch отсутствует: план ранее вернул `Branching is supported only on the Pro plan or above`.
 - Отдельного test project нет.
 - GitHub Environment `navigator-e2e`, disposable role accounts и mailbox отсутствуют.
 - Authenticated Playwright matrix: BLOCKED.
 - Invite/access-link/password/recovery/email delivery: BLOCKED.
 - Browser task/document/risk/status mutations: BLOCKED.
-- Успешный workflow с `authenticated-smoke=skipped` не является authenticated PASS.
+- Workflow success при `authenticated-smoke=skipped` не является authenticated PASS.
 
 ## Открытые issues
 
@@ -159,12 +158,12 @@ Interpretation:
 - P0 MANUAL — первый approved release drift workflow run с `allow_drift=false`.
 - P0 BLOCKED — isolated target + authenticated role/invite/recovery/mutation E2E.
 - P0 MANUAL — manager assignments/exceptions по 16 реальным сделкам.
-- P1 BLOCKED ON AUTH EVIDENCE — audited point task contract mutation: preview → одна synthetic task → audit event → reload verification; никаких bulk updates.
+- P1 UNBLOCKED — read-only manager assignment proposal: вывести предполагаемого менеджера из `seller_spn.manager_id` / `buyer_spn.manager_id`, состояния `single_candidate`, `conflict`, `missing_source`; никаких mutation и bulk update.
+- P1 BLOCKED ON AUTH EVIDENCE — audited point task contract mutation: preview → одна synthetic task → audit event → reload verification.
 - P1 BLOCKED ON CONFIRMATION — audited point manager assignment.
-- P1 UNBLOCKED — добавить read-only сравнение adoption report с предыдущим равным периодом: текущий результат против предыдущего, без изменения строк и без оценки сотрудников одним числом.
 - P1 — leaked-password protection только после auth E2E.
-- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate и базовый adoption snapshot без новой причины.
+- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, базовый adoption snapshot и period comparison без новой причины.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #241. Один раз проверь Environment navigator-production-readonly, isolated auth target и manager confirmation. Если release Environment настроен — запусти approved drift report и обнови #177. Если auth/manager остаются blocked — реализуй read-only сравнение operational adoption текущего периода с предыдущим равным периодом, без mutation и без изменения рабочих строк. Заверши branch → PR → CI → merge → Supabase verification → handoff.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #244. Один раз проверь Environment navigator-production-readonly, isolated auth target и manager confirmation. Если release Environment настроен — запусти approved drift report и обнови #177. Если auth/manager остаются blocked — реализуй read-only manager assignment proposal из manager_id назначенных SPN с явными состояниями single candidate/conflict/missing source, без mutation и без изменения реальных сделок. Заверши branch → PR → CI → merge → Supabase verification → handoff.`
