@@ -10,7 +10,9 @@ EVIDENCE_MIGRATION = ROOT / "supabase/migrations/20260713233000_nav_v2_responsib
 CONFIRMATION_MIGRATION = ROOT / "supabase/migrations/20260713234500_nav_v2_responsibility_confirmation_context.sql"
 PAGE = ROOT / "manager-source-remediation-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-v2.js"
+VALIDATION_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-validation-v2.js"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
+MODULE_BUDGET = ROOT / "config/nav-v2-module-budget.json"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
 RPC_REGISTRY = ROOT / "config/nav-v2-rpc-surface.json"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-manager-source-remediation.yml"
@@ -37,6 +39,21 @@ def assert_read_only(sql: str, label: str, errors: list[str]) -> None:
             errors.append(f"{label}: read-only workflow contains mutation {forbidden}")
 
 
+def assert_browser_read_only(text: str, label: str, errors: list[str]) -> None:
+    for forbidden in (
+        "nav_v2_get_manager_source_remediation_plan_unchecked_20260713",
+        "nav_v2_get_responsibility_evidence_unchecked_20260713",
+        "nav_v2_get_responsibility_confirmation_context_unchecked_20260713",
+        "nav_v2_update_",
+        "nav_v2_add_",
+        "nav_v2_save_",
+        ".from('nav_",
+        '.from("nav_',
+    ):
+        if forbidden in text:
+            errors.append(f"{label} must remain server read-only: {forbidden}")
+
+
 def main() -> int:
     errors: list[str] = []
     required = (
@@ -45,7 +62,9 @@ def main() -> int:
         CONFIRMATION_MIGRATION,
         PAGE,
         MODULE,
+        VALIDATION_MODULE,
         MENU,
+        MODULE_BUDGET,
         ROLE_CONTRACT,
         RPC_REGISTRY,
         WORKFLOW,
@@ -132,6 +151,7 @@ def main() -> int:
         "Content-Security-Policy",
         'aria-live="polite"',
         "manager-source-remediation-v2.js?v=20260713-03",
+        "manager-source-remediation-validation-v2.js?v=20260713-01",
         "role-menu-v2.js?v=20260713-02",
         "nav-base-menu-cleanup-v2.js",
     ), PAGE.name, errors)
@@ -163,18 +183,36 @@ def main() -> int:
     ), MODULE.name, errors)
     if module.count("rpc('nav_v2_get_operational_adoption_report'") != 1:
         errors.append("remediation UI must use exactly one existing adoption report RPC call")
-    for forbidden in (
-        "nav_v2_get_manager_source_remediation_plan_unchecked_20260713",
-        "nav_v2_get_responsibility_evidence_unchecked_20260713",
-        "nav_v2_get_responsibility_confirmation_context_unchecked_20260713",
-        "nav_v2_update_",
-        "nav_v2_add_",
-        "nav_v2_save_",
-        ".from('nav_",
-        '.from("nav_',
-    ):
-        if forbidden in module:
-            errors.append(f"remediation UI must remain server read-only: {forbidden}")
+    assert_browser_read_only(module, MODULE.name, errors)
+
+    validation_module = VALIDATION_MODULE.read_text(encoding="utf-8")
+    require(validation_module, (
+        "MAX_FILE_BYTES = 2 * 1024 * 1024",
+        "navigator_v2_responsibility_confirmation_draft",
+        "navigator_v2_responsibility_confirmation_validation",
+        "requires_separate_audited_point_operation",
+        "server_mutation_available: false",
+        "current_seller_spn_id",
+        "current_buyer_spn_id",
+        "current_manager_id",
+        "point_operation_ready",
+        "summary.ready === 1",
+        "summary.stale === 0",
+        "summary.invalid === 0",
+        "summary.not_ready === 0",
+        "Выбрать JSON для проверки",
+        "Скачать отчёт проверки",
+        "Копировать готовую операцию",
+        "Свежий read-only отчёт",
+        "rpc('nav_v2_get_operational_adoption_report'",
+    ), VALIDATION_MODULE.name, errors)
+    if validation_module.count("rpc('nav_v2_get_operational_adoption_report'") != 1:
+        errors.append("package validator must use exactly one existing adoption report RPC call")
+    assert_browser_read_only(validation_module, VALIDATION_MODULE.name, errors)
+
+    budget = json.loads(MODULE_BUDGET.read_text(encoding="utf-8"))
+    if budget.get("pages", {}).get("manager-source-remediation-v2.html", {}).get("max_modules") != 4:
+        errors.append("manager source remediation module budget must be exactly 4")
 
     menu = MENU.read_text(encoding="utf-8")
     require(menu, (
@@ -209,8 +247,11 @@ def main() -> int:
 
     workflow = WORKFLOW.read_text(encoding="utf-8")
     require(workflow, (
+        "assets/js/nav-v2/manager-source-remediation-validation-v2.js",
+        "config/nav-v2-module-budget.json",
         "20260713233000_nav_v2_responsibility_evidence_candidates.sql",
         "20260713234500_nav_v2_responsibility_confirmation_context.sql",
+        "Check grouped remediation, evidence, confirmation draft and package validation",
         "python3 scripts/check_nav_v2_manager_source_remediation.py",
         "python3 scripts/check_nav_v2_role_contract.py",
         "python3 scripts/check_nav_v2_rpc_surface.py",
@@ -232,8 +273,8 @@ def main() -> int:
 
     print(
         "Navigator v2 manager source remediation passed: delivered page, grouped manual actions, "
-        "evidence-only candidates, browser-local confirmation export, one existing browser RPC, "
-        "role-safe route and server mutation disabled"
+        "evidence-only candidates, browser-local confirmation export, imported package freshness validation, "
+        "one external browser RPC name, role-safe route and server mutation disabled"
     )
     return 0
 
