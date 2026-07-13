@@ -76,6 +76,20 @@ migration_markers = {
         "'trigger_helper', false",
         "'rls_helper', true",
     ),
+    "20260713172000_nav_v2_task_contract_preview.sql": (
+        "add column if not exists task_type text",
+        "add column if not exists sla_days integer",
+        "nav_deal_tasks_v2_task_type_check",
+        "nav_deal_tasks_v2_sla_days_check",
+        "task_type is null",
+        "sla_days is null or sla_days between 1 and 365",
+        "persisted_task_type",
+        "inferred_task_type",
+        "contract_state",
+        "missing_contracts",
+        "'contract_version', 1",
+        "Task contract preview definition drifted",
+    ),
 }
 
 for name, markers in migration_markers.items():
@@ -143,6 +157,7 @@ deal_card_hook_check_path = root / "scripts/check_nav_v2_deal_card_hooks.py"
 e2e_contract_check_path = root / "scripts/check_nav_v2_e2e_contract.py"
 e2e_workflow_path = root / ".github/workflows/nav-v2-authenticated-e2e.yml"
 static_workflow_path = root / ".github/workflows/nav-v2-static.yml"
+task_contract_check_path = root / "scripts/check_nav_v2_task_contract.py"
 if not build_config_path.exists():
     errors.append("Missing Navigator v2 build version config")
 if not build_check_path.exists():
@@ -153,6 +168,8 @@ if not e2e_contract_check_path.exists():
     errors.append("Missing Navigator v2 authenticated E2E contract check")
 if not e2e_workflow_path.exists():
     errors.append("Missing Navigator v2 authenticated E2E workflow")
+if not task_contract_check_path.exists():
+    errors.append("Missing Navigator v2 persisted task contract check")
 if not static_workflow_path.exists():
     errors.append("Missing Navigator v2 static workflow")
 elif "python3 scripts/check_nav_v2_build_version.py" not in static_workflow_path.read_text(encoding="utf-8"):
@@ -161,6 +178,8 @@ elif "python3 scripts/check_nav_v2_deal_card_hooks.py" not in static_workflow_pa
     errors.append("Navigator v2 static workflow does not run deal-card hook check")
 elif "python3 scripts/check_nav_v2_e2e_contract.py" not in static_workflow_path.read_text(encoding="utf-8"):
     errors.append("Navigator v2 static workflow does not run authenticated E2E contract check")
+elif "python3 scripts/check_nav_v2_task_contract.py" not in static_workflow_path.read_text(encoding="utf-8"):
+    errors.append("Navigator v2 static workflow does not run persisted task contract check")
 
 rpc_auth_smoke_path = root / "scripts/check_nav_v2_rpc_auth.py"
 if not rpc_auth_smoke_path.exists():
@@ -214,9 +233,10 @@ if static_workflow_path.exists():
         "python3 scripts/check_nav_v2_release_drift.py --self-test",
         "python3 scripts/check_nav_v2_release_drift.py --baseline-only",
         "python3 scripts/check_nav_v2_release_drift_workflow.py",
+        "python3 scripts/check_nav_v2_task_contract.py",
     ):
         if marker not in static_workflow:
-            errors.append(f"Static workflow missing release drift check: {marker}")
+            errors.append(f"Static workflow missing release/task contract check: {marker}")
 
 if legacy_count:
     print(f"WARNING: {legacy_count} legacy migration filenames are outside the current convention")
