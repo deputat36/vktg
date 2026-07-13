@@ -25,7 +25,7 @@ DIRECT_TABLE_PATTERNS = (
     re.compile(r"/rest/v1/(nav_[a-z0-9_]+)(?:[/?'\"`]|$)"),
 )
 DB_HEALTH_ENTRY_PATTERN = re.compile(
-    r"\('(frontend_api|admin_api|demo_api)',\s*'(nav_v2_[a-z0-9_]+)'\)"
+    r"\('{1,2}(frontend_api|admin_api|demo_api)'{1,2},\s*'{1,2}(nav_v2_[a-z0-9_]+)'{1,2}\)"
 )
 DB_HEALTH_FUNCTION_MARKER = "create or replace function public.nav_v2_get_rpc_grant_health()"
 CATEGORIES = ("frontend_api", "admin_api", "demo_api", "internal_only")
@@ -51,15 +51,38 @@ def iter_browser_files() -> list[Path]:
     return sorted(path for path in BROWSER_ROOT.rglob("*") if path.suffix in {".js", ".ts", ".html"})
 
 
-def latest_db_health_migration() -> Path | None:
+def migration_files() -> list[Path]:
     if not MIGRATIONS_ROOT.exists():
-        return None
+        return []
+    return sorted(MIGRATIONS_ROOT.glob("*.sql"))
+
+
+def latest_db_health_migration() -> Path | None:
     candidates: list[Path] = []
-    for path in sorted(MIGRATIONS_ROOT.glob("*.sql")):
+    for path in migration_files():
         text = path.read_text(encoding="utf-8").lower()
         if DB_HEALTH_FUNCTION_MARKER in text:
             candidates.append(path)
     return candidates[-1] if candidates else None
+
+
+def health_entries_from_base_and_later(base: Path) -> tuple[dict[str, set[str]], list[Path]]:
+    entries: dict[str, set[str]] = defaultdict(set)
+    sources: list[Path] = []
+    include = False
+    for path in migration_files():
+        if path == base:
+            include = True
+        if not include:
+            continue
+        text = path.read_text(encoding="utf-8")
+        found = DB_HEALTH_ENTRY_PATTERN.findall(text)
+        if not found:
+            continue
+        sources.append(path)
+        for category, name in found:
+            entries[category].add(name)
+    return entries, sources
 
 
 def main() -> int:
@@ -90,13 +113,11 @@ def main() -> int:
             classified[value] = category
 
     db_health_migration = latest_db_health_migration()
+    health_sources: list[Path] = []
     if db_health_migration is None:
         fail("Missing migration defining nav_v2_get_rpc_grant_health()", errors)
     else:
-        health_sql = db_health_migration.read_text(encoding="utf-8")
-        health_entries: dict[str, set[str]] = defaultdict(set)
-        for category, name in DB_HEALTH_ENTRY_PATTERN.findall(health_sql):
-            health_entries[category].add(name)
+        health_entries, health_sources = health_entries_from_base_and_later(db_health_migration)
 
         for category in BROWSER_CATEGORIES:
             registry_names = set(registry.get(category, []))
@@ -105,13 +126,13 @@ def main() -> int:
             extra = sorted(health_names - registry_names)
             if missing:
                 fail(
-                    f"Latest DB RPC health ({db_health_migration.name}) is missing {category} entries: "
+                    f"RPC health chain from {db_health_migration.name} is missing {category} entries: "
                     + ", ".join(missing),
                     errors,
                 )
             if extra:
                 fail(
-                    f"Latest DB RPC health ({db_health_migration.name}) has unregistered {category} entries: "
+                    f"RPC health chain from {db_health_migration.name} has unregistered {category} entries: "
                     + ", ".join(extra),
                     errors,
                 )
@@ -178,11 +199,12 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
+    source_label = ", ".join(path.name for path in health_sources) if health_sources else "missing"
     print(
         "Navigator v2 RPC surface passed: "
         f"{len(calls)} calls found, {len(classified)} RPCs classified, "
         f"{len(direct_tables)} direct browser table calls, "
-        f"health source {db_health_migration.name if db_health_migration else 'missing'}"
+        f"health chain {source_label}"
     )
     return 0
 
