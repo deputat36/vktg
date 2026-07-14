@@ -60,7 +60,7 @@ def main() -> int:
         "decision_package_ready=false",
         "pilot_started=false",
         "pilot_start_authorized=false",
-        "requires fresh read-only",
+        "требует свежую read-only проверку",
         "rpc('nav_v2_get_operational_adoption_report'",
         "URL.createObjectURL",
         "navigator-v2-operational-pilot-owner-decision-",
