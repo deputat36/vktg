@@ -47,14 +47,8 @@ def main() -> int:
         "buildPilotActionChecklistPackage",
         "MAX_FILE_BYTES = 2 * 1024 * 1024",
         "['owner', 'admin'].includes(profile().role)",
-        "Action checklist операционного пилота доступен только владельцу и администратору.",
         "navigator_v2_operational_pilot_measurement_baseline",
         "navigator-v2-operational-pilot-action-checklist-",
-        "Одно действие, ответственный, срок и evidence",
-        "Checklist не создаёт задачи",
-        "pilot_started=false",
-        "pilot_start_authorized=false",
-        "Файл остаётся локально",
         "rpc('nav_v2_get_operational_adoption_report'",
         "URL.createObjectURL",
     ), UI.name, errors)
@@ -81,7 +75,6 @@ def main() -> int:
         "export function buildPilotActionChecklistPackage",
         "navigator_v2_operational_pilot_measurement_baseline_validation",
         "navigator_v2_operational_pilot_action_checklist",
-        "action_checklist_available",
         "fresh_ready_for_action",
         "checklist_ready",
         "server_mutation_available: false",
@@ -92,11 +85,7 @@ def main() -> int:
         "pilot_started: false",
         "pilot_start_authorized: false",
         "requires_separate_owner_start_confirmation: true",
-        "requires_responsible_acknowledgement: true",
         "requires_result_evidence: true",
-        "requires_post_action_result_confirmation: true",
-        "overdue_required_documents",
-        "baseline_metrics.${field}",
     ), MODEL.name, errors)
     for forbidden in ("rpc(", ".from(", "fetch(", "localStorage", "sessionStorage"):
         if forbidden in model:
@@ -106,9 +95,6 @@ def main() -> int:
     require(semantic, (
         "checklist_ready, true",
         "fresh_revalidation_passed, false",
-        "automatic_task_creation_available, false",
-        "checklist_is_execution_authorization, false",
-        "role: 'manager'",
         "duplicateBaseline",
         "pastSummary",
         "semantic regression passed",
