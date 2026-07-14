@@ -60,7 +60,130 @@
   display: block;
 }
 
-.role-home-summary {
+.role-home-profile-details {
+  margin-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.role-home-profile-details summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.role-home-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+  color: #475569;
+}
+
+.role-home-focus {
+  margin-bottom: 18px;
+  border-color: #bfdbfe;
+  box-shadow: 0 16px 44px rgba(29, 78, 216, 0.09);
+}
+
+.role-home-section-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.role-home-data-note {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+}
+
+.role-home-priority-list {
+  display: grid;
+  gap: 12px;
+}
+
+.role-home-priority-card {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 20px;
+  padding: 15px;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.role-home-priority-number {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.role-home-priority-head,
+.role-home-priority-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-home-priority-head h3 {
+  margin: 3px 0 0;
+  font-size: 18px;
+}
+
+.role-home-priority-main p {
+  margin: 12px 0;
+  line-height: 1.45;
+}
+
+.role-home-reasons {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.role-home-reason {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.role-home-reason.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.role-home-reason.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-home-reason.positive {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.role-home-quick-actions {
   margin-bottom: 18px;
 }
 
@@ -89,5 +212,22 @@
 
   .role-home-profile .section-title {
     gap: 14px;
+  }
+
+  .role-home-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-home-priority-card {
+    grid-template-columns: 1fr;
+  }
+
+  .role-home-priority-number {
+    width: 36px;
+    height: 36px;
+  }
+
+  .role-home-priority-footer .btn {
+    width: 100%;
   }
 }
