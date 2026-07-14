@@ -60,7 +60,7 @@ def main() -> int:
         "Fresh read-only revalidation",
         "Measurement baseline",
         "Файл остаётся локально",
-        "pilot start по-прежнему не разрешён",
+        "Pilot start по-прежнему не разрешён",
         "rpc('nav_v2_get_operational_adoption_report'",
         "URL.createObjectURL",
     ), UI.name, errors)
