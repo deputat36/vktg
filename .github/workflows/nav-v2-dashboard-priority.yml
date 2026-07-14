@@ -1,0 +1,40 @@
+name: Navigator v2 dashboard priority
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'assets/js/nav-v2/dashboard-v2.js'
+      - 'assets/js/nav-v2/dashboard-priority-v2.js'
+      - 'assets/css/nav-v2-role-home.css'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_dashboard_priority.py'
+      - 'scripts/check-nav-v2-dashboard-priority.mjs'
+      - '.github/workflows/nav-v2-dashboard-priority.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dashboard-v2.html'
+      - 'assets/js/nav-v2/dashboard-v2.js'
+      - 'assets/js/nav-v2/dashboard-priority-v2.js'
+      - 'assets/css/nav-v2-role-home.css'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_dashboard_priority.py'
+      - 'scripts/check-nav-v2-dashboard-priority.mjs'
+      - '.github/workflows/nav-v2-dashboard-priority.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard-priority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile dashboard priority contract
+        run: python3 -m py_compile scripts/check_nav_v2_dashboard_priority.py
+      - name: Check dashboard priority structure
+        run: python3 scripts/check_nav_v2_dashboard_priority.py
+      - name: Check dashboard priority semantics
+        run: node scripts/check-nav-v2-dashboard-priority.mjs
