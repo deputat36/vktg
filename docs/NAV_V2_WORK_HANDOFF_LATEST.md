@@ -3,20 +3,21 @@
 ## Точка продолжения
 
 - Дата: 2026-07-14.
-- Текущий product `main`: `281523c61f833e11cc4b84045a309fccff417a7e` — PR #260.
-- Последняя production migration: `20260713195810_nav_v2_responsibility_point_preview_guard`.
-- Canonical migrations: `20260714001500_nav_v2_responsibility_point_preview.sql` и `20260714001600_nav_v2_responsibility_point_preview_guard.sql`.
-- Release baseline синхронизирован PR #259.
+- Текущий product `main`: `f83848ea8ea0f39be5fbc2af97a60891a0a5563d` — PR #262.
+- Последняя production migration: `20260714064311_nav_v2_operational_pilot_shortlist`.
+- Canonical migration: `20260714013000_nav_v2_operational_pilot_shortlist.sql`.
+- Canonical blob: `2fde357c95d838645927a466053e551dff11941a`.
+- Release-sync: ветка `agent/nav-v2-operational-pilot-shortlist-release-sync`.
 - Canonical frontend build: `20260711-01`.
 - Deal-card budget: 22; механическое сокращение без новой продуктовой причины запрещено.
-- `manager-source-remediation-v2.html` budget: 6 модулей после добавления evidence bundle validator.
+- `manager-source-remediation-v2.html` budget: 6 модулей.
 
 ## Последние завершённые PR
 
-- #260 — локальная проверка трёх responsibility evidence-файлов, SHA-256 manifest и semantic regression.
-- #259 — release baseline/aliases после responsibility point preview deploy.
-- #258 — owner/admin server-side read-only preview одной responsibility correction, fingerprint, private implementation и CI contracts.
-- #257/#256 — handoff и импорт/локальная read-only валидация confirmation JSON.
+- #262 — прозрачный read-only shortlist трёх реальных сделок для операционного пилота.
+- #261/#260 — handoff и локальная проверка полного responsibility evidence bundle с SHA-256 manifest.
+- #259/#258 — release sync и owner/admin server preview одной responsibility correction.
+- #257/#256 — handoff и импорт/локальная валидация confirmation JSON.
 - #255/#254 — release sync и browser-local лист подтверждения ответственности.
 - #253/#252 — release sync, source-remediation UI и evidence-only candidates.
 - #251/#250 — release sync и grouped source-remediation SQL.
@@ -32,20 +33,20 @@
 ## Supabase production
 
 - Project: `ofewxuqfjhamgerwzull`.
-- Live core preview: `20260713195749_nav_v2_responsibility_point_preview`.
-- Live guard: `20260713195810_nav_v2_responsibility_point_preview_guard`.
-- Canonical core blob: `298c5093419e7cf3837b3255df170f32f60498c9`.
-- Canonical guard blob: `d92aaf30482f0fc8802f947e796ca9307cc3479f`.
+- Live pilot shortlist: `20260714064311_nav_v2_operational_pilot_shortlist`.
+- Public operational report version: 7.
 - `nav-invite-user`: v10 ACTIVE, `verify_jwt=true`.
 - `nav-v2-deal-api`: v4 ACTIVE, `verify_jwt=true`.
 - RPC grant health: 50 items, 0 problems.
 - Frontend RPC coverage: 43 items, 0 problems.
+- Public operational wrapper: authenticated=true, anon=false, PUBLIC=false.
+- Private pilot helper: service_role=true, authenticated=false, anon=false, PUBLIC=false.
+- Активный СПН получает SQLSTATE `42501` при вызове operational report.
 - Supabase branches: только production `main`; isolated auth target отсутствует.
-- PR #260 не менял schema, migrations, grants или Edge Functions.
 
 ## Рабочие данные
 
-Read-only baseline после merge PR #260:
+До и после PR #262 deployment:
 
 - Deals: 21.
 - Documents: 168.
@@ -53,7 +54,6 @@ Read-only baseline после merge PR #260:
 - Risks: 49.
 - Events: 116.
 - Profiles: 5.
-- Latest migration: `20260713195810`.
 - Persisted task type: 0.
 - Persisted SLA: 0.
 - Реальные `seller_spn_id`, `buyer_spn_id`, `manager_id`, статусы, задачи, риски и документы не менялись.
@@ -81,11 +81,83 @@ Read-only baseline после merge PR #260:
 - Исторический backlog не реконструируется.
 - Автоматический рейтинг сотрудника отсутствует.
 
+## PR #262 — operational pilot shortlist
+
+Private helper:
+
+`nav_v2_private.nav_v2_get_operational_pilot_shortlist_unchecked_20260714(p_days integer, p_limit integer)`
+
+Browser API не расширена. Существующий RPC:
+
+`public.nav_v2_get_operational_adoption_report(p_days integer, p_limit integer)`
+
+добавляет поле `operational_pilot_shortlist`.
+
+Границы:
+
+- `preview_only=true`;
+- `selection_available=false`;
+- `mutation_available=false`;
+- `ranking_is_not_employee_rating=true`;
+- `owner_decision_required=true`;
+- demo-сделки исключаются существующим adoption scope;
+- нормализованный адрес не позволяет одной вероятной дублирующей группе занять несколько мест;
+- причины и backlog показываются явно, а не скрываются общим баллом;
+- shortlist не назначает сотрудника, не меняет статус и не запускает пилот.
+
+Production summary:
+
+- deals in scope: 16;
+- shortlist count: 3;
+- quick-result candidates: 3;
+- responsibility candidates: 3;
+- document-workflow candidates: 1;
+- probable duplicate groups: 3.
+
+### 1. Быстрый пилотный цикл
+
+- Deal ID: `a6740629-8e36-4fb9-8b3f-08510fd0497f`.
+- Адрес: Пушкинская 97-11.
+- Готовность к сделке: 55%.
+- Значимых событий за период: 0.
+- Открытые/просроченные задачи: 5/5.
+- Открытых обязательных документов: 8; просроченных: 0; бесхозных: 0.
+- Рисков, блокирующих сделку: 2.
+- Active-SPN evidence отсутствует.
+- Смысл lane: проверить один короткий, фактически завершаемый результат после ручного подтверждения ответственности.
+
+### 2. Подтверждение ответственности
+
+- Deal ID: `03029d49-6e43-47b6-856e-4886f0ac320a`.
+- Адрес: Танцырей.
+- Готовность к сделке: 65%.
+- Evidence-кандидат: Овчинников Александр Константинович.
+- Независимых типов сигналов: 5; действий: 8.
+- Значимых событий: 2.
+- Открытые/просроченные задачи: 3/3.
+- Открытых обязательных документов: 11; все 11 без assigned_to/responsible_role.
+- Рисков, блокирующих сделку: 2.
+- У evidence-кандидата отсутствует `manager_id`.
+- Смысл lane: вручную подтвердить фактического СПН, сторону сделки и менеджерскую связь до любых назначений.
+
+### 3. Документный рабочий цикл
+
+- Deal ID: `a696d7f8-6c9f-4a2b-87e9-3a7594a31787`.
+- Адрес: Приборная.
+- Готовность к сделке: 45%.
+- Значимых событий: 5.
+- Открытые/просроченные задачи: 5/5.
+- Подтверждено документов: 2.
+- Открытых обязательных документов: 9; просроченных: 6; бесхозных: 0.
+- Рисков, блокирующих сделку: 2.
+- Active-SPN evidence отсутствует.
+- Смысл lane: проверить полный цикл одного документа — ответственный, срок, фактическое подтверждение и следующий шаг.
+
 ## Источники ответственности
 
 ### Manager assignment proposal
 
-- Public report version: 6.
+- Public report version: 7.
 - Live: 16 `missing_source`; остальные состояния 0.
 - Candidate выводится только из `manager_id` корректного активного СПН стороны сделки.
 - `mutation_available=false`.
@@ -118,7 +190,7 @@ Read-only baseline после merge PR #260:
 - Во всех четырёх strong-evidence сделках кандидат — Овчинников А. К.
 - Evidence не определяет сторону сделки и не выполняет назначение.
 
-## Confirmation workflow
+## Confirmation and evidence bundle workflow
 
 Экран `manager-source-remediation-v2.html` позволяет:
 
@@ -128,141 +200,55 @@ Read-only baseline после merge PR #260:
 4. Получить `point_operation_ready=true` только для ровно одной свежей, подтверждённой и однозначной операции.
 5. Скачать validation report.
 6. Owner/admin может вызвать read-only server preview и скачать fingerprint.
-7. Загрузить все три файла в evidence bundle validator.
-8. Получить `bundle_ready=true` и скачать SHA-256 bundle manifest только при полном совпадении файлов.
+7. Загрузить три файла в evidence bundle validator.
+8. Получить `bundle_ready=true` и скачать SHA-256 manifest только при полном совпадении файлов.
 
 Ни один этап не выполняет UPDATE.
 
-## Server responsibility point preview
+Bundle validator проверяет:
 
-Public RPC:
-
-`public.nav_v2_preview_responsibility_point_correction(p_operation jsonb)`
-
-Private implementation:
-
-`nav_v2_private.nav_v2_preview_responsibility_point_correction_unchecked_20260714(p_operation jsonb)`
-
-Поддерживаемые операции:
-
-- `deal_spn` → только `seller_spn_id` или `buyer_spn_id`;
-- `profile_manager` → только `manager_id`.
-
-Server preview:
-
-- доступен только owner/admin;
-- требует ровно одну нормализованную операцию;
-- требует явный ключ `expected_current_id`, включая JSON null;
-- требует основание не короче 10 символов;
-- проверяет live current value;
-- проверяет active/role целевого и предлагаемого профиля;
-- отказывает при stale, no-change, неизвестном поле, неверной роли или self-manager;
-- возвращает before/after, preconditions, fingerprint и `expires_at` через 15 минут;
-- `mutation_available=false`;
-- `execution_rpc_available=false`;
-- `requires_revalidation=true`;
-- не создаёт audit event и не изменяет таблицы.
-
-Production verification:
-
-- target: Овчинников Александр Константинович;
-- operation: `profile_manager.manager_id`;
-- before: `null`;
-- proposed: Алексей Ковтун, role owner;
-- result: `ready=true`;
-- пакет без `expected_current_id`: `missing_expected_current`;
-- SPN invocation: SQLSTATE `42501`.
-
-Grants:
-
-- public wrapper: authenticated=true, anon=false, PUBLIC=false;
-- private implementation: service_role=true, authenticated=false, anon=false, PUBLIC=false.
-
-## PR #260 — responsibility evidence bundle validator
-
-Новый модуль:
-
-`assets/js/nav-v2/manager-source-remediation-evidence-bundle-v2.js`
-
-Он принимает ровно три JSON-файла:
-
-1. `navigator_v2_responsibility_confirmation_draft`;
-2. `navigator_v2_responsibility_confirmation_validation`;
-3. `navigator_v2_responsibility_point_server_preview`.
-
-Проверки:
-
-- все корневые типы, schema versions и safety markers;
-- confirmation JSON содержит ровно одну реально изменяемую операцию;
-- `decision_status=confirmed`;
-- target, field, proposed id и основание присутствуют;
-- основание не короче 10 символов;
-- package внутри validation report точно равен загруженному confirmation JSON после стабильной сериализации;
-- validation report содержит `point_operation_ready=true`;
-- ровно одна ready/actionable операция;
-- stale/invalid/not_ready равны нулю;
-- operation из validation совпадает с confirmation;
-- server preview имеет `ready=true`, `reason_code=ready` и корректный 32-символьный fingerprint;
-- preview не истёк;
+- confirmation JSON содержит ровно одну изменяемую операцию и `decision_status=confirmed`;
+- package внутри validation report точно равен confirmation JSON;
+- `point_operation_ready=true`, одна ready/actionable операция, ноль stale/invalid/not_ready;
+- operation во всех файлах совпадает;
+- server preview имеет `ready=true`, корректный fingerprint и не истёк;
 - `actual_current_id` совпадает с `expected_current_id`;
-- envelope operation и server result совпадают с confirmation/validation;
 - validation report и server preview сформированы одним user id;
-- при остатке менее пяти минут выводится предупреждение;
-- подозрительная последовательность timestamps выводится как предупреждение.
+- safety markers запрещают mutation/execution.
 
-При успехе:
+При успехе создаётся локальный manifest с SHA-256 confirmation, validation, preview и нормализованной операции. `bundle_ready=true` не является разрешением на UPDATE; перед audited correction обязательна новая server revalidation.
 
-- `bundle_ready=true`;
-- создаётся локальный manifest `navigator_v2_responsibility_evidence_bundle_validation`;
-- вычисляются SHA-256 для confirmation, validation report, server preview и нормализованной операции;
-- manifest можно скачать;
-- согласованную операцию можно скопировать.
+## Проверки PR #262
 
-Граница:
-
-- новый модуль не вызывает RPC;
-- файлы не отправляются в Supabase;
-- файлы хранятся только в памяти страницы;
-- `bundle_ready=true` не является разрешением на UPDATE;
-- непосредственно перед audited correction обязательна новая server revalidation.
-
-## Проверки PR #260
-
-- Dedicated remediation contract: PASS.
-- Semantic Node bundle regression: PASS.
-- Valid bundle: PASS.
-- Tampered confirmation/validation package: rejected.
-- Expired preview: rejected.
-- Mismatched preview operation: rejected.
-- Multiple operations: rejected.
-- Different validation/preview users: rejected.
-- Stable JSON serialization: PASS.
-- SHA-256 known-vector test: PASS.
+- Dedicated operational pilot shortlist contract: PASS.
+- Strict `pipefail` validator exit propagation: PASS.
+- Validator artifact upload on success/failure: PASS.
+- Existing adoption/comparison/manager contracts: PASS.
 - Full static suite: PASS.
 - JavaScript syntax: PASS.
+- Advisor scope: PASS.
+- Manager-source-remediation contracts: PASS.
 - Public desktop/mobile Playwright: PASS.
-- RPC surface and release integrity: PASS.
 - Review threads: 0.
+- DDL rehearsal with full ROLLBACK: PASS.
+- Production post-deploy verification: PASS.
 - `authenticated-smoke`: `skipped`; это не authenticated PASS.
 
 ## Advisors
 
-- Security Advisor после preview deploy получен.
-- Public preview присутствует как ожидаемый `authenticated_security_definer_function_executable` warning и учтён в Navigator-only Advisor baseline.
-- Private implementation наружу не утекла.
+- Security Advisor после shortlist deploy получен.
+- Public adoption RPC присутствует как ожидаемый role-gated `authenticated_security_definer_function_executable` warning и уже учтён в Navigator-only baseline.
+- Новый private shortlist helper наружу не утёк.
 - Leaked-password protection остаётся выключенной до invite/recovery E2E.
-- Performance Advisor не показал preview-specific проблему.
+- Performance Advisor не показал shortlist-specific проблему.
 - Общий Performance Advisor смешивает Navigator, legacy Nav, Leader, Parket и другие подсистемы; автоматическое удаление индексов или массовая правка RLS запрещены без workload evidence.
-- PR #260 не менял БД, поэтому повторный Advisor run не требовался.
 
 ## Release drift
 
-- Baseline latest live: `20260713195810`.
-- Live `20260713195749` связан с canonical `20260714001500` и blob `298c5093419e7cf3837b3255df170f32f60498c9`.
-- Live `20260713195810` связан с canonical `20260714001600` и blob `d92aaf30482f0fc8802f947e796ca9307cc3479f`.
-- Alias manifest: 15 approved live mappings и 15 canonical repository-only sources.
+- Target baseline latest live: `20260714064311`.
+- Live `20260714064311` связан с canonical `20260714013000` и blob `2fde357c95d838645927a466053e551dff11941a`.
+- Alias manifest после текущего release-sync содержит 16 approved live mappings и 16 canonical repository-only sources.
 - Неизвестный remote-only/repo-only drift продолжает ломать gate.
-- PR #260 не менял Supabase, поэтому новый release-sync не требуется.
 - Approved workflow run в Environment `navigator-production-readonly` всё ещё требует ручной настройки владельца.
 
 ## Authenticated E2E blocker
@@ -274,35 +260,48 @@ Grants:
 - Invite/access-link/password/recovery/email delivery: BLOCKED.
 - Browser mutation E2E: BLOCKED.
 - Workflow success при `authenticated-smoke=skipped` не является authenticated PASS.
-- Не создавать execution RPC и не включать leaked-password protection до появления изолированного target и фактического role PASS.
+- Не создавать execution RPC и не включать leaked-password protection до isolated target и фактического role PASS.
 
 ## Ручные действия владельца
 
-1. Открыть `manager-source-remediation-v2.html` под owner/admin.
-2. Заполнить локальный confirmation draft только для одного решения.
-3. Скачать confirmation JSON.
-4. Импортировать JSON в local validator и получить `point_operation_ready=true`.
-5. Скачать validation report.
-6. Получить свежий server preview.
-7. Скачать server preview с неистёкшим fingerprint.
-8. В блоке «Проверка трёх evidence-файлов» загрузить все три файла.
-9. Получить `bundle_ready=true`.
-10. Скачать bundle manifest с SHA-256.
-11. Передать четыре файла: confirmation JSON, validation report, server preview и bundle manifest.
-12. Только после явного подтверждения рассматривать одну audited point correction.
-13. Создать Environment `navigator-production-readonly` и выполнить approved drift workflow.
-14. Для auth E2E создать отдельный test project/branch и Environment `navigator-e2e`.
+### Операционный пилот
+
+1. Открыть `operational-adoption-v2.html` под owner/admin/manager.
+2. В блоке «Кандидаты для операционного пилота» открыть три карточки.
+3. Подтвердить или отклонить каждый lane вручную.
+4. Для Пушкинской 97-11 сначала подтвердить ответственных и выбрать одно завершаемое действие.
+5. Для Танцырей подтвердить Овчинникова, сторону сделки и его менеджера.
+6. Для Приборной выбрать один обязательный документ и зафиксировать ответственного, срок и критерий результата.
+7. Не считать shortlist автоматическим включением сделки в пилот.
+
+### Responsibility correction
+
+1. Подготовить confirmation draft только для одного решения.
+2. Скачать confirmation JSON.
+3. Получить validation report с `point_operation_ready=true`.
+4. Получить свежий server preview с неистёкшим fingerprint.
+5. Загрузить три файла в bundle validator.
+6. Получить `bundle_ready=true` и скачать bundle manifest.
+7. Передать четыре evidence-файла.
+8. Только после явного подтверждения рассматривать одну audited point correction.
+
+### Инфраструктура
+
+1. Создать Environment `navigator-production-readonly` и выполнить approved drift workflow с `allow_drift=false`.
+2. Создать отдельный test project/branch и Environment `navigator-e2e`.
 
 ## NEXT_WORK_QUEUE
 
-- P0 MANUAL — получить confirmation JSON, validation report, server preview и `bundle_ready=true` manifest.
+- P0 MANUAL — owner вручную подтверждает или отклоняет три сделки operational pilot shortlist.
+- P0 MANUAL — получить confirmation JSON, validation report, server preview и `bundle_ready=true` manifest для одной responsibility correction.
 - P0 MANUAL — approved release drift workflow run с `allow_drift=false`.
 - P0 BLOCKED — isolated target + authenticated role/invite/recovery/mutation E2E.
-- P1 BLOCKED ON VALID BUNDLE — одна audited point correction одного SPN field либо `manager_id`, с повторной server revalidation, pre/post snapshot и audit event.
+- P1 BLOCKED ON OWNER PILOT DECISION — подготовить read-only pilot checklist/measurement baseline только для подтверждённых owner сделок; не менять данные автоматически.
+- P1 BLOCKED ON VALID BUNDLE — одна audited point correction одного SPN field либо `manager_id`, с новой server revalidation, pre/post snapshot и audit event.
 - P1 BLOCKED ON AUTH EVIDENCE — audited synthetic task contract mutation.
 - P1 — leaked-password protection только после auth E2E.
-- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, adoption snapshot/comparison, manager proposal, grouped remediation, evidence candidates, local confirmation draft, package validator, server point preview и evidence bundle validator без новой причины.
+- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, adoption snapshot/comparison, manager proposal, grouped remediation, evidence candidates, local confirmation draft, package validator, server point preview, evidence bundle validator и pilot shortlist без новой причины.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #260 и live migration 20260713195810. Один раз проверь Environment navigator-production-readonly, isolated auth target и наличие четырёх evidence-файлов: confirmation JSON, validation report с point_operation_ready=true, server preview с неистёкшим fingerprint и bundle manifest с bundle_ready=true. Если все четыре файла подтверждены владельцем — выполни только одну audited point correction с повторной server revalidation, pre/post snapshot и audit event. Если bundle отсутствует или невалиден — реальные назначения не менять.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #262 и live migration 20260714064311. Один раз проверь Environment navigator-production-readonly, isolated auth target, owner-решение по трём pilot shortlist карточкам и наличие четырёх responsibility evidence-файлов. Если owner подтвердил pilot deals — подготовь только read-only pilot checklist/measurement baseline без автоматических изменений. Если валидный bundle подтверждён — выполни только одну audited point correction с новой server revalidation, pre/post snapshot и audit event. Если подтверждений нет — реальные данные не менять.`
