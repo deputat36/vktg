@@ -7,6 +7,7 @@ on:
       - 'assets/js/nav-v2/manager-source-remediation-v2.js'
       - 'assets/js/nav-v2/manager-source-remediation-validation-v2.js'
       - 'assets/js/nav-v2/manager-source-remediation-server-preview-v2.js'
+      - 'assets/js/nav-v2/manager-source-remediation-evidence-bundle-v2.js'
       - 'assets/js/nav-v2/role-menu-v2.js'
       - 'config/nav-v2-module-budget.json'
       - 'config/nav-v2-role-contract.json'
@@ -19,6 +20,7 @@ on:
       - 'supabase/migrations/20260714001600_nav_v2_responsibility_point_preview_guard.sql'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - 'scripts/check_nav_v2_responsibility_point_preview.py'
+      - 'scripts/check-nav-v2-responsibility-evidence-bundle.mjs'
       - 'scripts/check_nav_v2_role_contract.py'
       - 'scripts/check_nav_v2_rpc_surface.py'
       - 'scripts/check_nav_v2_release_integrity_v2.py'
@@ -32,6 +34,7 @@ on:
       - 'assets/js/nav-v2/manager-source-remediation-v2.js'
       - 'assets/js/nav-v2/manager-source-remediation-validation-v2.js'
       - 'assets/js/nav-v2/manager-source-remediation-server-preview-v2.js'
+      - 'assets/js/nav-v2/manager-source-remediation-evidence-bundle-v2.js'
       - 'assets/js/nav-v2/role-menu-v2.js'
       - 'config/nav-v2-module-budget.json'
       - 'config/nav-v2-role-contract.json'
@@ -44,6 +47,7 @@ on:
       - 'supabase/migrations/20260714001600_nav_v2_responsibility_point_preview_guard.sql'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - 'scripts/check_nav_v2_responsibility_point_preview.py'
+      - 'scripts/check-nav-v2-responsibility-evidence-bundle.mjs'
       - '.github/workflows/nav-v2-manager-source-remediation.yml'
       - '.github/workflows/nav-v2-static.yml'
 
@@ -55,8 +59,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check grouped remediation, evidence, confirmation, package validation and server preview
+      - name: Check grouped remediation, evidence, confirmation, package validation, server preview and evidence bundle
         run: python3 scripts/check_nav_v2_manager_source_remediation.py
+      - name: Check responsibility evidence bundle validator
+        run: node scripts/check-nav-v2-responsibility-evidence-bundle.mjs
       - name: Check responsibility point preview private wrapper
         run: python3 scripts/check_nav_v2_responsibility_point_preview.py
       - name: Check role route contract
