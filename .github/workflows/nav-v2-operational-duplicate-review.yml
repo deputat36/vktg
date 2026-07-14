@@ -1,0 +1,44 @@
+name: Navigator v2 exact duplicate review
+
+on:
+  pull_request:
+    paths:
+      - 'operational-duplicate-review-v2.html'
+      - 'operational-adoption-v2.html'
+      - 'assets/js/nav-v2/operational-duplicate-review-v2.js'
+      - 'assets/js/nav-v2/operational-duplicate-review-model-v2.js'
+      - 'supabase/migrations/20260714130000_nav_v2_exact_duplicate_review_pack.sql'
+      - 'config/nav-v2-rpc-surface.json'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_operational_duplicate_review.py'
+      - 'scripts/check-nav-v2-operational-duplicate-review.mjs'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-duplicate-review.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-duplicate-review-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check exact duplicate review static contract
+        run: python3 scripts/check_nav_v2_operational_duplicate_review.py
+      - name: Check exact duplicate review semantics
+        run: node scripts/check-nav-v2-operational-duplicate-review.mjs
+      - name: Check operational adoption compatibility
+        run: python3 scripts/check_nav_v2_operational_adoption.py
+      - name: Check pilot shortlist compatibility
+        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py
+      - name: Check RPC surface registry
+        run: python3 scripts/check_nav_v2_rpc_surface.py
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/operational-duplicate-review-model-v2.js
+          node --check assets/js/nav-v2/operational-duplicate-review-v2.js
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_operational_duplicate_review.py

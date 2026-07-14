@@ -77,6 +77,7 @@
     "nav_v2_get_responsibility_evidence_unchecked_20260713",
     "nav_v2_get_responsibility_confirmation_context_unchecked_20260713",
     "nav_v2_get_operational_pilot_shortlist_unchecked_20260714",
+    "nav_v2_get_exact_duplicate_review_pack_unchecked_20260714",
     "nav_v2_preview_responsibility_point_correction_unchecked_20260714",
     "nav_v2_touch_updated_at",
     "nav_v2_set_auto_task_due_date",
