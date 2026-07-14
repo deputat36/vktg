@@ -37,7 +37,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check operational pilot shortlist
-        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py
+        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py 2>&1 | tee operational-pilot-shortlist-contract.txt
+      - name: Upload pilot shortlist contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: operational-pilot-shortlist-contract
+          path: operational-pilot-shortlist-contract.txt
+          if-no-files-found: error
+          retention-days: 14
       - name: Check adoption report compatibility
         run: |
           python3 scripts/check_nav_v2_operational_adoption.py
