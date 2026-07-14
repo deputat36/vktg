@@ -61,7 +61,7 @@ def main() -> int:
 
         if '<script type="module" src="./assets/js/nav-v2/deal-card-risk-resolution-v2.js' in page:
             errors.append("Risk resolution must not be a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260713-11"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260714-12"'
         if cache_mapping not in page:
             errors.append("Deal-card page missing current risk lifecycle cache mapping")
 
