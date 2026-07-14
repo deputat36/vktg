@@ -13,6 +13,7 @@
     "viewer-v2.html": { "max_modules": 3 },
     "manager-source-remediation-v2.html": { "max_modules": 6 },
     "operational-pilot-decision-v2.html": { "max_modules": 3 },
+    "operational-pilot-decision-validation-v2.html": { "max_modules": 3 },
     "admin-v2.html": { "max_modules": 6 },
     "nav-access-v2.html": { "max_modules": 3 }
   },
