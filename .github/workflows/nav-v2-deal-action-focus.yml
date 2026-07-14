@@ -1,0 +1,32 @@
+name: Navigator v2 deal action focus
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-model-v2.js'
+      - 'assets/css/nav-v2-deal-action-focus.css'
+      - 'scripts/check_nav_v2_deal_action_focus.py'
+      - 'scripts/check-nav-v2-deal-action-focus.mjs'
+      - '.github/workflows/nav-v2-deal-action-focus.yml'
+
+jobs:
+  deal-action-focus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check action-focus contract
+        run: python3 scripts/check_nav_v2_deal_action_focus.py
+      - name: Check action-focus semantics
+        run: node scripts/check-nav-v2-deal-action-focus.mjs
+      - name: Recheck existing deal-card hooks
+        run: python3 scripts/check_nav_v2_deal_card_hooks.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deal-card-action-focus-v2.js
+          node --check assets/js/nav-v2/deal-card-action-focus-model-v2.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+      - name: Compile Python contract
+        run: python3 -m py_compile scripts/check_nav_v2_deal_action_focus.py

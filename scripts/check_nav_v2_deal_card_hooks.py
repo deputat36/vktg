@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
+ACTION_FOCUS_MODULE = ROOT / "assets/js/nav-v2/deal-card-action-focus-v2.js"
+ACTION_FOCUS_MODEL = ROOT / "assets/js/nav-v2/deal-card-action-focus-model-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 SPN_SAVE_CONFIRMATION_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-save-confirmation-v2.js"
@@ -25,6 +27,8 @@ def main() -> int:
     paths = (
         BASE_MODULE,
         RECHECK_MODULE,
+        ACTION_FOCUS_MODULE,
+        ACTION_FOCUS_MODEL,
         BAZA_MODULE,
         SPN_HANDOFF_MODULE,
         SPN_SAVE_CONFIRMATION_MODULE,
@@ -44,6 +48,8 @@ def main() -> int:
     if not errors:
         base = BASE_MODULE.read_text(encoding="utf-8")
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
+        action_focus = ACTION_FOCUS_MODULE.read_text(encoding="utf-8")
+        action_model = ACTION_FOCUS_MODEL.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
         spn_save_confirmation = SPN_SAVE_CONFIRMATION_MODULE.read_text(encoding="utf-8")
@@ -69,6 +75,7 @@ def main() -> int:
 
         recheck_markers = (
             "export function applyDealCardRecheckAlert(data, profile)",
+            "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
@@ -77,6 +84,7 @@ def main() -> int:
             "import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';",
             "import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';",
             "import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';",
+            "applyDealCardActionFocus(cardData, profileData);",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
@@ -90,6 +98,8 @@ def main() -> int:
         for marker in recheck_markers:
             if marker not in recheck:
                 errors.append(f"deal-card enhancement lifecycle missing marker: {marker}")
+        if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("placeAlert();"):
+            errors.append("deal-card action focus must run after recheck alert placement")
 
         forbidden_recheck_markers = (
             "rpc('nav_v2_get_deal_card'",
@@ -100,6 +110,26 @@ def main() -> int:
         for marker in forbidden_recheck_markers:
             if marker in recheck:
                 errors.append(f"deal-card recheck helper still contains legacy patch behavior: {marker}")
+
+        action_markers = (
+            "export function applyDealCardActionFocus(data, profile)",
+            "buildDealActionFocus(data, profile || data?.profile || null)",
+            "id=\"dealActionFocus\"",
+            "Главное действие сейчас",
+            "Как понять, что готово",
+            "data-action-focus-tab",
+        )
+        for marker in action_markers:
+            if marker not in action_focus:
+                errors.append(f"deal-card action focus missing marker: {marker}")
+        for marker in ("rpc(", "new MutationObserver", "localStorage", "sessionStorage", "nav_v2_update_", "nav_v2_add_", "nav_v2_save_"):
+            if marker in action_focus:
+                errors.append(f"deal-card action focus must remain RPC-free and read-only: {marker}")
+        if "export function buildDealActionFocus" not in action_model:
+            errors.append("deal-card action focus model must export buildDealActionFocus")
+        for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+            if marker in action_model:
+                errors.append(f"deal-card action focus model must remain pure: {marker}")
 
         if "export async function applyDealCardBazaHints(card, profile)" not in baza:
             errors.append("deal-card BAZA helper must export its explicit lifecycle hook")
@@ -246,6 +276,8 @@ def main() -> int:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
             "deal-card-recheck-alert-v2.js",
+            "deal-card-action-focus-v2.js",
+            "deal-card-action-focus-model-v2.js",
             "deal-card-baza-hints-v2.js",
             "deal-card-spn-handoff-v2.js",
             "deal-card-spn-save-confirmation-v2.js",
@@ -259,7 +291,7 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260713-11"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260714-12"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
@@ -273,7 +305,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: shared lifecycle includes read-only SPN save confirmation")
+    print("Navigator v2 deal-card hook passed: shared lifecycle includes action focus and read-only SPN save confirmation")
     return 0
 
 

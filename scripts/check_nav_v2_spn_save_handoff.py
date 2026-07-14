@@ -76,8 +76,8 @@ def main() -> int:
     ), HOOK.name, errors)
 
     card_page = CARD_PAGE.read_text(encoding="utf-8")
-    if "deal-card-recheck-alert-v2.js?v=20260713-11" not in card_page:
-        errors.append("deal-card importmap does not publish the SPN handoff lifecycle version")
+    if "deal-card-recheck-alert-v2.js?v=20260714-12" not in card_page:
+        errors.append("deal-card importmap does not publish the current SPN handoff lifecycle version")
 
     workflow = WORKFLOW.read_text(encoding="utf-8")
     if "python3 scripts/check_nav_v2_spn_save_handoff.py" not in workflow:
