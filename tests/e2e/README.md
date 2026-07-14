@@ -2,6 +2,22 @@
 
 Этот контур предназначен только для отдельного Supabase development branch. Production-проект `ofewxuqfjhamgerwzull` намеренно блокируется preflight-скриптом.
 
+Полный cost-controlled lifecycle описан в `docs/NAV_V2_AUTH_E2E_TARGET_RUNBOOK.md`. Машиночитаемый план находится в `config/nav-v2-e2e-target-plan.json`.
+
+## Стоимость и подтверждение
+
+Перед созданием ветки обязательно заново проверить цену Supabase Branching и получить отдельное подтверждение пользователя через cost-confirmation flow.
+
+Снимок на 2026-07-14:
+
+- USD 0.01344 в час для Micro preview branch;
+- плановый максимум жизни ветки — 6 часов;
+- плановый compute ceiling — USD 0.08064;
+- egress и storage могут добавить расходы;
+- generic-команда «продолжай» не считается подтверждением стоимости.
+
+Без отдельного подтверждения ветку не создавать.
+
 ## Что проверяется
 
 - гостевые auth-gates на desktop и mobile;
@@ -30,7 +46,7 @@ Secrets:
 - пары `NAV_E2E_<ROLE>_EMAIL` / `NAV_E2E_<ROLE>_PASSWORD` для `ADMIN`, `MANAGER`, `SPN`, `LAWYER`, `BROKER`, `VIEWER`;
 - `NAV_E2E_OWNER_EMAIL` / `NAV_E2E_OWNER_PASSWORD` — только для disposable owner и только при ручном `include_owner=true`.
 
-Не добавлять service-role key, JWT, refresh token или access link. Workflow подменяет `config/supabase.js` только во временном runner workspace и не выводит значения secrets.
+Не добавлять service-role key, JWT, refresh token, database password или access link. Workflow подменяет `config/supabase.js` только во временном runner workspace и не выводит значения secrets.
 
 ## Тестовые данные
 
@@ -54,6 +70,15 @@ npm run test:e2e:public
 
 ## Cleanup
 
-После теста development branch удаляется целиком. Если branch нужно сохранить, сначала удалить все сделки и дочерние записи с техническим маркером `[NAV E2E]`, затем деактивировать профили `nav-e2e` и удалить соответствующих Auth users через Supabase Dashboard. Cleanup считается завершённым только когда запрос по префиксу `nav-e2e` возвращает ноль Auth users и ноль активных профилей.
+После теста development branch удаляется целиком сразу после сохранения evidence. Максимальное плановое время жизни — 6 часов.
+
+Cleanup считается завершённым только когда:
+
+- ветка отсутствует в Supabase branch list;
+- технических Auth users с префиксом `nav-e2e` не осталось;
+- активных профилей `[NAV E2E]` не осталось;
+- branch ID, creation/deletion timestamps и workflow evidence записаны в связанные issues.
+
+Если branch нужно сохранить вопреки плану, это требует нового явного решения и новой оценки стоимости. Не оставлять ветку активной по умолчанию.
 
 Production cleanup не требуется: preflight запрещает authenticated E2E против production, а public smoke ничего не записывает.
