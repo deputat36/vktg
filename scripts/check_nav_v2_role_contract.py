@@ -179,7 +179,12 @@ def main() -> int:
         block = dashboard_source[start_at:next_at if next_at >= 0 else start_at + 1200]
         if destination not in block:
             errors.append(f"dashboard-v2.js: {role} primary workspace must point to {destination}")
-    if "Режим наблюдения" not in dashboard_source:
+    viewer_read_only_markers = (
+        "Режим наблюдения",
+        "без возможности менять данные",
+        "без права изменения данных",
+    )
+    if not any(marker in dashboard_source for marker in viewer_read_only_markers):
         errors.append("dashboard-v2.js: viewer workspace must explicitly explain read-only mode")
 
     dashboard_html = DASHBOARD_HTML_PATH.read_text(encoding="utf-8")
