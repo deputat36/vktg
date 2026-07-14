@@ -64,7 +64,7 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
-    if baseline.get("latest_live_migration") != "20260713195810":
+    if baseline.get("latest_live_migration") != "20260714064311":
         errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
@@ -88,6 +88,7 @@ def main() -> int:
         "20260713184344",
         "20260713195749",
         "20260713195810",
+        "20260714064311",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
@@ -106,22 +107,24 @@ def main() -> int:
         "20260713234500",
         "20260714001500",
         "20260714001600",
+        "20260714013000",
     }:
         errors.append("approved repository-only migration set drifted")
 
     expected = {
         "20260713195749": ("20260714001500", "298c5093419e7cf3837b3255df170f32f60498c9"),
         "20260713195810": ("20260714001600", "d92aaf30482f0fc8802f947e796ca9307cc3479f"),
+        "20260714064311": ("20260714013000", "2fde357c95d838645927a466053e551dff11941a"),
     }
     for live_version, (canonical_version, blob_sha) in expected.items():
         live_entry = (aliases.get("live_aliases") or {}).get(live_version) or {}
         if live_entry.get("canonical_migrations") != [canonical_version]:
-            errors.append(f"point preview live migration mapping drifted for {live_version}")
+            errors.append(f"reviewed live migration mapping drifted for {live_version}")
         canonical_entry = (aliases.get("approved_repository_only") or {}).get(canonical_version) or {}
         if canonical_entry.get("represented_by_live") != [live_version]:
-            errors.append(f"point preview canonical reverse mapping drifted for {canonical_version}")
+            errors.append(f"reviewed canonical reverse mapping drifted for {canonical_version}")
         if canonical_entry.get("source_blob_sha") != blob_sha:
-            errors.append(f"point preview canonical blob drifted for {canonical_version}")
+            errors.append(f"reviewed canonical blob drifted for {canonical_version}")
 
     reporter = REPORTER.read_text(encoding="utf-8")
     require(reporter, (
