@@ -1,0 +1,40 @@
+name: Navigator v2 operational pilot responsible acknowledgement
+
+on:
+  pull_request:
+    paths:
+      - 'operational-pilot-responsible-acknowledgement-v2.html'
+      - 'operational-pilot-start-confirmation-v2.html'
+      - 'assets/js/nav-v2/operational-pilot-responsible-acknowledgement-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-responsible-acknowledgement-model-v2.js'
+      - 'scripts/check_nav_v2_operational_pilot_responsible_acknowledgement.py'
+      - 'scripts/check-nav-v2-operational-pilot-responsible-acknowledgement.mjs'
+      - 'config/nav-v2-module-budget.json'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-pilot-responsible-acknowledgement.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-responsible-acknowledgement-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check pilot responsible acknowledgement static contract
+        run: python3 scripts/check_nav_v2_operational_pilot_responsible_acknowledgement.py
+      - name: Check pilot responsible acknowledgement semantics
+        run: node scripts/check-nav-v2-operational-pilot-responsible-acknowledgement.mjs
+      - name: Check owner start confirmation compatibility
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_start_confirmation.py
+          node scripts/check-nav-v2-operational-pilot-start-confirmation.mjs
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/operational-pilot-responsible-acknowledgement-model-v2.js
+          node --check assets/js/nav-v2/operational-pilot-responsible-acknowledgement-v2.js
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_operational_pilot_responsible_acknowledgement.py
