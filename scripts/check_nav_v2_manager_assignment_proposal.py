@@ -66,7 +66,7 @@ def main() -> int:
     page = PAGE.read_text(encoding="utf-8")
     require(page, (
         "Content-Security-Policy",
-        "assets/js/nav-v2/operational-adoption-v2.js?v=20260713-03",
+        "assets/js/nav-v2/operational-adoption-v2.js?v=20260714-01",
         'aria-live="polite"',
     ), PAGE.name, errors)
 
