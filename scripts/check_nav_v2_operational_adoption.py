@@ -102,7 +102,7 @@ def main() -> int:
     require(page, (
         "Content-Security-Policy",
         "aria-live=\"polite\"",
-        "assets/js/nav-v2/operational-adoption-v2.js?v=20260713-03",
+        "assets/js/nav-v2/operational-adoption-v2.js?v=20260714-01",
         "assets/js/nav-v2/role-menu-v2.js?v=20260713-01",
     ), PAGE.name, errors)
 
