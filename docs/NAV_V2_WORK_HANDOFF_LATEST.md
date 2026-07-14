@@ -3,214 +3,175 @@
 ## Точка продолжения
 
 - Дата: 2026-07-14.
-- Текущий `main`: `f4cdd54650d1f39e7449d86068217156ae92a869` — merge PR #288.
+- Текущий `main`: `16b2d9af4a5a641c8f879dc04539a998e5a9372c` — merge PR #292.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260714125054_nav_v2_exact_duplicate_review_pack`.
 - Public operational report version: 8.
-- Frontend build baseline: `20260711-01`; dashboard local cache-bust: `20260714-01`.
-- Open PR: нет после merge #288.
 - Supabase branches: только production `main`.
 - Isolated authenticated target: не создан.
 - `authenticated-smoke=skipped` не является authenticated PASS.
 
-## Последний продуктовый срез — PR #288
+## Завершённая UX-цепочка
 
-Рабочий стол перестроен вокруг вопроса «что делать сейчас», а не вокруг длинного списка карточек.
+### PR #288 — рабочий стол «Что делать сейчас»
+
+- три объяснимых приоритета;
+- role-aware действия;
+- рабочие KPI без demo и точных повторов;
+- шесть последних рабочих сделок вместо длинного списка;
+- pure priority model и semantic CI.
+
+### PR #290 — рабочие режимы списка сделок
+
+Страница `deals-v2.html` теперь по умолчанию показывает канонический рабочий набор:
+
+- demo скрыты;
+- точные повторы объединены, ранняя карточка остаётся;
+- owner/admin/manager: `Рабочие / Требуют внимания / Просрочено / Без ответственного / Готовы к задатку`;
+- СПН, юрист, брокер и viewer получают свои role-aware быстрые режимы;
+- полный исходный список, demo и повторы остаются доступны через расширенный фильтр;
+- карточка показывает просрочки, документы, ответственность и следующий шаг;
+- используется только существующий `nav_v2_get_deals_list`.
 
 Файлы:
 
-- `dashboard-v2.html`;
-- `assets/js/nav-v2/dashboard-v2.js`;
-- `assets/js/nav-v2/dashboard-priority-v2.js`;
-- `assets/css/nav-v2-role-home.css`;
-- `scripts/check_nav_v2_dashboard_priority.py`;
-- `scripts/check-nav-v2-dashboard-priority.mjs`;
-- `.github/workflows/nav-v2-dashboard-priority.yml`.
+- `assets/js/nav-v2/deals-work-modes-v2.js`;
+- `assets/js/nav-v2/deals-v2.js`;
+- `assets/css/nav-v2-deals.css`;
+- `scripts/check-nav-v2-deals-work-modes.mjs`;
+- `scripts/check_nav_v2_deals_work_modes.py`.
 
-Что изменилось:
+### PR #291 — action-first карточка сделки
 
-- показываются три приоритетные сделки;
-- у каждой сделки есть понятная причина приоритета;
-- действия адаптированы под owner/admin/manager/SPN/lawyer/broker/viewer;
-- demo-карточки исключаются из рабочей сводки;
-- точные повторы объединяются, ранняя карточка остаётся в сводке;
-- KPI показывают красные риски, просроченные задачи, документы и готовность к задатку;
-- профиль и техническая помощь свёрнуты;
-- вместо всех карточек показываются шесть последних рабочих сделок;
-- используется прежний единственный RPC `nav_v2_get_deals_list`.
+После hero показывается блок `Главное действие сейчас`:
 
-Проверки PR #288:
+- выбирается наиболее срочная открытая задача;
+- просрочка и urgent/high имеют приоритет;
+- показаны ответственный, срок и готовность;
+- есть критерий `Как понять, что готово`;
+- видны красные риски, просроченные задачи и недостающие документы;
+- кнопка ведёт прямо во вкладку задачи, риска, документа или сводки;
+- при отсутствии задач fallback строится по риску, документу или `next_action`;
+- viewer получает явный read-only режим;
+- новый hook не вызывает RPC и использует уже загруженный card payload.
 
-- dedicated dashboard priority contract: PASS;
-- semantic role ranking/demo/deduplication: PASS;
-- full static suite: PASS;
-- role contract: PASS;
-- JavaScript syntax: PASS;
-- public desktop/mobile Playwright: PASS;
-- review threads: 0;
-- authenticated smoke: skipped.
+Файлы:
 
-## Живой backlog, на котором строится UX
+- `assets/js/nav-v2/deal-card-action-focus-model-v2.js`;
+- `assets/js/nav-v2/deal-card-action-focus-v2.js`;
+- `assets/css/nav-v2-deal-action-focus.css`;
+- consolidated lifecycle `deal-card-recheck-alert-v2.js`.
 
-Read-only snapshot после merge #288:
+### PR #292 — прямые маршруты менеджера
 
-- Profiles: 5;
+Менеджерская очередь ведёт сразу к работе:
+
+- просроченные задачи → `#tasks`;
+- блокирующие риски → `#risks`;
+- просроченные документы → `#docs`;
+- пробелы ответственности → `manager-source-remediation-v2.html`;
+- дополнительные кнопки открывают связанные причины;
+- используется прежний read-only `nav_v2_get_operational_readiness_preview`.
+
+Файлы:
+
+- `assets/js/nav-v2/manager-action-route-v2.js`;
+- `assets/js/nav-v2/manager-v2.js`;
+- `scripts/check-nav-v2-manager-action-routes.mjs`.
+
+## Проверки UX-срезов
+
+Для PR #288/#290/#291/#292 пройдены:
+
+- dedicated semantic regressions;
+- полный static suite;
+- role/operational/deal-card/BAZA/risk/SPN compatibility contracts;
+- JavaScript syntax;
+- public desktop/mobile Playwright;
+- review threads: 0.
+
+Authenticated jobs были `skipped` и не считаются PASS.
+
+## Production snapshot
+
+После merge PR #292:
+
 - Deals: 23;
 - Tasks: 98;
 - Risks: 53;
 - Documents: 198;
 - Events: 118;
-- Overdue open tasks: 92;
-- Open blocking risks: 53;
-- Open/unassigned documents: 198;
 - Latest live migration: `20260714125054`.
 
-PR #288 не менял Supabase schema, grants, functions, Auth users или рабочие строки.
+UX PR не меняли Supabase schema, grants, functions, Auth users или рабочие строки.
 
 ## Security и release state
-
-### Release drift
 
 - latest migration совпадает с baseline: `20260714125054`;
 - live → canonical alias: `20260714125054` → `20260714130000`;
 - canonical source blob: `cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14`;
-- Edge versions/status/verify_jwt/bundle hashes совпадают с baseline;
 - connector-equivalent evidence: `docs/NAV_V2_LIVE_VERIFICATION_20260714.md`;
-- ручной workflow `navigator-production-readonly` с `allow_drift=false` ещё не запускался.
+- ручной workflow `navigator-production-readonly` с `allow_drift=false` ещё не запускался;
+- Advisor whitelist: 48/48, missing 0, unexpected 0;
+- leaked-password protection заблокирована до isolated authenticated E2E.
 
-### Edge no-JWT observability
+## Ручные блокеры
 
-PR #284 добавил query marker и `probe_id` для ожидаемых no-JWT smoke. Production logs подтвердили маркированные `401`; JWT-защита не ослаблена.
+### Exact duplicate cleanup
 
-### Security Advisor whitelist
+- четыре группы / восемь карточек;
+- owner decision `navigator_v2_exact_duplicate_owner_decision` не предоставлен;
+- issue #273 открыта;
+- cleanup mutation запрещена.
 
-PR #286 закрепил live attestation:
+### Operational pilot
 
-- expected Navigator v2 SECURITY DEFINER warnings: 48;
-- observed: 48;
-- missing: 0;
-- unexpected: 0;
-- SECURITY INVOKER exceptions: `nav_v2_update_document_status`, `nav_v2_get_frontend_coverage_health`.
+Не предоставлены шесть файлов от owner decision до responsible acknowledgement. Pilot mutation запрещена.
 
-Массовый revoke запрещён. Leaked-password protection остаётся заблокирована до isolated invite/recovery/role E2E.
+### Responsibility correction
 
-## Exact duplicate review
+Не предоставлены confirmation JSON, validation report, fresh server preview и bundle manifest. Не менять `seller_spn_id`, `buyer_spn_id`, `manager_id`.
 
-Страница:
+### Isolated authenticated E2E
 
-`operational-duplicate-review-v2.html`
-
-Live summary:
-
-- groups: 4;
-- deals: 8;
-- exact semantic groups: 4;
-- diverged groups: 0;
-- groups with comments/reviews: 0;
-- `selection_available=false`;
-- `mutation_available=false`;
-- `cleanup_execution_available=false`;
-- `owner_decision_required=true`.
-
-Owner decision export:
-
-`navigator_v2_exact_duplicate_owner_decision`
-
-Issue #273 остаётся открытой. Без owner decision не готовить cleanup mutation.
-
-## Operational pilot artifact chain
-
-Не предоставлены:
-
-1. `navigator_v2_operational_pilot_owner_decision`;
-2. `navigator_v2_operational_pilot_owner_decision_validation`;
-3. `navigator_v2_operational_pilot_measurement_baseline`;
-4. `navigator_v2_operational_pilot_action_checklist`;
-5. `navigator_v2_operational_pilot_owner_start_confirmation`;
-6. `navigator_v2_operational_pilot_responsible_acknowledgement_evidence`.
-
-Responsible acknowledgement остаётся внешним evidence:
-
-- `acknowledgement_is_authenticated_self_action=false`;
-- `authenticated_self_acknowledgements=0`;
-- `execution_authorized=false`;
-- `pilot_started=false`.
-
-Pilot mutation запрещена до полного комплекта и подтверждения identity ответственного.
-
-## Responsibility correction workflow
-
-Заблокирован до четырёх файлов:
-
-1. confirmation JSON;
-2. validation report с `point_operation_ready=true`;
-3. fresh server preview с fingerprint;
-4. bundle manifest с `bundle_ready=true`.
-
-Без полного bundle не изменять `seller_spn_id`, `buyer_spn_id`, `manager_id`.
-
-## Isolated authenticated E2E target
-
-Issue #282 — ручное подтверждение расходов.
-
-Последний cost snapshot:
-
-- Micro preview branch: USD 0.01344/hour;
-- max planned lifetime: 6 hours;
-- planned compute ceiling: USD 0.08064;
-- egress/storage могут добавить расходы;
-- preview branch usage не защищён Spend Cap.
-
-Состояние:
-
-- `status=approval_required`;
-- `confirmed=false`;
-- `branch_creation_allowed=false`.
-
-Без точного approval не вызывать `confirm_cost`, не создавать branch/Auth users/secrets.
+Issue #282 ожидает точное cost approval. Без него не вызывать `confirm_cost`, не создавать branch/Auth users/secrets.
 
 ## UX_NEXT_WORK_QUEUE
 
-Приоритет — не добавлять новые отчёты, а сокращать путь пользователя до результата.
+Не добавлять новые отчёты. Продолжать сокращать путь до подтверждённого результата.
 
-1. Сделки: быстрые режимы «требует внимания / просрочено / без ответственного / готово к задатку» и рабочий default без demo.
-2. Карточка сделки: один заметный блок «следующее действие», ответственный, срок и критерий результата.
-3. Менеджер: действия из очереди без лишнего перехода по техническим экранам.
-4. СПН: понятный маршрут «исправить замечание → отправить повторно → увидеть подтверждение».
-5. Юрист: документный цикл в одном экране с причиной блокировки и следующим шагом.
-6. Мобильная навигация: сократить количество равнозначных кнопок и сохранить основные действия в пределах первого экрана.
-7. Измерение UX: число кликов до действия, доля сделок с зафиксированным результатом, просроченный backlog и возвраты на доработку.
+1. СПН: единый маршрут `замечание → что исправить → сохранить → отправить повторно → увидеть принятие`.
+2. Юрист: документный цикл `нужен → запросить → получен → проверить → проблема/готово` на одном экране.
+3. Карточка: после выполнения действия показывать подтверждение результата и следующий шаг без поиска по вкладкам.
+4. Мобильная навигация: оставить ключевое действие и 2–3 контекстные кнопки на первом экране.
+5. Менеджер: показывать факт выполнения и evidence, а не только открытый backlog.
+6. Измерение UX: клики до действия, доля задач с результатом, возвраты на доработку и изменение просроченного backlog.
 
 ## NEXT_WORK_QUEUE
 
-- P1 UX — улучшить список сделок быстрыми рабочими режимами; frontend-only, без нового RPC.
-- P1 UX — сделать action-first блок карточки сделки на основе существующего payload.
-- P0 MANUAL — owner/admin экспортирует `navigator_v2_exact_duplicate_owner_decision`.
-- P0 MANUAL — предоставить шесть pilot-файлов.
-- P0 MANUAL — предоставить четыре responsibility evidence-файла.
-- P0 MANUAL — запустить production-readonly drift workflow с `allow_drift=false`.
-- P0 MANUAL COST APPROVAL — подтвердить issue #282 точной формулировкой.
-- P1 BLOCKED ON AUTH EVIDENCE — audited synthetic task-contract mutation и leaked-password protection.
+- P1 UX — упростить SPN rework cycle, используя существующие status/comment/rework RPC и hooks.
+- P1 UX — собрать документный цикл юриста поверх существующих document RPC.
+- P1 UX — показать completion evidence/next step после закрытия главной задачи.
+- P0 MANUAL — owner duplicate decision #273.
+- P0 MANUAL — шесть pilot-файлов.
+- P0 MANUAL — четыре responsibility evidence-файла.
+- P0 MANUAL — production-readonly workflow `allow_drift=false`.
+- P0 MANUAL COST APPROVAL — issue #282.
 
 ## DO NOT REPEAT без новой причины
 
 - общий технический аудит;
+- dashboard/list/deal-card/manager action-first UX PR #288/#290/#291/#292;
 - public guest/no-JWT/private-helper smoke;
-- механическое сокращение deal-card;
 - risk lifecycle #218;
 - readiness/task taxonomy/broker/viewer/lawyer previews;
 - owner/admin IA;
-- adoption report/comparison;
-- manager proposal/remediation;
-- responsibility draft/validation/preview/bundle;
-- pilot scaffolding;
-- browser save lock и exact duplicate trigger;
-- duplicate comparison pack;
-- isolated E2E runbook/cost scaffold;
-- Edge probe observability;
-- Advisor whitelist attestation;
-- action-first dashboard PR #288.
+- adoption/comparison/remediation;
+- responsibility и pilot scaffolding;
+- duplicate comparison/trigger;
+- isolated E2E cost scaffold;
+- Edge observability и Advisor attestation.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #288. Сначала проверь ручные gates один раз. Если они пусты, продолжай UX_NEXT_WORK_QUEUE: улучши список сделок быстрыми режимами и понятным рабочим default, используя существующий nav_v2_get_deals_list, без новых RPC и без production mutations.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #292. Один раз проверь ручные gates. Если они пусты, продолжай UX_NEXT_WORK_QUEUE с маршрута СПН: замечание → исправление → повторная отправка → подтверждение. Используй существующие RPC/hooks, не добавляй production mutation без отдельного reviewed contract и не создавай платную Supabase branch без точного approval #282.`
