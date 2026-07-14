@@ -69,6 +69,10 @@
     "20260714102956": {
       "canonical_migrations": ["20260714103000"],
       "reason": "Production apply assigned a live timestamp to the reviewed exact recent wizard-save duplicate trigger source."
+    },
+    "20260714125054": {
+      "canonical_migrations": ["20260714130000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed read-only exact duplicate review pack source."
     }
   },
   "approved_repository_only": {
@@ -156,6 +160,11 @@
       "represented_by_live": ["20260714102956"],
       "source_blob_sha": "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd",
       "reason": "Canonical fresh-install source for the exact same-creator wizard payload guard with advisory transaction locking and no existing-row cleanup."
+    },
+    "20260714130000": {
+      "represented_by_live": ["20260714125054"],
+      "source_blob_sha": "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14",
+      "reason": "Canonical fresh-install source for the read-only exact duplicate comparison pack, owner decision draft and report version 8."
     }
   }
 }
