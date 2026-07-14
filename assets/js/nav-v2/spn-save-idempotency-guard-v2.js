@@ -107,13 +107,21 @@ async function monitorSave({ draft, fingerprint, token, startedAt }) {
   const deadline = startedAt + wizardSaveLeaseTtlMs();
   while (Date.now() < deadline) {
     if (!localStorage.getItem(DRAFT_KEY)) {
-      const found = await findCreatedDeal(draft, startedAt);
-      const receipt = storeWizardSaveReceipt(localStorage, fingerprint, {
+      let receipt = storeWizardSaveReceipt(localStorage, fingerprint, {
         savedAt: Date.now(),
-        dealId: found?.id || null,
+        dealId: null,
         address: draft.address,
         objectType: draft.objectType
       });
+      const found = await findCreatedDeal(draft, startedAt);
+      if (found?.id) {
+        receipt = storeWizardSaveReceipt(localStorage, fingerprint, {
+          savedAt: receipt.saved_at,
+          dealId: found.id,
+          address: draft.address,
+          objectType: draft.objectType
+        });
+      }
       releaseWizardSaveLease(localStorage, fingerprint, token);
       return { state: 'saved', receipt };
     }
@@ -137,6 +145,7 @@ async function startUnderLease(button, draft, fingerprint, token) {
   bypassFingerprint = fingerprint;
   button.click();
   await sleep(START_CONFIRM_MS);
+  if (bypassFingerprint === fingerprint) bypassFingerprint = '';
 
   if (!saveStarted()) {
     releaseWizardSaveLease(localStorage, fingerprint, token);
