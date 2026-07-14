@@ -5,7 +5,9 @@ on:
     paths:
       - 'config/nav-v2-rpc-surface.json'
       - 'config/nav-v2-advisor-scope.json'
+      - 'config/nav-v2-advisor-live-attestation.json'
       - 'scripts/check_nav_v2_advisor_scope.py'
+      - 'scripts/check_nav_v2_advisor_live_attestation.py'
       - 'docs/NAV_V2_ADVISOR_TRIAGE.md'
       - 'docs/NAV_V2_AUTONOMOUS_AUDIT_PLAN_20260713.md'
       - '.github/workflows/nav-v2-advisor-scope.yml'
@@ -15,7 +17,9 @@ on:
     paths:
       - 'config/nav-v2-rpc-surface.json'
       - 'config/nav-v2-advisor-scope.json'
+      - 'config/nav-v2-advisor-live-attestation.json'
       - 'scripts/check_nav_v2_advisor_scope.py'
+      - 'scripts/check_nav_v2_advisor_live_attestation.py'
       - '.github/workflows/nav-v2-advisor-scope.yml'
   workflow_dispatch:
 
@@ -29,9 +33,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate Advisor policy JSON
         run: python3 -m json.tool config/nav-v2-advisor-scope.json > /dev/null
-      - name: Compile Advisor validator
-        run: python3 -m py_compile scripts/check_nav_v2_advisor_scope.py
+      - name: Validate Advisor live attestation JSON
+        run: python3 -m json.tool config/nav-v2-advisor-live-attestation.json > /dev/null
+      - name: Compile Advisor validators
+        run: |
+          python3 -m py_compile scripts/check_nav_v2_advisor_scope.py
+          python3 -m py_compile scripts/check_nav_v2_advisor_live_attestation.py
       - name: Check Navigator-only Advisor baseline
         run: python3 scripts/check_nav_v2_advisor_scope.py
       - name: Test Advisor drift detection
         run: python3 scripts/check_nav_v2_advisor_scope.py --self-test
+      - name: Check live Advisor attestation against the RPC registry
+        run: python3 scripts/check_nav_v2_advisor_live_attestation.py
