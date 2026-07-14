@@ -1,0 +1,36 @@
+name: Navigator v2 SPN save idempotency
+
+on:
+  pull_request:
+    paths:
+      - 'spn-v2.html'
+      - 'assets/js/nav-v2/spn-save-idempotency-guard-v2.js'
+      - 'assets/js/nav-v2/spn-save-idempotency-model-v2.js'
+      - 'scripts/check_nav_v2_spn_save_idempotency.py'
+      - 'scripts/check-nav-v2-spn-save-idempotency.mjs'
+      - 'config/nav-v2-module-budget.json'
+      - '.github/workflows/nav-v2-spn-save-idempotency.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  save-idempotency-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SPN save idempotency static contract
+        run: python3 scripts/check_nav_v2_spn_save_idempotency.py
+      - name: Check SPN save idempotency semantics
+        run: node scripts/check-nav-v2-spn-save-idempotency.mjs
+      - name: Check existing SPN save handoff
+        run: python3 scripts/check_nav_v2_spn_save_handoff.py
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/spn-save-idempotency-model-v2.js
+          node --check assets/js/nav-v2/spn-save-idempotency-guard-v2.js
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_spn_save_idempotency.py
