@@ -1,4 +1,5 @@
 import { esc } from './supabase-v2.js';
+import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';
 import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';
 import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';
 import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
@@ -125,6 +126,7 @@ function placeAlert() {
 
 function applyCardEnhancements() {
   placeAlert();
+  applyDealCardActionFocus(cardData, profileData);
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);
   applyDealCardTaskDueDate(cardData);
