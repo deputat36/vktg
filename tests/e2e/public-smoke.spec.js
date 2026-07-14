@@ -15,7 +15,8 @@ const guestPages = [
   '/operational-pilot-decision-validation-v2.html',
   '/operational-pilot-action-checklist-v2.html',
   '/operational-pilot-start-confirmation-v2.html',
-  '/operational-pilot-responsible-acknowledgement-v2.html'
+  '/operational-pilot-responsible-acknowledgement-v2.html',
+  '/operational-duplicate-review-v2.html'
 ];
 
 for (const path of guestPages) {
