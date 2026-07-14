@@ -102,9 +102,9 @@ def main() -> int:
         "overdue_tasks_count",
         "blocking_risks_count",
         "overdue_required_documents_count",
-        "#tasks",
-        "#risks",
-        "#docs",
+        "cardTab(item, 'tasks')",
+        "cardTab(item, 'risks')",
+        "cardTab(item, 'docs')",
         "manager-source-remediation-v2.html?deal_id=",
     ), ACTION_ROUTE.name, errors)
     for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
