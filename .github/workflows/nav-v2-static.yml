@@ -30,6 +30,7 @@ on:
       - 'scripts/check_nav_v2_operational_readiness.py'
       - 'scripts/check_nav_v2_operational_adoption.py'
       - 'scripts/check_nav_v2_operational_adoption_comparison.py'
+      - 'scripts/check_nav_v2_operational_pilot_shortlist.py'
       - 'scripts/check_nav_v2_manager_assignment_proposal.py'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - 'scripts/check_nav_v2_responsibility_point_preview.py'
@@ -55,6 +56,7 @@ on:
       - '.github/workflows/nav-v2-static.yml'
       - '.github/workflows/nav-v2-authenticated-e2e.yml'
       - '.github/workflows/nav-v2-advisor-scope.yml'
+      - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
   push:
     branches:
       - main
@@ -168,6 +170,8 @@ jobs:
         run: python3 scripts/check_nav_v2_operational_adoption.py
       - name: Check operational adoption period comparison
         run: python3 scripts/check_nav_v2_operational_adoption_comparison.py
+      - name: Check operational pilot shortlist
+        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py
       - name: Check manager assignment proposal
         run: python3 scripts/check_nav_v2_manager_assignment_proposal.py
       - name: Check manager source remediation, evidence and confirmation draft

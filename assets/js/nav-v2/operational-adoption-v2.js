@@ -17,6 +17,9 @@ function periodDelta() { return comparison().delta || {}; }
 function managerProposal() { return report?.manager_assignment_proposal || {}; }
 function proposalSummary() { return managerProposal().summary || {}; }
 function proposalItems() { return Array.isArray(managerProposal().items) ? managerProposal().items : []; }
+function pilotShortlist() { return report?.operational_pilot_shortlist || {}; }
+function pilotSummary() { return pilotShortlist().summary || {}; }
+function pilotItems() { return Array.isArray(pilotShortlist().items) ? pilotShortlist().items : []; }
 function allowed() { return ['owner', 'admin', 'manager'].includes(report?.profile?.role); }
 
 function fmtDateTime(value) {
@@ -45,6 +48,10 @@ function movementTone(state) {
 
 function proposalTone(state) {
   return ({ already_assigned: 'green', single_candidate: 'blue', conflict: 'red', missing_source: 'yellow' })[state] || 'gray';
+}
+
+function pilotTone(lane) {
+  return ({ quick_result: 'green', responsibility_confirmation: 'blue', document_workflow: 'yellow' })[lane] || 'gray';
 }
 
 function filterItems() {
@@ -132,6 +139,74 @@ function comparisonBlock() {
     </div>
     <div class="status ok"><b>Граница сравнения.</b> ${esc(data.comparison_note || 'Сравниваются только события внутри равных периодов.')}</div>
     <div class="status warn"><b>Не рейтинг сотрудников.</b> Этот блок не оценивает отдельных специалистов и не включает реконструированный исторический backlog.</div>
+  </section>`;
+}
+
+function textList(values, emptyText) {
+  const rows = Array.isArray(values) ? values.filter(Boolean) : [];
+  return rows.length ? `<ul>${rows.map((value) => `<li>${esc(value)}</li>`).join('')}</ul>` : `<span class="muted">${esc(emptyText)}</span>`;
+}
+
+function pilotCard(item) {
+  const responsibility = responsibilityText(item);
+  return `<article class="list-item task-review-card operational-pilot-card">
+    <div class="section-title task-review-head">
+      <div>
+        <div class="task-review-labels">
+          <span class="pill ${pilotTone(item.lane)}">${esc(item.lane_label || item.lane || 'Сценарий')}</span>
+          <span class="pill gray">Порядок проверки: ${n(item.review_order)}</span>
+        </div>
+        <h3>${esc(item.deal_title || item.address || 'Сделка')}</h3>
+        <p class="muted">${esc(item.address || 'Адрес не указан')} · ${esc(statusText(item.deal_status))}</p>
+      </div>
+      <span class="pill ${item.owner_decision_required ? 'red' : 'green'}">${item.owner_decision_required ? 'Решение владельца' : 'Можно продолжать'}</span>
+    </div>
+    <div class="status ok"><b>Цель сценария:</b> ${esc(item.lane_goal || 'Проверить рабочий цикл сделки.')}</div>
+    <div class="task-review-facts">
+      <div><span class="small">Готовность</span><b>Задаток ${n(item.readiness_deposit)}% · сделка ${n(item.readiness_deal)}%</b></div>
+      <div><span class="small">Ответственные</span><b>${esc(responsibility.spn)}</b><span class="muted">Менеджер: ${esc(responsibility.manager)}</span></div>
+      <div><span class="small">Evidence</span><b>${esc(item.evidence_candidate_name || 'Кандидат не подтверждён')}</b><span class="muted">Типов сигналов: ${n(item.strongest_signal_types)}, действий: ${n(item.strongest_signal_count)}</span></div>
+      <div><span class="small">Активность</span><b>${n(item.meaningful_events)} значимых событий</b><span class="muted">Последняя: ${esc(fmtDateTime(item.last_meaningful_activity_at))}</span></div>
+    </div>
+    <div class="task-review-facts adoption-backlog">
+      <div><span class="small">Задачи</span><b>${n(item.open_tasks)} открыто</b><span class="muted">Просрочено: ${n(item.overdue_tasks)} · high/urgent: ${n(item.high_open_tasks)}</span></div>
+      <div><span class="small">Риски</span><b>${n(item.open_risks)} открыто</b><span class="muted">Блокируют сделку: ${n(item.blocking_deal_risks)}</span></div>
+      <div><span class="small">Документы</span><b>${n(item.open_required_documents)} обязательных открыто</b><span class="muted">Просрочено: ${n(item.overdue_required_documents)} · подтверждено: ${n(item.resolved_documents)}</span></div>
+    </div>
+    <details class="task-review-contract" open><summary>Почему сделка попала в этот сценарий</summary>${textList(item.reasons, 'Причины не переданы.')}</details>
+    <details class="task-review-contract"><summary>Ограничения до начала пилота</summary>${textList(item.cautions, 'Критические ограничения не определены.')}</details>
+    <div class="status warn"><b>Следующее безопасное действие:</b> ${esc(item.safe_action || 'Открыть карточку и подтвердить факты вручную.')}</div>
+    <div class="actions task-review-actions" style="justify-content:flex-start">
+      <a class="btn primary" href="${esc(item.card_url || `./deal-card-v2.html?id=${encodeURIComponent(item.deal_id)}`)}">Открыть карточку</a>
+    </div>
+  </article>`;
+}
+
+function pilotShortlistBlock() {
+  const data = pilotShortlist();
+  if (!data.pilot_version) return '';
+  const s = pilotSummary();
+  const rows = pilotItems();
+  return `<section class="card operational-pilot-shortlist">
+    <div class="section-title">
+      <div>
+        <h2>Кандидаты для операционного пилота</h2>
+        <p class="muted">Три разные сделки для проверки короткого результата, ответственности и документного цикла.</p>
+      </div>
+      <span class="pill red">Только ручной выбор</span>
+    </div>
+    <div class="status warn"><b>Shortlist не запускает пилот.</b> Сделки не назначаются сотрудникам, не меняют статус и не считаются выбранными, пока владелец не проверит карточки и ограничения.</div>
+    <div class="kpi-row task-review-metrics" aria-label="Сводка кандидатов операционного пилота">
+      ${metric('Сделок в scope', n(s.deals_in_scope), 'blue')}
+      ${metric('В shortlist', n(s.shortlist_count), n(s.shortlist_count) === 3 ? 'green' : 'yellow')}
+      ${metric('Короткий цикл', n(s.quick_result_candidates), n(s.quick_result_candidates) ? 'green' : 'red')}
+      ${metric('Ответственность', n(s.responsibility_candidates), n(s.responsibility_candidates) ? 'blue' : 'red')}
+      ${metric('Документный цикл', n(s.document_workflow_candidates), n(s.document_workflow_candidates) ? 'yellow' : 'red')}
+      ${metric('Групп вероятных дублей', n(s.duplicate_groups), n(s.duplicate_groups) ? 'yellow' : 'green')}
+    </div>
+    <div class="status ok"><b>Методика.</b> ${esc(data.methodology_note || 'Разные сценарии рассматриваются отдельно, без единого рейтинга.')}</div>
+    <div class="status warn"><b>Граница решения.</b> ${esc(data.decision_note || 'Окончательный выбор выполняет владелец после проверки карточек.')}</div>
+    <div class="list">${rows.map(pilotCard).join('') || '<div class="empty">Подходящие кандидаты не найдены. Автоматический выбор не выполнялся.</div>'}</div>
   </section>`;
 }
 
@@ -225,7 +300,7 @@ function dealRow(item) {
     <div class="task-review-facts adoption-responsibility">
       <div><span class="small">Менеджер</span><b>${esc(responsibility.manager)}</b></div>
       <div><span class="small">СПН</span><b>${esc(responsibility.spn)}</b></div>
-      <div><span class="small">Последняя активность</span><b>${esc(fmtDateTime(item.last_meaningful_activity_at))}</b><span class="muted">${esc(item.latest_event_title || item.latest_event_type || 'Событие не указано')}</span></div>
+      <div><span class="small">Последняя активность</span><b>${esc(fmtDateTime(item.last_meaning_activity_at || item.last_meaningful_activity_at))}</b><span class="muted">${esc(item.latest_event_title || item.latest_event_type || 'Событие не указано')}</span></div>
     </div>
 
     <div class="task-review-facts adoption-results">
@@ -278,6 +353,7 @@ function draw() {
     </section>
 
     ${comparisonBlock()}
+    ${pilotShortlistBlock()}
     ${managerProposalBlock()}
 
     <section class="card task-review-explanation">
