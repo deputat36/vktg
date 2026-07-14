@@ -9,7 +9,7 @@ PAGE = ROOT / "operational-pilot-start-confirmation-v2.html"
 UI = ROOT / "assets/js/nav-v2/operational-pilot-start-confirmation-v2.js"
 MODEL = ROOT / "assets/js/nav-v2/operational-pilot-start-confirmation-model-v2.js"
 SEMANTIC = ROOT / "scripts/check-nav-v2-operational-pilot-start-confirmation.mjs"
-SOURCE_UI = ROOT / "assets/js/nav-v2/operational-pilot-action-checklist-v2.js"
+SOURCE_PAGE = ROOT / "operational-pilot-action-checklist-v2.html"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 STATIC_WORKFLOW = ROOT / ".github/workflows/nav-v2-static.yml"
 DEDICATED_WORKFLOW = ROOT / ".github/workflows/nav-v2-operational-pilot-start-confirmation.yml"
@@ -24,7 +24,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (PAGE, UI, MODEL, SEMANTIC, SOURCE_UI, BUDGET, STATIC_WORKFLOW, DEDICATED_WORKFLOW, PUBLIC_SMOKE):
+    for path in (PAGE, UI, MODEL, SEMANTIC, SOURCE_PAGE, BUDGET, STATIC_WORKFLOW, DEDICATED_WORKFLOW, PUBLIC_SMOKE):
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
@@ -106,9 +106,9 @@ def main() -> int:
         "semantic regression passed",
     ), SEMANTIC.name, errors)
 
-    source_ui = SOURCE_UI.read_text(encoding="utf-8")
-    if "operational-pilot-start-confirmation-v2.html" not in source_ui:
-        errors.append("action checklist UI must link to the owner start confirmation page")
+    source_page = SOURCE_PAGE.read_text(encoding="utf-8")
+    if "operational-pilot-start-confirmation-v2.html" not in source_page:
+        errors.append("action checklist page must link to the owner start confirmation page")
 
     budget = json.loads(BUDGET.read_text(encoding="utf-8"))
     if (budget.get("pages") or {}).get(PAGE.name) != {"max_modules": 3}:
