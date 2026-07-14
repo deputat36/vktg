@@ -2,11 +2,11 @@
   "schema_version": 1,
   "project_ref": "ofewxuqfjhamgerwzull",
   "environment": "navigator-production-readonly",
-  "latest_live_migration": "20260714064311",
+  "latest_live_migration": "20260714102956",
   "edge_functions": {
     "nav-invite-user": {
       "source_path": "supabase/functions/nav-invite-user/index.ts",
-      "source_blob_sha": "e914cd0c54fbdb296434b47fd28fa6cfd327fff8",
+      "source_blob_sha": "e914cd0c54fbdb296434f47fd28fa6cfd327fff8",
       "version": 10,
       "status": "ACTIVE",
       "verify_jwt": true,
