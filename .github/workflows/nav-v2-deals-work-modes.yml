@@ -1,0 +1,33 @@
+name: Navigator v2 deals work modes
+
+on:
+  pull_request:
+    paths:
+      - 'deals-v2.html'
+      - 'assets/js/nav-v2/deals-v2.js'
+      - 'assets/js/nav-v2/deals-work-modes-v2.js'
+      - 'assets/js/nav-v2/dashboard-priority-v2.js'
+      - 'assets/css/nav-v2-deals.css'
+      - 'scripts/check_nav_v2_deals_work_modes.py'
+      - 'scripts/check-nav-v2-deals-work-modes.mjs'
+      - 'scripts/check-nav-v2-dashboard-priority.mjs'
+      - '.github/workflows/nav-v2-deals-work-modes.yml'
+
+jobs:
+  deals-work-modes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deals work-mode contract
+        run: python3 scripts/check_nav_v2_deals_work_modes.py
+      - name: Check deals work-mode semantics
+        run: node scripts/check-nav-v2-deals-work-modes.mjs
+      - name: Recheck dashboard priority compatibility
+        run: node scripts/check-nav-v2-dashboard-priority.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deals-v2.js
+          node --check assets/js/nav-v2/deals-work-modes-v2.js
+          node --check assets/js/nav-v2/dashboard-priority-v2.js
+      - name: Compile Python contract
+        run: python3 -m py_compile scripts/check_nav_v2_deals_work_modes.py

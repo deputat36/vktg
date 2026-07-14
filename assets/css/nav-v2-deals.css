@@ -1,0 +1,22 @@
+.deals-workspace{display:grid;gap:16px}
+.deals-quick-modes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.deals-quick-mode{border:1px solid #dbe4f0;border-radius:16px;background:#f8fafc;color:#1e293b;padding:12px;min-height:68px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:6px;cursor:pointer;text-align:left;font:inherit}
+.deals-quick-mode span{font-size:13px;font-weight:800;line-height:1.2}
+.deals-quick-mode b{font-size:22px;line-height:1;color:#1d4ed8}
+.deals-quick-mode:hover{border-color:#93c5fd;background:#eff6ff}
+.deals-quick-mode.active{border-color:#1d4ed8;background:#1d4ed8;color:#fff;box-shadow:0 10px 28px rgba(29,78,216,.2)}
+.deals-quick-mode.active b{color:#fff}
+.deals-advanced-filters{border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;padding:0 14px}
+.deals-advanced-filters>summary{cursor:pointer;padding:13px 0;font-weight:800;color:#334155}
+.deals-advanced-filters[open]>summary{border-bottom:1px solid #e2e8f0}
+.deals-advanced-filters .filters{margin:14px 0}
+.deals-work-summary{padding:11px 13px;border-radius:14px;background:#eff6ff;color:#1e40af;font-size:13px;font-weight:700}
+.deals-work-parties{margin-top:5px;line-height:1.45}
+.deals-work-next{margin:12px 0;padding:13px;border-radius:15px;background:#f8fafc;border-left:4px solid #1d4ed8}
+.deals-work-next span{display:block;margin-bottom:4px;color:#64748b;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.deals-work-next b{display:block;line-height:1.42}
+.deals-work-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.deals-work-actions{justify-content:flex-end;margin-top:8px}
+.deals-work-actions .btn{min-width:170px}
+@media(max-width:980px){.deals-quick-modes{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:860px){.deals-quick-modes{display:flex;overflow-x:auto;gap:8px;padding-bottom:4px;scroll-snap-type:x proximity}.deals-quick-mode{min-width:145px;scroll-snap-align:start}.deals-advanced-filters .filters{display:grid}.deals-work-actions .btn{width:100%}}
