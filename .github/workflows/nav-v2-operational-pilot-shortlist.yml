@@ -37,7 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check operational pilot shortlist
-        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py 2>&1 | tee operational-pilot-shortlist-contract.txt
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_operational_pilot_shortlist.py 2>&1 | tee operational-pilot-shortlist-contract.txt
       - name: Upload pilot shortlist contract evidence
         if: always()
         uses: actions/upload-artifact@v4
