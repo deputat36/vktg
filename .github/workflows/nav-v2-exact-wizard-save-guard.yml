@@ -1,0 +1,27 @@
+name: Navigator v2 exact wizard save guard
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260714103000_nav_v2_exact_wizard_save_guard.sql'
+      - 'scripts/nav_v2_exact_wizard_save_guard_rollback_smoke.sql'
+      - 'scripts/check_nav_v2_exact_wizard_save_guard.py'
+      - '.github/workflows/nav-v2-exact-wizard-save-guard.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-wizard-save-guard-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check exact wizard save guard migration contract
+        run: python3 scripts/check_nav_v2_exact_wizard_save_guard.py
+      - name: Check release integrity
+        run: python3 scripts/check_nav_v2_release_integrity_v2.py
+      - name: Check migration drift baseline
+        run: python3 scripts/check_nav_v2_release_drift.py --baseline-only
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_exact_wizard_save_guard.py
