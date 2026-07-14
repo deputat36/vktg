@@ -517,7 +517,8 @@ begin
     raise exception 'Operational adoption duplicate review wrapper definition drifted';
   end if;
 
-  if position('coalesce(deal.title, '''') not ilike ''ДЕМО:%%''' in v_private_definition) = 0
+  if position('ДЕМО:' in v_private_definition) = 0
+    or position('wizard_snapshot' in v_private_definition) = 0
     or position('all_semantic_equal' in v_private_definition) = 0
     or position('suggested_canonical_deal_id' in v_private_definition) = 0
     or position('earliest_created_only' in v_private_definition) = 0
