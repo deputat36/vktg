@@ -13,6 +13,8 @@ PAGE = ROOT / "manager-source-remediation-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-v2.js"
 VALIDATION_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-validation-v2.js"
 SERVER_PREVIEW_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-server-preview-v2.js"
+EVIDENCE_BUNDLE_MODULE = ROOT / "assets/js/nav-v2/manager-source-remediation-evidence-bundle-v2.js"
+EVIDENCE_BUNDLE_TEST = ROOT / "scripts/check-nav-v2-responsibility-evidence-bundle.mjs"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 MODULE_BUDGET = ROOT / "config/nav-v2-module-budget.json"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
@@ -68,6 +70,8 @@ def main() -> int:
         MODULE,
         VALIDATION_MODULE,
         SERVER_PREVIEW_MODULE,
+        EVIDENCE_BUNDLE_MODULE,
+        EVIDENCE_BUNDLE_TEST,
         MENU,
         MODULE_BUDGET,
         ROLE_CONTRACT,
@@ -130,7 +134,9 @@ def main() -> int:
         "profile.role = 'spn'::public.nav_v2_user_role",
         "'active_spn_options'",
         "'manager_options'",
+        "'local_draft_available', true",
         "'local_storage_only', true",
+        "'export_available', true",
         "'server_selection_available', false",
         "'server_mutation_available', false",
         "'report_version', 6",
@@ -179,6 +185,7 @@ def main() -> int:
         "manager-source-remediation-v2.js?v=20260713-03",
         "manager-source-remediation-validation-v2.js?v=20260713-01",
         "manager-source-remediation-server-preview-v2.js?v=20260714-01",
+        "manager-source-remediation-evidence-bundle-v2.js?v=20260714-01",
         "role-menu-v2.js?v=20260713-02",
         "nav-base-menu-cleanup-v2.js",
     ), PAGE.name, errors)
@@ -252,9 +259,55 @@ def main() -> int:
         errors.append("server preview UI must load the current profile exactly once")
     assert_browser_read_only(server_preview_module, SERVER_PREVIEW_MODULE.name, errors)
 
+    evidence_bundle_module = EVIDENCE_BUNDLE_MODULE.read_text(encoding="utf-8")
+    require(evidence_bundle_module, (
+        "MAX_FILE_BYTES = 2 * 1024 * 1024",
+        "export function normalizeOperation",
+        "export function stableStringify",
+        "export function extractConfirmationOperations",
+        "export function validateEvidenceBundle",
+        "export async function sha256Hex",
+        "crypto.subtle.digest('SHA-256'",
+        "navigator_v2_responsibility_confirmation_draft",
+        "navigator_v2_responsibility_confirmation_validation",
+        "navigator_v2_responsibility_point_server_preview",
+        "navigator_v2_responsibility_evidence_bundle_validation",
+        "point_operation_ready",
+        "Confirmation JSON должен содержать ровно одну изменяемую операцию",
+        "Validation report относится к другому confirmation JSON",
+        "Server preview истёк",
+        "operation_fingerprint",
+        "preview_expires_at",
+        "local_memory_only: true",
+        "server_mutation_available: false",
+        "execution_rpc_available: false",
+        "requires_server_revalidation: true",
+        "requires_separate_audited_point_operation: true",
+        "Проверка трёх evidence-файлов",
+        "Файлы не отправляются в Supabase",
+        "Bundle manifest",
+    ), EVIDENCE_BUNDLE_MODULE.name, errors)
+    if "rpc(" in evidence_bundle_module:
+        errors.append("evidence bundle validator must not call any RPC")
+    assert_browser_read_only(evidence_bundle_module, EVIDENCE_BUNDLE_MODULE.name, errors)
+
+    evidence_bundle_test = EVIDENCE_BUNDLE_TEST.read_text(encoding="utf-8")
+    require(evidence_bundle_test, (
+        "validateEvidenceBundle",
+        "extractConfirmationOperations",
+        "validBundle",
+        "другому confirmation JSON",
+        "истёк",
+        "server preview envelope",
+        "ровно одну изменяемую операцию",
+        "разными пользователями",
+        "sha256Hex('abc')",
+        "responsibility evidence bundle validation passed",
+    ), EVIDENCE_BUNDLE_TEST.name, errors)
+
     budget = json.loads(MODULE_BUDGET.read_text(encoding="utf-8"))
-    if budget.get("pages", {}).get("manager-source-remediation-v2.html", {}).get("max_modules") != 5:
-        errors.append("manager source remediation module budget must be exactly 5")
+    if budget.get("pages", {}).get("manager-source-remediation-v2.html", {}).get("max_modules") != 6:
+        errors.append("manager source remediation module budget must be exactly 6")
 
     menu = MENU.read_text(encoding="utf-8")
     require(menu, (
@@ -305,11 +358,15 @@ def main() -> int:
     require(workflow, (
         "assets/js/nav-v2/manager-source-remediation-validation-v2.js",
         "assets/js/nav-v2/manager-source-remediation-server-preview-v2.js",
+        "assets/js/nav-v2/manager-source-remediation-evidence-bundle-v2.js",
+        "scripts/check-nav-v2-responsibility-evidence-bundle.mjs",
         "config/nav-v2-module-budget.json",
         "config/nav-v2-advisor-scope.json",
         "20260713234500_nav_v2_responsibility_confirmation_context.sql",
         "20260714001500_nav_v2_responsibility_point_preview.sql",
-        "Check grouped remediation, evidence, confirmation, package validation and server preview",
+        "Check grouped remediation, evidence, confirmation, package validation, server preview and evidence bundle",
+        "Check responsibility evidence bundle validator",
+        "node scripts/check-nav-v2-responsibility-evidence-bundle.mjs",
         "python3 scripts/check_nav_v2_manager_source_remediation.py",
         "python3 scripts/check_nav_v2_role_contract.py",
         "python3 scripts/check_nav_v2_rpc_surface.py",
@@ -319,8 +376,11 @@ def main() -> int:
     static_workflow = STATIC_WORKFLOW.read_text(encoding="utf-8")
     require(static_workflow, (
         "scripts/check_nav_v2_manager_source_remediation.py",
+        "scripts/check-nav-v2-responsibility-evidence-bundle.mjs",
         "Check manager source remediation, evidence and confirmation draft",
+        "Check responsibility evidence bundle validator",
         "python3 scripts/check_nav_v2_manager_source_remediation.py",
+        "node scripts/check-nav-v2-responsibility-evidence-bundle.mjs",
     ), STATIC_WORKFLOW.name, errors)
 
     if errors:
@@ -331,7 +391,8 @@ def main() -> int:
 
     print(
         "Navigator v2 manager source remediation passed: grouped manual actions, evidence, local confirmation, "
-        "package freshness validation, owner/admin server preview fingerprint, health registration and no mutation"
+        "package freshness validation, owner/admin server preview fingerprint, three-file bundle consistency, "
+        "SHA-256 manifest, health registration and no mutation"
     )
     return 0
 
