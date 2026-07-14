@@ -35,6 +35,8 @@ on:
       - 'scripts/check-nav-v2-operational-pilot-owner-decision.mjs'
       - 'scripts/check_nav_v2_operational_pilot_decision_validation.py'
       - 'scripts/check-nav-v2-operational-pilot-decision-validation.mjs'
+      - 'scripts/check_nav_v2_operational_pilot_action_checklist.py'
+      - 'scripts/check-nav-v2-operational-pilot-action-checklist.mjs'
       - 'scripts/check_nav_v2_manager_assignment_proposal.py'
       - 'scripts/check_nav_v2_manager_source_remediation.py'
       - 'scripts/check_nav_v2_responsibility_point_preview.py'
@@ -63,6 +65,7 @@ on:
       - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
       - '.github/workflows/nav-v2-operational-pilot-owner-decision.yml'
       - '.github/workflows/nav-v2-operational-pilot-decision-validation.yml'
+      - '.github/workflows/nav-v2-operational-pilot-action-checklist.yml'
   push:
     branches:
       - main
@@ -186,6 +189,10 @@ jobs:
         run: |
           python3 scripts/check_nav_v2_operational_pilot_decision_validation.py
           node scripts/check-nav-v2-operational-pilot-decision-validation.mjs
+      - name: Check operational pilot action checklist
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_action_checklist.py
+          node scripts/check-nav-v2-operational-pilot-action-checklist.mjs
       - name: Check manager assignment proposal
         run: python3 scripts/check_nav_v2_manager_assignment_proposal.py
       - name: Check manager source remediation, evidence and confirmation draft
