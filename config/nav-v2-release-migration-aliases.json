@@ -61,6 +61,10 @@
     "20260713195810": {
       "canonical_migrations": ["20260714001600"],
       "reason": "Production apply assigned a live timestamp to the reviewed explicit-precondition wrapper and private implementation source."
+    },
+    "20260714064311": {
+      "canonical_migrations": ["20260714013000"],
+      "reason": "Production apply assigned a live timestamp to the reviewed read-only three-lane operational pilot shortlist source."
     }
   },
   "approved_repository_only": {
@@ -138,6 +142,11 @@
       "represented_by_live": ["20260713195810"],
       "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f",
       "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private preview implementation."
+    },
+    "20260714013000": {
+      "represented_by_live": ["20260714064311"],
+      "source_blob_sha": "2fde357c95d838645927a466053e551dff11941a",
+      "reason": "Canonical fresh-install source for the read-only three-lane operational pilot shortlist with duplicate avoidance and no automatic selection."
     }
   }
 }
