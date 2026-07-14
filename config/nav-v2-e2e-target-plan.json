@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "status": "approval_required",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "organization_id": "tcbupmmcojrcxfqjuwsm",
+  "cost_snapshot": {
+    "checked_at": "2026-07-14",
+    "amount_usd": 0.01344,
+    "recurrence": "hourly",
+    "source": "Supabase Management API get_cost"
+  },
+  "approval": {
+    "explicit_user_confirmation_required": true,
+    "confirmed": false,
+    "branch_creation_allowed": false
+  },
+  "branch": {
+    "requested_name": "navigator-e2e",
+    "kind": "preview",
+    "with_production_data": false,
+    "persistent": false,
+    "max_lifetime_hours": 6,
+    "estimated_compute_ceiling_usd": 0.08064,
+    "delete_immediately_after_evidence_capture": true,
+    "merge_to_production_allowed": false
+  },
+  "data_policy": {
+    "production_data_copy_allowed": false,
+    "real_client_data_allowed": false,
+    "real_employee_credentials_allowed": false,
+    "technical_account_prefix": "nav-e2e",
+    "technical_full_name_prefix": "[NAV E2E]"
+  },
+  "required_roles": [
+    "admin",
+    "manager",
+    "spn",
+    "lawyer",
+    "broker",
+    "viewer"
+  ],
+  "optional_roles": [
+    "owner"
+  ],
+  "required_controls": {
+    "production_ref_rejected_by_preflight": true,
+    "publishable_key_only": true,
+    "service_role_secret_forbidden": true,
+    "workflow_environment": "navigator-e2e",
+    "manual_workflow_dispatch": true,
+    "browser_artifacts_required": true,
+    "cleanup_verification_required": true
+  },
+  "cleanup_acceptance": {
+    "branch_deleted": true,
+    "technical_auth_users_remaining": 0,
+    "active_technical_profiles_remaining": 0,
+    "open_follow_up_for_failed_cleanup": true
+  }
+}
