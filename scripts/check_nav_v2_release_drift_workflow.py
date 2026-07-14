@@ -64,7 +64,7 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
-    if baseline.get("latest_live_migration") != "20260714102956":
+    if baseline.get("latest_live_migration") != "20260714125054":
         errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
@@ -90,6 +90,7 @@ def main() -> int:
         "20260713195810",
         "20260714064311",
         "20260714102956",
+        "20260714125054",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
@@ -110,6 +111,7 @@ def main() -> int:
         "20260714001600",
         "20260714013000",
         "20260714103000",
+        "20260714130000",
     }:
         errors.append("approved repository-only migration set drifted")
 
@@ -118,6 +120,7 @@ def main() -> int:
         "20260713195810": ("20260714001600", "d92aaf30482f0fc8802f947e796ca9307cc3479f"),
         "20260714064311": ("20260714013000", "2fde357c95d838645927a466053e551dff11941a"),
         "20260714102956": ("20260714103000", "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd"),
+        "20260714125054": ("20260714130000", "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14"),
     }
     for live_version, (canonical_version, blob_sha) in expected.items():
         live_entry = (aliases.get("live_aliases") or {}).get(live_version) or {}
