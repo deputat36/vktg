@@ -140,7 +140,7 @@ function chooseCanonical(group) {
   })[0];
 }
 
-export function buildDashboardFocus(deals, role, limit = 3) {
+export function buildWorkingDealSet(deals) {
   const source = Array.isArray(deals) ? deals : [];
   const active = source.filter((deal) => !CLOSED_STATUSES.has(normalize(deal?.status)));
   const real = active.filter((deal) => !isDashboardDemoDeal(deal));
@@ -159,6 +159,22 @@ export function buildDashboardFocus(deals, role, limit = 3) {
     canonicalDeals.push(chooseCanonical(group));
     hiddenDuplicateCount += Math.max(0, group.length - 1);
   }
+
+  return {
+    source,
+    activeDeals: active,
+    realDeals: real,
+    canonicalDeals,
+    hiddenDemoCount: active.length - real.length,
+    hiddenDuplicateCount,
+    visibleRawCount: source.length,
+    workingDealCount: canonicalDeals.length
+  };
+}
+
+export function buildDashboardFocus(deals, role, limit = 3) {
+  const workingSet = buildWorkingDealSet(deals);
+  const { canonicalDeals } = workingSet;
 
   const ranked = canonicalDeals
     .map((deal) => ({
@@ -192,13 +208,9 @@ export function buildDashboardFocus(deals, role, limit = 3) {
     .slice(0, 6);
 
   return {
+    ...workingSet,
     items: ranked.slice(0, Math.max(1, number(limit) || 3)),
-    canonicalDeals,
     recentDeals,
-    totals,
-    hiddenDemoCount: active.length - real.length,
-    hiddenDuplicateCount,
-    visibleRawCount: source.length,
-    workingDealCount: canonicalDeals.length
+    totals
   };
 }
