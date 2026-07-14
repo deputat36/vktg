@@ -139,7 +139,7 @@ function validationBlock() {
 function uploadBlock() {
   return `<section class="card">
     <div class="section-title">
-      <div><h2>Загрузить owner decision JSON</h2><p class="muted">Принимается файл `navigator_v2_operational_pilot_owner_decision`, созданный на экране решения владельца.</p></div>
+      <div><h2>Загрузить owner decision JSON</h2><p class="muted">Принимается файл <code>navigator_v2_operational_pilot_owner_decision</code>, созданный на экране решения владельца.</p></div>
       <span class="pill blue">До 2 МБ</span>
     </div>
     <div class="status warn"><b>Файл остаётся локально.</b> Он читается в памяти браузера и не отправляется в Supabase.</div>
