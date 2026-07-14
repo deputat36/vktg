@@ -1,0 +1,55 @@
+name: Navigator v2 operational pilot shortlist
+
+on:
+  pull_request:
+    paths:
+      - 'operational-adoption-v2.html'
+      - 'assets/js/nav-v2/operational-adoption-v2.js'
+      - 'config/nav-v2-rpc-surface.json'
+      - 'supabase/migrations/20260714013000_nav_v2_operational_pilot_shortlist.sql'
+      - 'scripts/check_nav_v2_operational_pilot_shortlist.py'
+      - 'scripts/check_nav_v2_operational_adoption.py'
+      - 'scripts/check_nav_v2_operational_adoption_comparison.py'
+      - 'scripts/check_nav_v2_manager_assignment_proposal.py'
+      - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
+      - '.github/workflows/nav-v2-static.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'operational-adoption-v2.html'
+      - 'assets/js/nav-v2/operational-adoption-v2.js'
+      - 'config/nav-v2-rpc-surface.json'
+      - 'supabase/migrations/20260714013000_nav_v2_operational_pilot_shortlist.sql'
+      - 'scripts/check_nav_v2_operational_pilot_shortlist.py'
+      - 'scripts/check_nav_v2_operational_adoption.py'
+      - 'scripts/check_nav_v2_operational_adoption_comparison.py'
+      - 'scripts/check_nav_v2_manager_assignment_proposal.py'
+      - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-shortlist-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check operational pilot shortlist
+        run: python3 scripts/check_nav_v2_operational_pilot_shortlist.py
+      - name: Check adoption report compatibility
+        run: |
+          python3 scripts/check_nav_v2_operational_adoption.py
+          python3 scripts/check_nav_v2_operational_adoption_comparison.py
+          python3 scripts/check_nav_v2_manager_assignment_proposal.py
+      - name: Check RPC surface
+        run: python3 scripts/check_nav_v2_rpc_surface.py
+      - name: Check release integrity
+        run: python3 scripts/check_nav_v2_release_integrity_v2.py
+      - name: Compile regressions
+        run: |
+          python3 -m py_compile scripts/check_nav_v2_operational_pilot_shortlist.py
+          python3 -m py_compile scripts/check_nav_v2_operational_adoption.py
+          python3 -m py_compile scripts/check_nav_v2_operational_adoption_comparison.py
+          python3 -m py_compile scripts/check_nav_v2_manager_assignment_proposal.py
