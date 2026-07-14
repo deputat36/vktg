@@ -1,0 +1,27 @@
+name: Navigator v2 manager action routes
+
+on:
+  pull_request:
+    paths:
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/manager-v2.js'
+      - 'assets/js/nav-v2/manager-action-route-v2.js'
+      - 'scripts/check_nav_v2_operational_readiness.py'
+      - 'scripts/check-nav-v2-manager-action-routes.mjs'
+      - '.github/workflows/nav-v2-manager-action-routes.yml'
+
+jobs:
+  manager-action-routes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check operational readiness and routes
+        run: python3 scripts/check_nav_v2_operational_readiness.py
+      - name: Check manager action route semantics
+        run: node scripts/check-nav-v2-manager-action-routes.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/manager-v2.js
+          node --check assets/js/nav-v2/manager-action-route-v2.js
+      - name: Compile Python contract
+        run: python3 -m py_compile scripts/check_nav_v2_operational_readiness.py
