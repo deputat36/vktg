@@ -1,0 +1,40 @@
+name: Navigator v2 operational pilot owner start confirmation
+
+on:
+  pull_request:
+    paths:
+      - 'operational-pilot-start-confirmation-v2.html'
+      - 'assets/js/nav-v2/operational-pilot-start-confirmation-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-start-confirmation-model-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-action-checklist-v2.js'
+      - 'scripts/check_nav_v2_operational_pilot_start_confirmation.py'
+      - 'scripts/check-nav-v2-operational-pilot-start-confirmation.mjs'
+      - 'config/nav-v2-module-budget.json'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-pilot-start-confirmation.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-owner-start-confirmation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check pilot owner start confirmation static contract
+        run: python3 scripts/check_nav_v2_operational_pilot_start_confirmation.py
+      - name: Check pilot owner start confirmation semantics
+        run: node scripts/check-nav-v2-operational-pilot-start-confirmation.mjs
+      - name: Check action checklist compatibility
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_action_checklist.py
+          node scripts/check-nav-v2-operational-pilot-action-checklist.mjs
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/operational-pilot-start-confirmation-v2.js
+          node --check assets/js/nav-v2/operational-pilot-start-confirmation-model-v2.js
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_operational_pilot_start_confirmation.py
