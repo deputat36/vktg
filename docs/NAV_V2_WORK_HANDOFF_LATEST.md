@@ -3,293 +3,333 @@
 ## Точка продолжения
 
 - Дата: 2026-07-14.
-- Текущий product `main`: `cb9318cc4c537aebf9a2c89d5b35457d3d625dd2` — PR #266.
-- Последняя production migration: `20260714064311_nav_v2_operational_pilot_shortlist`.
-- Canonical migration: `20260714013000_nav_v2_operational_pilot_shortlist.sql`.
-- Release baseline синхронизирован PR #263.
-- PR #264 и #266 frontend-only: schema, grants, Edge Functions и production rows не менялись.
+- Текущий `main`: `f02d1be8201fa78c435e489d4bd9fe8ba2500b5a` — merge PR #272.
+- Последняя production migration: `20260714102956_nav_v2_exact_wizard_save_guard`.
+- Canonical migration: `20260714103000_nav_v2_exact_wizard_save_guard.sql`.
+- Release baseline и migration aliases синхронизированы PR #272.
 - Canonical frontend build: `20260711-01`.
 - Deal-card budget: 22; механическое сокращение без новой продуктовой причины запрещено.
+- `spn-v2.html` budget: 18 после добавления межвкладочной защиты сохранения.
 
 ## Последние завершённые PR
 
-- #266 — свежая локальная проверка owner decision JSON и confirmed-only measurement baseline.
-- #265 — handoff после owner decision package.
-- #264 — browser-local owner/admin решение по трём operational pilot lanes и JSON package.
-- #263 — release baseline/aliases после deploy pilot shortlist.
-- #262 — прозрачный read-only shortlist трёх реальных сделок для операционного пилота.
-- #261/#260 — handoff и локальная проверка responsibility evidence bundle с SHA-256 manifest.
-- #259/#258 — release sync и owner/admin server preview одной responsibility correction.
-- #257/#256 — handoff и импорт/локальная валидация responsibility confirmation JSON.
-- #255/#254 — release sync и browser-local лист подтверждения ответственности.
-- #253/#252 — release sync, source-remediation UI и evidence-only candidates.
-- #251/#250 — release sync и grouped source-remediation SQL.
-- #249/#248 — release sync и read-only manager assignment proposal.
-- #247/#246 — release sync и exact current/previous adoption comparison.
-- #240 — отчёт «Движение и результат».
+- #272 — release baseline/alias sync после deploy exact wizard-save guard.
+- #271 — server-side exact repeated wizard payload guard и rollback smoke.
+- #270 — browser cross-tab save lock, lease и recent receipt.
+- #268 — browser-local action checklist для confirmed pilot deals.
+- #267 — handoff после pilot decision validation.
+- #266 — fresh owner-decision validation и confirmed-only measurement baseline.
+- #264 — owner/admin решение по трём operational pilot lanes.
+- #263/#262 — release sync и read-only operational pilot shortlist.
 
 ## Supabase production
 
 - Project: `ofewxuqfjhamgerwzull`.
-- Live pilot shortlist: `20260714064311_nav_v2_operational_pilot_shortlist`.
+- Latest live migration: `20260714102956`.
 - Public operational report version: 7.
 - Pilot shortlist version: 1.
 - `nav-invite-user`: v10 ACTIVE, `verify_jwt=true`.
 - `nav-v2-deal-api`: v4 ACTIVE, `verify_jwt=true`.
-- RPC grant health: 50 items, 0 problems.
-- Frontend RPC coverage: 43 items, 0 problems.
-- Public operational wrapper: authenticated=true, anon=false, PUBLIC=false.
-- Private pilot helper: service_role=true, authenticated=false, anon=false, PUBLIC=false.
 - Supabase branches: только production `main`; isolated auth target отсутствует.
 
-Контроль после merge PR #266 выполнен в owner-context внутри транзакции с `ROLLBACK`:
+Post-deploy verification:
 
-- latest migration: `20260714064311`;
-- report version: 7;
-- pilot version: 1;
-- shortlist count: 3;
-- Deals: 21;
-- Tasks: 92;
-- Risks: 49;
-- Documents: 168;
-- Events: 116;
+- Deals: 23.
+- Tasks: 98.
+- Risks: 53.
+- Documents: 198.
+- Events: 118.
 - Profiles: 5.
+- Synthetic rollback-smoke rows: 0.
+- Exact duplicate groups, созданные до защиты: 4.
 
-Реальные `seller_spn_id`, `buyer_spn_id`, `manager_id`, статусы, задачи, риски и документы не менялись.
+Новый trigger:
 
-## Operational adoption
+- `nav_v2_block_exact_recent_wizard_duplicate` присутствует и включён;
+- BEFORE INSERT на `public.nav_deals_v2`;
+- owner функции: `postgres`;
+- SECURITY DEFINER с фиксированным `search_path=public`;
+- execute для `authenticated`, `anon` и `PUBLIC` отсутствует;
+- блокирует только точный `wizard_snapshot` одного автора в течение двух минут;
+- существующие строки не изменяет.
 
-30-дневный read-only snapshot:
+## Post-deploy rollback smoke
 
-- 16 реальных сделок в scope;
+Проверка выполнялась через production `nav_v2_save_wizard_result` внутри транзакции:
+
+1. Первый synthetic wizard payload создал сделку.
+2. Второй точный payload был заблокирован с кодом `NAV_V2_EXACT_WIZARD_DUPLICATE`.
+3. `existing_deal_id` совпал с ID первой synthetic-сделки.
+4. Payload с изменённым `clientNextStep` создал отдельный ID.
+5. Выполнен явный `ROLLBACK`.
+6. Synthetic rows после проверки: 0.
+7. Рабочие counts не изменились.
+
+Воспроизводимый сценарий:
+
+`scripts/nav_v2_exact_wizard_save_guard_rollback_smoke.sql`
+
+## Operational adoption — актуальный snapshot
+
+30-дневный read-only отчёт после появления двух новых дублей:
+
+- 18 реальных сделок в scope;
 - 1 сделка с подтверждённым результатом;
-- 15 сделок с активностью без подтверждённого результата;
-- confirmed result rate: 6,3%;
-- 76 открытых задач, все просрочены;
-- 44 открытых риска;
-- 119 просроченных обязательных документов;
-- 16 сделок без manager/exception;
-- 2 сделки без СПН.
+- 17 сделок с активностью без подтверждённого результата;
+- confirmed result rate: 5,6%;
+- 82 открытые задачи;
+- 48 открытых рисков;
+- 4 группы вероятных дублей.
 
-Сравнение с предыдущими 30 днями:
+Рост относительно предыдущего snapshot полностью объяснён двумя повторными wizard-save:
 
-- Current: 16 сделок, 1 результат, 6,3%;
-- Previous: 9 сделок, 1 результат, 11,1%;
-- Delta: +7 сделок и −4,8 процентного пункта;
-- исторический backlog не реконструируется;
-- рейтинг сотрудников отсутствует.
+- +2 deals;
+- +6 tasks;
+- +4 risks;
+- +30 documents;
+- +2 events.
 
-## Operational pilot shortlist
+Operational shortlist остался тем же:
 
-Shortlist остаётся только read-only предложением:
+1. `a6740629-8e36-4fb9-8b3f-08510fd0497f` — quick result, Пушкинская 97-11.
+2. `03029d49-6e43-47b6-856e-4886f0ac320a` — responsibility confirmation, Танцырей.
+3. `a696d7f8-6c9f-4a2b-87e9-3a7594a31787` — document workflow, Приборная.
 
-- `preview_only=true`;
+Shortlist остаётся read-only:
+
 - `selection_available=false`;
 - `mutation_available=false`;
-- `ranking_is_not_employee_rating=true`;
-- `owner_decision_required=true`.
+- `owner_decision_required=true`;
+- не является рейтингом сотрудников.
 
-### Быстрый пилотный цикл
+## Exact duplicate groups
 
-- Deal ID: `a6740629-8e36-4fb9-8b3f-08510fd0497f`.
-- Адрес: Пушкинская 97-11.
-- Готовность к сделке: 55%.
-- Открытые/просроченные задачи: 5/5.
-- Открытых обязательных документов: 8; просроченных: 0; бесхозных: 0.
-- Рисков, блокирующих сделку: 2.
-- Active-SPN evidence отсутствует.
+Read-only hash-проверка подтвердила четыре полных группы одинаковых wizard payload одного автора.
 
-### Подтверждение ответственности
+### Овчинников — Первомайская,3
 
-- Deal ID: `03029d49-6e43-47b6-856e-4886f0ac320a`.
-- Адрес: Танцырей.
-- Evidence-кандидат: Овчинников Александр Константинович.
-- Типов сигналов: 5; действий: 8.
-- Открытые/просроченные задачи: 3/3.
-- Открытых обязательных документов: 11; все 11 без assigned_to/responsible_role.
-- Рисков, блокирующих сделку: 2.
-- У evidence-кандидата отсутствует `manager_id`.
+- `366330f5-966c-4f97-8147-7e79e2ea408d`;
+- `06a14681-d77d-4b3c-b65f-f887fffb3bbd`;
+- интервал создания: 6,1 секунды;
+- совпадают deal row, summary, snapshot, 3 tasks, 2 risks, 15 documents и created event.
 
-### Документный рабочий цикл
+### Ковтун — Чкалова 4 кв44
 
-- Deal ID: `a696d7f8-6c9f-4a2b-87e9-3a7594a31787`.
-- Адрес: Приборная.
-- Готовность к сделке: 45%.
-- Значимых событий: 5.
-- Открытые/просроченные задачи: 5/5.
-- Подтверждено документов: 2.
-- Открытых обязательных документов: 9; просроченных: 6; бесхозных: 0.
-- Рисков, блокирующих сделку: 2.
+- `c2dd4db4-c995-4e63-8df7-cf318558050d`;
+- `cdce4e04-4421-4079-9c9c-03380cc59631`.
 
-## Owner decision package
+### Ковтун — адрес не указан
 
-Экран:
+- `e69a656a-54ec-4f1f-b5e6-e1f28334ba03`;
+- `76ecc56e-36d4-47b9-8476-508f93b13cfe`.
 
-`operational-pilot-decision-v2.html`
+### Ковтун — Прибрежная 1
 
-Возможности:
+- `32978be1-4652-472d-80f3-c030f69ad61a`;
+- `a1256578-3150-4ee1-9e3a-163bd8d0a56d`.
 
-- доступ только owner/admin;
-- один существующий read-only RPC `nav_v2_get_operational_adoption_report`;
-- решение `confirmed` или `rejected` по каждому lane;
+Существующие записи не удалены и не объединены. Ручной разбор вынесен в issue #273. Для каждой пары нужны canonical deal, перенос уникальных данных, pre/post snapshot и audit event.
+
+## Защита от новых дублей
+
+### Browser layer — PR #270
+
+- deterministic fingerprint полного draft + user ID;
+- Web Locks API между вкладками;
+- localStorage lease fallback на 120 секунд;
+- recent receipt на 10 минут;
+- receipt создаётся после исчезновения draft до перехода на карточку;
+- повторная идентичная отправка блокируется;
+- guard не вызывает mutation RPC напрямую;
+- существующий address duplicate warning сохранён.
+
+### Server layer — PR #271
+
+- advisory transaction lock по автору и hash payload;
+- окончательное решение только по точному `jsonb` equality;
+- окно блокировки — две минуты;
+- другие payload и другие авторы не блокируются;
+- публичный RPC surface не расширялся;
+- `nav_v2_save_wizard_result(jsonb)` не переписывался.
+
+Issue #269 закрыта как выполненная по предотвращению. Историческая очистка остаётся в #273.
+
+## Operational pilot artifacts
+
+Файлы владельца по-прежнему не предоставлены.
+
+### 1. Owner decision
+
+Экран: `operational-pilot-decision-v2.html`.
+
+Export:
+
+`navigator_v2_operational_pilot_owner_decision`
+
+Gate:
+
+- автор owner/admin;
+- все три lane имеют `confirmed` или `rejected`;
 - основание не короче 10 символов;
-- browser-memory only, без localStorage/sessionStorage;
-- экспорт `navigator_v2_operational_pilot_owner_decision`;
-- `decision_package_ready=true` только после рассмотрения всех трёх lane валидным owner/admin.
-
-Safety markers:
-
-- `browser_local_only=true`;
-- `server_mutation_available=false`;
-- `automatic_selection_available=false`;
+- `decision_package_ready=true`;
 - `pilot_started=false`;
-- `pilot_start_authorized=false`;
-- `requires_manual_pilot_start=true`;
-- `requires_fresh_readonly_revalidation=true`;
-- `requires_separate_measurement_baseline=true`.
+- `pilot_start_authorized=false`.
 
-Готовый owner package не запускает пилот и не разрешает mutation.
+### 2. Fresh validation
 
-## PR #266 — fresh validation и measurement baseline
+Экран: `operational-pilot-decision-validation-v2.html`.
 
-Новый экран:
+Export:
 
-`operational-pilot-decision-validation-v2.html`
+`navigator_v2_operational_pilot_owner_decision_validation`
 
-Переход доступен с экрана owner decision как «Проверить скачанный JSON».
+Gate:
 
-Экран:
+- `decision_package_valid=true`;
+- `fresh_revalidation_passed=true`;
+- все контролируемые поля совпадают со свежим shortlist;
+- любое изменение переводит запись в `stale`.
 
-- принимает JSON до 2 МБ;
-- читает файл только в памяти браузера;
-- использует ровно один существующий read-only RPC;
-- доступен только owner/admin;
-- проверяет export type, schema version, owner/admin автора, summary и safety markers;
-- проверяет report version, pilot version и `shortlist_key`;
-- сравнивает свежие карточки по lane, deal id, готовности, ответственности, evidence, задачам, рискам, документам, причинам, ограничениям и safe action;
-- любое изменение контролируемого поля переводит решение в `stale`;
-- не использует localStorage/sessionStorage;
-- ничего не отправляет в Supabase.
+### 3. Measurement baseline
 
-Validation export:
+Export:
 
-- `export_type=navigator_v2_operational_pilot_owner_decision_validation`;
-- `schema_version=1`;
-- `decision_package_valid=true` означает корректную структуру исходного файла;
-- `fresh_revalidation_passed=true` означает полное совпадение со свежим shortlist;
-- состояния: `confirmed_ready_for_baseline`, `rejected_verified`, `stale`, `invalid`;
-- `measurement_baseline_ready=true` только при валидном, свежем пакете и минимум одной `confirmed` сделке.
+`navigator_v2_operational_pilot_measurement_baseline`
 
-Measurement baseline export:
+Gate:
 
-- `export_type=navigator_v2_operational_pilot_measurement_baseline`;
-- включает только актуальные `confirmed` deals;
-- фиксирует baseline readiness, tasks, risks, documents и responsibility snapshot;
-- содержит lane-specific measurement contract;
-- не создаёт action/task/assignment/status автоматически;
-- execution state начинается с `false` по всем контрольным точкам.
+- только актуальные `confirmed` deals;
+- `baseline_ready=true`;
+- readiness/tasks/risks/documents/responsibility зафиксированы;
+- execution state начинается с `false`;
+- automatic task/assignment/status changes запрещены.
 
-Safety markers baseline:
+### 4. Action checklist
 
+Экран: `operational-pilot-action-checklist-v2.html`.
+
+Export:
+
+`navigator_v2_operational_pilot_action_checklist`
+
+Для каждой confirmed-сделки требуется ровно одно действие:
+
+- точный объект действия;
+- фактический ответственный или роль;
+- будущий срок;
+- тип evidence;
+- ожидаемый результат;
+- требование к evidence;
+- следующий шаг;
+- основание выбора действия.
+
+Safety:
+
+- `checklist_ready=true` означает только заполненный план;
+- `checklist_is_execution_authorization=false`;
 - `server_mutation_available=false`;
 - `automatic_task_creation_available=false`;
 - `automatic_assignment_available=false`;
 - `automatic_status_change_available=false`;
 - `pilot_started=false`;
 - `pilot_start_authorized=false`;
-- `requires_manual_action_selection=true`;
-- `requires_manual_pilot_start=true`;
-- `requires_result_evidence=true`.
-
-Даже свежий measurement baseline не является запуском пилота. Для начала нужны ручной выбор действия, фактический ответственный, срок и отдельное явное решение владельца.
-
-## Проверки PR #266
-
-- Dedicated validation static contract: PASS.
-- Semantic Node regression: PASS.
-- Valid package → confirmed-only baseline: PASS.
-- One changed overdue-document field → stale and blocked: PASS.
-- Tampered safety marker → blocked: PASS.
-- Manager validator actor → blocked: PASS.
-- All rejected → revalidation PASS, baseline blocked: PASS.
-- Tampered shortlist key → blocked: PASS.
-- Owner decision backward compatibility: PASS.
-- Page module budget: PASS.
-- Full static suite: PASS.
-- JavaScript syntax: PASS после исправления неэкранированных template-literal backticks.
-- Public desktop/mobile Playwright: PASS.
-- Review threads: 0.
-- `authenticated-smoke`: `skipped`; это не authenticated PASS.
+- требуется отдельное owner start confirmation и согласие ответственного.
 
 ## Responsibility correction workflow
 
-Остаётся отдельным контуром:
+Остаётся отдельным заблокированным контуром:
 
 1. confirmation JSON;
 2. validation report с `point_operation_ready=true`;
-3. свежий server preview с неистёкшим fingerprint;
+3. свежий server preview с fingerprint;
 4. bundle manifest с `bundle_ready=true`.
 
-Без всех четырёх подтверждённых файлов реальные `seller_spn_id`, `buyer_spn_id` и `manager_id` не менять.
+Без четырёх файлов реальные `seller_spn_id`, `buyer_spn_id` и `manager_id` не менять.
 
 ## Release drift
 
-- Baseline latest live: `20260714064311`.
-- Alias manifest: 16 approved live mappings и 16 canonical repository-only sources.
-- PR #264/#266 не меняли Supabase, поэтому release-sync не требуется.
-- Неизвестный remote-only/repo-only drift продолжает ломать gate.
-- Approved workflow в Environment `navigator-production-readonly` всё ещё требует ручной настройки владельца.
+- Baseline latest live: `20260714102956`.
+- Canonical source: `20260714103000`.
+- Alias manifest: 17 live mappings и 17 canonical mappings, плюс ранее одобренный task-contract forward copy.
+- New mapping source blob: `6aab0d57fa1cc33ffbbcc27444300db8da2df5dd`.
+- Migration alias CI: PASS.
+- Full static release drift contract: PASS.
+- Approved live workflow в Environment `navigator-production-readonly` всё ещё требует ручного запуска владельца с `allow_drift=false`.
+
+## Advisor
+
+После DDL проверены Security и Performance Advisor.
+
+- Новый trigger не добавил отдельного предупреждения по search path или grants.
+- Остались прежние SECURITY DEFINER/Auth warnings и общие performance notices.
+- Leaked-password protection не включать до authenticated E2E.
 
 ## Authenticated E2E blocker
 
-- Отдельного Supabase test project/development branch нет.
-- GitHub Environment `navigator-e2e` отсутствует.
+- Изолированного Supabase test project/development branch нет.
+- Environment `navigator-e2e` отсутствует.
 - Disposable role accounts и mailbox отсутствуют.
 - Authenticated role/invite/recovery/mutation E2E: BLOCKED.
-- Workflow success при `authenticated-smoke=skipped` не является authenticated PASS.
-- Не создавать execution RPC и не включать leaked-password protection до isolated target и фактического role PASS.
+- `authenticated-smoke=skipped` не является PASS.
 
 ## Ручные действия владельца
 
-### Операционный пилот
+### Pilot
 
-1. Открыть `operational-adoption-v2.html` под owner/admin.
-2. Перейти в «Решение владельца по пилоту».
-3. Проверить три карточки, выбрать `confirmed`/`rejected`, заполнить основания.
-4. Получить и скачать owner decision JSON с `decision_package_ready=true`.
-5. Перейти в «Проверить скачанный JSON».
-6. Загрузить owner decision JSON.
-7. Получить `decision_package_valid=true` и `fresh_revalidation_passed=true`.
-8. Скачать validation JSON.
-9. При `measurement_baseline_ready=true` скачать measurement baseline.
-10. Передать три файла: owner decision, validation report и measurement baseline.
-11. Не считать ни один из файлов запуском пилота.
-12. Следующий этап — вручную выбрать одно действие, ответственного и срок для каждой confirmed-сделки.
+1. Сформировать owner decision JSON.
+2. Выполнить fresh validation.
+3. Скачать measurement baseline.
+4. Загрузить baseline в action checklist.
+5. Заполнить одно действие на каждую confirmed-сделку.
+6. Скачать checklist JSON.
+7. Не считать checklist запуском пилота.
+
+### Исторические дубли
+
+1. Открыть issue #273.
+2. Для каждой из четырёх пар определить canonical deal.
+3. Проверить уникальные комментарии, задачи, риски, документы и evidence.
+4. Явно указать, что переносить и как закрывать дубль.
+5. Только после этого выполнять одну группу за раз с pre/post snapshot и audit event.
 
 ### Responsibility correction
 
-1. Подготовить один confirmation draft.
-2. Получить validation report, свежий server preview и bundle manifest.
-3. Передать четыре evidence-файла.
-4. Только после явного подтверждения рассматривать одну audited point correction.
+1. Подготовить четыре evidence-файла.
+2. Передать owner confirmation.
+3. Только после свежей server revalidation рассматривать одну point correction.
 
 ### Инфраструктура
 
-1. Создать Environment `navigator-production-readonly` и выполнить approved drift workflow с `allow_drift=false`.
-2. Создать отдельный Supabase test project/branch и Environment `navigator-e2e`.
+1. Запустить approved production-readonly drift workflow с `allow_drift=false`.
+2. Создать isolated Supabase target и Environment `navigator-e2e`.
 
 ## NEXT_WORK_QUEUE
 
-- P0 MANUAL — получить три pilot-файла: owner decision, fresh validation и measurement baseline.
-- P0 MANUAL — получить четыре responsibility evidence-файла для одной correction.
-- P0 MANUAL — approved release drift workflow run с `allow_drift=false`.
+- P0 MANUAL — получить четыре pilot-файла: owner decision, validation, baseline и action checklist.
+- P0 MANUAL — решить canonical deal по четырём duplicate groups в #273.
+- P0 MANUAL — получить четыре responsibility evidence-файла.
+- P0 MANUAL — approved release drift workflow с `allow_drift=false`.
 - P0 BLOCKED — isolated target + authenticated role/invite/recovery/mutation E2E.
-- P1 BLOCKED ON VALID PILOT FILES — подготовить ручной action checklist для confirmed deals: одно действие, ответственный, срок, evidence и следующий шаг; без автоматической записи.
-- P1 BLOCKED ON VALID RESPONSIBILITY BUNDLE — одна audited point correction с новой server revalidation, pre/post snapshot и audit event.
+- P1 BLOCKED ON VALID CHECKLIST — подготовить отдельное owner start confirmation без автоматической записи.
+- P1 BLOCKED ON DUPLICATE OWNER DECISION — выполнить только одну подтверждённую группу очистки с pre/post snapshot и audit event.
+- P1 BLOCKED ON VALID RESPONSIBILITY BUNDLE — одна audited point correction.
 - P1 BLOCKED ON AUTH EVIDENCE — audited synthetic task contract mutation.
 - P1 — leaked-password protection только после auth E2E.
-- DO NOT REPEAT — общий аудит, guest/no-JWT/private-helper smoke, deal-card consolidation, risk #218, operational/task/broker/viewer previews, lawyer focus, SPN handoff, owner/admin IA, task contract schema, Advisor scope gate, adoption snapshot/comparison, manager proposal, grouped remediation, evidence candidates, local responsibility confirmation, responsibility package validator, server point preview, responsibility bundle validator, pilot shortlist, owner decision package и pilot decision validation без новой причины.
+
+DO NOT REPEAT без новой причины:
+
+- общий технический аудит;
+- guest/no-JWT/private-helper smoke;
+- механическую deal-card consolidation;
+- risk lifecycle #218;
+- operational readiness/task taxonomy/broker/viewer/lawyer previews;
+- owner/admin IA;
+- adoption report/comparison;
+- manager proposal/grouped remediation;
+- responsibility draft/validation/server preview/bundle;
+- pilot shortlist/owner decision/validation/action-checklist scaffolding;
+- browser save lock и exact server duplicate guard.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #266. Один раз проверь наличие трёх pilot-файлов: owner decision JSON с decision_package_ready=true, validation JSON с decision_package_valid=true и fresh_revalidation_passed=true, measurement baseline с baseline_ready=true; четырёх responsibility evidence-файлов; Environment navigator-production-readonly; isolated auth target. Если три pilot-файла валидны — подготовь только browser-local action checklist для confirmed deals с ручным действием, ответственным, сроком, evidence и следующим шагом, без автоматической записи. Если responsibility bundle валиден — выполни только одну audited point correction с новой server revalidation, pre/post snapshot и audit event. Если подтверждений нет — реальные данные не менять.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #272. Один раз проверь четыре pilot-файла, четыре responsibility evidence-файла, owner-решения по issue #273, Environment navigator-production-readonly и isolated auth target. Если checklist валиден — подготовь только отдельное browser-local owner start confirmation без mutation. Если владелец выбрал canonical deal для одной duplicate group — выполни только одну audited cleanup operation с новой server revalidation, pre/post snapshot и audit event. Если responsibility bundle валиден — выполни одну point correction. Без подтверждений рабочие данные не менять.`
