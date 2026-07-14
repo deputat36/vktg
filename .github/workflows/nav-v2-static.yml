@@ -39,6 +39,8 @@ on:
       - 'scripts/check-nav-v2-operational-pilot-action-checklist.mjs'
       - 'scripts/check_nav_v2_operational_pilot_start_confirmation.py'
       - 'scripts/check-nav-v2-operational-pilot-start-confirmation.mjs'
+      - 'scripts/check_nav_v2_operational_pilot_responsible_acknowledgement.py'
+      - 'scripts/check-nav-v2-operational-pilot-responsible-acknowledgement.mjs'
       - 'scripts/check_nav_v2_spn_save_idempotency.py'
       - 'scripts/check-nav-v2-spn-save-idempotency.mjs'
       - 'scripts/check_nav_v2_exact_wizard_save_guard.py'
@@ -73,6 +75,7 @@ on:
       - '.github/workflows/nav-v2-operational-pilot-decision-validation.yml'
       - '.github/workflows/nav-v2-operational-pilot-action-checklist.yml'
       - '.github/workflows/nav-v2-operational-pilot-start-confirmation.yml'
+      - '.github/workflows/nav-v2-operational-pilot-responsible-acknowledgement.yml'
       - '.github/workflows/nav-v2-spn-save-idempotency.yml'
       - '.github/workflows/nav-v2-exact-wizard-save-guard.yml'
   push:
@@ -206,6 +209,10 @@ jobs:
         run: |
           python3 scripts/check_nav_v2_operational_pilot_start_confirmation.py
           node scripts/check-nav-v2-operational-pilot-start-confirmation.mjs
+      - name: Check operational pilot responsible acknowledgement
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_responsible_acknowledgement.py
+          node scripts/check-nav-v2-operational-pilot-responsible-acknowledgement.mjs
       - name: Check SPN wizard save idempotency
         run: |
           python3 scripts/check_nav_v2_spn_save_idempotency.py
