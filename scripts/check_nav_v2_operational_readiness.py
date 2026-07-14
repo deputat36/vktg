@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase/migrations/20260712162609_nav_v2_operational_readiness_manager_queue.sql"
 PAGE = ROOT / "manager-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-v2.js"
+ACTION_ROUTE = ROOT / "assets/js/nav-v2/manager-action-route-v2.js"
 MANAGER_CSS = ROOT / "assets/css/nav-v2-manager.css"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
@@ -23,7 +24,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MIGRATION, PAGE, MODULE, MANAGER_CSS, MENU, ROLE_CONTRACT, RPC_SURFACE, WORKFLOW)
+    paths = (MIGRATION, PAGE, MODULE, ACTION_ROUTE, MANAGER_CSS, MENU, ROLE_CONTRACT, RPC_SURFACE, WORKFLOW)
     for path in paths:
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
@@ -66,18 +67,20 @@ def main() -> int:
         "Content-Security-Policy",
         "assets/css/nav-v2-role-home.css?v=20260712-01",
         "assets/css/nav-v2-manager.css?v=20260712-01",
-        "assets/js/nav-v2/manager-v2.js?v=20260712-02",
+        "assets/js/nav-v2/manager-v2.js?v=20260714-03",
         "assets/js/nav-v2/role-menu-v2.js?v=20260713-01",
         'aria-live="polite"',
     ), PAGE.name, errors)
 
     module = MODULE.read_text(encoding="utf-8")
     require(module, (
+        "import { buildManagerActionRoute, managerItemNeedsDistribution } from './manager-action-route-v2.js?v=20260714-01';",
         "rpc('nav_v2_get_operational_readiness_preview'",
         "['owner', 'admin', 'manager']",
         "Почему сделка требует внимания",
         "Главное действие",
-        "Открыть и решить",
+        "actionButtons(item)",
+        "data-manager-action-kind",
         "Режим контроля",
         "Правдивая готовность",
         "Дополнительные показатели контроля",
@@ -88,9 +91,25 @@ def main() -> int:
     ), MODULE.name, errors)
     if "item.legacy_readiness_deposit)" in module:
         errors.append("manager preview uses obsolete legacy_readiness_deposit field")
-    for marker in ("nav_v2_update_", "nav_v2_add_", "nav_v2_save_"):
+    for marker in ("nav_v2_update_", "nav_v2_add_", "nav_v2_save_", "localStorage", "sessionStorage"):
         if marker in module:
-            errors.append(f"manager preview calls a write RPC family: {marker}")
+            errors.append(f"manager preview calls a write/storage family: {marker}")
+
+    route_model = ACTION_ROUTE.read_text(encoding="utf-8")
+    require(route_model, (
+        "export function managerItemNeedsDistribution(item)",
+        "export function buildManagerActionRoute(item)",
+        "overdue_tasks_count",
+        "blocking_risks_count",
+        "overdue_required_documents_count",
+        "cardTab(item, 'tasks')",
+        "cardTab(item, 'risks')",
+        "cardTab(item, 'docs')",
+        "manager-source-remediation-v2.html?deal_id=",
+    ), ACTION_ROUTE.name, errors)
+    for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+        if marker in route_model:
+            errors.append(f"manager route model must remain pure/read-only: {marker}")
 
     css = MANAGER_CSS.read_text(encoding="utf-8")
     require(css, (
@@ -127,7 +146,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 operational readiness passed: server preview and manager decision hierarchy checked")
+    print("Navigator v2 operational readiness passed: server preview and direct manager action routes checked")
     return 0
 
 
