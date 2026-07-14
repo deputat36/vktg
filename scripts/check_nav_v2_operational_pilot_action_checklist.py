@@ -95,7 +95,8 @@ def main() -> int:
         "requires_responsible_acknowledgement: true",
         "requires_result_evidence: true",
         "requires_post_action_result_confirmation: true",
-        "baseline_metrics.overdue_required_documents",
+        "overdue_required_documents",
+        "baseline_metrics.${field}",
     ), MODEL.name, errors)
     for forbidden in ("rpc(", ".from(", "fetch(", "localStorage", "sessionStorage"):
         if forbidden in model:
