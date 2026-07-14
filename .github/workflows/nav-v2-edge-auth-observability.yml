@@ -1,0 +1,29 @@
+name: Navigator v2 Edge auth observability
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check_nav_v2_edge_auth.py'
+      - 'scripts/check_nav_v2_edge_auth_observability.py'
+      - '.github/workflows/nav-v2-edge-auth-observability.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/check_nav_v2_edge_auth.py'
+      - 'scripts/check_nav_v2_edge_auth_observability.py'
+      - '.github/workflows/nav-v2-edge-auth-observability.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  edge-auth-observability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Edge auth smoke
+        run: python3 -m py_compile scripts/check_nav_v2_edge_auth.py
+      - name: Validate marked no-JWT probe contract
+        run: python3 scripts/check_nav_v2_edge_auth_observability.py
