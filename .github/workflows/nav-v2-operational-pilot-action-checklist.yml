@@ -1,0 +1,35 @@
+name: Navigator v2 operational pilot action checklist
+
+on:
+  pull_request:
+    paths:
+      - 'operational-pilot-action-checklist-v2.html'
+      - 'assets/js/nav-v2/operational-pilot-action-checklist-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-action-checklist-model-v2.js'
+      - 'scripts/check_nav_v2_operational_pilot_action_checklist.py'
+      - 'scripts/check-nav-v2-operational-pilot-action-checklist.mjs'
+      - 'config/nav-v2-module-budget.json'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-pilot-action-checklist.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-action-checklist-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check pilot action checklist static contract
+        run: python3 scripts/check_nav_v2_operational_pilot_action_checklist.py
+      - name: Check pilot action checklist semantics
+        run: node scripts/check-nav-v2-operational-pilot-action-checklist.mjs
+      - name: Check measurement baseline compatibility
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_decision_validation.py
+          node scripts/check-nav-v2-operational-pilot-decision-validation.mjs
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_operational_pilot_action_checklist.py
