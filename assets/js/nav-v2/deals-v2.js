@@ -1,13 +1,23 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, riskPill, saveCachedProfile, statusText } from './supabase-v2.js';
+import {
+  buildDealsWorkspace,
+  dealMatchesWorkMode,
+  hasMissingResponsibility,
+  isOverdueDeal,
+  needsWorkAttention
+} from './deals-work-modes-v2.js?v=20260714-01';
 
 let allDeals = [];
 let profile = null;
 let loadInProgress = false;
 let loadError = '';
-const allowedFilters = new Set(['all', 'real', 'demo', 'attention', 'lawyer', 'broker', 'deposit', 'deal', 'docs', 'red', 'rework']);
+const allowedFilters = new Set([
+  'work', 'all', 'real', 'demo', 'attention', 'overdue', 'unassigned',
+  'lawyer', 'broker', 'deposit', 'deal', 'docs', 'red', 'rework'
+]);
 const urlParams = new URLSearchParams(location.search);
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
-let currentFilter = allowedFilters.has(urlParams.get('filter')) ? urlParams.get('filter') : 'all';
+let currentFilter = allowedFilters.has(urlParams.get('filter')) ? urlParams.get('filter') : 'work';
 let searchQuery = urlParams.get('q') || '';
 
 function formatDate(value) {
@@ -20,7 +30,7 @@ function shortId(id) {
 }
 
 function roleName(role) {
-  return ({ owner:'Владелец', admin:'Админ', manager:'Менеджер', spn:'СПН', lawyer:'Юрист', broker:'Брокер', viewer:'Наблюдатель' })[role] || role || '—';
+  return ({ owner:'Владелец', admin:'Администратор', manager:'Менеджер', spn:'СПН', lawyer:'Юрист', broker:'Брокер', viewer:'Наблюдатель' })[role] || role || '—';
 }
 
 function objectTypeName(type) {
@@ -51,7 +61,7 @@ function isGenericTitle(title) {
 }
 
 function dealDisplayTitle(deal) {
-  const rawTitle = clean(deal?.title);
+  const rawTitle = clean(deal?.display_title || deal?.title);
   if (!isGenericTitle(rawTitle)) return rawTitle;
   const object = objectTypeName(deal?.object_type);
   const address = clean(deal?.address);
@@ -79,7 +89,7 @@ function dealPartiesText(deal) {
   }
 
   if (manager) parts.push(`менеджер: ${manager}`);
-  return parts.join(' · ') || 'Стороны пока не указаны';
+  return parts.join(' · ') || 'Стороны и ответственные пока не указаны';
 }
 
 function dealResponsibleSearchText(deal) {
@@ -90,8 +100,6 @@ function dealResponsibleSearchText(deal) {
   const broker = clean(deal?.broker);
   const parts = [];
 
-  // Этот текст используется только для основного поиска, чтобы совпадения по ответственным
-  // попадали в обычный список, а fallback-поиск по СПН оставался лишь страховкой.
   if (sellerSpn && buyerSpn && sellerSpn === buyerSpn) parts.push(`СПН: ${sellerSpn}`);
   else {
     if (sellerSpn) parts.push(`СПН продавца: ${sellerSpn}`);
@@ -112,9 +120,15 @@ function isReworkDeal(deal) {
   return deal?.status === 'need_info';
 }
 
+function defaultFilterForRole() {
+  if (profile?.role === 'lawyer') return 'lawyer';
+  if (profile?.role === 'broker') return 'broker';
+  return 'work';
+}
+
 function updateUrl() {
   const params = new URLSearchParams();
-  if (currentFilter && currentFilter !== 'all') params.set('filter', currentFilter);
+  if (currentFilter && currentFilter !== defaultFilterForRole()) params.set('filter', currentFilter);
   if (searchQuery.trim()) params.set('q', searchQuery.trim());
   const next = params.toString() ? `${location.pathname}?${params.toString()}` : location.pathname;
   history.replaceState(null, '', next);
@@ -130,30 +144,12 @@ function demoBadge(deal) {
   return isDemoDeal(deal) ? '<span class="pill blue">ДЕМО</span> ' : '';
 }
 
-function needsAttention(deal) {
-  return isReworkDeal(deal)
-    || deal?.risk_level === 'red'
-    || Boolean(deal?.has_children)
-    || !deal?.expenses_agreed
-    || !deal?.settlements_agreed
-    || Number(deal?.red_risks_count || 0) > 0;
-}
-
 function needsLawyerQueue(deal) {
-  if (!deal?.lawyer_needed) return false;
-  return deal.status === 'need_lawyer'
-    || deal.status === 'need_documents'
-    || Boolean(deal.has_children)
-    || deal.risk_level === 'red'
-    || Number(deal.red_risks_count || 0) > 0
-    || missingDocs(deal) > 0;
+  return dealMatchesWorkMode(deal, 'lawyer');
 }
 
 function needsBrokerQueue(deal) {
-  if (!deal?.broker_needed) return false;
-  return deal.status === 'need_broker'
-    || deal.status === 'need_documents'
-    || Number(deal.open_tasks_count || 0) > 0;
+  return dealMatchesWorkMode(deal, 'broker');
 }
 
 function queueBadges(deal) {
@@ -164,8 +160,7 @@ function queueBadges(deal) {
 }
 
 function applyDefaultFilterByRole() {
-  if (!urlParams.get('filter') && profile?.role === 'lawyer') currentFilter = 'lawyer';
-  if (!urlParams.get('filter') && profile?.role === 'broker') currentFilter = 'broker';
+  if (!urlParams.get('filter')) currentFilter = defaultFilterForRole();
 }
 
 function publishDealsLoaded() {
@@ -180,16 +175,9 @@ function publishDealsLoaded() {
 }
 
 function filterDeal(deal) {
-  if (currentFilter === 'rework' && !isReworkDeal(deal)) return false;
-  if (currentFilter === 'attention' && !needsAttention(deal)) return false;
-  if (currentFilter === 'lawyer' && !needsLawyerQueue(deal)) return false;
-  if (currentFilter === 'broker' && !needsBrokerQueue(deal)) return false;
-  if (currentFilter === 'docs' && missingDocs(deal) <= 0) return false;
-  if (currentFilter === 'red' && deal?.risk_level !== 'red' && Number(deal?.red_risks_count || 0) <= 0) return false;
+  if (!['all', 'real', 'demo'].includes(currentFilter) && !dealMatchesWorkMode(deal, currentFilter)) return false;
   if (currentFilter === 'demo' && !isDemoDeal(deal)) return false;
   if (currentFilter === 'real' && isDemoDeal(deal)) return false;
-  if (currentFilter === 'deposit' && Number(deal?.readiness_deposit || 0) < 80) return false;
-  if (currentFilter === 'deal' && Number(deal?.readiness_deal || 0) < 80) return false;
 
   if (searchQuery.trim()) {
     const text = [
@@ -203,7 +191,9 @@ function filterDeal(deal) {
       deal?.next_action,
       statusText(deal?.status),
       isDemoDeal(deal) ? 'демо demo' : 'рабочая реальная',
-      isReworkDeal(deal) ? 'доработка need_info нужно дозаполнить' : ''
+      isReworkDeal(deal) ? 'доработка need_info нужно дозаполнить' : '',
+      isOverdueDeal(deal) ? 'просрочено просроченные задачи' : '',
+      hasMissingResponsibility(deal) ? 'без ответственного не назначен' : ''
     ].join(' ').toLocaleLowerCase('ru-RU');
     return text.includes(searchQuery.trim().toLocaleLowerCase('ru-RU'));
   }
@@ -211,44 +201,35 @@ function filterDeal(deal) {
   return true;
 }
 
-function renderKpi() {
-  const attention = allDeals.filter(needsAttention).length;
-  const lawyer = allDeals.filter(needsLawyerQueue).length;
-  const broker = allDeals.filter(needsBrokerQueue).length;
-  const docs = allDeals.filter((deal) => missingDocs(deal) > 0).length;
-  const red = allDeals.filter((deal) => deal?.risk_level === 'red' || Number(deal?.red_risks_count || 0) > 0).length;
-  const rework = allDeals.filter(isReworkDeal).length;
-  const demo = allDeals.filter(isDemoDeal).length;
-  const real = allDeals.length - demo;
+function renderKpi(workspace) {
+  const counts = workspace.counts || {};
 
   if (profile?.role === 'lawyer') {
     return `<div class="kpi-row">
-      <div class="metric yellow"><span>Юридическая очередь</span><b>${lawyer}</b></div>
-      <div class="metric red"><span>Красные риски</span><b>${red}</b></div>
-      <div class="metric yellow"><span>Не хватает документов</span><b>${docs}</b></div>
-      <div class="metric yellow"><span>На доработке</span><b>${rework}</b></div>
-      <div class="metric"><span>Всего доступно</span><b>${allDeals.length}</b></div>
+      <div class="metric yellow"><span>Юридическая очередь</span><b>${counts.lawyer || 0}</b></div>
+      <div class="metric red"><span>Красные риски</span><b>${counts.red || 0}</b></div>
+      <div class="metric red"><span>Просроченные сделки</span><b>${counts.overdue || 0}</b></div>
+      <div class="metric yellow"><span>Не хватает документов</span><b>${counts.docs || 0}</b></div>
+      <div class="metric"><span>Рабочие сделки</span><b>${workspace.workingDealCount}</b></div>
     </div>`;
   }
 
   if (profile?.role === 'spn') {
     return `<div class="kpi-row">
-      <div class="metric"><span>Мои сделки</span><b>${allDeals.length}</b></div>
-      <div class="metric red"><span>Требуют внимания</span><b>${attention}</b></div>
-      <div class="metric yellow"><span>Документы</span><b>${docs}</b></div>
-      <div class="metric yellow"><span>Юристу</span><b>${lawyer}</b></div>
-      <div class="metric"><span>Брокеру</span><b>${broker}</b></div>
+      <div class="metric"><span>Мои рабочие сделки</span><b>${workspace.workingDealCount}</b></div>
+      <div class="metric red"><span>Требуют внимания</span><b>${counts.attention || 0}</b></div>
+      <div class="metric red"><span>Просроченные</span><b>${counts.overdue || 0}</b></div>
+      <div class="metric yellow"><span>Документы</span><b>${counts.docs || 0}</b></div>
+      <div class="metric green"><span>Готовы к задатку</span><b>${counts.deposit || 0}</b></div>
     </div>`;
   }
 
   return `<div class="kpi-row">
-    <div class="metric"><span>Всего</span><b>${allDeals.length}</b></div>
-    <div class="metric red"><span>На контроле</span><b>${attention}</b></div>
-    <div class="metric yellow"><span>На доработке</span><b>${rework}</b></div>
-    <div class="metric yellow"><span>Юристу</span><b>${lawyer}</b></div>
-    <div class="metric"><span>Брокеру</span><b>${broker}</b></div>
-    <div class="metric"><span>Демо</span><b>${demo}</b></div>
-    <div class="metric"><span>Рабочие</span><b>${real}</b></div>
+    <div class="metric"><span>Рабочие сделки</span><b>${workspace.workingDealCount}</b></div>
+    <div class="metric red"><span>Требуют внимания</span><b>${counts.attention || 0}</b></div>
+    <div class="metric red"><span>Просроченные</span><b>${counts.overdue || 0}</b></div>
+    <div class="metric yellow"><span>Без ответственного</span><b>${counts.unassigned || 0}</b></div>
+    <div class="metric green"><span>Готовы к задатку</span><b>${counts.deposit || 0}</b></div>
   </div>`;
 }
 
@@ -256,6 +237,8 @@ function statusBadges(deal) {
   const badges = [];
   if (isDemoDeal(deal)) badges.push(demoBadge(deal).trim());
   if (isReworkDeal(deal)) badges.push('<span class="pill yellow">доработка СПН</span>');
+  if (isOverdueDeal(deal)) badges.push(`<span class="pill red">просрочено: ${Number(deal?.overdue_tasks_count || 0)}</span>`);
+  if (hasMissingResponsibility(deal)) badges.push('<span class="pill yellow">нет ответственного</span>');
   if (deal?.has_children) badges.push('<span class="pill red">дети</span>');
   if (missingDocs(deal)) badges.push(`<span class="pill yellow">документы: ${missingDocs(deal)}</span>`);
   if (queueBadges(deal).trim()) badges.push(queueBadges(deal).trim());
@@ -268,37 +251,37 @@ function statusBadges(deal) {
 function renderDealCard(deal, index) {
   const href = './deal-card-v2.html?id=' + encodeURIComponent(deal?.id || '') + (profile?.role === 'lawyer' ? '#risks' : '');
   const title = esc(dealDisplayTitle(deal));
-  const address = esc(clean(deal?.address) || 'Адрес уточняется');
   const parties = esc(dealPartiesText(deal));
-  const lawyerMeta = profile?.role === 'lawyer'
-    ? `<div><span class="small">Документы</span><b>${missingDocs(deal)}</b></div>`
-    : `<div><span class="small">К сделке</span><b>${deal?.readiness_deal || 0}%</b></div>`;
+  const overdue = Number(deal?.overdue_tasks_count || 0);
+  const redRisks = Number(deal?.red_risks_count || 0);
+  const meta = profile?.role === 'lawyer'
+    ? `<div><span class="small">Красные риски</span><b>${redRisks}</b></div>
+       <div><span class="small">Просрочено</span><b>${overdue}</b></div>
+       <div><span class="small">Документы</span><b>${missingDocs(deal)}</b></div>`
+    : `<div><span class="small">К задатку</span><b>${deal?.readiness_deposit || 0}%</b></div>
+       <div><span class="small">Просрочено</span><b>${overdue}</b></div>
+       <div><span class="small">Документы</span><b>${missingDocs(deal)}</b></div>`;
   const reworkNotice = isReworkDeal(deal)
     ? '<div class="status warn" style="margin:10px 0">Нужно дозаполнить: СПН должен исправить карточку и отправить на повторную проверку.</div>'
     : '';
-  const cardClass = `deal-card ${isDemoDeal(deal) ? 'demo-card' : ''}`.trim();
+  const cardClass = `deal-card deals-work-card ${isDemoDeal(deal) ? 'demo-card' : ''}`.trim();
   const cardStyle = isReworkDeal(deal) ? 'border-color:rgba(245,158,11,.55);background:#fffdf7' : '';
   const styleAttr = cardStyle ? ` style="${cardStyle}"` : '';
 
   return `<article class="${cardClass}"${styleAttr}>
     <div class="deal-head">
       <div>
-        <div class="small">№ ${index + 1} · ID ${shortId(deal?.id)} · создана ${formatDate(deal?.created_at)}</div>
+        <div class="small">№ ${index + 1} · ID ${shortId(deal?.id)} · ${formatDate(deal?.created_at)}</div>
         <div class="deal-title">${demoBadge(deal)}${title}</div>
-        <div class="small">${address}</div>
-        <div class="small">${parties}</div>
+        <div class="small deals-work-parties">${parties}</div>
       </div>
       ${riskPill(deal?.risk_level)}
     </div>
     ${reworkNotice}
-    <div class="deal-meta">
-      <div><span class="small">К задатку</span><b>${deal?.readiness_deposit || 0}%</b></div>
-      ${lawyerMeta}
-      <div><span class="small">Задачи</span><b>${deal?.open_tasks_count || 0}</b></div>
-    </div>
-    <p><b>${profile?.role === 'lawyer' ? 'Юридический фокус' : 'Следующий шаг'}:</b><br>${esc(deal?.next_action || 'Проверить карточку')}</p>
-    <div style="margin-bottom:12px">${statusBadges(deal)}</div>
-    <div class="actions" style="margin-top:8px"><a class="btn primary" href="${href}">${profile?.role === 'lawyer' ? 'Проверить риски' : 'Открыть карточку'}</a></div>
+    <div class="deal-meta">${meta}</div>
+    <div class="deals-work-next"><span>Следующий шаг</span><b>${esc(deal?.next_action || 'Открыть карточку и определить ближайшее действие')}</b></div>
+    <div class="deals-work-badges">${statusBadges(deal)}</div>
+    <div class="actions deals-work-actions"><a class="btn primary" href="${href}">${profile?.role === 'lawyer' ? 'Проверить сделку' : 'Продолжить работу'}</a></div>
   </article>`;
 }
 
@@ -313,70 +296,96 @@ function safeRenderDealCard(deal, index) {
 function filterOptions() {
   if (profile?.role === 'lawyer') {
     return `<option value="lawyer">Юридическая очередь</option>
-      <option value="rework">На доработке у СПН</option>
+      <option value="overdue">Просроченные сделки</option>
       <option value="red">Красные риски</option>
       <option value="docs">Не хватает документов</option>
-      <option value="attention">На контроле</option>
-      <option value="all">Все доступные</option>
-      <option value="real">Только рабочие</option>
+      <option value="rework">На доработке у СПН</option>
+      <option value="work">Все рабочие без повторов</option>
+      <option value="all">Все исходные записи</option>
       <option value="demo">Только демо</option>`;
   }
 
   if (profile?.role === 'spn') {
-    return `<option value="all">Все мои сделки</option>
+    return `<option value="work">Рабочие без повторов</option>
       <option value="attention">Требуют внимания</option>
+      <option value="overdue">Просроченные</option>
       <option value="docs">Не хватает документов</option>
       <option value="lawyer">Нужен юрист</option>
       <option value="broker">Нужен брокер</option>
       <option value="deposit">Готовы к задатку 80%+</option>
       <option value="deal">Готовы к сделке 80%+</option>
       <option value="rework">Вернули на доработку</option>
-      <option value="real">Только рабочие</option>
+      <option value="all">Все исходные записи</option>
+      <option value="real">Рабочие, включая повторы</option>
       <option value="demo">Только демо</option>`;
   }
 
-  return `<option value="all">Все сделки</option>
+  return `<option value="work">Рабочие без демо и повторов</option>
+    <option value="attention">Требуют внимания</option>
+    <option value="overdue">Просроченные</option>
+    <option value="unassigned">Без ответственного</option>
     <option value="rework">На доработке у СПН</option>
-    <option value="real">Только рабочие</option>
-    <option value="demo">Только демо</option>
-    <option value="attention">На контроле</option>
     <option value="lawyer">Юристу</option>
     <option value="broker">Брокеру</option>
     <option value="deposit">Готовы к задатку 80%+</option>
-    <option value="deal">Готовы к сделке 80%+</option>`;
+    <option value="deal">Готовы к сделке 80%+</option>
+    <option value="docs">Не хватает документов</option>
+    <option value="red">Красные риски</option>
+    <option value="all">Все исходные записи</option>
+    <option value="real">Рабочие, включая повторы</option>
+    <option value="demo">Только демо</option>`;
+}
+
+function renderQuickModes(workspace) {
+  return `<div class="deals-quick-modes" role="group" aria-label="Быстрые режимы списка">
+    ${(workspace.quickModes || []).map((mode) => `<button type="button" class="deals-quick-mode ${currentFilter === mode.key ? 'active' : ''}" data-deals-filter="${esc(mode.key)}" aria-pressed="${currentFilter === mode.key ? 'true' : 'false'}"><span>${esc(mode.label)}</span><b>${mode.count}</b></button>`).join('')}
+  </div>`;
 }
 
 function emptyState() {
   const canCreate = ['owner','admin','manager','spn'].includes(profile?.role);
+  const isFiltered = currentFilter !== defaultFilterForRole() || searchQuery.trim();
   return `<div class="empty">
     <b>Сделки не найдены.</b><br>
-    ${currentFilter !== 'all' || searchQuery.trim() ? 'Попробуйте сбросить фильтр или поиск.' : 'Создайте первую сделку из мастера.'}
+    ${isFiltered ? 'Сбросьте фильтр или измените поисковый запрос.' : 'Создайте первую сделку из мастера.'}
     <div class="actions" style="justify-content:center;margin-top:14px">
-      ${currentFilter !== 'all' || searchQuery.trim() ? '<button id="resetDealsFilter" class="btn light" type="button">Сбросить фильтр</button>' : ''}
+      ${isFiltered ? '<button id="resetDealsFilter" class="btn light" type="button">Вернуться к рабочему списку</button>' : ''}
       ${canCreate ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>' : ''}
     </div>
   </div>`;
 }
 
+function sourceDealsForFilter(workspace) {
+  if (['all', 'real', 'demo'].includes(currentFilter)) return allDeals;
+  return workspace.canonicalDeals;
+}
+
+function listSummary(workspace, shown) {
+  const sourceTotal = ['all', 'real', 'demo'].includes(currentFilter) ? allDeals.length : workspace.workingDealCount;
+  const hidden = [];
+  if (workspace.hiddenDemoCount) hidden.push(`демо: ${workspace.hiddenDemoCount}`);
+  if (workspace.hiddenDuplicateCount) hidden.push(`точных повторов: ${workspace.hiddenDuplicateCount}`);
+  const hiddenText = hidden.length ? ` В рабочем режиме скрыто: ${hidden.join(', ')}.` : '';
+  return `Показано: ${shown} из ${sourceTotal}.${hiddenText}`;
+}
+
 function render() {
   const root = document.getElementById('app');
   try {
-    const items = allDeals.filter(filterDeal);
-    const reworkCount = allDeals.filter(isReworkDeal).length;
-    const heroTitle = profile?.role === 'lawyer' ? 'Юридическая очередь' : profile?.role === 'spn' ? 'Мои сделки' : 'Сделки v2';
+    const workspace = buildDealsWorkspace(allDeals, profile?.role);
+    const sourceDeals = sourceDealsForFilter(workspace);
+    const items = sourceDeals.filter(filterDeal);
+    const overdueCount = workspace.counts?.overdue || 0;
+    const heroTitle = profile?.role === 'lawyer' ? 'Юридическая очередь' : profile?.role === 'spn' ? 'Мои сделки' : 'Рабочие сделки';
     const heroText = profile?.role === 'lawyer'
-      ? 'Сделки, где нужно проверить юридические риски, документы, детей, обременения, расчеты и готовность к задатку.'
+      ? 'Сначала откройте просроченные сделки и стоп-факторы. Демо и точные повторы не мешают рабочей очереди.'
       : profile?.role === 'spn'
-        ? 'Рабочий список СПН: видно готовность, пробелы, задачи, юриста, брокера и ближайший шаг по каждой сделке.'
-        : 'Здесь отображаются все доступные сделки. Демо-сделки помечены отдельным бейджем и доступны через фильтр.';
-    const topStatusClass = reworkCount ? 'warn' : 'ok';
-    const topStatusText = reworkCount
-      ? `На доработке у СПН: ${reworkCount}. Используйте фильтр «На доработке у СПН», чтобы быстро проверить зависшие карточки.`
-      : (profile?.role === 'lawyer'
-        ? 'Профиль юриста: основной фокус — риски, документы, юридические стоп-факторы и комментарии по сделке.'
-        : profile?.role === 'spn'
-          ? 'Если в карточке нет ФИО сторон, список показывает объект и адрес, чтобы сделку можно было быстро узнать.'
-          : 'Фильтры «Юристу» и «Брокеру» учитывают статус сделки, стоп-факторы, красные риски и активность по задачам.');
+        ? 'Выберите один режим и доведите ближайшее действие до результата: снять просрочку, собрать документ или приблизить задаток.'
+        : 'Быстрые режимы показывают, где требуется решение сегодня. Полный исходный список доступен в расширенном фильтре.';
+    const topStatusClass = overdueCount ? 'warn' : 'ok';
+    const topStatusText = overdueCount
+      ? `Просроченные задачи есть в ${overdueCount} рабочих сделках. Начните с режима «Просрочено».`
+      : 'Просроченных задач в рабочем наборе нет. Проверьте сделки без ответственного и готовые к задатку.';
     const newDealButton = ['owner','admin','manager','spn'].includes(profile?.role)
       ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>'
       : '';
@@ -385,17 +394,21 @@ function render() {
     const reloadText = loadInProgress ? 'Обновляю...' : 'Обновить';
     const refreshStatus = loadError
       ? `<div class="status error" role="alert">Не удалось обновить список. Ранее загруженные сделки сохранены. ${esc(loadError)} <button id="retryDeals" class="btn light" type="button">Повторить</button></div>`
-      : (loadInProgress ? '<div class="status" role="status" aria-live="polite">Обновляю данные, список остается доступным.</div>' : '');
+      : (loadInProgress ? '<div class="status" role="status" aria-live="polite">Обновляю данные, список остаётся доступным.</div>' : '');
 
     root.innerHTML = `<main class="nav-v2-shell">
       <section class="hero"><h1>${heroTitle}</h1><p>${heroText}</p></section>
       <div class="status ${topStatusClass}">${esc(topStatusText)}</div>
-      ${renderKpi()}
-      <section class="card">
-        <div class="section-title"><div><h2>${profile?.role === 'lawyer' ? 'Сделки на юридическую проверку' : profile?.role === 'spn' ? 'Рабочий список' : 'Все сделки'}</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} / ${esc(roleName(profile?.role))}</p></div>${newDealButton}</div>
-        <div class="filters"><input id="dealSearch" placeholder="Поиск по адресу, объекту, СПН, статусу или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button" ${reloadState}>${reloadText}</button></div>
+      ${renderKpi(workspace)}
+      <section class="card deals-workspace">
+        <div class="section-title"><div><h2>${profile?.role === 'lawyer' ? 'Что проверить сейчас' : 'Сделки для работы'}</h2><p class="muted">${esc(profile?.full_name || 'Пользователь')} · ${esc(roleName(profile?.role))}</p></div>${newDealButton}</div>
+        ${renderQuickModes(workspace)}
+        <details class="deals-advanced-filters" ${['all', 'real', 'demo', 'deal', 'rework'].includes(currentFilter) || searchQuery.trim() ? 'open' : ''}>
+          <summary>Поиск и расширенные фильтры</summary>
+          <div class="filters"><input id="dealSearch" placeholder="Адрес, объект, клиент, СПН, статус или ID" value="${esc(searchQuery)}"><select id="dealFilter">${filterOptions()}</select><button id="reloadDeals" class="btn light" type="button" ${reloadState}>${reloadText}</button></div>
+        </details>
         ${refreshStatus}
-        <div class="status">Показано сделок: ${items.length} из ${allDeals.length}</div>
+        <div class="deals-work-summary">${esc(listSummary(workspace, items.length))}</div>
         <div class="deal-list">${cardsHtml}</div>
       </section>
     </main>`;
@@ -409,10 +422,17 @@ function render() {
       filter.value = currentFilter;
       filter.onchange = (event) => { currentFilter = event.target.value; updateUrl(); render(); };
     }
+    document.querySelectorAll('[data-deals-filter]').forEach((button) => {
+      button.addEventListener('click', () => {
+        currentFilter = button.dataset.dealsFilter || defaultFilterForRole();
+        updateUrl();
+        render();
+      });
+    });
     if (search) search.oninput = (event) => { searchQuery = event.target.value; updateUrl(); render(); };
     if (reload) reload.onclick = () => loadDeals({ preserveContent: true });
     if (retry) retry.onclick = () => loadDeals({ preserveContent: true });
-    if (reset) reset.onclick = () => { currentFilter = 'all'; searchQuery = ''; updateUrl(); render(); };
+    if (reset) reset.onclick = () => { currentFilter = defaultFilterForRole(); searchQuery = ''; updateUrl(); render(); };
   } catch (error) {
     root.innerHTML = `<main class="nav-v2-shell"><div class="status error">Ошибка отображения списка: ${esc(error.message)}</div><button id="reloadDeals" class="btn light" type="button">Обновить</button></main>`;
     document.getElementById('reloadDeals')?.addEventListener('click', () => loadDeals({ preserveContent: Boolean(profile) }));
