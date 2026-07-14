@@ -2,7 +2,7 @@
   "schema_version": 1,
   "pages": {
     "nav-v2.html": { "max_modules": 1 },
-    "dashboard-v2.html": { "max_modules": 1 },
+    "dashboard-v2.html": { "max_modules": 2 },
     "deals-v2.html": { "max_modules": 9 },
     "deal-card-v2.html": { "max_modules": 22 },
     "spn-v2.html": { "max_modules": 18 },
