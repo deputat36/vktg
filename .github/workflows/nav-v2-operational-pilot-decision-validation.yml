@@ -1,0 +1,50 @@
+name: Navigator v2 operational pilot decision validation
+
+on:
+  pull_request:
+    paths:
+      - 'operational-pilot-decision-v2.html'
+      - 'operational-pilot-decision-validation-v2.html'
+      - 'assets/js/nav-v2/operational-pilot-decision-validation-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-decision-validation-model-v2.js'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_operational_pilot_decision_validation.py'
+      - 'scripts/check-nav-v2-operational-pilot-decision-validation.mjs'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-pilot-decision-validation.yml'
+      - '.github/workflows/nav-v2-static.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'operational-pilot-decision-v2.html'
+      - 'operational-pilot-decision-validation-v2.html'
+      - 'assets/js/nav-v2/operational-pilot-decision-validation-v2.js'
+      - 'assets/js/nav-v2/operational-pilot-decision-validation-model-v2.js'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_operational_pilot_decision_validation.py'
+      - 'scripts/check-nav-v2-operational-pilot-decision-validation.mjs'
+      - 'tests/e2e/public-smoke.spec.js'
+      - '.github/workflows/nav-v2-operational-pilot-decision-validation.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-decision-validation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check pilot decision validation static contract
+        run: python3 scripts/check_nav_v2_operational_pilot_decision_validation.py
+      - name: Check pilot decision validation semantics
+        run: node scripts/check-nav-v2-operational-pilot-decision-validation.mjs
+      - name: Check owner decision compatibility
+        run: |
+          python3 scripts/check_nav_v2_operational_pilot_owner_decision.py
+          node scripts/check-nav-v2-operational-pilot-owner-decision.mjs
+      - name: Check page module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_operational_pilot_decision_validation.py

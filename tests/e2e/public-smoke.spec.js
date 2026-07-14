@@ -11,7 +11,8 @@ const guestPages = [
   '/broker-v2.html',
   '/viewer-v2.html',
   '/admin-v2.html',
-  '/operational-pilot-decision-v2.html'
+  '/operational-pilot-decision-v2.html',
+  '/operational-pilot-decision-validation-v2.html'
 ];
 
 for (const path of guestPages) {
