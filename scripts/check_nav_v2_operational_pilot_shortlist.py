@@ -86,12 +86,15 @@ def main() -> int:
         "function pilotShortlist()",
         "function pilotShortlistBlock()",
         "function pilotCard(item)",
+        "function pilotTone(lane)",
         "operational_pilot_shortlist",
+        "item.lane_label",
+        "pilotTone(item.lane)",
         "Кандидаты для операционного пилота",
         "Shortlist не запускает пилот",
-        "Быстрый пилотный цикл",
-        "Подтверждение ответственности",
-        "Документный рабочий цикл",
+        "Короткий цикл",
+        "Ответственность",
+        "Документный цикл",
         "Только ручной выбор",
         "Групп вероятных дублей",
         "Решение владельца",
@@ -125,6 +128,8 @@ def main() -> int:
         errors.append("static workflow does not run pilot shortlist regression")
     if command not in dedicated_workflow:
         errors.append("dedicated workflow does not run pilot shortlist regression")
+    if "set -o pipefail" not in dedicated_workflow:
+        errors.append("dedicated workflow must preserve the validator exit code when tee is used")
 
     if errors:
         print("Navigator v2 operational pilot shortlist errors:")
