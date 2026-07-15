@@ -3,7 +3,7 @@
 Дата: 15 июля 2026 года  
 Репозиторий: `deputat36/vktg`  
 Production Supabase: `ofewxuqfjhamgerwzull`  
-Проверенный `main`: `90063c346974c0f8328d7528b5b6c34d46eda8a8`, после PR #327
+Проверенный `main`: `bbb82b51adb59b0235824a221e6fa5668103be58`, после PR #329
 
 Связанные приложения:
 
@@ -15,6 +15,8 @@ Production Supabase: `ofewxuqfjhamgerwzull`
 Проверены продуктовая логика, роли, UX, редкие сценарии, frontend, Supabase, RLS/RPC, Advisors, эксплуатационные данные, CI и release-процесс. Аудит выполнен read-only: production-данные, Auth, RPC и миграции не изменялись.
 
 Не выполнялись пользовательские интервью и полноценная authenticated role/mutation matrix: соответствующий CI job сейчас пропускается. Deployed-код `nav-v2-deal-api` connector получить не смог.
+
+PR #329 дополнительно заменил длинное нативное подтверждение передачи юристу на controlled review dialog. Это улучшает контекст, keyboard recovery и progressive disclosure, но не меняет основные выводы аудита о process closure, данных и compliance.
 
 ## Итоговый вывод
 
@@ -98,7 +100,7 @@ Navigator помогает подготовить сделку: определи
 
 ### Доступность и feedback
 
-Последние PR улучшили headings, groups, labels, field errors, native fieldset, клавиатуру, focus recovery, controlled dialogs, async feedback и mobile disclosure.
+Последние PR улучшили headings, groups, labels, field errors, native fieldset, клавиатуру, focus recovery, controlled dialogs, async feedback и mobile disclosure. PR #329 добавил отдельную проверку незакрытых пунктов перед передачей юристу, не перегружая основной экран постоянным списком.
 
 ## Критические проблемы
 
