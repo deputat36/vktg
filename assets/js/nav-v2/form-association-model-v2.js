@@ -52,6 +52,45 @@ const FIELD_POLICIES = Object.freeze({
   })
 });
 
+const GROUP_POLICIES = Object.freeze({
+  spnReworkReturnOptions: Object.freeze({
+    groupId: 'spnReworkReturnOptions',
+    selector: '#spnReworkReturnOptions',
+    labelText: 'Замечания для возврата СПН',
+    helpText: 'Выберите одно или несколько фактических замечаний либо опишите главную причину ниже.',
+    helpId: 'spnReworkReturnHelp',
+    validationFieldId: 'spnReworkReturnReason',
+    nativeFieldset: true
+  }),
+  dealQuickStatusActions: Object.freeze({
+    groupId: 'dealQuickStatusActions',
+    selector: '[data-nav-choice-group="deal-quick-status"]',
+    labelText: 'Быстрое изменение статуса сделки',
+    helpText: 'Выберите одно действие. Каждая кнопка сразу запускает соответствующее изменение статуса.',
+    helpId: '',
+    validationFieldId: '',
+    nativeFieldset: false
+  }),
+  dealLegalActions: Object.freeze({
+    groupId: 'dealLegalActions',
+    selector: '[data-nav-choice-group="deal-legal-action"]',
+    labelText: 'Юридическое решение по сделке',
+    helpText: 'Выберите одно юридическое решение или перейдите к документам и истории решений.',
+    helpId: '',
+    validationFieldId: '',
+    nativeFieldset: false
+  }),
+  lawyerDocumentActions: Object.freeze({
+    groupId: 'lawyerDocumentActions',
+    selector: '[data-nav-choice-group="lawyer-document-action"]',
+    labelText: 'Состояние текущего документа',
+    helpText: 'Выберите новое состояние документа. Для проблемы сначала укажите конкретную причину.',
+    helpId: '',
+    validationFieldId: 'lawyerDocumentNoteV2',
+    nativeFieldset: false
+  })
+});
+
 function clean(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
@@ -63,6 +102,15 @@ export function formFieldPolicy(fieldId) {
 
 export function formFieldIds() {
   return Object.freeze(Object.keys(FIELD_POLICIES));
+}
+
+export function formGroupPolicy(groupId) {
+  const key = clean(groupId);
+  return Object.hasOwn(GROUP_POLICIES, key) ? GROUP_POLICIES[key] : null;
+}
+
+export function formGroupIds() {
+  return Object.freeze(Object.keys(GROUP_POLICIES));
 }
 
 export function mergeDescriptionIds(...values) {
@@ -97,6 +145,12 @@ export function formAssociationContract() {
     ariaInvalidOnlyForClientFieldError: true,
     ariaInvalidClearsOnInput: true,
     serverErrorDoesNotInvalidateValidField: true,
+    nativeFieldsetPreferred: true,
+    stableGroupNameRequired: true,
+    sharedGroupHelpRequired: true,
+    groupErrorMirrorsFieldError: true,
+    individualControlNamesPreserved: true,
+    nativeKeyboardBehaviorPreserved: true,
     liveAnnouncementOwnedByAsyncFeedback: true,
     positiveTabindexAllowed: false,
     layoutMutationAllowed: false,
