@@ -1,5 +1,6 @@
 import {
   dealTabFromDataset,
+  dealTabPanelLabel,
   dealTabPanelSelector,
   primaryActionAccessibleName,
   shouldRestoreDisclosureFocus
@@ -73,6 +74,21 @@ function preparePrimaryAction(action) {
   action.dataset.navPrimaryAction = 'true';
 }
 
+function prepareDealTabPanel(root = document) {
+  const activeTab = root.querySelector('.tabs [data-tab].active');
+  const tab = activeTab instanceof HTMLElement ? dealTabFromDataset(activeTab.dataset) : '';
+  const tabs = activeTab?.closest('.tabs');
+  const panel = tabs?.closest('section.card');
+  if (!tab || !(panel instanceof HTMLElement)) return;
+  panel.dataset.dealTabPanel = tab;
+  panel.tabIndex = -1;
+  panel.setAttribute('aria-label', dealTabPanelLabel(tab));
+  tabs.setAttribute('aria-label', 'Разделы карточки сделки');
+  tabs.querySelectorAll('[data-tab]').forEach((button) => {
+    button.setAttribute('aria-pressed', button === activeTab ? 'true' : 'false');
+  });
+}
+
 function focusHashPanelOnce() {
   const tab = String(location.hash || '').replace(/^#/, '');
   if (!tab || lastHashFocus === `${location.pathname}#${tab}`) return;
@@ -85,6 +101,7 @@ function focusHashPanelOnce() {
 export function applyActionFocusContinuity(root = document) {
   root.querySelectorAll(PRIMARY_SELECTOR).forEach(preparePrimaryAction);
   root.querySelectorAll(DISCLOSURE_SELECTOR).forEach(prepareDisclosure);
+  prepareDealTabPanel(root);
   focusHashPanelOnce();
 }
 
