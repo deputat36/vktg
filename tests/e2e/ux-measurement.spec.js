@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { captureRuntimeFailures, expectNoRuntimeFailures, openPage } from './helpers.mjs';
+import { captureRuntimeFailures, expectNoRuntimeFailures } from './helpers.mjs';
 
 const allowedKeys = new Set([
   'schema_version',
@@ -18,8 +18,11 @@ test('privacy-safe UX measurement emits enum-only local events', async ({ page }
   const requests = [];
   page.on('request', (request) => requests.push(request.url()));
 
-  await openPage(page, '/tests/fixtures/nav-v2-ux-measurement.html');
+  const response = await page.goto('/tests/fixtures/nav-v2-ux-measurement.html', { waitUntil: 'domcontentloaded' });
+  expect(response, 'No document response for UX measurement fixture').not.toBeNull();
+  expect(response.status(), 'Unexpected HTTP status for UX measurement fixture').toBeLessThan(400);
   await expect(page.locator('html')).toHaveAttribute('data-nav-ux-measurement', 'event-only-v1');
+  await expect(page.locator('#primaryAction')).toBeVisible();
 
   await page.locator('#primaryAction').click();
   await expect.poll(() => page.evaluate(() => window.__NAV_V2_UX_EVENTS__.length)).toBe(1);
