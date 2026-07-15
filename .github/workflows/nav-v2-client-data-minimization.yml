@@ -1,0 +1,90 @@
+name: Navigator v2 client data minimization
+
+on:
+  pull_request:
+    paths:
+      - 'spn-v2.html'
+      - 'assets/js/nav-v2/client-data-minimization-model-v2.js'
+      - 'assets/js/nav-v2/spn-party-names-adaptive-v2.js'
+      - 'assets/js/nav-v2/spn-save-idempotency-model-v2.js'
+      - 'assets/js/nav-v2/party-summary-v2.js'
+      - 'supabase/migrations/20260715224500_nav_v2_minimize_client_identifiers.sql'
+      - 'config/nav-v2-data-minimization.json'
+      - 'scripts/check_nav_v2_client_data_minimization.py'
+      - 'scripts/check-nav-v2-client-data-minimization.mjs'
+      - 'tests/fixtures/nav-v2-client-data-minimization.html'
+      - 'tests/e2e/client-data-minimization.spec.js'
+      - '.github/workflows/nav-v2-client-data-minimization.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'spn-v2.html'
+      - 'assets/js/nav-v2/client-data-minimization-model-v2.js'
+      - 'assets/js/nav-v2/spn-party-names-adaptive-v2.js'
+      - 'assets/js/nav-v2/spn-save-idempotency-model-v2.js'
+      - 'assets/js/nav-v2/party-summary-v2.js'
+      - 'supabase/migrations/20260715224500_nav_v2_minimize_client_identifiers.sql'
+      - 'config/nav-v2-data-minimization.json'
+      - 'scripts/check_nav_v2_client_data_minimization.py'
+      - 'scripts/check-nav-v2-client-data-minimization.mjs'
+      - 'tests/fixtures/nav-v2-client-data-minimization.html'
+      - 'tests/e2e/client-data-minimization.spec.js'
+      - '.github/workflows/nav-v2-client-data-minimization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/client-data-minimization-model-v2.js
+          node --check assets/js/nav-v2/spn-party-names-adaptive-v2.js
+          node --check assets/js/nav-v2/spn-save-idempotency-model-v2.js
+          node --check assets/js/nav-v2/party-summary-v2.js
+          node --check scripts/check-nav-v2-client-data-minimization.mjs
+          node --check tests/e2e/client-data-minimization.spec.js
+      - name: Client data minimization source contract
+        run: python3 scripts/check_nav_v2_client_data_minimization.py
+      - name: Client data minimization semantic regression
+        run: node scripts/check-nav-v2-client-data-minimization.mjs
+      - name: Compatible save idempotency regression
+        run: |
+          python3 scripts/check_nav_v2_spn_save_idempotency.py
+          node scripts/check-nav-v2-spn-save-idempotency.mjs
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_client_data_minimization.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run client data minimization regression
+        run: npx playwright test tests/e2e/client-data-minimization.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload client data minimization evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-client-data-minimization-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
