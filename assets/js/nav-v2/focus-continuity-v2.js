@@ -5,6 +5,7 @@ import {
   primaryActionAccessibleName,
   shouldRestoreDisclosureFocus
 } from './focus-continuity-model-v2.js?v=20260715-01';
+import { applyScreenStructure } from './screen-structure-v2.js?v=20260715-01';
 
 const DISCLOSURE_SELECTOR = '.mobile-first-screen-more, .mobile-first-screen-details';
 const PRIMARY_SELECTOR = '.mobile-first-screen-primary-action';
@@ -99,6 +100,7 @@ function focusHashPanelOnce() {
 }
 
 export function applyActionFocusContinuity(root = document) {
+  applyScreenStructure(root);
   root.querySelectorAll(PRIMARY_SELECTOR).forEach(preparePrimaryAction);
   root.querySelectorAll(DISCLOSURE_SELECTOR).forEach(prepareDisclosure);
   prepareDealTabPanel(root);
