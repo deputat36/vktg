@@ -53,11 +53,11 @@ assert.deepEqual(accessibleDialogContract(), {
   escapeCancelsWithoutMutation: true,
   cancelRestoresTriggerFocus: true,
   serverErrorPreservesInput: true,
-  promptReplayIsBounded: true,
+  existingRpcPayloadsOnly: true,
+  newRpcAllowed: false,
   nativeConfirmRetainedWhenReplacementAddsNoValue: true,
   positiveTabindexAllowed: false,
-  storageAllowed: false,
-  networkAllowed: false
+  storageAllowed: false
 });
 
 console.log('Navigator v2 accessible dialog semantic checks passed');
