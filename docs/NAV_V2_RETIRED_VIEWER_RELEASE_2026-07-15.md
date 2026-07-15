@@ -7,11 +7,13 @@
 - implementation PR: #336;
 - merged main: `7632f1c43847b6dde151e418dbba44cac4064d14`;
 - Edge Function `nav-invite-user` не менялась;
-- production migration source: `supabase/migrations/20260715195732_nav_v2_retire_viewer_assignment.sql`.
+- канонический fresh-install source: `supabase/migrations/20260715213000_nav_v2_retire_viewer_assignment.sql`;
+- production timestamp: `20260715195732`;
+- связь live → canonical зарегистрирована в `config/nav-v2-release-migration-aliases.json`.
 
 ## Production
 
-Миграция `20260715195732_nav_v2_retire_viewer_assignment` применена к проекту `ofewxuqfjhamgerwzull`.
+Миграция `20260715195732_nav_v2_retire_viewer_assignment` применена к проекту `ofewxuqfjhamgerwzull`. Supabase назначил live timestamp каноническому reviewed source `20260715213000_nav_v2_retire_viewer_assignment.sql`.
 
 После применения подтверждено:
 
