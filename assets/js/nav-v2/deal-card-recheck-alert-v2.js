@@ -16,6 +16,7 @@ import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.j
 import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-01';
 import { applyFormAssociations } from './form-association-v2.js?v=20260715-02';
+import { installSensitiveFreeTextGuard } from './sensitive-free-text-guard-v2.js?v=20260715-01';
 
 // Previous release source markers:
 // import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';
@@ -27,6 +28,7 @@ let profileData = null;
 let rerenderHookBound = false;
 
 function applyCardEnhancements() {
+  installSensitiveFreeTextGuard();
   applyDealCardSpnRework(cardData, profileData);
   applyLawyerDocumentCycle(cardData, profileData);
   applyDealCardActionFocus(cardData, profileData);
