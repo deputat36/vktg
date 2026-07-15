@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 accessibility continuity fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0815">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-mobile-first-screen.css?v=20260715-01">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-focus-continuity.css?v=20260715-01">
+</head>
+<body class="nav-v2">
+  <div id="app">
+    <main id="fixturePage" class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
+      <section id="heroRegion" class="hero"><h1>Рабочая сделка</h1><p>Синтетический keyboard fixture.</p></section>
+      <section id="statusRegion" class="status"><a id="secondaryBefore" href="#secondary">Вторичная ссылка</a></section>
+      <section id="metricsRegion" class="kpi-row"><div class="metric"><span>Показатель</span><b>1</b></div></section>
+      <section id="workspaceRegion" class="card deals-workspace">
+        <h2>Главное действие</h2>
+        <button id="primaryAction" class="btn primary mobile-first-screen-primary-action" type="button">Продолжить работу</button>
+        <button id="shortcutAction" class="btn light" type="button" data-tab-shortcut="docs">Открыть документы</button>
+        <details id="contextDetails" class="mobile-first-screen-details">
+          <summary>Дополнительный контекст</summary>
+          <div class="mobile-first-screen-details-body"><a id="contextLink" href="#context">Контекстная ссылка</a></div>
+        </details>
+      </section>
+      <section id="tabRegion" class="card">
+        <div class="tabs">
+          <button class="tab active" type="button" data-tab="overview">Сводка</button>
+          <button class="tab" type="button" data-tab="docs">Документы</button>
+          <button class="tab" type="button" data-tab="tasks">Задачи</button>
+        </div>
+        <h2 id="panelHeading">Сводка</h2>
+        <p>Тестовое содержимое активной вкладки.</p>
+      </section>
+    </main>
+  </div>
+  <script type="module">
+    import { applyMobileFirstScreenDisclosure } from '../../assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-03';
+
+    const labels = {
+      overview: 'Сводка',
+      docs: 'Документы',
+      tasks: 'Задачи'
+    };
+
+    function activate(route) {
+      document.querySelectorAll('[data-tab]').forEach((tab) => {
+        tab.classList.toggle('active', tab.dataset.tab === route);
+      });
+      const panel = document.querySelector('[data-nav-tab-panel]');
+      if (panel) panel.innerHTML = `<h2 id="panelHeading">${labels[route] || route}</h2><p>Тестовое содержимое активной вкладки.</p>`;
+      history.replaceState(null, '', `#${route}`);
+      applyMobileFirstScreenDisclosure(document);
+    }
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest('[data-tab], [data-tab-shortcut]');
+      if (!control) return;
+      const route = control.dataset.tab || control.dataset.tabShortcut;
+      if (route) activate(route);
+    });
+
+    applyMobileFirstScreenDisclosure(document);
+  </script>
+</body>
+</html>
