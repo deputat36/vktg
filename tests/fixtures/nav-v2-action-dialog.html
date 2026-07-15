@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 action dialog fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0830">
+</head>
+<body class="nav-v2">
+  <div id="app">
+    <main class="nav-v2-shell">
+      <section class="card">
+        <h1>Проверка диалогов действий</h1>
+        <label><input id="simulateSuccess" type="checkbox"> Имитировать успешное сохранение</label>
+        <div class="actions">
+          <button id="resolveRisk" class="btn green" type="button">Устранить риск</button>
+          <button id="reopenRisk" class="btn light" type="button">Вернуть риск в работу</button>
+          <button id="requiredReason" class="btn primary" type="button">Действие с обязательной причиной</button>
+        </div>
+        <div id="fixtureResult" class="status" aria-live="polite">Действие не выполнено.</div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { buildRiskResolutionDialog } from '../../assets/js/nav-v2/action-dialog-model-v2.js?v=20260715-01';
+    import { clearActionDialogDraft, requestActionDialog } from '../../assets/js/nav-v2/action-dialog-v2.js?v=20260715-01';
+
+    const result = document.getElementById('fixtureResult');
+    const success = document.getElementById('simulateSuccess');
+
+    async function runRisk(button, nextState) {
+      const config = buildRiskResolutionDialog({ nextState, isDemo: true, riskTitle: 'Не согласованы расчёты' });
+      const decision = await requestActionDialog(config, button);
+      button.dataset.confirmed = decision.confirmed ? 'true' : 'false';
+      button.dataset.dialogMode = decision.mode;
+      button.dataset.note = decision.value;
+      result.className = `status ${decision.confirmed ? 'ok' : 'warn'}`;
+      result.textContent = decision.confirmed ? `Подтверждено: ${decision.value || 'без комментария'}` : 'Действие отменено.';
+      if (decision.confirmed && success.checked) clearActionDialogDraft(button);
+    }
+
+    document.getElementById('resolveRisk').addEventListener('click', (event) => void runRisk(event.currentTarget, true));
+    document.getElementById('reopenRisk').addEventListener('click', (event) => void runRisk(event.currentTarget, false));
+
+    document.getElementById('requiredReason').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      const decision = await requestActionDialog({
+        id: 'required-reason-test',
+        title: 'Укажите причину',
+        description: 'Причина обязательна для продолжения действия.',
+        details: ['Минимум 5 символов.'],
+        confirmLabel: 'Продолжить',
+        cancelLabel: 'Отмена',
+        tone: 'warning',
+        input: {
+          label: 'Причина действия',
+          description: 'Коротко опишите причину.',
+          required: true,
+          minLength: 5,
+          multiline: true,
+          errorText: 'Введите причину минимум из 5 символов.'
+        }
+      }, button);
+      button.dataset.confirmed = decision.confirmed ? 'true' : 'false';
+      button.dataset.note = decision.value;
+      result.textContent = decision.confirmed ? 'Причина принята.' : 'Ввод причины отменён.';
+    });
+  </script>
+</body>
+</html>
