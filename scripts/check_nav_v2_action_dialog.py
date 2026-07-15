@@ -10,6 +10,7 @@ ERRORS: list[str] = []
 MODEL = ROOT / "assets/js/nav-v2/action-dialog-model-v2.js"
 RUNTIME = ROOT / "assets/js/nav-v2/action-dialog-v2.js"
 RISK = ROOT / "assets/js/nav-v2/deal-card-risk-resolution-v2.js"
+DOCUMENT_PROBLEM = ROOT / "assets/js/nav-v2/deal-card-document-problem-dialog-v2.js"
 HOOK = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 PAGE = ROOT / "deal-card-v2.html"
 DEAL_CARD = ROOT / "assets/js/nav-v2/deal-card-v2.js"
@@ -20,7 +21,21 @@ BROWSER = ROOT / "tests/e2e/action-dialog.spec.js"
 FIXTURE = ROOT / "tests/fixtures/nav-v2-action-dialog.html"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-action-dialog.yml"
 
-PATHS = (MODEL, RUNTIME, RISK, HOOK, PAGE, DEAL_CARD, REWORK, LAWYER_DOCUMENT, SEMANTIC, BROWSER, FIXTURE, WORKFLOW)
+PATHS = (
+    MODEL,
+    RUNTIME,
+    RISK,
+    DOCUMENT_PROBLEM,
+    HOOK,
+    PAGE,
+    DEAL_CARD,
+    REWORK,
+    LAWYER_DOCUMENT,
+    SEMANTIC,
+    BROWSER,
+    FIXTURE,
+    WORKFLOW,
+)
 for path in PATHS:
     if not path.exists():
         ERRORS.append(f"Missing action dialog file: {path.relative_to(ROOT)}")
@@ -29,6 +44,7 @@ if not ERRORS:
     model = MODEL.read_text(encoding="utf-8")
     runtime = RUNTIME.read_text(encoding="utf-8")
     risk = RISK.read_text(encoding="utf-8")
+    document_problem = DOCUMENT_PROBLEM.read_text(encoding="utf-8")
     hook = HOOK.read_text(encoding="utf-8")
     page = PAGE.read_text(encoding="utf-8")
     deal_card = DEAL_CARD.read_text(encoding="utf-8")
@@ -43,6 +59,7 @@ if not ERRORS:
         "export function nativeDialogInventory",
         "export function nativeDialogDecision",
         "export function buildRiskResolutionDialog",
+        "export function buildDocumentProblemDialog",
         "export function actionDialogContract",
         "deal-document-problem",
         "deal-lawyer-handoff",
@@ -50,7 +67,8 @@ if not ERRORS:
         "decision: 'replace_now'",
         "decision: 'candidate'",
         "decision: 'keep_native'",
-        "nativeDialogPreferred: true",
+        "fallbackConfirm: false",
+        "inputDraftMemoryOnly: true",
         "draftPreservedOnCancel: true",
         "draftPreservedOnServerError: true",
         "draftClearedOnlyAfterSuccess: true",
@@ -78,6 +96,7 @@ if not ERRORS:
         "focusTrigger(trigger)",
         "field.setAttribute('aria-invalid', 'true')",
         "field.setAttribute('aria-errormessage'",
+        "config.fallbackConfirm !== false",
         "export function requestActionDialog",
         "export function clearActionDialogDraft",
         "window.confirm",
@@ -121,20 +140,47 @@ if not ERRORS:
 
     for forbidden in ("confirm(", "prompt(", "localStorage", "sessionStorage", "fetch(", "sendBeacon"):
         if forbidden in risk:
-            ERRORS.append(f"Risk resolution must use the controlled dialog instead of legacy UI/storage: {forbidden}")
+            ERRORS.append(f"Risk resolution must use controlled dialog: {forbidden}")
 
     if risk.index("clearActionDialogDraft(button)") > risk.index("catch (error)"):
-        ERRORS.append("Risk dialog draft must clear only inside the successful mutation path")
+        ERRORS.append("Risk dialog draft must clear only inside successful mutation path")
+
+    for marker in (
+        "buildDocumentProblemDialog",
+        "requestActionDialog(config, button)",
+        "clearActionDialogDraft(button)",
+        "[data-doc-id][data-doc-status=\"problem\"]",
+        "nav_v2_update_document_workflow",
+        "p_document_id: button.dataset.docId",
+        "p_status: 'problem'",
+        "p_assigned_to: null",
+        "p_responsible_role: null",
+        "p_due_date: null",
+        "p_note: note",
+        "if (!decision.confirmed) return;",
+        "button.disabled = false;",
+    ):
+        if marker not in document_problem:
+            ERRORS.append(f"Document problem dialog integration missing marker: {marker}")
+
+    for forbidden in ("localStorage", "sessionStorage", "fetch(", "sendBeacon", "prompt("):
+        if forbidden in document_problem:
+            ERRORS.append(f"Document problem enhancement must stay bounded: {forbidden}")
+
+    if document_problem.index("clearActionDialogDraft(button)") > document_problem.index("catch (error)"):
+        ERRORS.append("Document problem draft must clear only inside successful mutation path")
 
     for marker in (
         "import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260715-01';",
+        "import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';",
         "applyDealCardRiskResolution(cardData, profileData);",
+        "applyDealCardDocumentProblemDialog(cardData);",
     ):
         if marker not in hook:
-            ERRORS.append(f"Deal card hook missing risk dialog release marker: {marker}")
+            ERRORS.append(f"Deal card hook missing action dialog release marker: {marker}")
 
     for marker in (
-        '"./deal-card-recheck-alert-v2.js?v=20260715-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-19"',
+        '"./deal-card-recheck-alert-v2.js?v=20260715-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-20"',
         '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-15"',
     ):
         if page.count(marker) != 1:
@@ -155,12 +201,13 @@ if not ERRORS:
     for source_name, markers in inventory_source_markers.items():
         for marker in markers:
             if marker not in source_texts[source_name]:
-                ERRORS.append(f"Native dialog inventory source drift in {source_name}: {marker}")
+                ERRORS.append(f"Native fallback source drift in {source_name}: {marker}")
 
     for marker in (
         "Navigator v2 action dialog semantic checks passed",
         "nativeDialogInventory",
         "buildRiskResolutionDialog",
+        "buildDocumentProblemDialog",
         "actionDialogContract",
         "replace_now",
         "candidate",
@@ -218,6 +265,6 @@ if ERRORS:
     sys.exit(1)
 
 print(
-    "Navigator v2 action dialog contract passed: inventory is explicit, risk confirm/prompt is replaced by one named dialog, "
-    "drafts are memory-only and preserved through cancel/server error, focus returns, and RPC semantics stay unchanged"
+    "Navigator v2 action dialog contract passed: risk and document-problem actions use one named dialog, "
+    "drafts are memory-only, focus returns, and existing RPC semantics stay unchanged"
 )
