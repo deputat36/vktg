@@ -25,7 +25,9 @@ if not errors:
 
     edge_markers = [
         'const ACTIONS = new Set(["access_link", "invite_email", "dry_run"])',
+        'const RETIRED_ROLES = new Set(["viewer"])',
         'if (!ACTIONS.has(action))',
+        'if (RETIRED_ROLES.has(role))',
         'if (role === "spn" && !managerId)',
         'if (!["owner", "admin"].includes(profile.role))',
         'if (!["owner", "admin", "manager"].includes(data.role))',
@@ -37,7 +39,9 @@ if not errors:
             errors.append(f"nav-invite-user missing marker: {marker}")
 
     access_markers = [
+        "const ASSIGNABLE_ROLES = new Set(['admin', 'manager', 'spn', 'lawyer', 'broker'])",
         "action: 'access_link'",
+        "if (!ASSIGNABLE_ROLES.has(payload.role))",
         "if (payload.role === 'spn' && !payload.manager_id)",
         "Для СПН обязательно выберите менеджера.",
         "manager.required = required",
@@ -46,6 +50,8 @@ if not errors:
     for marker in access_markers:
         if marker not in access:
             errors.append(f"nav-temp-password-v2.js missing marker: {marker}")
+    if '<option value="viewer">' in access:
+        errors.append("nav-temp-password-v2.js must not offer the retired viewer role")
 
     accept_markers = [
         "token_hash",
@@ -62,8 +68,8 @@ if not errors:
     if "SUPABASE_SERVICE_ROLE_KEY" in access or "SUPABASE_SERVICE_ROLE_KEY" in accept:
         errors.append("Browser invite modules must not reference service role key")
 
-    if "nav-temp-password-v2.js?v=20260710-1510" not in loader:
-        errors.append("admin-loader-v2.js missing invite module cache-bust")
+    if "nav-temp-password-v2.js?v=20260715-01" not in loader:
+        errors.append("admin-loader-v2.js missing retired-role invite module cache-bust")
 
     system_check_markers = [
         "const managerId = currentProfile?.id || getCachedUser()?.id || null",
