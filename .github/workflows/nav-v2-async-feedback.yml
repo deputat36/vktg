@@ -1,0 +1,79 @@
+name: Navigator v2 accessible async feedback
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js'
+      - 'assets/js/nav-v2/async-feedback-*.js'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'scripts/check-nav-v2-async-feedback.mjs'
+      - 'tests/e2e/async-feedback.spec.js'
+      - 'tests/fixtures/nav-v2-async-feedback.html'
+      - '.github/workflows/nav-v2-async-feedback.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js'
+      - 'assets/js/nav-v2/async-feedback-*.js'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'scripts/check-nav-v2-async-feedback.mjs'
+      - 'tests/e2e/async-feedback.spec.js'
+      - 'tests/fixtures/nav-v2-async-feedback.html'
+      - '.github/workflows/nav-v2-async-feedback.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/async-feedback-model-v2.js
+          node --check assets/js/nav-v2/async-feedback-v2.js
+          node --check scripts/check-nav-v2-async-feedback.mjs
+          node --check tests/e2e/async-feedback.spec.js
+      - name: Semantic async feedback contract
+        run: node scripts/check-nav-v2-async-feedback.mjs
+      - name: Static async feedback contract
+        run: python3 scripts/check_nav_v2_async_feedback.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_async_feedback.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run accessible async feedback regression
+        run: npx playwright test tests/e2e/async-feedback.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload async feedback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-async-feedback-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
