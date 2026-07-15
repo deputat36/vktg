@@ -73,9 +73,9 @@ export function baseDescriptionIds({ existing = '', helpIds = [], statusId = '' 
 }
 
 export function validationDescriptionIds({ baseIds = [], statusId = '', invalid = false } = {}) {
-  const result = describedByTokens(Array.isArray(baseIds) ? baseIds.join(' ') : baseIds);
   const status = clean(statusId);
-  if (invalid && status && !result.includes(status)) result.push(status);
+  const result = describedByTokens(Array.isArray(baseIds) ? baseIds.join(' ') : baseIds).filter((id) => id !== status);
+  if (invalid && status) result.push(status);
   return result;
 }
 
