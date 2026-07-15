@@ -1,7 +1,8 @@
+import { focusModeForControl, nextTabIndex, sortOperationalRegions } from './accessibility-continuity-model-v2.js?v=20260715-01';
+
 const PAGE_SELECTOR = '.mobile-first-screen-page';
 const DETAILS_SELECTOR = '.mobile-first-screen-more, .mobile-first-screen-details';
 const TAB_SELECTOR = '.tabs [data-tab]';
-const TAB_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 const originalPositions = new WeakMap();
 
 let bindingsReady = false;
@@ -30,15 +31,12 @@ function cssOrder(element) {
 
 function reorderPage(page, compact) {
   rememberOrder(page);
-  const children = directChildren(page);
-  children.sort((left, right) => {
-    if (compact) {
-      const byCss = cssOrder(left) - cssOrder(right);
-      if (byCss) return byCss;
-    }
-    return (originalPositions.get(left) ?? 0) - (originalPositions.get(right) ?? 0);
-  });
-  children.forEach((child) => page.append(child));
+  const regions = directChildren(page).map((element) => ({
+    element,
+    visualOrder: cssOrder(element),
+    sourceOrder: originalPositions.get(element) ?? 0
+  }));
+  sortOperationalRegions(regions, compact).forEach(({ element }) => page.append(element));
   page.dataset.navDomOrder = compact ? 'compact' : 'source';
 }
 
@@ -57,21 +55,21 @@ function syncDetailsState(root = document) {
 
 function routeIntent(element) {
   if (element.hasAttribute('data-tab')) {
-    return { route: element.dataset.tab || '', mode: 'tab', targetId: '' };
+    return { route: element.dataset.tab || '', mode: focusModeForControl('tab'), targetId: '' };
   }
   if (element.hasAttribute('data-tab-shortcut')) {
-    return { route: element.dataset.tabShortcut || '', mode: 'panel', targetId: '' };
+    return { route: element.dataset.tabShortcut || '', mode: focusModeForControl('tab_shortcut'), targetId: '' };
   }
   if (element.hasAttribute('data-action-focus-tab')) {
-    return { route: element.dataset.actionFocusTab || '', mode: 'panel', targetId: '' };
+    return { route: element.dataset.actionFocusTab || '', mode: focusModeForControl('action_focus'), targetId: '' };
   }
   if (element.hasAttribute('data-completion-next-tab')) {
-    return { route: element.dataset.completionNextTab || '', mode: 'panel', targetId: '' };
+    return { route: element.dataset.completionNextTab || '', mode: focusModeForControl('completion_next'), targetId: '' };
   }
   if (element.hasAttribute('data-spn-rework-route')) {
     return {
       route: element.dataset.spnReworkRoute || '',
-      mode: 'panel',
+      mode: focusModeForControl('spn_rework'),
       targetId: element.dataset.spnReworkTarget || ''
     };
   }
@@ -206,7 +204,6 @@ function onToggle(event) {
 }
 
 function onTabKeydown(event) {
-  if (!TAB_KEYS.has(event.key)) return;
   const current = event.target;
   if (!(current instanceof Element) || !current.matches('[role="tab"][data-tab]')) return;
   const tabList = current.closest('[role="tablist"]');
@@ -214,15 +211,12 @@ function onTabKeydown(event) {
   if (!tabs.length) return;
 
   const currentIndex = Math.max(0, tabs.indexOf(current));
-  let nextIndex = currentIndex;
-  if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
-  if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-  if (event.key === 'Home') nextIndex = 0;
-  if (event.key === 'End') nextIndex = tabs.length - 1;
+  const targetIndex = nextTabIndex(currentIndex, event.key, tabs.length);
+  if (targetIndex < 0) return;
 
   event.preventDefault();
-  pendingFocus = { route: tabs[nextIndex].dataset.tab || '', mode: 'tab', targetId: '' };
-  tabs[nextIndex].click();
+  pendingFocus = { route: tabs[targetIndex].dataset.tab || '', mode: focusModeForControl('tab'), targetId: '' };
+  tabs[targetIndex].click();
 }
 
 function bindGlobalEvents() {
