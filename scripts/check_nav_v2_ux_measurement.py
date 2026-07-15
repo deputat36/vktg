@@ -47,7 +47,7 @@ if not ERRORS:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     direct_entry = '<script type="module" src="./assets/js/nav-v2/ux-measurement-v2.js?v=20260715-01"></script>'
-    remap = '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-03"'
+    remap = '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-04"'
     for page in PAGES:
         text = page.read_text(encoding="utf-8")
         if direct_entry in text:
