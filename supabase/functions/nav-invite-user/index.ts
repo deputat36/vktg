@@ -13,13 +13,11 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const REDIRECT = "https://deputat36.github.io/vktg/nav-accept-invite-v2.html";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set(["access_link", "invite_email", "dry_run"]);
-const ROLES = new Set(["owner", "admin", "manager", "spn", "lawyer", "broker"]);
-const RETIRED_ROLES = new Set(["viewer"]);
+const ROLES = new Set(["owner", "admin", "manager", "spn", "lawyer", "broker", "viewer"]);
 
 function out(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...H, "Content-Type": "application/json" } });
 }
-
 function cleanEmail(v: unknown) { return String(v || "").trim().toLowerCase(); }
 function cleanText(v: unknown) { return String(v || "").trim(); }
 function cleanUuid(v: unknown) {
@@ -124,7 +122,6 @@ serve(async (req: Request) => {
 
     if (!ACTIONS.has(action)) return out({ error: "Недопустимое действие создания доступа." }, 400);
     if (!email || !email.includes("@")) return out({ error: "Укажите корректный email сотрудника." }, 400);
-    if (RETIRED_ROLES.has(role)) return out({ error: "Роль «Наблюдатель» больше не назначается. Выберите рабочую роль сотрудника." }, 400);
     if (!ROLES.has(role)) return out({ error: "Недопустимая роль Навигатора." }, 400);
     if (role === "spn" && !managerId) return out({ error: "Для СПН обязательно выберите менеджера." }, 400);
 
