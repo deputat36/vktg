@@ -80,9 +80,9 @@ function currentSurface(root = document) {
 function actionForTarget(target) {
   if (!(target instanceof Element)) return '';
   if (target.closest('.mobile-first-screen-primary-action')) return 'primary_action';
-  if (target.closest('[data-manager-action-kind], [data-action-focus-tab], .btn, a')) return 'context_action';
-  if (target.closest('[data-deals-filter], [data-filter], [data-confirmed-filter], select, input[type="search"]')) return 'refine';
+  if (target.closest('[data-deals-filter], [data-filter], [data-confirmed-filter]')) return 'refine';
   if (target.closest('summary')) return 'disclosure';
+  if (target.closest('[data-manager-action-kind], [data-action-focus-tab], .btn, a')) return 'context_action';
   return '';
 }
 
@@ -147,3 +147,5 @@ export function installPrivacySafeUxMetrics(root = document) {
     if (surface) recordPrivacySafeUxEvent(surface, 'refine');
   }, true);
 }
+
+if (typeof document !== 'undefined') installPrivacySafeUxMetrics(document);
