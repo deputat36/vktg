@@ -1,3 +1,5 @@
+import './ux-measurement-v2.js?v=20260715-01';
+
 const DISCLOSURE_SELECTOR = '.mobile-first-screen-more, .mobile-first-screen-details';
 let mediaQuery = null;
 let resizeBound = false;
@@ -22,4 +24,3 @@ export function applyMobileFirstScreenDisclosure(root = document) {
   mobileQuery().addEventListener('change', () => syncDisclosures(document));
   resizeBound = true;
 }
-
