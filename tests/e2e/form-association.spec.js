@@ -14,20 +14,28 @@ test('all bounded fields have programmatic labels and help associations', async 
   const failures = captureRuntimeFailures(page);
   await openPage(page, fixture);
 
+  const search = page.locator('#dealSearch');
+  const filter = page.locator('#dealFilter');
   const status = page.locator('#dealStatus');
   const comment = page.locator('#newComment');
   const completion = page.locator('#spnReworkCompletionText');
   const reason = page.locator('#spnReworkReturnReason');
   const lawyerNote = page.locator('#lawyerDocumentNoteV2');
 
+  await expect(search).toHaveAccessibleName('Поиск сделок');
+  await expect(filter).toHaveAccessibleName('Режим списка сделок');
   await expect(status).toHaveAccessibleName('Текущий статус');
   await expect(comment).toHaveAccessibleName('Новый комментарий');
   await expect(completion).toHaveAccessibleName('Что именно исправлено');
   await expect(reason).toHaveAccessibleName('Главная причина или другое замечание');
   await expect(lawyerNote).toHaveAccessibleName('Комментарий к действию');
 
-  for (const field of [status, comment, completion, reason, lawyerNote]) await expectHelpAssociation(page, field);
+  for (const field of [search, filter, status, comment, completion, reason, lawyerNote]) await expectHelpAssociation(page, field);
 
+  await expect(search).toHaveAccessibleDescription('Ищет по адресу, объекту, клиенту, СПН, статусу или идентификатору сделки.');
+  await expect(filter).toHaveAccessibleDescription('Ограничивает рабочую очередь выбранным режимом, не изменяя данные сделок.');
+  await expect(search).toHaveAttribute('aria-required', 'false');
+  await expect(filter).toHaveAttribute('aria-required', 'false');
   await expect(status).toHaveAttribute('aria-required', 'true');
   await expect(comment).toHaveAttribute('aria-required', 'true');
   await expect(completion).toHaveAttribute('aria-required', 'true');
