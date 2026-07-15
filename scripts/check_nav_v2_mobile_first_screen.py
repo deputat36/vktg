@@ -12,7 +12,11 @@ pages = {
 }
 for page, module_marker in pages.items():
     source = (ROOT / page).read_text(encoding="utf-8")
-    for marker in ["nav-v2-mobile-first-screen.css?v=20260715-01", module_marker]:
+    for marker in [
+        "nav-v2-mobile-first-screen.css?v=20260715-02",
+        module_marker,
+        '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-03"',
+    ]:
         if marker not in source:
             errors.append(f"{page} missing marker: {marker}")
 
@@ -40,6 +44,9 @@ for marker in [
     "window.matchMedia('(max-width: 430px)')",
     "details.open = !compact",
     "addEventListener('change'",
+    "focus-continuity-v2.js?v=20260715-01",
+    "applyActionFocusContinuity(root)",
+    "applyActionFocusContinuity(document)",
 ]:
     if marker not in disclosure:
         errors.append(f"mobile first-screen disclosure hook missing marker: {marker}")
@@ -88,6 +95,8 @@ for marker in [
     ".mobile-first-screen-card > #dealActionFocus { order: 1; }",
     "@media (min-width: 431px)",
     "display: contents",
+    ":focus-visible",
+    "@media (forced-colors: active)",
 ]:
     if marker not in css:
         errors.append(f"mobile first-screen CSS missing marker: {marker}")

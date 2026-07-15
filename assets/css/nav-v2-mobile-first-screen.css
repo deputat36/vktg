@@ -1,4 +1,25 @@
 /* Shared progressive disclosure for the 360–430 px operational first screen. */
+.nav-v2 :is(a, button, summary, select, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(37, 99, 235, .20);
+}
+
+.nav-v2 [data-deal-tab-panel] {
+  scroll-margin-top: 90px;
+}
+
+.nav-v2 [data-deal-tab-panel]:focus-visible {
+  border-color: #2563eb;
+}
+
+@media (forced-colors: active) {
+  .nav-v2 :is(a, button, summary, select, input, textarea, [tabindex]):focus-visible {
+    outline: 3px solid CanvasText;
+    box-shadow: none;
+  }
+}
+
 .mobile-first-screen-more > summary,
 .mobile-first-screen-details > summary {
   display: none;

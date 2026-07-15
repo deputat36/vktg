@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru" data-nav-ux-surface="deal_card">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 focus continuity fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0815">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-mobile-first-screen.css?v=20260715-02">
+</head>
+<body class="nav-v2">
+  <div id="app">
+    <main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-card">
+      <section class="hero"><h1>Клавиатурная работа</h1><p>Синтетический fixture без рабочих данных.</p></section>
+      <section class="card" id="primaryWork">
+        <a id="primaryAction" class="btn primary mobile-first-screen-primary-action" href="#work">Открыть главное действие</a>
+        <details id="contextDetails" class="mobile-first-screen-details">
+          <summary>Дополнительный контекст</summary>
+          <div class="mobile-first-screen-details-body"><button id="contextAction" type="button">Контекстное действие</button></div>
+        </details>
+      </section>
+      <section class="card" id="tabCard">
+        <div class="tabs" id="tabControls">
+          <button id="overviewTab" class="tab active" data-tab="overview" type="button">Сводка</button>
+          <button id="docsTab" class="tab" data-tab="docs" type="button">Документы</button>
+        </div>
+        <h2>Сводка сделки</h2>
+      </section>
+    </main>
+  </div>
+  <script type="module">
+    import { applyMobileFirstScreenDisclosure } from '../../assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-03';
+    import { applyActionFocusContinuity } from '../../assets/js/nav-v2/focus-continuity-v2.js?v=20260715-01';
+
+    applyMobileFirstScreenDisclosure(document);
+    document.getElementById('docsTab').addEventListener('click', () => {
+      document.getElementById('tabCard').innerHTML = `
+        <div class="tabs" id="tabControls">
+          <button class="tab" data-tab="overview" type="button">Сводка</button>
+          <button class="tab active" data-tab="docs" type="button">Документы</button>
+        </div>
+        <h2>Документы сделки</h2>`;
+      applyActionFocusContinuity(document);
+    });
+  </script>
+</body>
+</html>
