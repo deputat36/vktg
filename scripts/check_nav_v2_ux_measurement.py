@@ -9,6 +9,7 @@ ERRORS: list[str] = []
 RUNTIME = ROOT / "assets/js/nav-v2/ux-measurement-v2.js"
 MODEL = ROOT / "assets/js/nav-v2/ux-measurement-model-v2.js"
 SERVER_MODEL = ROOT / "assets/js/nav-v2/ux-server-measurement-model-v2.js"
+MOBILE_LIFECYCLE = ROOT / "assets/js/nav-v2/mobile-first-screen-v2.js"
 DOC = ROOT / "docs/NAV_V2_UX_MEASUREMENT_CONTRACT.md"
 NODE_CHECK = ROOT / "scripts/check-nav-v2-ux-measurement.mjs"
 BROWSER_SPEC = ROOT / "tests/e2e/ux-measurement.spec.js"
@@ -21,7 +22,18 @@ PAGES = (
     ROOT / "manager-v2.html",
 )
 
-REQUIRED = (RUNTIME, MODEL, SERVER_MODEL, DOC, NODE_CHECK, BROWSER_SPEC, FIXTURE, WORKFLOW, *PAGES)
+REQUIRED = (
+    RUNTIME,
+    MODEL,
+    SERVER_MODEL,
+    MOBILE_LIFECYCLE,
+    DOC,
+    NODE_CHECK,
+    BROWSER_SPEC,
+    FIXTURE,
+    WORKFLOW,
+    *PAGES,
+)
 for path in REQUIRED:
     if not path.exists():
         ERRORS.append(f"Missing privacy-safe UX measurement file: {path.relative_to(ROOT)}")
@@ -30,14 +42,22 @@ if not ERRORS:
     runtime = RUNTIME.read_text(encoding="utf-8")
     model = MODEL.read_text(encoding="utf-8")
     server_model = SERVER_MODEL.read_text(encoding="utf-8")
+    mobile_lifecycle = MOBILE_LIFECYCLE.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
+    direct_entry = '<script type="module" src="./assets/js/nav-v2/ux-measurement-v2.js?v=20260715-01"></script>'
+    remap = '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-02"'
     for page in PAGES:
         text = page.read_text(encoding="utf-8")
-        marker = '<script type="module" src="./assets/js/nav-v2/ux-measurement-v2.js?v=20260715-01"></script>'
-        if text.count(marker) != 1:
-            ERRORS.append(f"{page.name} must load the UX measurement module exactly once")
+        if direct_entry in text:
+            ERRORS.append(f"{page.name} must not increase the page entry-module budget")
+        if text.count(remap) != 1:
+            ERRORS.append(f"{page.name} must cache-bust the shared mobile lifecycle exactly once")
+
+    lifecycle_marker = "import './ux-measurement-v2.js?v=20260715-01';"
+    if mobile_lifecycle.count(lifecycle_marker) != 1:
+        ERRORS.append("Shared mobile lifecycle must import the UX runtime exactly once")
 
     runtime_markers = (
         "nav-v2:ux-measurement",
@@ -159,5 +179,6 @@ if ERRORS:
 
 print(
     "Navigator v2 privacy-safe UX measurement contract passed: enum-only events, "
-    "no identifiers or free text, no network/storage, server-confirmed outcome definitions"
+    "no identifiers or free text, no network/storage, no entry-budget growth, "
+    "server-confirmed outcome definitions"
 )
