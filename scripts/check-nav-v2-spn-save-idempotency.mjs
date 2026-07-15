@@ -35,7 +35,9 @@ const draftAReordered = {
 };
 const fingerprint = wizardSubmissionFingerprint(draftA, 'spn-1');
 assert.equal(fingerprint, wizardSubmissionFingerprint(draftAReordered, 'spn-1'));
-assert.notEqual(fingerprint, wizardSubmissionFingerprint({ ...draftA, buyerName: 'Петя' }, 'spn-1'));
+assert.equal(fingerprint, wizardSubmissionFingerprint({ ...draftA, buyerName: 'Петя', buyerPhone: '+7 900 000-00-00' }, 'spn-1'));
+assert.notEqual(fingerprint, wizardSubmissionFingerprint({ ...draftA, address: 'Борисоглебск, Первомайская,4' }, 'spn-1'));
+assert.notEqual(fingerprint, wizardSubmissionFingerprint({ ...draftA, flags: ['shares'] }, 'spn-1'));
 assert.notEqual(fingerprint, wizardSubmissionFingerprint(draftA, 'spn-2'));
 assert.match(fingerprint, /^[0-9a-f]{8}$/);
 
