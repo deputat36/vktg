@@ -1,4 +1,14 @@
 const DEAL_TABS = new Set(['overview', 'risks', 'docs', 'reviews', 'tasks', 'expenses', 'comments', 'history']);
+const DEAL_TAB_LABELS = {
+  overview: 'Сводка сделки',
+  risks: 'Риски и рекомендации',
+  docs: 'Документы сделки',
+  reviews: 'Решения проверки',
+  tasks: 'Задачи по сделке',
+  expenses: 'Расходы по сделке',
+  comments: 'Комментарии команды',
+  history: 'История сделки'
+};
 
 const ACTION_LABELS = {
   dashboard: 'Открыть приоритетную работу',
@@ -26,6 +36,10 @@ export function dealTabFromDataset(dataset = {}) {
 export function dealTabPanelSelector(tab) {
   const safe = clean(tab);
   return DEAL_TABS.has(safe) ? `[data-deal-tab-panel="${safe}"]` : '';
+}
+
+export function dealTabPanelLabel(tab) {
+  return DEAL_TAB_LABELS[clean(tab)] || 'Рабочий раздел карточки сделки';
 }
 
 export function primaryActionAccessibleName({ text = '', ariaLabel = '', surface = '' } = {}) {
