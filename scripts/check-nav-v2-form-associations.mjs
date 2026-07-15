@@ -18,7 +18,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   validationDescriptionIds({ baseIds: ['newCommentHelp', 'pageStatus'], statusId: 'pageStatus', invalid: false }),
-  ['newCommentHelp', 'pageStatus']
+  ['newCommentHelp']
 );
 
 for (const fieldId of [
