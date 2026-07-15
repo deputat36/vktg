@@ -7,30 +7,32 @@
   <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0830">
 </head>
 <body class="nav-v2">
-  <main class="nav-v2-shell">
-    <section id="spnReworkWorkflowV2" class="card">
-      <h1>Доработка СПН</h1>
-      <label for="savedInput">Комментарий</label>
-      <textarea id="savedInput">Исходный текст</textarea>
-      <div class="actions">
-        <button id="keyboardErrorButton" class="btn primary" type="button" data-spn-rework-submit>Ошибка с клавиатуры</button>
-        <button id="pointerErrorButton" class="btn light" type="button" data-spn-rework-return>Ошибка мышью</button>
-      </div>
-      <div id="spnReworkStatusV2" class="status" aria-live="polite">Готово к действию.</div>
-    </section>
+  <div id="app">
+    <main class="nav-v2-shell">
+      <section id="spnReworkWorkflowV2" class="card">
+        <h1>Доработка СПН</h1>
+        <label for="savedInput">Комментарий</label>
+        <textarea id="savedInput">Исходный текст</textarea>
+        <div class="actions">
+          <button id="keyboardErrorButton" class="btn primary" type="button" data-spn-rework-submit>Ошибка с клавиатуры</button>
+          <button id="pointerErrorButton" class="btn light" type="button" data-spn-rework-return>Ошибка мышью</button>
+        </div>
+        <div id="spnReworkStatusV2" class="status" aria-live="polite">Готово к действию.</div>
+      </section>
 
-    <section id="lawyerDocumentCycleV2" class="card">
-      <h2>Документный цикл</h2>
-      <button id="successButton" class="btn primary" type="button" data-lawyer-document-action="checked">Сохранить документ</button>
-      <div id="lawyerDocumentStatusV2" class="status" aria-live="polite">Готово к действию.</div>
-      <div class="lawyer-document-confirmation">Подтверждённый документный результат</div>
-    </section>
+      <section id="lawyerDocumentCycleV2" class="card">
+        <h2>Документный цикл</h2>
+        <button id="successButton" class="btn primary" type="button" data-lawyer-document-action="checked">Сохранить документ</button>
+        <div id="lawyerDocumentStatusV2" class="status" aria-live="polite">Готово к действию.</div>
+        <div class="lawyer-document-confirmation">Подтверждённый документный результат</div>
+      </section>
 
-    <section id="dealCompletionEvidenceV2" class="card">
-      <h2>Подтверждённый результат</h2>
-      <button class="btn primary" type="button">Следующий шаг</button>
-    </section>
-  </main>
+      <section id="dealCompletionEvidenceV2" class="card">
+        <h2>Подтверждённый результат</h2>
+        <button class="btn primary" type="button">Следующий шаг</button>
+      </section>
+    </main>
+  </div>
 
   <script type="module">
     import { applyAsyncFeedbackLifecycle } from '../../assets/js/nav-v2/async-feedback-v2.js?v=20260715-01';
