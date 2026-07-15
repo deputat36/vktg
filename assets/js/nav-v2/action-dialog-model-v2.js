@@ -1,6 +1,6 @@
 const NATIVE_DIALOG_INVENTORY = Object.freeze([
   Object.freeze({ id: 'deal-demo-guard', source: 'deal-card-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Короткое бинарное подтверждение только для демо-сделки.' }),
-  Object.freeze({ id: 'deal-lawyer-handoff', source: 'deal-card-v2.js', kind: 'confirm', decision: 'candidate', reason: 'Длинный перечень незакрытых пунктов требует отдельного controlled review.' }),
+  Object.freeze({ id: 'deal-lawyer-handoff', source: 'deal-card-v2.js', kind: 'confirm', decision: 'replace_now', reason: 'Длинный перечень незакрытых пунктов требует отдельного controlled review.' }),
   Object.freeze({ id: 'deal-document-problem', source: 'deal-card-v2.js', kind: 'prompt', decision: 'replace_now', reason: 'Обязательная причина и recovery требуют controlled input dialog.' }),
   Object.freeze({ id: 'spn-rework-unresolved', source: 'deal-card-spn-rework-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Контекст уже показан рядом с запускающей кнопкой.' }),
   Object.freeze({ id: 'spn-rework-demo-submit', source: 'deal-card-spn-rework-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Короткий demo guard.' }),
@@ -75,6 +75,22 @@ export function buildDocumentProblemDialog({ documentTitle = '', isDemo = false 
       multiline: true,
       errorText: 'Укажите короткую причину проблемы документа.'
     })
+  });
+}
+
+export function buildLawyerHandoffDialog({ issues = [], isDemo = false } = {}) {
+  const details = Array.isArray(issues) ? issues.map(clean).filter(Boolean) : [];
+  if (isDemo) details.push('Это демо-сделка. Действие затронет только тестовые данные этой карточки.');
+  return Object.freeze({
+    id: 'deal-lawyer-handoff',
+    title: 'Передать юристу с незакрытыми пунктами?',
+    description: 'Юрист получит карточку вместе с перечисленными пробелами. Проверьте список и подтвердите осознанную передачу либо вернитесь к исправлению.',
+    details: Object.freeze(details),
+    confirmLabel: 'Передать юристу',
+    cancelLabel: 'Вернуться к карточке',
+    tone: 'warning',
+    fallbackConfirm: true,
+    input: null
   });
 }
 

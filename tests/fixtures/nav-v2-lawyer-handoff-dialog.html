@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 lawyer handoff dialog fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell mobile-first-screen-card">
+    <section class="hero"><h1>Карточка сделки</h1></section>
+    <div id="pageStatus" class="status" role="status" aria-live="polite">Готово к действию.</div>
+    <section class="card" id="handoffPanel">
+      <div class="section-title">
+        <div><h2>Перед передачей юристу</h2></div>
+        <span id="handoffState" class="pill yellow">есть пробелы</span>
+      </div>
+      <div class="list" id="handoffIssues">
+        <div class="list-item">Не хватает обязательных документов: 2.</div>
+        <div class="list-item">Есть красные риски: 1.</div>
+        <div class="list-item">Порядок расчетов не согласован.</div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Быстрые действия</h2>
+      <button id="lawyerHandoff" class="btn light" data-quick-status="need_lawyer" type="button">Передать юристу</button>
+    </section>
+  </main>
+  <script>
+    window.baseHandoffClicks = 0;
+    document.getElementById('lawyerHandoff').onclick = () => { window.baseHandoffClicks += 1; };
+    const params = new URLSearchParams(location.search);
+    if (params.get('ready') === '1') {
+      document.getElementById('handoffState').className = 'pill green';
+      document.getElementById('handoffState').textContent = 'можно передавать';
+      document.getElementById('handoffIssues').innerHTML = '<div class="list-item">Ключевые пробелы не обнаружены.</div>';
+    }
+  </script>
+  <script type="module">
+    import { applyDealCardLawyerHandoffDialog } from '/assets/js/nav-v2/deal-card-lawyer-handoff-dialog-v2.js?v=20260715-01';
+    const demo = new URLSearchParams(location.search).get('demo') === '1';
+    applyDealCardLawyerHandoffDialog({ deal: { title: demo ? 'ДЕМО: Сделка' : 'Сделка' } });
+  </script>
+</body>
+</html>

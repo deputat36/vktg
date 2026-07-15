@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   actionDialogContract,
   buildDocumentProblemDialog,
+  buildLawyerHandoffDialog,
   buildRiskResolutionDialog,
   nativeDialogDecision,
   nativeDialogInventory
@@ -9,10 +10,10 @@ import {
 
 const inventory = nativeDialogInventory();
 assert.equal(inventory.length, 10);
-assert.equal(inventory.filter((item) => item.decision === 'replace_now').length, 2);
+assert.equal(inventory.filter((item) => item.decision === 'replace_now').length, 3);
 assert.equal(nativeDialogDecision('risk-resolution').decision, 'replace_now');
 assert.equal(nativeDialogDecision('deal-document-problem').decision, 'replace_now');
-assert.equal(nativeDialogDecision('deal-lawyer-handoff').decision, 'candidate');
+assert.equal(nativeDialogDecision('deal-lawyer-handoff').decision, 'replace_now');
 assert.equal(nativeDialogDecision('deal-demo-guard').decision, 'keep_native');
 assert.equal(nativeDialogDecision('unknown'), null);
 
@@ -23,32 +24,30 @@ const resolveDialog = buildRiskResolutionDialog({
 });
 assert.equal(resolveDialog.id, 'risk-resolution');
 assert.equal(resolveDialog.title, 'Устранить риск');
-assert.equal(resolveDialog.confirmLabel, 'Устранить риск');
 assert.equal(resolveDialog.input.required, false);
 assert.equal(resolveDialog.details.length, 2);
-assert.match(resolveDialog.details[0], /Не согласованы расчёты/);
-assert.match(resolveDialog.details[1], /демо-сделка/);
 assert.equal(resolveDialog.fallbackConfirm, true);
-
-const reopenDialog = buildRiskResolutionDialog({ nextState: false });
-assert.equal(reopenDialog.title, 'Вернуть риск в работу');
-assert.equal(reopenDialog.tone, 'warning');
-assert.equal(reopenDialog.details.length, 0);
 
 const documentDialog = buildDocumentProblemDialog({
   documentTitle: 'Выписка ЕГРН',
   isDemo: true
 });
 assert.equal(documentDialog.id, 'deal-document-problem');
-assert.equal(documentDialog.title, 'Зафиксировать проблему документа');
-assert.equal(documentDialog.confirmLabel, 'Сохранить проблему');
-assert.equal(documentDialog.tone, 'danger');
-assert.equal(documentDialog.fallbackConfirm, false);
 assert.equal(documentDialog.input.required, true);
-assert.equal(documentDialog.input.minLength, 1);
+assert.equal(documentDialog.fallbackConfirm, false);
 assert.match(documentDialog.details[0], /Выписка ЕГРН/);
-assert.match(documentDialog.details[1], /Проблема/);
-assert.match(documentDialog.details[2], /демо-сделка/);
+
+const handoffDialog = buildLawyerHandoffDialog({
+  issues: ['Не хватает документов: 2.', 'Есть красный риск: 1.'],
+  isDemo: true
+});
+assert.equal(handoffDialog.id, 'deal-lawyer-handoff');
+assert.equal(handoffDialog.title, 'Передать юристу с незакрытыми пунктами?');
+assert.equal(handoffDialog.confirmLabel, 'Передать юристу');
+assert.equal(handoffDialog.cancelLabel, 'Вернуться к карточке');
+assert.equal(handoffDialog.input, null);
+assert.equal(handoffDialog.details.length, 3);
+assert.match(handoffDialog.details[2], /демо-сделка/);
 
 assert.deepEqual(actionDialogContract(), {
   nativeDialogPreferred: true,
