@@ -119,6 +119,7 @@ if not ERRORS:
             ERRORS.append(f"Async feedback browser regression missing marker: {marker}")
 
     for marker in (
+        'id="app"',
         "data-spn-rework-submit",
         "data-spn-rework-return",
         "data-lawyer-document-action",
