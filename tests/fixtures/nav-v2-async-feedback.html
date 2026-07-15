@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 async feedback fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0830">
+</head>
+<body class="nav-v2">
+  <main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-card">
+    <section class="hero"><h1>Асинхронная обратная связь</h1><p>Синтетический fixture без рабочих данных.</p></section>
+
+    <section id="spnReworkWorkflowV2" class="card" data-spn-rework-phase="submitted">
+      <h2>Повторная отправка СПН</h2>
+      <textarea id="spnInput">Введённый текст должен сохраниться</textarea>
+      <div class="actions">
+        <button id="spnSuccess" class="btn primary" type="button" data-spn-rework-submit data-result="success">Отправить успешно</button>
+        <button id="spnError" class="btn light" type="button" data-spn-rework-submit data-result="error">Получить ошибку</button>
+      </div>
+      <div id="spnReworkStatusV2" class="status">Готово к отправке.</div>
+    </section>
+
+    <section id="lawyerDocumentCycleV2" class="card">
+      <h2>Документный цикл</h2>
+      <div class="lawyer-document-confirmation" tabindex="-1">Серверное подтверждение документа</div>
+      <button id="documentSuccess" class="btn primary" type="button" data-lawyer-document-action="checked">Сохранить документ</button>
+      <div id="lawyerDocumentStatusV2" class="status">Готово к сохранению.</div>
+    </section>
+
+    <section id="dealCompletionEvidenceV2" class="card" tabindex="-1"><h2>Результат подтверждён сервером</h2></section>
+    <section id="dealActionFocus" class="card" tabindex="-1"><h2>Следующее действие</h2></section>
+  </main>
+
+  <script type="module">
+    import { applyAccessibleAsyncFeedback } from '../../assets/js/nav-v2/async-feedback-v2.js?v=20260715-01';
+
+    function simulate(button, status, successText, errorText) {
+      button.addEventListener('click', () => {
+        button.disabled = true;
+        status.className = 'status warn';
+        status.textContent = 'Выполняю серверное действие…';
+        setTimeout(() => {
+          if (button.dataset.result === 'error') {
+            button.disabled = false;
+            status.className = 'status error';
+            status.textContent = errorText;
+          } else {
+            status.className = 'status ok';
+            status.textContent = successText;
+          }
+        }, 120);
+      });
+    }
+
+    simulate(
+      document.getElementById('spnSuccess'),
+      document.getElementById('spnReworkStatusV2'),
+      'Карточка отправлена. Загружаю серверное подтверждение…',
+      'Не удалось отправить карточку.'
+    );
+    simulate(
+      document.getElementById('spnError'),
+      document.getElementById('spnReworkStatusV2'),
+      'Карточка отправлена.',
+      'Не удалось отправить карточку. Введённый текст сохранён.'
+    );
+    simulate(
+      document.getElementById('documentSuccess'),
+      document.getElementById('lawyerDocumentStatusV2'),
+      'Результат сохранён. Загружаю подтверждение…',
+      'Не удалось сохранить документ.'
+    );
+
+    applyAccessibleAsyncFeedback(document);
+  </script>
+</body>
+</html>
