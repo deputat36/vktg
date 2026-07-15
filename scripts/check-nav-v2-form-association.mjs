@@ -4,6 +4,8 @@ import {
   formAssociationContract,
   formFieldIds,
   formFieldPolicy,
+  formGroupIds,
+  formGroupPolicy,
   mergeDescriptionIds
 } from '../assets/js/nav-v2/form-association-model-v2.js';
 
@@ -17,11 +19,25 @@ assert.deepEqual(formFieldIds(), [
   'lawyerDocumentNoteV2'
 ]);
 
+assert.deepEqual(formGroupIds(), [
+  'spnReworkReturnOptions',
+  'dealQuickStatusActions',
+  'dealLegalActions',
+  'lawyerDocumentActions'
+]);
+
 assert.equal(formFieldPolicy('dealSearch').labelText, 'Поиск сделок');
 assert.equal(formFieldPolicy('dealFilter').labelText, 'Режим списка сделок');
 assert.equal(formFieldPolicy('spnReworkCompletionText').minLength, 10);
 assert.equal(formFieldPolicy('lawyerDocumentNoteV2').minLength, 5);
 assert.equal(formFieldPolicy('unknown'), null);
+
+assert.equal(formGroupPolicy('spnReworkReturnOptions').nativeFieldset, true);
+assert.equal(formGroupPolicy('spnReworkReturnOptions').validationFieldId, 'spnReworkReturnReason');
+assert.equal(formGroupPolicy('dealQuickStatusActions').closestSelector, '.actions');
+assert.equal(formGroupPolicy('dealLegalActions').labelText, 'Юридическое решение по сделке');
+assert.equal(formGroupPolicy('lawyerDocumentActions').validationFieldId, 'lawyerDocumentNoteV2');
+assert.equal(formGroupPolicy('unknown'), null);
 
 assert.equal(mergeDescriptionIds('help-one help-two', 'help-two', 'error-one'), 'help-one help-two error-one');
 
@@ -78,6 +94,12 @@ assert.deepEqual(formAssociationContract(), {
   ariaInvalidOnlyForClientFieldError: true,
   ariaInvalidClearsOnInput: true,
   serverErrorDoesNotInvalidateValidField: true,
+  nativeFieldsetPreferred: true,
+  stableGroupNameRequired: true,
+  sharedGroupHelpRequired: true,
+  groupErrorMirrorsFieldError: true,
+  individualControlNamesPreserved: true,
+  nativeKeyboardBehaviorPreserved: true,
   liveAnnouncementOwnedByAsyncFeedback: true,
   positiveTabindexAllowed: false,
   layoutMutationAllowed: false,

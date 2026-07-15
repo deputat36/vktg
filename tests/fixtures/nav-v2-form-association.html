@@ -25,6 +25,14 @@
         </div>
         <button id="addComment" class="btn primary" type="button">Добавить комментарий</button>
         <div id="pageStatus" class="status">Готово к действию.</div>
+        <div class="actions" id="fixtureQuickActions">
+          <button class="btn light" type="button" data-quick-status="need_lawyer">Передать юристу</button>
+          <button class="btn green" type="button" data-quick-status="ready_for_deposit">Готово к задатку</button>
+        </div>
+        <div class="actions" id="fixtureLegalActions">
+          <button class="btn green" type="button" data-legal-action="checked">Проверено юристом</button>
+          <button class="btn red" type="button" data-legal-action="stop_factor">Есть стоп-фактор</button>
+        </div>
       </section>
 
       <section id="spnReworkWorkflowV2" class="card">
@@ -37,6 +45,7 @@
         <button id="spnSubmit" class="btn primary" type="button" data-spn-rework-submit>Отправить повторно</button>
         <div class="spn-rework-options">
           <label><input id="returnOption" type="checkbox" data-spn-rework-option value="document"> Не хватает документа</label>
+          <label><input id="returnRiskOption" type="checkbox" data-spn-rework-option value="risk"> Не описан риск</label>
         </div>
         <div class="field"><label for="spnReworkReturnReason">Главная причина или другое замечание</label><textarea id="spnReworkReturnReason"></textarea></div>
         <button id="spnReturn" class="btn red" type="button" data-spn-rework-return>Вернуть СПН</button>
@@ -46,15 +55,17 @@
       <section id="lawyerDocumentCycleV2" class="card">
         <h2>Документный цикл юриста</h2>
         <div class="field"><label for="lawyerDocumentNoteV2">Комментарий к действию</label><textarea id="lawyerDocumentNoteV2"></textarea></div>
-        <button id="lawyerProblem" class="btn red" type="button" data-lawyer-document-action="problem" data-lawyer-document-note-required="1">Проблема</button>
-        <button id="lawyerReceived" class="btn light" type="button" data-lawyer-document-action="received" data-lawyer-document-note-required="0">Получен</button>
+        <div class="actions lawyer-document-actions">
+          <button id="lawyerProblem" class="btn red" type="button" data-lawyer-document-action="problem" data-lawyer-document-note-required="1">Проблема</button>
+          <button id="lawyerReceived" class="btn light" type="button" data-lawyer-document-action="received" data-lawyer-document-note-required="0">Получен</button>
+        </div>
         <div id="lawyerDocumentStatusV2" class="status">Готово к действию.</div>
       </section>
     </main>
   </div>
 
   <script type="module">
-    import { applyFormAssociations } from '../../assets/js/nav-v2/form-association-v2.js?v=20260715-01';
+    import { applyFormAssociations } from '../../assets/js/nav-v2/form-association-v2.js?v=20260715-02';
 
     const pageStatus = document.getElementById('pageStatus');
     const spnStatus = document.getElementById('spnReworkStatusV2');
