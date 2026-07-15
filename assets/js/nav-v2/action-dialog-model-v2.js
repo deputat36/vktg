@@ -1,7 +1,7 @@
 const NATIVE_DIALOG_INVENTORY = Object.freeze([
   Object.freeze({ id: 'deal-demo-guard', source: 'deal-card-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Короткое бинарное подтверждение только для демо-сделки.' }),
   Object.freeze({ id: 'deal-lawyer-handoff', source: 'deal-card-v2.js', kind: 'confirm', decision: 'candidate', reason: 'Длинный перечень незакрытых пунктов требует отдельного controlled review.' }),
-  Object.freeze({ id: 'deal-document-problem', source: 'deal-card-v2.js', kind: 'prompt', decision: 'candidate', reason: 'Обязательная причина и recovery требуют отдельного controlled input slice.' }),
+  Object.freeze({ id: 'deal-document-problem', source: 'deal-card-v2.js', kind: 'prompt', decision: 'replace_now', reason: 'Обязательная причина и recovery требуют controlled input dialog.' }),
   Object.freeze({ id: 'spn-rework-unresolved', source: 'deal-card-spn-rework-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Контекст уже показан рядом с запускающей кнопкой.' }),
   Object.freeze({ id: 'spn-rework-demo-submit', source: 'deal-card-spn-rework-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Короткий demo guard.' }),
   Object.freeze({ id: 'spn-rework-demo-return', source: 'deal-card-spn-rework-v2.js', kind: 'confirm', decision: 'keep_native', reason: 'Короткий demo guard.' }),
@@ -41,12 +41,39 @@ export function buildRiskResolutionDialog({ nextState = true, isDemo = false, ri
     confirmLabel: action,
     cancelLabel: 'Отмена',
     tone: resolved ? 'positive' : 'warning',
+    fallbackConfirm: true,
     input: Object.freeze({
       label: 'Комментарий к изменению риска',
       description: 'Необязательно. Коротко поясните, что изменилось или почему риск возвращается в работу.',
       required: false,
       minLength: 0,
       multiline: true
+    })
+  });
+}
+
+export function buildDocumentProblemDialog({ documentTitle = '', isDemo = false } = {}) {
+  const details = [];
+  const title = clean(documentTitle);
+  if (title) details.push(`Документ: ${title}`);
+  details.push('Новое состояние: Проблема');
+  if (isDemo) details.push('Это демо-сделка. Действие затронет только тестовые данные этой карточки.');
+  return Object.freeze({
+    id: 'deal-document-problem',
+    title: 'Зафиксировать проблему документа',
+    description: 'Укажите конкретную причину. Комментарий увидят СПН и юрист, а документ останется в рабочем контроле до исправления.',
+    details: Object.freeze(details),
+    confirmLabel: 'Сохранить проблему',
+    cancelLabel: 'Отмена',
+    tone: 'danger',
+    fallbackConfirm: false,
+    input: Object.freeze({
+      label: 'Что не так с документом',
+      description: 'Обязательное поле. Коротко опишите, что нужно исправить или уточнить.',
+      required: true,
+      minLength: 1,
+      multiline: true,
+      errorText: 'Укажите короткую причину проблемы документа.'
     })
   });
 }

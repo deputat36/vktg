@@ -30,7 +30,7 @@ function fallbackText(config) {
 
 function fallbackRequest(config, trigger) {
   const current = rememberedDraft(trigger);
-  if (!window.confirm(fallbackText(config))) {
+  if (config.fallbackConfirm !== false && !window.confirm(fallbackText(config))) {
     focusTrigger(trigger);
     return Promise.resolve({ confirmed: false, value: current, mode: 'native-fallback' });
   }

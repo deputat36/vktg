@@ -1,0 +1,94 @@
+name: Navigator v2 document problem dialog
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/action-dialog-*.js'
+      - 'assets/js/nav-v2/deal-card-document-problem-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check-nav-v2-action-dialog.mjs'
+      - 'scripts/check_nav_v2_action_dialog.py'
+      - 'scripts/check_nav_v2_document_problem_dialog.py'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'scripts/check_nav_v2_form_association.py'
+      - 'scripts/check_nav_v2_risk_resolution.py'
+      - 'tests/e2e/document-problem-dialog.spec.js'
+      - 'tests/fixtures/nav-v2-document-problem-dialog.html'
+      - '.github/workflows/nav-v2-document-problem-dialog.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/action-dialog-*.js'
+      - 'assets/js/nav-v2/deal-card-document-problem-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check-nav-v2-action-dialog.mjs'
+      - 'scripts/check_nav_v2_action_dialog.py'
+      - 'scripts/check_nav_v2_document_problem_dialog.py'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'scripts/check_nav_v2_form_association.py'
+      - 'scripts/check_nav_v2_risk_resolution.py'
+      - 'tests/e2e/document-problem-dialog.spec.js'
+      - 'tests/fixtures/nav-v2-document-problem-dialog.html'
+      - '.github/workflows/nav-v2-document-problem-dialog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/action-dialog-model-v2.js
+          node --check assets/js/nav-v2/action-dialog-v2.js
+          node --check assets/js/nav-v2/deal-card-document-problem-dialog-v2.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+          node --check scripts/check-nav-v2-action-dialog.mjs
+          node --check tests/e2e/document-problem-dialog.spec.js
+      - name: Shared action dialog semantic contract
+        run: node scripts/check-nav-v2-action-dialog.mjs
+      - name: Document problem source contract
+        run: python3 scripts/check_nav_v2_document_problem_dialog.py
+      - name: Compatible action dialog and accessibility contracts
+        run: |
+          python3 scripts/check_nav_v2_action_dialog.py
+          python3 scripts/check_nav_v2_async_feedback.py
+          python3 scripts/check_nav_v2_form_association.py
+          python3 scripts/check_nav_v2_risk_resolution.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_document_problem_dialog.py scripts/check_nav_v2_action_dialog.py scripts/check_nav_v2_async_feedback.py scripts/check_nav_v2_form_association.py scripts/check_nav_v2_risk_resolution.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run required document problem dialog regression
+        run: npx playwright test tests/e2e/document-problem-dialog.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload document problem dialog evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-document-problem-dialog-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
