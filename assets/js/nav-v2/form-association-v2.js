@@ -111,6 +111,9 @@ function prepareField(field) {
   if (!policy) return;
   const label = labelForField(field);
   if (label && !String(label.textContent || '').trim()) label.textContent = policy.labelText;
+  if (!label && !field.getAttribute('aria-label') && !field.getAttribute('aria-labelledby')) {
+    field.setAttribute('aria-label', policy.labelText);
+  }
   const help = ensureHelp(field, policy);
   field.setAttribute('aria-describedby', mergeDescriptionIds(field.getAttribute('aria-describedby'), help?.id));
   field.dataset.navFormAssociation = 'ready';
