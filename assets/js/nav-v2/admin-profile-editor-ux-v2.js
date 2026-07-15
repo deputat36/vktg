@@ -1,3 +1,4 @@
+const RETIRED_ROLE = 'viewer';
 let scheduled = false;
 
 function ensureEditHint() {
@@ -34,6 +35,50 @@ function setFieldHint(field, marker, html, shouldShow) {
   } else {
     existing?.remove();
   }
+}
+
+function retireViewerOptions() {
+  document.querySelectorAll('#newRole, [data-role]').forEach((select) => {
+    const option = [...select.options].find((item) => item.value === RETIRED_ROLE);
+    if (!option) {
+      setFieldHint(select.closest('.field'), 'data-retired-role-hint', '', false);
+      return;
+    }
+
+    if (option.selected) {
+      option.disabled = true;
+      option.textContent = 'Наблюдатель — устаревшая роль, выберите другую';
+      setFieldHint(
+        select.closest('.field'),
+        'data-retired-role-hint',
+        '<p class="muted" data-retired-role-hint="true"><span class="pill yellow">роль больше не назначается</span> Выберите рабочую роль или выключите аккаунт.</p>',
+        true
+      );
+      return;
+    }
+
+    option.remove();
+    setFieldHint(select.closest('.field'), 'data-retired-role-hint', '', false);
+  });
+}
+
+function blockRetiredRoleAction(event) {
+  const button = event.target?.closest?.('#addUser, [data-save-user]');
+  if (!button) return;
+
+  const select = button.id === 'addUser'
+    ? document.getElementById('newRole')
+    : document.querySelector(`[data-role="${button.dataset.saveUser}"]`);
+  if (select?.value !== RETIRED_ROLE) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const status = document.getElementById('adminStatus');
+  if (status) {
+    status.className = 'status error';
+    status.textContent = 'Роль «Наблюдатель» больше не назначается. Выберите рабочую роль сотрудника.';
+  }
+  select.focus();
 }
 
 function markMissingManager() {
@@ -99,6 +144,7 @@ function apply() {
   });
 
   ensureEditHint();
+  retireViewerOptions();
   markMissingManager();
   markMissingPhone();
   markInactiveManagerOptions();
@@ -115,8 +161,9 @@ function schedule() {
 
 const app = document.getElementById('app') || document.body;
 new MutationObserver(schedule).observe(app, { childList: true, subtree: true });
+document.addEventListener('click', blockRetiredRoleAction, true);
 document.addEventListener('change', (event) => {
-  if (event.target?.matches?.('[data-role], [data-manager], [data-phone]')) schedule();
+  if (event.target?.matches?.('#newRole, [data-role], [data-manager], [data-phone]')) schedule();
 });
 document.addEventListener('input', (event) => {
   if (event.target?.matches?.('[data-phone]')) schedule();
