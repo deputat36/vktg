@@ -1,0 +1,50 @@
+name: Navigator v2 mobile first screen
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/css/nav-v2-mobile-first-screen.css'
+      - 'config/nav-v2-mobile-first-screen.json'
+      - 'tests/fixtures/nav-v2-mobile-first-screen.html'
+      - 'tests/e2e/mobile-first-screen.spec.js'
+      - 'scripts/check-nav-v2-mobile-first-screen.mjs'
+      - 'scripts/check_nav_v2_mobile_first_screen.py'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.mjs'
+      - '.github/workflows/nav-v2-mobile-first-screen.yml'
+
+jobs:
+  mobile-first-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check mobile first-screen static contract
+        run: python3 scripts/check_nav_v2_mobile_first_screen.py
+      - name: Check mobile action-budget semantics
+        run: node scripts/check-nav-v2-mobile-first-screen.mjs
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run public desktop and mobile regression
+        run: npm run test:e2e:public
+      - name: Upload mobile browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-mobile-first-screen
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
