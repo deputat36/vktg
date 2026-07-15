@@ -4,6 +4,7 @@ import {
   screenStructureId,
   screenStructurePolicy
 } from './screen-structure-model-v2.js?v=20260715-01';
+import { applyFormAssociations } from './form-association-v2.js?v=20260715-01';
 
 function cleanText(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
@@ -136,6 +137,7 @@ export function applyScreenStructure(root = document) {
   applyItemRules(main, policy);
   applyKpiNames(main, policy);
   if (policy.key === 'manager') applyContextualManagerRegions(main);
+  applyFormAssociations(main);
   preserveLiveOnlySemantics(main);
   return true;
 }
