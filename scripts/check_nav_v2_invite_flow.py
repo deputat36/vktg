@@ -40,7 +40,7 @@ if not errors:
         "ASSIGNABLE_ROLES = new Set(['admin', 'manager', 'spn', 'lawyer', 'broker'])",
         "action: 'access_link'",
         'if (!ASSIGNABLE_ROLES.has(payload.role))',
-        "if (payload.role === 'spn' and not payload.manager_id)",
+        "if (payload.role === 'spn' && !payload.manager_id)",
         'Для СПН обязательно выберите менеджера.',
         'manager.required = required',
         'makeSafeAccessLink',
