@@ -179,7 +179,7 @@ export function applyFormAssociations(root = document) {
 export function installFormAssociationLifecycle() {
   if (installed || typeof document === 'undefined') return;
   installed = true;
-  document.addEventListener('click', onAction, true);
+  document.addEventListener('click', onAction);
   document.addEventListener('input', onFieldInput, true);
   document.addEventListener('change', onAlternativeChange, true);
 }
