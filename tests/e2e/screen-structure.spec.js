@@ -46,8 +46,8 @@ test('deal card names action, rework and active content without extra live landm
   await expect(page.getByRole('region', { name: 'Главное действие по сделке' })).toHaveCount(1);
   await expect(page.getByRole('region', { name: 'Исправьте замечания' })).toHaveCount(1);
   await expect(page.getByRole('region', { name: 'Документы для проверки' })).toHaveCount(1);
-  await expect(page.getByRole('group', { name: 'Показатели карточки сделки' })).toHaveCount(1);
-  await expect(page.getByRole('group', { name: 'Показатели карточки сделки, дополнительная группа' })).toHaveCount(1);
+  await expect(page.getByRole('group', { name: 'Показатели карточки сделки', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('group', { name: 'Показатели карточки сделки, дополнительная группа', exact: true })).toHaveCount(1);
   await expect(page.getByRole('status')).toHaveCount(1);
   await expect(page.getByRole('region', { name: 'Документы загружены' })).toHaveCount(0);
   await expectNoRuntimeFailures(failures, testInfo, 'screen-structure-deal-card');
