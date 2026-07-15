@@ -9,7 +9,7 @@ FILES = {
     'loader': ROOT / 'assets/js/nav-v2/admin-loader-v2.js',
     'page': ROOT / 'admin-v2.html',
     'edge': ROOT / 'supabase/functions/nav-invite-user/index.ts',
-    'migration': ROOT / 'supabase/migrations/20260715195732_nav_v2_retire_viewer_assignment.sql',
+    'migration': ROOT / 'supabase/migrations/20260715213000_nav_v2_retire_viewer_assignment.sql',
     'policy': ROOT / 'config/nav-v2-data-minimization.json',
     'baseline': ROOT / 'docs/NAV_V2_DATA_MINIMIZATION_BASELINE_2026-07-15.md',
     'fixture': ROOT / 'tests/fixtures/nav-v2-retired-viewer-role.html',
