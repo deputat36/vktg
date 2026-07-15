@@ -160,7 +160,7 @@ if not ERRORS:
         if marker not in deals_source:
             ERRORS.append(f"Deals source missing filter field marker: {marker}")
 
-    active_remap = '"./deal-card-recheck-alert-v2.js?v=20260715-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-18"'
+    active_remap = '"./deal-card-recheck-alert-v2.js?v=20260715-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-19"'
     legacy_remap = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-15"'
     for marker in (active_remap, legacy_remap):
         if page.count(marker) != 1:

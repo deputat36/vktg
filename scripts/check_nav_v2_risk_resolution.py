@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "assets/js/nav-v2/deal-card-risk-resolution-v2.js"
 LIFECYCLE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
+DIALOG_MODEL = ROOT / "assets/js/nav-v2/action-dialog-model-v2.js"
+DIALOG_RUNTIME = ROOT / "assets/js/nav-v2/action-dialog-v2.js"
 MIGRATION = ROOT / "supabase/migrations/20260712160000_nav_v2_risk_resolution_lifecycle.sql"
 REGISTRY = ROOT / "config/nav-v2-rpc-surface.json"
 PAGE = ROOT / "deal-card-v2.html"
@@ -14,13 +16,15 @@ PAGE = ROOT / "deal-card-v2.html"
 
 def main() -> int:
     errors: list[str] = []
-    for path in (MODULE, LIFECYCLE, MIGRATION, REGISTRY, PAGE):
+    for path in (MODULE, LIFECYCLE, DIALOG_MODEL, DIALOG_RUNTIME, MIGRATION, REGISTRY, PAGE):
         if not path.exists():
             errors.append(f"Missing risk resolution file: {path.relative_to(ROOT)}")
 
     if not errors:
         module = MODULE.read_text(encoding="utf-8")
         lifecycle = LIFECYCLE.read_text(encoding="utf-8")
+        dialog_model = DIALOG_MODEL.read_text(encoding="utf-8")
+        dialog_runtime = DIALOG_RUNTIME.read_text(encoding="utf-8")
         migration = MIGRATION.read_text(encoding="utf-8")
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
         page = PAGE.read_text(encoding="utf-8")
@@ -30,6 +34,10 @@ def main() -> int:
             "await rpc('nav_v2_update_risk_resolution'",
             "button.setAttribute('data-risk-resolution'",
             "if (role === 'viewer') return false;",
+            "buildRiskResolutionDialog",
+            "requestActionDialog",
+            "clearActionDialogDraft(button)",
+            "if (!decision.confirmed) return;",
             "setTimeout(() => location.reload(), 250);",
         )
         for marker in required_module:
@@ -44,6 +52,10 @@ def main() -> int:
             ".from('nav_",
             '.from("nav_',
             ".from(`nav_",
+            "confirm(",
+            "prompt(",
+            "localStorage",
+            "sessionStorage",
         )
         for marker in forbidden_module:
             if marker in module:
@@ -51,8 +63,20 @@ def main() -> int:
         if module.count("rpc(") != 1:
             errors.append(f"Risk resolution module must contain one mutation RPC, got {module.count('rpc(')}")
 
+        required_dialog = (
+            "export function buildRiskResolutionDialog",
+            "export function requestActionDialog",
+            "export function clearActionDialogDraft",
+            "const DRAFTS = new WeakMap()",
+            "document.createElement('dialog')",
+        )
+        combined_dialog = "\n".join((dialog_model, dialog_runtime))
+        for marker in required_dialog:
+            if marker not in combined_dialog:
+                errors.append(f"Risk action dialog missing marker: {marker}")
+
         required_lifecycle = (
-            "import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260712-10';",
+            "import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260715-01';",
             "applyDealCardRiskResolution(cardData, profileData);",
         )
         for marker in required_lifecycle:
@@ -61,7 +85,9 @@ def main() -> int:
 
         if '<script type="module" src="./assets/js/nav-v2/deal-card-risk-resolution-v2.js' in page:
             errors.append("Risk resolution must not be a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-15"'
+        if '<script type="module" src="./assets/js/nav-v2/action-dialog-v2.js' in page:
+            errors.append("Risk action dialog must not be a standalone HTML entry module")
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260715-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-19"'
         if cache_mapping not in page:
             errors.append("Deal-card page missing current risk lifecycle cache mapping")
 
@@ -98,7 +124,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 risk resolution passed: RPC-first, idempotent and explicit-lifecycle contract is present")
+    print("Navigator v2 risk resolution passed: RPC-first, idempotent and accessible-dialog lifecycle is present")
     return 0
 
 

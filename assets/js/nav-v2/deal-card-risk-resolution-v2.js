@@ -1,4 +1,6 @@
 import { rpc } from './supabase-v2.js';
+import { buildRiskResolutionDialog } from './action-dialog-model-v2.js?v=20260715-01';
+import { clearActionDialogDraft, requestActionDialog } from './action-dialog-v2.js?v=20260715-01';
 
 const MUTATING_ROLES = new Set(['owner', 'admin', 'manager', 'spn', 'lawyer', 'broker']);
 
@@ -66,6 +68,10 @@ function appendStatus(item, risk) {
   return row;
 }
 
+function riskTitle(risk) {
+  return String(risk?.title || risk?.description || risk?.risk_type || '').trim();
+}
+
 function appendAction(row, item, risk, deal, profile) {
   if (!canAttemptMutation(risk, deal, profile)) return;
 
@@ -78,13 +84,15 @@ function appendAction(row, item, risk, deal, profile) {
   button.textContent = nextState ? 'Устранить риск' : 'Вернуть в работу';
 
   button.onclick = async () => {
-    const actionText = nextState ? 'устранить риск' : 'вернуть риск в работу';
-    const confirmation = isDemoDeal(deal)
-      ? `Это демо-сделка. Подтвердите действие: ${actionText}.`
-      : `Подтвердите действие: ${actionText}.`;
-    if (!confirm(confirmation)) return;
+    const dialog = buildRiskResolutionDialog({
+      nextState,
+      isDemo: isDemoDeal(deal),
+      riskTitle: riskTitle(risk)
+    });
+    const decision = await requestActionDialog(dialog, button);
+    if (!decision.confirmed) return;
 
-    const note = prompt('Комментарий к изменению риска (необязательно):', '') || '';
+    const note = String(decision.value || '').trim();
     button.disabled = true;
     setPageStatus(nextState ? 'Фиксирую устранение риска...' : 'Возвращаю риск в работу...');
 
@@ -92,8 +100,9 @@ function appendAction(row, item, risk, deal, profile) {
       const result = await rpc('nav_v2_update_risk_resolution', {
         p_risk_id: risk.id,
         p_is_resolved: nextState,
-        p_note: note.trim() || null
+        p_note: note || null
       });
+      clearActionDialogDraft(button);
       window.dispatchEvent(new CustomEvent('nav-v2:risk-resolution-updated', {
         detail: { riskId: risk.id, changed: result?.changed === true, isResolved: nextState }
       }));

@@ -1,0 +1,88 @@
+name: Navigator v2 action dialog
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/action-dialog-*.js'
+      - 'assets/js/nav-v2/deal-card-risk-resolution-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check-nav-v2-action-dialog.mjs'
+      - 'scripts/check_nav_v2_action_dialog.py'
+      - 'scripts/check_nav_v2_form_association.py'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'tests/e2e/action-dialog.spec.js'
+      - 'tests/fixtures/nav-v2-action-dialog.html'
+      - '.github/workflows/nav-v2-action-dialog.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/action-dialog-*.js'
+      - 'assets/js/nav-v2/deal-card-risk-resolution-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check-nav-v2-action-dialog.mjs'
+      - 'scripts/check_nav_v2_action_dialog.py'
+      - 'scripts/check_nav_v2_form_association.py'
+      - 'scripts/check_nav_v2_async_feedback.py'
+      - 'tests/e2e/action-dialog.spec.js'
+      - 'tests/fixtures/nav-v2-action-dialog.html'
+      - '.github/workflows/nav-v2-action-dialog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/action-dialog-model-v2.js
+          node --check assets/js/nav-v2/action-dialog-v2.js
+          node --check assets/js/nav-v2/deal-card-risk-resolution-v2.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+          node --check scripts/check-nav-v2-action-dialog.mjs
+          node --check tests/e2e/action-dialog.spec.js
+      - name: Semantic action dialog contract
+        run: node scripts/check-nav-v2-action-dialog.mjs
+      - name: Static action dialog contract
+        run: python3 scripts/check_nav_v2_action_dialog.py
+      - name: Compatible form association contract
+        run: python3 scripts/check_nav_v2_form_association.py
+      - name: Compatible async feedback contract
+        run: python3 scripts/check_nav_v2_async_feedback.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_action_dialog.py scripts/check_nav_v2_form_association.py scripts/check_nav_v2_async_feedback.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run action dialog regression
+        run: npx playwright test tests/e2e/action-dialog.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload action dialog evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-action-dialog-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
