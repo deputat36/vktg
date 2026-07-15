@@ -13,6 +13,7 @@ import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v
 import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';
 import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-01';
+import { applyFormAssociations } from './form-association-v2.js?v=20260715-01';
 
 let cardData = null;
 let profileData = null;
@@ -34,6 +35,7 @@ function applyCardEnhancements() {
   void applyDealCardBazaHints(cardData, profileData);
   applyMobileFirstScreenDisclosure();
   applyAccessibleAsyncFeedback();
+  applyFormAssociations();
 }
 
 function bindRerenderHook() {

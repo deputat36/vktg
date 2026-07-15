@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 form association fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0830">
+</head>
+<body class="nav-v2">
+  <div id="app">
+    <main class="nav-v2-shell">
+      <section class="card">
+        <h1>Поля карточки сделки</h1>
+        <div class="field">
+          <label>Текущий статус</label>
+          <select id="dealStatus"><option value="draft">Черновик</option><option value="need_info">Нужно дозаполнить</option></select>
+        </div>
+        <div class="field">
+          <label>Новый комментарий</label>
+          <textarea id="newComment" placeholder="Комментарий для команды"></textarea>
+        </div>
+        <button id="addComment" class="btn primary" type="button">Добавить комментарий</button>
+        <div id="pageStatus" class="status">Готово к действию.</div>
+      </section>
+
+      <section id="spnReworkWorkflowV2" class="card">
+        <h2>Доработка СПН</h2>
+        <div class="spn-rework-evidence">
+          <label for="spnReworkCompletionText"><b>Что именно исправлено</b></label>
+          <p class="small">Перечислите сохранённые изменения. Этот комментарий увидят юрист и менеджер.</p>
+          <textarea id="spnReworkCompletionText"></textarea>
+        </div>
+        <button id="spnSubmit" class="btn primary" type="button" data-spn-rework-submit>Отправить повторно</button>
+        <div class="spn-rework-options">
+          <label><input id="returnOption" type="checkbox" data-spn-rework-option value="document"> Не хватает документа</label>
+        </div>
+        <div class="field"><label for="spnReworkReturnReason">Главная причина или другое замечание</label><textarea id="spnReworkReturnReason"></textarea></div>
+        <button id="spnReturn" class="btn red" type="button" data-spn-rework-return>Вернуть СПН</button>
+        <div id="spnReworkStatusV2" class="status">Готово к действию.</div>
+      </section>
+
+      <section id="lawyerDocumentCycleV2" class="card">
+        <h2>Документный цикл юриста</h2>
+        <div class="field"><label for="lawyerDocumentNoteV2">Комментарий к действию</label><textarea id="lawyerDocumentNoteV2"></textarea></div>
+        <button id="lawyerProblem" class="btn red" type="button" data-lawyer-document-action="problem" data-lawyer-document-note-required="1">Проблема</button>
+        <button id="lawyerReceived" class="btn light" type="button" data-lawyer-document-action="received" data-lawyer-document-note-required="0">Получен</button>
+        <div id="lawyerDocumentStatusV2" class="status">Готово к действию.</div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { applyFormAssociations } from '../../assets/js/nav-v2/form-association-v2.js?v=20260715-01';
+
+    const pageStatus = document.getElementById('pageStatus');
+    const spnStatus = document.getElementById('spnReworkStatusV2');
+    const lawyerStatus = document.getElementById('lawyerDocumentStatusV2');
+
+    document.getElementById('addComment').addEventListener('click', () => {
+      pageStatus.className = document.getElementById('newComment').value.trim() ? 'status ok' : 'status error';
+      pageStatus.textContent = pageStatus.classList.contains('error') ? 'Комментарий пустой.' : 'Комментарий сохранён.';
+    });
+
+    document.getElementById('spnSubmit').addEventListener('click', () => {
+      const value = document.getElementById('spnReworkCompletionText').value.trim();
+      spnStatus.className = value.length < 10 ? 'status error' : 'status ok';
+      spnStatus.textContent = value.length < 10 ? 'Перечислите, что именно исправлено и сохранено в карточке.' : 'Карточка готова к отправке.';
+    });
+
+    document.getElementById('spnReturn').addEventListener('click', () => {
+      const selected = document.querySelector('[data-spn-rework-option]:checked');
+      const reason = document.getElementById('spnReworkReturnReason').value.trim();
+      spnStatus.className = !selected && reason.length < 10 ? 'status error' : 'status ok';
+      spnStatus.textContent = spnStatus.classList.contains('error') ? 'Выберите замечание или опишите конкретную причину возврата.' : 'Замечания готовы.';
+    });
+
+    document.getElementById('lawyerProblem').addEventListener('click', () => {
+      const note = document.getElementById('lawyerDocumentNoteV2').value.trim();
+      lawyerStatus.className = note.length < 5 ? 'status error' : 'status warn';
+      lawyerStatus.textContent = note.length < 5 ? 'Опишите конкретную проблему по документу.' : 'Сохраняю действие...';
+      if (note.length >= 5) setTimeout(() => {
+        lawyerStatus.className = 'status error';
+        lawyerStatus.textContent = 'Сервер временно не ответил.';
+      }, 80);
+    });
+
+    document.getElementById('lawyerReceived').addEventListener('click', () => {
+      lawyerStatus.className = 'status ok';
+      lawyerStatus.textContent = 'Документ отмечен как полученный.';
+    });
+
+    applyFormAssociations(document);
+  </script>
+</body>
+</html>
