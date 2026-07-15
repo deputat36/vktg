@@ -1,5 +1,33 @@
 begin;
 
+create or replace function nav_v2_private.nav_v2_guard_retired_viewer_role()
+returns trigger
+language plpgsql
+set search_path to 'public', 'nav_v2_private'
+as $function$
+begin
+  if new.role = 'viewer'::public.nav_v2_user_role and new.is_active = true then
+    raise exception 'Роль «Наблюдатель» больше не назначается. Выберите рабочую роль сотрудника.' using errcode = '22023';
+  end if;
+
+  return new;
+end;
+$function$;
+
+comment on function nav_v2_private.nav_v2_guard_retired_viewer_role()
+is 'Table-bound guard: blocks every insert or role/activation update that would create an active viewer profile. Inactive legacy viewer rows remain compatible.';
+
+revoke all on function nav_v2_private.nav_v2_guard_retired_viewer_role() from public;
+revoke all on function nav_v2_private.nav_v2_guard_retired_viewer_role() from anon;
+revoke all on function nav_v2_private.nav_v2_guard_retired_viewer_role() from authenticated;
+
+drop trigger if exists nav_v2_profiles_guard_retired_viewer on public.nav_user_profiles;
+create trigger nav_v2_profiles_guard_retired_viewer
+before insert or update of role, is_active
+on public.nav_user_profiles
+for each row
+execute function nav_v2_private.nav_v2_guard_retired_viewer_role();
+
 create or replace function public.nav_v2_link_user_by_email(
   p_email text,
   p_full_name text,
@@ -60,7 +88,7 @@ end;
 $function$;
 
 comment on function public.nav_v2_link_user_by_email(text, text, public.nav_v2_user_role, uuid, text)
-is 'Owner/admin profile linking. New viewer assignments are retired; enum remains for compatibility.';
+is 'Owner/admin profile linking. New viewer assignments are retired; table trigger also protects Edge and direct privileged writes.';
 
 create or replace function public.nav_v2_update_user_profile(
   p_user_id uuid,
@@ -117,6 +145,6 @@ end;
 $function$;
 
 comment on function public.nav_v2_update_user_profile(uuid, text, public.nav_v2_user_role, uuid, text, boolean)
-is 'Owner/admin profile update. Viewer may only be retained for deactivation of a legacy viewer profile.';
+is 'Owner/admin profile update. Viewer may only be retained for deactivation; table trigger blocks every active viewer write path.';
 
 commit;
