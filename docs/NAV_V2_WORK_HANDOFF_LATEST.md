@@ -3,14 +3,14 @@
 ## Точка продолжения
 
 - Дата: 2026-07-15.
-- Текущий `main`: `c1dd6f759e822965b4959775ce78965d8a38fbb6` — merge PR #300.
+- Текущий `main`: `902910f09a65fa5c186d39bfdded44ebdf8c85b8` — merge PR #302.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260714125054_nav_v2_exact_duplicate_review_pack`.
 - Public operational report version: 8.
 - Supabase branches: только production `main`.
 - Isolated authenticated target: не создан.
 - `authenticated-smoke=skipped` не является authenticated PASS.
-- Открытых PR после merge #300: 0 на момент подготовки handoff.
+- Открытых PR после merge #302: 0 на момент подготовки handoff.
 
 ## Завершённая action-first UX-цепочка
 
@@ -129,6 +129,25 @@
 - `scripts/check_nav_v2_manager_confirmed_results.py`;
 - `.github/workflows/nav-v2-manager-confirmed-results.yml`.
 
+### PR #302 — мобильный операционный первый экран
+
+На ширине 360–430 px четыре ежедневных экрана теперь показывают действие до вторичной отчётности:
+
+- dashboard — первый объяснимый приоритет до профиля и KPI;
+- список сделок — следующий шаг первой сделки и одна основная CTA до агрегатов и остальных карточек;
+- карточка — доработка СПН, документный фокус юриста, подтверждённый результат или текущее главное действие до legacy KPI и быстрых mutation-панелей;
+- manager — первая сделка очереди решений до готовности, нагрузки и истории подтверждённых результатов.
+
+Дополнительные приоритеты, сделки, режимы, фильтры и метаданные остаются доступны через progressive disclosure. Общий viewport hook явно раскрывает их на desktop и сворачивает на mobile; изменение ширины синхронизируется без `MutationObserver`.
+
+Pure policy ограничивает первый экран:
+
+- dashboard/deals/deal-card — не более двух видимых действий;
+- manager — одно главное и до двух контекстных действий;
+- overflow не удаляется и остаётся доступным после раскрытия.
+
+Срез использует уже загруженные payload. Новых RPC, migrations, grants, Auth users, browser storage и production mutations нет.
+
 ## Проверки PR #300
 
 - dedicated manager confirmed results semantic regression: PASS;
@@ -144,6 +163,20 @@
 
 Первый CI-запуск упал только потому, что старый operational readiness contract ожидал предыдущие cache-busting версии CSS/JS. Продуктовая semantic regression уже была зелёной. Контракт обновлён на фактические release-маркеры, после чего все обязательные проверки прошли.
 
+## Проверки PR #302
+
+- dedicated mobile first-screen semantic/static workflow: PASS;
+- полный Navigator v2 static suite: 52/52 команд PASS;
+- JavaScript syntax: PASS;
+- совместимые dashboard/deals/card/SPN/completion/manager workflows: PASS;
+- public desktop/mobile Playwright: 32/32 PASS;
+- новый browser-сценарий подтверждает desktop disclosure и мобильный порядок/раскрытие/ширину CTA;
+- 23/23 запущенных workflows: success;
+- review threads: 0;
+- authenticated job внутри browser workflow: `skipped`, не считается authenticated evidence.
+
+Первый public browser run выявил подтверждённый desktop-дефект: закрытый `<details>` скрывал содержимое сильнее обычного CSS. Общий viewport hook исправил причину; повторный desktop/mobile run прошёл 32/32.
+
 ## Post-merge source smoke после PR #300
 
 Канонический `main` содержит актуальные release-маркеры:
@@ -157,9 +190,23 @@
 
 Прямое независимое чтение GitHub Pages из текущего рабочего окружения не выполнено из-за сетевого ограничения среды. Public desktop/mobile GitHub Actions smoke прошёл на merge-кандидате. При следующем запуске можно повторить live Pages smoke, не меняя данные.
 
+## Post-merge source smoke после PR #302
+
+Канонический `main` подтверждён через GitHub connector:
+
+- все четыре HTML подключают `nav-v2-mobile-first-screen.css?v=20260715-01`;
+- dashboard → `dashboard-v2.js?v=20260715-01`;
+- deals → `deals-v2.js?v=20260715-01`;
+- deal card → `deal-card-v2.js?v=20260715-02`;
+- manager → `manager-v2.js?v=20260715-02`;
+- `mobile-first-screen-v2.js` содержит `details.open = !compact` и resize sync;
+- CSS содержит отдельные правила 360–430 px и desktop `display: contents` для списка.
+
+Прямое чтение GitHub Pages снова заблокировано сетевой политикой текущей среды. Это не подменяется source smoke: browser evidence получено в обязательном GitHub Actions job на merge-кандидате.
+
 ## Supabase и рабочие данные
 
-PR #300 frontend-only:
+PR #302 frontend-only:
 
 - schema не менялась;
 - migrations не добавлялись;
@@ -170,7 +217,7 @@ PR #300 frontend-only:
 - preview branch не создавалась;
 - service-role secret не использовался.
 
-Последний подтверждённый production baseline остаётся:
+Read-only production-сверка после merge #302:
 
 - Deals: 23;
 - Tasks: 98;
@@ -179,7 +226,7 @@ PR #300 frontend-only:
 - Events: 118;
 - latest live migration: `20260714125054`.
 
-Не трактовать эти числа как новую post-PR #300 live-проверку: это сохранённый baseline после предыдущего frontend-only цикла.
+Значения совпали с предыдущим baseline. Latest production migration также осталась `20260714125054`; frontend-only merge не изменил schema или рабочие строки.
 
 ## Security и release state
 
@@ -224,15 +271,14 @@ PR #300 frontend-only:
 
 Не добавлять новые отчёты. Следующий безопасный продуктовый slice:
 
-1. Мобильный первый экран: одно главное действие и не более 2–3 контекстных кнопок.
-2. В первую очередь проверить dashboard, список сделок, карточку сделки и кабинет менеджера на ширине 360–430 px.
-3. Главный результат и следующий шаг должны быть видны без длинной прокрутки и без конкуренции нескольких primary-кнопок.
-4. Сохранить desktop UX и role-aware ограничения.
-5. Затем подготовить UX-метрики: клики до действия, доля подтверждённых результатов, возвраты СПН, время повторной проверки и изменение просроченного backlog.
+1. Подготовить минимальный privacy-safe UX measurement slice для кликов до главного действия, подтверждённых результатов, возвратов СПН и времени повторной проверки.
+2. Сначала найти и переиспользовать существующий audit/event payload; не создавать отдельный backend до доказанной необходимости.
+3. Не считать page view или локальный клик подтверждённым результатом: завершение по-прежнему требует совпадения server event с текущим состоянием сущности.
+4. Не хранить стороны сделки, адреса, комментарии, телефоны, email или browser draft в telemetry.
+5. Дать owner/manager проверяемое определение метрик и явные ограничения выборки до любого production write.
 
 ## NEXT_WORK_QUEUE
 
-- P1 UX — мобильный первый экран: одно действие и не более 2–3 контекстных кнопок.
 - P1 UX — измеримые UX-события без изменения рабочих данных.
 - P0 MANUAL — owner duplicate decision #273.
 - P0 MANUAL — шесть pilot-файлов.
@@ -248,6 +294,7 @@ PR #300 frontend-only:
 - lawyer document lifecycle PR #296;
 - completion evidence/automatic next step PR #298;
 - manager confirmed results PR #300;
+- mobile operational first screen PR #302;
 - public guest/no-JWT/private-helper smoke;
 - risk lifecycle #218;
 - readiness/task taxonomy/broker/viewer/lawyer previews;
@@ -260,4 +307,4 @@ PR #300 frontend-only:
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #300. Один раз проверь ручные gates. Если они не изменились, не повторяй action-first цепочку, SPN rework, документный цикл юриста, completion evidence и manager confirmed results. Начни мобильный first-screen slice: на dashboard, списке сделок, карточке и manager page оставь одно главное действие и не более 2–3 контекстных кнопок на ширине 360–430 px, сохрани desktop UX и role-aware ограничения. Добавь semantic/static/public mobile regressions. Не меняй рабочие данные и не создавай платную Supabase branch без точного approval #282. Заверши branch → PR → CI → merge → post-merge smoke → handoff.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #302. Один раз проверь ручные gates. Если они не изменились, не повторяй action-first цепочку, SPN rework, документный цикл юриста, completion evidence, manager confirmed results и mobile first-screen. Начни privacy-safe UX measurement slice: определи клики до главного действия, подтверждённые результаты, возвраты СПН и время повторной проверки; переиспользуй существующие server events, не выдавай локальный клик за результат и не передавай персональные или сделочные данные в telemetry. Сначала докажи необходимость backend; без этого не добавляй RPC/migration и не меняй рабочие данные. Не создавай платную Supabase branch без точного approval #282. Заверши branch → PR → CI → merge → post-merge smoke → handoff.`
