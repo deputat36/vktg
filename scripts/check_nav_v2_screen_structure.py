@@ -108,7 +108,7 @@ if not ERRORS:
     source_markers = {
         "dashboard": ["mobile-first-screen-dashboard", "<h1>", "role-home-focus", "role-home-quick-actions", "role-home-recent"],
         "deals": ["mobile-first-screen-deals", "<h1>", "deals-workspace", "deals-work-card", "deal-title"],
-        "deal_card": ["mobile-first-screen-card", "<h1>", "dealActionFocus", "spnReworkWorkflowV2", "renderTabs(data)"],
+        "deal_card": ["mobile-first-screen-card", "<h1>", "quickActions(deal)", "renderTabs(data)", "applyDealCardRecheckAlert"],
         "manager": ["mobile-first-screen-manager", "<h1>", "manager-confirmed-results", "manager-queue", "manager-decision-card"],
     }
     for name, path in SOURCES.items():
