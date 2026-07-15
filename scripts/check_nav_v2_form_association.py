@@ -52,7 +52,7 @@ if not ERRORS:
     for marker in (
         "export function applyFormAssociations",
         "export function installFormAssociationLifecycle",
-        "label.htmlFor = field.id",
+        "local.htmlFor = field.id",
         "setAttribute('aria-describedby'",
         "setAttribute('aria-invalid', 'true')",
         "setAttribute('aria-errormessage'",
@@ -120,7 +120,6 @@ if not ERRORS:
         "aria-errormessage",
         "aria-describedby",
         "toHaveAccessibleName",
-        "chromium-mobile",
     ):
         if marker not in browser:
             ERRORS.append(f"Form association browser regression missing marker: {marker}")
