@@ -1,0 +1,16 @@
+.deal-completion-evidence{display:grid;gap:16px;border:2px solid rgba(22,163,74,.28);background:linear-gradient(180deg,#fff,#f6fff8)}
+.deal-completion-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.deal-completion-head h2{margin:4px 0 7px}
+.deal-completion-head p{margin:0;color:#667085}
+.deal-completion-eyebrow{display:inline-flex;color:#15803d;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.deal-completion-meta{display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px}
+.deal-completion-meta>div{display:grid;gap:5px;padding:13px;border:1px solid #d8eadc;border-radius:14px;background:#fff}
+.deal-completion-meta span,.deal-completion-next>div:first-child>span{color:#667085;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.deal-completion-meta b{line-height:1.45}
+.deal-completion-next{display:grid;gap:12px;padding:16px;border:1px solid #cbd8ff;border-left:4px solid #4763ff;border-radius:14px;background:#f5f7ff}
+.deal-completion-next h3{margin:4px 0 0}
+.deal-completion-next p{margin:0;color:#475467}
+.deal-completion-next-meta{display:flex;gap:7px;flex-wrap:wrap}
+.deal-completion-next .actions{justify-content:flex-start}
+[data-nav-completion-evidence="document"] .lawyer-document-confirmation{display:none}
+@media(max-width:860px){.deal-completion-head{display:grid}.deal-completion-meta{grid-template-columns:1fr}.deal-completion-next .btn{width:100%;justify-content:center}}

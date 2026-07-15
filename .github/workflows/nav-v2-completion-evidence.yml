@@ -1,0 +1,32 @@
+name: Navigator v2 completion evidence
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-completion-evidence-v2.js'
+      - 'assets/js/nav-v2/deal-card-completion-evidence-model-v2.js'
+      - 'assets/css/nav-v2-completion-evidence.css'
+      - 'scripts/check_nav_v2_completion_evidence.py'
+      - 'scripts/check-nav-v2-completion-evidence.mjs'
+      - '.github/workflows/nav-v2-completion-evidence.yml'
+
+jobs:
+  completion-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check completion evidence contract
+        run: python3 scripts/check_nav_v2_completion_evidence.py
+      - name: Check completion evidence semantics
+        run: node scripts/check-nav-v2-completion-evidence.mjs
+      - name: Recheck existing deal-card hooks
+        run: python3 scripts/check_nav_v2_deal_card_hooks.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deal-card-completion-evidence-v2.js
+          node --check assets/js/nav-v2/deal-card-completion-evidence-model-v2.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+      - name: Compile Python contract
+        run: python3 -m py_compile scripts/check_nav_v2_completion_evidence.py
