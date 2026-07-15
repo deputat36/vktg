@@ -7,7 +7,11 @@
   <title>Новая сделка — Навигатор v2</title>
   <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260701-0830">
   <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260623-1545">
-  <style>.nav-v2 [data-action="set:objectCategory:share"]{display:none!important}</style>
+  <style>
+    .nav-v2 [data-action="set:objectCategory:share"]{display:none!important}
+    .nav-v2 [data-field="sellerName"], .nav-v2 [data-field="seller_name"], .nav-v2 [data-field="sellerPhone"], .nav-v2 [data-field="seller_phone"],
+    .nav-v2 [data-field="buyerName"], .nav-v2 [data-field="buyer_name"], .nav-v2 [data-field="buyerPhone"], .nav-v2 [data-field="buyer_phone"]{display:none!important}
+  </style>
 </head>
 <body class="nav-v2">
   <main class="nav-v2-shell">
@@ -41,7 +45,7 @@
   <script type="module" src="./assets/js/nav-v2/spn-object-details-adaptive-v2.js?v=20260623-1545"></script>
   <script type="module" src="./assets/js/nav-v2/spn-seller-adaptive-v2.js?v=20260623-1545"></script>
   <script type="module" src="./assets/js/nav-v2/spn-buyer-adaptive-v2.js?v=20260623-1545"></script>
-  <script type="module" src="./assets/js/nav-v2/spn-party-names-adaptive-v2.js?v=20260623-1545"></script>
+  <script type="module" src="./assets/js/nav-v2/spn-party-names-adaptive-v2.js?v=20260715-01"></script>
   <script type="module" src="./assets/js/nav-v2/spn-money-adaptive-v2.js?v=20260623-1545"></script>
   <script type="module" src="./assets/js/nav-v2/spn-deposit-adaptive-v2.js?v=20260623-1545"></script>
   <script type="module" src="./assets/js/nav-v2/spn-terms-adaptive-v2.js?v=20260623-1545"></script>
