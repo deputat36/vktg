@@ -74,3 +74,35 @@ test('mobile operational first screen keeps the primary action before secondary 
 
   await expectNoRuntimeFailures(failures, testInfo, 'mobile-first-screen');
 });
+
+test('privacy-safe journey storage contains only aggregate fields', async ({ page }, testInfo) => {
+  const failures = captureRuntimeFailures(page);
+  await openPage(page, '/nav-v2.html?clean=1');
+  await page.evaluate(() => {
+    history.replaceState({}, '', './dashboard-v2.html');
+    sessionStorage.removeItem('nav_v2_privacy_safe_ux_journeys_v1');
+  });
+  await page.setContent(`<!doctype html><html><body>
+    <button id="secondary" type="button">Открыть секретный адрес и UUID 123</button>
+    <a id="primary" class="mobile-first-screen-primary-action" href="./deal-card-v2.html?id=secret-deal-id">Главное действие по Иванову</a>
+  </body></html>`);
+  await page.evaluate(async () => {
+    const { installPrivacySafeUxJourneyMeasurement } = await import('./assets/js/nav-v2/ux-metrics-session-v2.js?v=20260715-01');
+    installPrivacySafeUxJourneyMeasurement();
+  });
+  await page.locator('#secondary').click();
+  await page.locator('#primary').click();
+
+  const records = await page.evaluate(() => JSON.parse(sessionStorage.getItem('nav_v2_privacy_safe_ux_journeys_v1') || '[]'));
+  expect(records).toHaveLength(1);
+  expect(Object.keys(records[0]).sort()).toEqual(['clicksToMain', 'elapsedBucket', 'page', 'viewport']);
+  expect(records[0].page).toBe('dashboard');
+  expect(records[0].clicksToMain).toBe(2);
+  const serialized = JSON.stringify(records);
+  expect(serialized).not.toContain('secret-deal-id');
+  expect(serialized).not.toContain('Иванову');
+  expect(serialized).not.toContain('секретный адрес');
+  expect(serialized).not.toContain('href');
+
+  await expectNoRuntimeFailures(failures, testInfo, 'privacy-safe-journey');
+});
