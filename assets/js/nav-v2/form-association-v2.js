@@ -41,9 +41,6 @@ function existingHelp(field) {
   if (field.id === 'spnReworkCompletionText') {
     return field.closest('.spn-rework-evidence')?.querySelector('p.small') || null;
   }
-  if (field.id === 'spnReworkReturnReason') {
-    return document.getElementById('spnReworkReturnHelp');
-  }
   return null;
 }
 
@@ -96,10 +93,32 @@ function groupPoliciesForField(fieldId) {
     .filter((policy) => policy?.validationFieldId === fieldId);
 }
 
+function upgradeToFieldset(group, policy) {
+  if (group instanceof HTMLFieldSetElement) return group;
+  const fieldset = document.createElement('fieldset');
+  [...group.attributes].forEach((attribute) => {
+    if (!['id', 'role', 'aria-label', 'aria-labelledby'].includes(attribute.name)) {
+      fieldset.setAttribute(attribute.name, attribute.value);
+    }
+  });
+  fieldset.id = policy.groupId;
+  fieldset.style.border = '0';
+  fieldset.style.padding = '0';
+  fieldset.style.minInlineSize = '0';
+  while (group.firstChild) fieldset.append(group.firstChild);
+  group.replaceWith(fieldset);
+  return fieldset;
+}
+
 function resolveGroup(policy, root = document) {
   if (!policy?.selector) return null;
-  const group = root.querySelector?.(policy.selector) || document.querySelector(policy.selector);
-  return group instanceof HTMLElement ? group : null;
+  const anchor = root.querySelector?.(policy.selector) || document.querySelector(policy.selector);
+  if (!(anchor instanceof HTMLElement)) return null;
+  let group = policy.closestSelector ? anchor.closest(policy.closestSelector) : anchor;
+  if (!(group instanceof HTMLElement)) return null;
+  if (policy.nativeFieldset) group = upgradeToFieldset(group, policy);
+  if (!group.id) group.id = policy.groupId;
+  return group;
 }
 
 function clearGroupErrorForField(fieldId) {
