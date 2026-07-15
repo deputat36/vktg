@@ -52,7 +52,7 @@ if not ERRORS:
         "heading.setAttribute('role', policy.role)",
         "heading.setAttribute('aria-level', policy.ariaLevel)",
         "status.removeAttribute('aria-labelledby')",
-        "data.navHeadingSequence",
+        "main.dataset.navHeadingSequence",
         "role=\"status\"",
         "role=\"alert\"",
     ):
