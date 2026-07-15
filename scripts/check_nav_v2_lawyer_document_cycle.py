@@ -41,7 +41,7 @@ def main() -> int:
 
     require(page, (
         "nav-v2-lawyer-document-cycle.css?v=20260715-01",
-        "deal-card-recheck-alert-v2.js?v=20260715-14",
+        "deal-card-recheck-alert-v2.js?v=20260715-15",
     ), PAGE.name, errors)
 
     require(lifecycle, (

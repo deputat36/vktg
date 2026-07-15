@@ -32,7 +32,7 @@ def main() -> int:
 
     for marker in (
         "nav-v2-deal-action-focus.css?v=20260714-01",
-        "deal-card-recheck-alert-v2.js?v=20260715-14",
+        "deal-card-recheck-alert-v2.js?v=20260715-15",
     ):
         if marker not in page:
             errors.append(f"deal-card-v2.html: missing {marker!r}")

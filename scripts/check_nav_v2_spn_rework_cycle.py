@@ -36,7 +36,7 @@ def main() -> int:
 
     for marker in (
         "nav-v2-spn-rework.css?v=20260715-01",
-        "deal-card-recheck-alert-v2.js?v=20260715-14",
+        "deal-card-recheck-alert-v2.js?v=20260715-15",
     ):
         if marker not in page:
             errors.append(f"deal-card-v2.html missing {marker!r}")

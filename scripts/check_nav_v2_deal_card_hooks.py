@@ -9,6 +9,8 @@ BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 ACTION_FOCUS_MODULE = ROOT / "assets/js/nav-v2/deal-card-action-focus-v2.js"
 ACTION_FOCUS_MODEL = ROOT / "assets/js/nav-v2/deal-card-action-focus-model-v2.js"
+COMPLETION_EVIDENCE_MODULE = ROOT / "assets/js/nav-v2/deal-card-completion-evidence-v2.js"
+COMPLETION_EVIDENCE_MODEL = ROOT / "assets/js/nav-v2/deal-card-completion-evidence-model-v2.js"
 SPN_REWORK_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-rework-v2.js"
 SPN_REWORK_MODEL = ROOT / "assets/js/nav-v2/deal-card-spn-rework-model-v2.js"
 LAWYER_DOCUMENT_MODULE = ROOT / "assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js"
@@ -33,6 +35,8 @@ def main() -> int:
         RECHECK_MODULE,
         ACTION_FOCUS_MODULE,
         ACTION_FOCUS_MODEL,
+        COMPLETION_EVIDENCE_MODULE,
+        COMPLETION_EVIDENCE_MODEL,
         SPN_REWORK_MODULE,
         SPN_REWORK_MODEL,
         LAWYER_DOCUMENT_MODULE,
@@ -58,6 +62,8 @@ def main() -> int:
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
         action_focus = ACTION_FOCUS_MODULE.read_text(encoding="utf-8")
         action_model = ACTION_FOCUS_MODEL.read_text(encoding="utf-8")
+        completion_evidence = COMPLETION_EVIDENCE_MODULE.read_text(encoding="utf-8")
+        completion_model = COMPLETION_EVIDENCE_MODEL.read_text(encoding="utf-8")
         spn_rework = SPN_REWORK_MODULE.read_text(encoding="utf-8")
         spn_rework_model = SPN_REWORK_MODEL.read_text(encoding="utf-8")
         lawyer_document = LAWYER_DOCUMENT_MODULE.read_text(encoding="utf-8")
@@ -90,6 +96,7 @@ def main() -> int:
             "import { applyDealCardSpnRework } from './deal-card-spn-rework-v2.js?v=20260715-01';",
             "import { applyLawyerDocumentCycle } from './deal-card-lawyer-document-cycle-v2.js?v=20260715-01';",
             "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
+            "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-01';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
@@ -101,6 +108,7 @@ def main() -> int:
             "applyDealCardSpnRework(cardData, profileData);",
             "applyLawyerDocumentCycle(cardData, profileData);",
             "applyDealCardActionFocus(cardData, profileData);",
+            "applyDealCardCompletionEvidence(cardData, profileData);",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
@@ -118,6 +126,8 @@ def main() -> int:
             errors.append("deal-card action focus must run after the unified SPN rework workflow")
         if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("applyLawyerDocumentCycle(cardData, profileData);"):
             errors.append("deal-card action focus must run after the lawyer document cycle")
+        if recheck.find("applyDealCardCompletionEvidence(cardData, profileData);") < recheck.find("applyDealCardActionFocus(cardData, profileData);"):
+            errors.append("deal-card completion evidence must reuse the next action selected by action focus")
 
         forbidden_recheck_markers = (
             "rpc('nav_v2_get_deal_card'",
@@ -148,6 +158,17 @@ def main() -> int:
         for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
             if marker in action_model:
                 errors.append(f"deal-card action focus model must remain pure: {marker}")
+
+        if "export function applyDealCardCompletionEvidence(data, profile)" not in completion_evidence:
+            errors.append("deal-card completion evidence must export its explicit lifecycle hook")
+        for marker in ("rpc(", "nav_v2_get_", "nav_v2_update_", "new MutationObserver", "localStorage", "sessionStorage"):
+            if marker in completion_evidence:
+                errors.append(f"deal-card completion evidence must remain read-only and use the loaded payload: {marker}")
+        if "export function buildDealCompletionEvidence" not in completion_model:
+            errors.append("deal-card completion evidence model must export buildDealCompletionEvidence")
+        for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+            if marker in completion_model:
+                errors.append(f"deal-card completion evidence model must remain pure: {marker}")
 
         if "export function applyDealCardSpnRework(data, profile)" not in spn_rework:
             errors.append("SPN rework helper must export its explicit lifecycle hook")
@@ -322,6 +343,8 @@ def main() -> int:
             "deal-card-recheck-alert-v2.js",
             "deal-card-action-focus-v2.js",
             "deal-card-action-focus-model-v2.js",
+            "deal-card-completion-evidence-v2.js",
+            "deal-card-completion-evidence-model-v2.js",
             "deal-card-spn-rework-v2.js",
             "deal-card-spn-rework-model-v2.js",
             "deal-card-lawyer-document-cycle-v2.js",
@@ -339,7 +362,7 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-14"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-15"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
@@ -353,7 +376,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: shared lifecycle includes unified SPN rework, action focus and save confirmation")
+    print("Navigator v2 deal-card hook passed: shared lifecycle includes rework, action focus, completion evidence and save confirmation")
     return 0
 
 
