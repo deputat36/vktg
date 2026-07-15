@@ -31,6 +31,11 @@ assert.deepEqual(fieldValidationState({ fieldId: 'newComment', value: 'Гото�
   required: true,
   reason: ''
 });
+assert.deepEqual(fieldValidationState({ fieldId: 'spnReworkReturnReason', value: '', alternativeSelected: false }), {
+  invalid: true,
+  required: false,
+  reason: 'alternative_or_too_short'
+});
 assert.deepEqual(fieldValidationState({ fieldId: 'spnReworkReturnReason', value: '', alternativeSelected: true }), {
   invalid: false,
   required: false,
