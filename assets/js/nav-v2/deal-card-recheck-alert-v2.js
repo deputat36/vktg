@@ -14,6 +14,7 @@ import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.j
 import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-01';
 import { applyFormAssociations } from './form-association-v2.js?v=20260715-02';
+import { applyAccessibleDialogs } from './accessible-dialog-v2.js?v=20260715-01';
 
 let cardData = null;
 let profileData = null;
@@ -36,6 +37,7 @@ function applyCardEnhancements() {
   applyMobileFirstScreenDisclosure();
   applyAccessibleAsyncFeedback();
   applyFormAssociations();
+  applyAccessibleDialogs();
 }
 
 function bindRerenderHook() {
