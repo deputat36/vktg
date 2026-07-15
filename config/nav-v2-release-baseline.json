@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project_ref": "ofewxuqfjhamgerwzull",
   "environment": "navigator-production-readonly",
-  "latest_live_migration": "20260715195732",
+  "latest_live_migration": "20260715203126",
   "edge_functions": {
     "nav-invite-user": {
       "source_path": "supabase/functions/nav-invite-user/index.ts",

@@ -64,7 +64,7 @@ def main() -> int:
         errors.append("release baseline project_ref drifted")
     if baseline.get("environment") != "navigator-production-readonly":
         errors.append("release baseline environment drifted")
-    if baseline.get("latest_live_migration") != "20260715195732":
+    if baseline.get("latest_live_migration") != "20260715203126":
         errors.append("release baseline latest migration drifted")
     if set((baseline.get("edge_functions") or {}).keys()) != {"nav-invite-user", "nav-v2-deal-api"}:
         errors.append("release baseline function set drifted")
@@ -73,47 +73,19 @@ def main() -> int:
     if aliases.get("project_ref") != baseline.get("project_ref"):
         errors.append("migration alias project_ref differs from release baseline")
     if set((aliases.get("live_aliases") or {})) != {
-        "20260712143253",
-        "20260712163919",
-        "20260712200429",
-        "20260712205117",
-        "20260713091921",
-        "20260713160355",
-        "20260713160446",
-        "20260713160524",
-        "20260713164757",
-        "20260713170608",
-        "20260713173156",
-        "20260713180701",
-        "20260713184344",
-        "20260713195749",
-        "20260713195810",
-        "20260714064311",
-        "20260714102956",
-        "20260714125054",
-        "20260715195732",
+        "20260712143253", "20260712163919", "20260712200429", "20260712205117",
+        "20260713091921", "20260713160355", "20260713160446", "20260713160524",
+        "20260713164757", "20260713170608", "20260713173156", "20260713180701",
+        "20260713184344", "20260713195749", "20260713195810", "20260714064311",
+        "20260714102956", "20260714125054", "20260715195732", "20260715203126",
     }:
         errors.append("approved live migration alias set drifted")
     if set((aliases.get("approved_repository_only") or {})) != {
-        "20260712160000",
-        "20260712162609",
-        "20260712190000",
-        "20260712203000",
-        "20260713090856",
-        "20260713172000",
-        "20260713193000",
-        "20260713193500",
-        "20260713203000",
-        "20260713213000",
-        "20260713223000",
-        "20260713233000",
-        "20260713234500",
-        "20260714001500",
-        "20260714001600",
-        "20260714013000",
-        "20260714103000",
-        "20260714130000",
-        "20260715213000",
+        "20260712160000", "20260712162609", "20260712190000", "20260712203000",
+        "20260713090856", "20260713172000", "20260713193000", "20260713193500",
+        "20260713203000", "20260713213000", "20260713223000", "20260713233000",
+        "20260713234500", "20260714001500", "20260714001600", "20260714013000",
+        "20260714103000", "20260714130000", "20260715213000", "20260715224500",
     }:
         errors.append("approved repository-only migration set drifted")
 
@@ -124,6 +96,7 @@ def main() -> int:
         "20260714102956": ("20260714103000", "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd"),
         "20260714125054": ("20260714130000", "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14"),
         "20260715195732": ("20260715213000", "fdce76deac3451015e97ad11437bcdcf4cd7de7d"),
+        "20260715203126": ("20260715224500", "87adddbf9e66e9366dd47343a4af673a5036dcf8"),
     }
     for live_version, (canonical_version, blob_sha) in expected.items():
         live_entry = (aliases.get("live_aliases") or {}).get(live_version) or {}
@@ -137,37 +110,23 @@ def main() -> int:
 
     reporter = REPORTER.read_text(encoding="utf-8")
     require(reporter, (
-        "def parse_migration_list",
-        "def normalize_functions",
-        "def build_report",
-        "def markdown_report",
-        "--baseline-only",
-        "--self-test",
-        "repository migrations missing in production",
-        "production migrations missing in repository",
-        "unregistered live Navigator Edge Functions",
+        "def parse_migration_list", "def normalize_functions", "def build_report", "def markdown_report",
+        "--baseline-only", "--self-test", "repository migrations missing in production",
+        "production migrations missing in repository", "unregistered live Navigator Edge Functions",
     ), REPORTER.name, errors)
 
     alias_reporter = ALIAS_REPORTER.read_text(encoding="utf-8")
     require(alias_reporter, (
-        "def validate_aliases",
-        "def classify_migrations",
-        "approved_repository_only",
-        "represented_remote_aliases",
-        "unrepresented_remote_only",
-        "Any migration outside these explicit mappings still fails the workflow.",
-        "--allow-drift",
+        "def validate_aliases", "def classify_migrations", "approved_repository_only",
+        "represented_remote_aliases", "unrepresented_remote_only",
+        "Any migration outside these explicit mappings still fails the workflow.", "--allow-drift",
     ), ALIAS_REPORTER.name, errors)
 
     doc = DOC.read_text(encoding="utf-8")
     require(doc, (
-        "navigator-production-readonly",
-        "SUPABASE_ACCESS_TOKEN",
-        "SUPABASE_DB_PASSWORD",
-        "без автоматического deploy",
-        "config/nav-v2-release-baseline.json",
-        "release-drift.json",
-        "release-drift.md",
+        "navigator-production-readonly", "SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_PASSWORD",
+        "без автоматического deploy", "config/nav-v2-release-baseline.json",
+        "release-drift.json", "release-drift.md",
     ), DOC.name, errors)
 
     if errors:

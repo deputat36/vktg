@@ -2,178 +2,47 @@
   "schema_version": 1,
   "project_ref": "ofewxuqfjhamgerwzull",
   "live_aliases": {
-    "20260712143253": {
-      "canonical_migrations": ["20260712160000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed risk-resolution lifecycle source."
-    },
-    "20260712163919": {
-      "canonical_migrations": ["20260712162609"],
-      "reason": "Production apply assigned a live timestamp to the reviewed manager operational-readiness source."
-    },
-    "20260712200429": {
-      "canonical_migrations": ["20260712190000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed task-taxonomy preview source."
-    },
-    "20260712205117": {
-      "canonical_migrations": ["20260712203000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed broker-triage queue source."
-    },
-    "20260713091921": {
-      "canonical_migrations": ["20260713090856"],
-      "reason": "Production apply assigned a live timestamp to the reviewed viewer operational-workspace source."
-    },
-    "20260713160355": {
-      "canonical_migrations": ["20260713193000"],
-      "reason": "Production-safe split: operational adoption report core was applied separately from health registration."
-    },
-    "20260713160446": {
-      "canonical_migrations": ["20260713193500"],
-      "reason": "Production-safe split: active-profile wrapper and private implementation were applied as a separate atomic migration."
-    },
-    "20260713160524": {
-      "canonical_migrations": ["20260713193000"],
-      "reason": "Production-safe split: curated RPC grant health registration was applied after the report wrapper."
-    },
-    "20260713164757": {
-      "canonical_migrations": ["20260713203000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed exact non-overlapping operational adoption period comparison source."
-    },
-    "20260713170608": {
-      "canonical_migrations": ["20260713213000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed read-only manager assignment proposal source."
-    },
-    "20260713173156": {
-      "canonical_migrations": ["20260713223000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed grouped manager source remediation plan source."
-    },
-    "20260713180701": {
-      "canonical_migrations": ["20260713233000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed responsibility evidence candidates source."
-    },
-    "20260713184344": {
-      "canonical_migrations": ["20260713234500"],
-      "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility confirmation context source."
-    },
-    "20260713195749": {
-      "canonical_migrations": ["20260714001500"],
-      "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility point preview core and health registration source."
-    },
-    "20260713195810": {
-      "canonical_migrations": ["20260714001600"],
-      "reason": "Production apply assigned a live timestamp to the reviewed explicit-precondition wrapper and private implementation source."
-    },
-    "20260714064311": {
-      "canonical_migrations": ["20260714013000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed read-only three-lane operational pilot shortlist source."
-    },
-    "20260714102956": {
-      "canonical_migrations": ["20260714103000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed exact recent wizard-save duplicate trigger source."
-    },
-    "20260714125054": {
-      "canonical_migrations": ["20260714130000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed read-only exact duplicate review pack source."
-    },
-    "20260715195732": {
-      "canonical_migrations": ["20260715213000"],
-      "reason": "Production apply assigned a live timestamp to the reviewed retired viewer assignment guard source."
-    }
+    "20260712143253": {"canonical_migrations": ["20260712160000"], "reason": "Production apply assigned a live timestamp to the reviewed risk-resolution lifecycle source."},
+    "20260712163919": {"canonical_migrations": ["20260712162609"], "reason": "Production apply assigned a live timestamp to the reviewed manager operational-readiness source."},
+    "20260712200429": {"canonical_migrations": ["20260712190000"], "reason": "Production apply assigned a live timestamp to the reviewed task-taxonomy preview source."},
+    "20260712205117": {"canonical_migrations": ["20260712203000"], "reason": "Production apply assigned a live timestamp to the reviewed broker-triage queue source."},
+    "20260713091921": {"canonical_migrations": ["20260713090856"], "reason": "Production apply assigned a live timestamp to the reviewed viewer operational-workspace source."},
+    "20260713160355": {"canonical_migrations": ["20260713193000"], "reason": "Production-safe split: operational adoption report core was applied separately from health registration."},
+    "20260713160446": {"canonical_migrations": ["20260713193500"], "reason": "Production-safe split: active-profile wrapper and private implementation were applied as a separate atomic migration."},
+    "20260713160524": {"canonical_migrations": ["20260713193000"], "reason": "Production-safe split: curated RPC grant health registration was applied after the report wrapper."},
+    "20260713164757": {"canonical_migrations": ["20260713203000"], "reason": "Production apply assigned a live timestamp to the reviewed exact non-overlapping operational adoption period comparison source."},
+    "20260713170608": {"canonical_migrations": ["20260713213000"], "reason": "Production apply assigned a live timestamp to the reviewed read-only manager assignment proposal source."},
+    "20260713173156": {"canonical_migrations": ["20260713223000"], "reason": "Production apply assigned a live timestamp to the reviewed grouped manager source remediation plan source."},
+    "20260713180701": {"canonical_migrations": ["20260713233000"], "reason": "Production apply assigned a live timestamp to the reviewed responsibility evidence candidates source."},
+    "20260713184344": {"canonical_migrations": ["20260713234500"], "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility confirmation context source."},
+    "20260713195749": {"canonical_migrations": ["20260714001500"], "reason": "Production apply assigned a live timestamp to the reviewed read-only responsibility point preview core and health registration source."},
+    "20260713195810": {"canonical_migrations": ["20260714001600"], "reason": "Production apply assigned a live timestamp to the reviewed explicit-precondition wrapper and private implementation source."},
+    "20260714064311": {"canonical_migrations": ["20260714013000"], "reason": "Production apply assigned a live timestamp to the reviewed read-only three-lane operational pilot shortlist source."},
+    "20260714102956": {"canonical_migrations": ["20260714103000"], "reason": "Production apply assigned a live timestamp to the reviewed exact recent wizard-save duplicate trigger source."},
+    "20260714125054": {"canonical_migrations": ["20260714130000"], "reason": "Production apply assigned a live timestamp to the reviewed read-only exact duplicate review pack source."},
+    "20260715195732": {"canonical_migrations": ["20260715213000"], "reason": "Production apply assigned a live timestamp to the reviewed retired viewer assignment guard source."},
+    "20260715203126": {"canonical_migrations": ["20260715224500"], "reason": "Production apply assigned a live timestamp to the reviewed client identifier minimization source."}
   },
   "approved_repository_only": {
-    "20260712160000": {
-      "represented_by_live": ["20260712143253"],
-      "source_blob_sha": "f749635bdcbc36081975c36571c81deb41cf2ed5",
-      "reason": "Canonical fresh-install source for the already-live risk-resolution lifecycle."
-    },
-    "20260712162609": {
-      "represented_by_live": ["20260712163919"],
-      "source_blob_sha": "fa9d6a02a3c1100f1c5f6d5c3d56fc137837b729",
-      "reason": "Canonical fresh-install source for the already-live manager operational-readiness queue."
-    },
-    "20260712190000": {
-      "represented_by_live": ["20260712200429"],
-      "source_blob_sha": "62928eaef359e16d609f9b9b91af17915cbfdcd7",
-      "reason": "Canonical fresh-install source for the already-live task-taxonomy preview."
-    },
-    "20260712203000": {
-      "represented_by_live": ["20260712205117"],
-      "source_blob_sha": "cb1dc13fb010b2a55f54ab684d176006ee7ec951",
-      "reason": "Canonical fresh-install source for the already-live broker-triage queue."
-    },
-    "20260713090856": {
-      "represented_by_live": ["20260713091921"],
-      "source_blob_sha": "87c387509ada444eaa96d2aaca45578d64432a63",
-      "reason": "Canonical fresh-install source for the already-live viewer operational workspace."
-    },
-    "20260713172000": {
-      "represented_by_live": ["20260713151053"],
-      "source_blob_sha": "f1daf3eae1042faf3917af57e3c9b1df00664d4c",
-      "reason": "Idempotent forward copy of the already-live task contract migration; retained for fresh-install ordering."
-    },
-    "20260713193000": {
-      "represented_by_live": ["20260713160355", "20260713160524"],
-      "source_blob_sha": "30db0d8145077db291dc0510c8a5b5c1cab5f8ac",
-      "reason": "Canonical fresh-install source for the adoption report core and curated health registration."
-    },
-    "20260713193500": {
-      "represented_by_live": ["20260713160446"],
-      "source_blob_sha": "2120fb849c6e555bb970d00110847ff1c411365d",
-      "reason": "Canonical fresh-install source for the active-profile wrapper and private implementation."
-    },
-    "20260713203000": {
-      "represented_by_live": ["20260713164757"],
-      "source_blob_sha": "2e6ee17e2428872c523314b070c5000c6b59db29",
-      "reason": "Canonical fresh-install source for the exact non-overlapping current-versus-previous operational adoption comparison."
-    },
-    "20260713213000": {
-      "represented_by_live": ["20260713170608"],
-      "source_blob_sha": "67a96acc8c85bc0d1d6fcbf646f1fef2f493417c",
-      "reason": "Canonical fresh-install source for the read-only manager assignment proposal derived from active SPN manager links."
-    },
-    "20260713223000": {
-      "represented_by_live": ["20260713173156"],
-      "source_blob_sha": "d7af8ac6e1ad7c17d8c087e86620af9214162df6",
-      "reason": "Canonical fresh-install source for the grouped read-only manager source remediation plan."
-    },
-    "20260713233000": {
-      "represented_by_live": ["20260713180701"],
-      "source_blob_sha": "7d540b25b8e9127e058e44a05a6123b781c934c3",
-      "reason": "Canonical fresh-install source for read-only responsibility evidence candidates and the delivered remediation screen contract."
-    },
-    "20260713234500": {
-      "represented_by_live": ["20260713184344"],
-      "source_blob_sha": "c4ee976a59e2645c04c97948e234d69b8a7d03d1",
-      "reason": "Canonical fresh-install source for the read-only responsibility confirmation catalog used by browser-local drafts and exports."
-    },
-    "20260714001500": {
-      "represented_by_live": ["20260713195749"],
-      "source_blob_sha": "298c5093419e7cf3837b3255df170f32f60498c9",
-      "reason": "Canonical fresh-install source for the read-only responsibility point preview and health registration."
-    },
-    "20260714001600": {
-      "represented_by_live": ["20260713195810"],
-      "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f",
-      "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private preview implementation."
-    },
-    "20260714013000": {
-      "represented_by_live": ["20260714064311"],
-      "source_blob_sha": "2fde357c95d838645927a466053e551dff11941a",
-      "reason": "Canonical fresh-install source for the read-only three-lane operational pilot shortlist with duplicate avoidance and no automatic selection."
-    },
-    "20260714103000": {
-      "represented_by_live": ["20260714102956"],
-      "source_blob_sha": "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd",
-      "reason": "Canonical fresh-install source for the exact same-creator wizard payload guard with advisory transaction locking and no existing-row cleanup."
-    },
-    "20260714130000": {
-      "represented_by_live": ["20260714125054"],
-      "source_blob_sha": "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14",
-      "reason": "Canonical fresh-install source for the read-only exact duplicate comparison pack, owner decision draft and report version 8."
-    },
-    "20260715213000": {
-      "represented_by_live": ["20260715195732"],
-      "source_blob_sha": "fdce76deac3451015e97ad11437bcdcf4cd7de7d",
-      "reason": "Canonical fresh-install source for the already-live retired viewer assignment guard."
-    }
+    "20260712160000": {"represented_by_live": ["20260712143253"], "source_blob_sha": "f749635bdcbc36081975c36571c81deb41cf2ed5", "reason": "Canonical fresh-install source for the already-live risk-resolution lifecycle."},
+    "20260712162609": {"represented_by_live": ["20260712163919"], "source_blob_sha": "fa9d6a02a3c1100f1c5f6d5c3d56fc137837b729", "reason": "Canonical fresh-install source for the already-live manager operational-readiness queue."},
+    "20260712190000": {"represented_by_live": ["20260712200429"], "source_blob_sha": "62928eaef359e16d609f9b9b91af17915cbfdcd7", "reason": "Canonical fresh-install source for the already-live task-taxonomy preview."},
+    "20260712203000": {"represented_by_live": ["20260712205117"], "source_blob_sha": "cb1dc13fb010b2a55f54ab684d176006ee7ec951", "reason": "Canonical fresh-install source for the already-live broker-triage queue."},
+    "20260713090856": {"represented_by_live": ["20260713091921"], "source_blob_sha": "87c387509ada444eaa96d2aaca45578d64432a63", "reason": "Canonical fresh-install source for the already-live viewer operational workspace."},
+    "20260713172000": {"represented_by_live": ["20260713151053"], "source_blob_sha": "f1daf3eae1042faf3917af57e3c9b1df00664d4c", "reason": "Idempotent forward copy of the already-live task contract migration; retained for fresh-install ordering."},
+    "20260713193000": {"represented_by_live": ["20260713160355", "20260713160524"], "source_blob_sha": "30db0d8145077db291dc0510c8a5b5c1cab5f8ac", "reason": "Canonical fresh-install source for the adoption report core and curated health registration."},
+    "20260713193500": {"represented_by_live": ["20260713160446"], "source_blob_sha": "2120fb849c6e555bb970d00110847ff1c411365d", "reason": "Canonical fresh-install source for the active-profile wrapper and private implementation."},
+    "20260713203000": {"represented_by_live": ["20260713164757"], "source_blob_sha": "2e6ee17e2428872c523314b070c5000c6b59db29", "reason": "Canonical fresh-install source for the exact non-overlapping current-versus-previous operational adoption comparison."},
+    "20260713213000": {"represented_by_live": ["20260713170608"], "source_blob_sha": "67a96acc8c85bc0d1d6fcbf646f1fef2f493417c", "reason": "Canonical fresh-install source for the read-only manager assignment proposal derived from active SPN manager links."},
+    "20260713223000": {"represented_by_live": ["20260713173156"], "source_blob_sha": "d7af8ac6e1ad7c17d8c087e86620af9214162df6", "reason": "Canonical fresh-install source for the grouped read-only manager source remediation plan."},
+    "20260713233000": {"represented_by_live": ["20260713180701"], "source_blob_sha": "7d540b25b8e9127e058e44a05a6123b781c934c3", "reason": "Canonical fresh-install source for read-only responsibility evidence candidates and the delivered remediation screen contract."},
+    "20260713234500": {"represented_by_live": ["20260713184344"], "source_blob_sha": "c4ee976a59e2645c04c97948e234d69b8a7d03d1", "reason": "Canonical fresh-install source for the read-only responsibility confirmation catalog used by browser-local drafts and exports."},
+    "20260714001500": {"represented_by_live": ["20260713195749"], "source_blob_sha": "298c5093419e7cf3837b3255df170f32f60498c9", "reason": "Canonical fresh-install source for the read-only responsibility point preview and health registration."},
+    "20260714001600": {"represented_by_live": ["20260713195810"], "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f", "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private preview implementation."},
+    "20260714013000": {"represented_by_live": ["20260714064311"], "source_blob_sha": "2fde357c95d838645927a466053e551dff11941a", "reason": "Canonical fresh-install source for the read-only three-lane operational pilot shortlist with duplicate avoidance and no automatic selection."},
+    "20260714103000": {"represented_by_live": ["20260714102956"], "source_blob_sha": "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd", "reason": "Canonical fresh-install source for the exact same-creator wizard payload guard with advisory transaction locking and no existing-row cleanup."},
+    "20260714130000": {"represented_by_live": ["20260714125054"], "source_blob_sha": "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14", "reason": "Canonical fresh-install source for the read-only exact duplicate comparison pack, owner decision draft and report version 8."},
+    "20260715213000": {"represented_by_live": ["20260715195732"], "source_blob_sha": "fdce76deac3451015e97ad11437bcdcf4cd7de7d", "reason": "Canonical fresh-install source for the already-live retired viewer assignment guard."},
+    "20260715224500": {"represented_by_live": ["20260715203126"], "source_blob_sha": "87adddbf9e66e9366dd47343a4af673a5036dcf8", "reason": "Canonical fresh-install source for the already-live client identifier minimization wrapper and table guard."}
   }
 }
