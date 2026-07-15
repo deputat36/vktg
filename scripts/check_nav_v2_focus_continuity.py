@@ -47,7 +47,7 @@ def main() -> int:
     require(runtime, (
         "export function applyActionFocusContinuity",
         "export function installActionFocusContinuity",
-        "data-deal-tab-panel",
+        "panel.dataset.dealTabPanel = tab",
         "panel.tabIndex = -1",
         "summary.setAttribute('aria-controls'",
         "summary.setAttribute('aria-expanded'",
