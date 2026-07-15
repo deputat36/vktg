@@ -1,0 +1,85 @@
+name: Navigator v2 landmark and heading structure
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/landmark-structure-*.js'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
+      - 'scripts/check-nav-v2-landmark-structure.mjs'
+      - 'scripts/check_nav_v2_landmark_structure.py'
+      - 'scripts/check_nav_v2_focus_continuity.py'
+      - 'scripts/check_nav_v2_ux_measurement.py'
+      - 'tests/e2e/landmark-structure.spec.js'
+      - 'tests/fixtures/nav-v2-landmark-structure.html'
+      - '.github/workflows/nav-v2-landmark-structure.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/landmark-structure-*.js'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
+      - 'scripts/check-nav-v2-landmark-structure.mjs'
+      - 'scripts/check_nav_v2_landmark_structure.py'
+      - 'tests/e2e/landmark-structure.spec.js'
+      - 'tests/fixtures/nav-v2-landmark-structure.html'
+      - '.github/workflows/nav-v2-landmark-structure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/landmark-structure-model-v2.js
+          node --check assets/js/nav-v2/landmark-structure-v2.js
+          node --check assets/js/nav-v2/mobile-first-screen-v2.js
+          node --check scripts/check-nav-v2-landmark-structure.mjs
+          node --check tests/e2e/landmark-structure.spec.js
+      - name: Semantic landmark contract
+        run: node scripts/check-nav-v2-landmark-structure.mjs
+      - name: Static landmark contract
+        run: python3 scripts/check_nav_v2_landmark_structure.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_landmark_structure.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run screen-reader oriented landmark regression
+        run: npx playwright test tests/e2e/landmark-structure.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload landmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-landmark-structure-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
