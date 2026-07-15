@@ -3,10 +3,11 @@ import { captureRuntimeFailures, expectNoRuntimeFailures, openPage } from './hel
 
 const fixture = '/tests/fixtures/nav-v2-form-association.html';
 
-async function expectHelpAssociation(field) {
+async function expectHelpAssociation(page, field) {
   const describedBy = await field.getAttribute('aria-describedby');
   expect(describedBy).toBeTruthy();
-  await expect(field.page().locator(`#${describedBy.split(' ')[0]}`)).not.toHaveText('');
+  const firstHelpId = describedBy.split(' ')[0];
+  await expect(page.locator(`#${firstHelpId}`)).not.toHaveText('');
 }
 
 test('all bounded fields have programmatic labels and help associations', async ({ page }, testInfo) => {
@@ -25,7 +26,7 @@ test('all bounded fields have programmatic labels and help associations', async 
   await expect(reason).toHaveAccessibleName('Главная причина или другое замечание');
   await expect(lawyerNote).toHaveAccessibleName('Комментарий к действию');
 
-  for (const field of [status, comment, completion, reason, lawyerNote]) await expectHelpAssociation(field);
+  for (const field of [status, comment, completion, reason, lawyerNote]) await expectHelpAssociation(page, field);
 
   await expect(status).toHaveAttribute('aria-required', 'true');
   await expect(comment).toHaveAttribute('aria-required', 'true');
