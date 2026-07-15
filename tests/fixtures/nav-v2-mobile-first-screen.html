@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 mobile first-screen fixture</title>
+  <link rel="stylesheet" href="../../assets/css/nav-v2.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-role-home.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-deals.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-deal-action-focus.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-completion-evidence.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-manager.css">
+  <link rel="stylesheet" href="../../assets/css/nav-v2-mobile-first-screen.css">
+</head>
+<body class="nav-v2 nav-mobile-first">
+  <div data-fixture-surface="dashboard" hidden>
+    <main class="nav-v2-shell">
+      <section class="hero role-home-hero">
+        <span class="role-home-eyebrow">Менеджер</span>
+        <h1>Рабочий стол менеджера</h1>
+        <p>Начните с одной сделки, выполните ближайшее действие и зафиксируйте результат.</p>
+        <div class="actions role-home-actions"><a class="btn green" href="#">Контроль сегодня</a><a class="btn light" href="#">Сделки команды</a></div>
+      </section>
+      <section class="card role-home-profile"><div class="section-title"><div><b>Алексей Ковтун</b><span class="small">manager@example.test</span></div><button class="btn light">Выйти</button></div></section>
+      <section class="card role-home-focus">
+        <div class="section-title"><div><span class="role-home-section-eyebrow">Приоритет</span><h2>Что делать сейчас</h2><p class="muted">Система выбрала три сделки с наиболее сильными рисками и просрочками.</p></div><a class="btn light" data-fixture-context href="#">Открыть всю очередь</a></div>
+        <div class="role-home-priority-list">
+          <article class="role-home-priority-card"><div class="role-home-priority-number">1</div><div class="role-home-priority-main"><div class="role-home-priority-head"><div><div class="small">Снять просрочку</div><h3>Квартира — Чкалова, 4</h3></div><span class="pill red">Высокий риск</span></div><div class="role-home-reasons"><span class="role-home-reason danger">Просрочена задача</span><span class="role-home-reason warning">Не хватает документа</span><span class="role-home-reason warning">Нет срока</span></div><p><b>Следующий шаг:</b> согласовать дату получения выписки.</p><div class="role-home-priority-footer"><span class="small">Задаток 65% · Сделка 55%</span><a class="btn primary" data-fixture-primary href="#">Открыть карточку</a></div></div></article>
+          <article class="role-home-priority-card"><div class="role-home-priority-number">2</div><div class="role-home-priority-main"><h3>Дом — Прибрежная, 1</h3><div class="role-home-priority-footer"><a class="btn primary" href="#">Открыть карточку</a></div></div></article>
+          <article class="role-home-priority-card"><div class="role-home-priority-number">3</div><div class="role-home-priority-main"><h3>Участок — Просторная</h3><div class="role-home-priority-footer"><a class="btn primary" href="#">Открыть карточку</a></div></div></article>
+        </div>
+      </section>
+      <div class="kpi-row"><div class="metric"><span>Сделки</span><b>12</b></div><div class="metric red"><span>Риски</span><b>3</b></div><div class="metric yellow"><span>Просрочено</span><b>4</b></div><div class="metric"><span>Документы</span><b>6</b></div></div>
+      <section class="card role-home-quick-actions"><h2>Быстрые действия</h2><div class="actions"><a class="btn primary" href="#">Контроль</a><a class="btn light" href="#">Сделки</a><a class="btn light" href="#">Обновить</a></div></section>
+      <section class="card"><h2>Последние сделки</h2><a class="btn light" href="#">Открыть все сделки</a></section>
+    </main>
+  </div>
+
+  <div data-fixture-surface="deals" hidden>
+    <main class="nav-v2-shell">
+      <section class="hero"><h1>Рабочие сделки</h1><p>Быстрые режимы показывают, где требуется решение сегодня.</p></section>
+      <div class="status warn">Просроченные задачи есть в четырёх рабочих сделках.</div>
+      <div class="kpi-row"><div class="metric"><span>Рабочие</span><b>12</b></div><div class="metric red"><span>Внимание</span><b>5</b></div><div class="metric red"><span>Просрочено</span><b>4</b></div><div class="metric yellow"><span>Без ответственного</span><b>2</b></div></div>
+      <section class="card deals-workspace">
+        <div class="section-title"><div><h2>Сделки для работы</h2><p class="muted">Алексей Ковтун · Менеджер</p></div><a class="btn primary" href="#">Новая сделка</a></div>
+        <div class="deals-quick-modes"><button class="deals-quick-mode active" data-fixture-context><span>Рабочие</span><b>12</b></button><button class="deals-quick-mode" data-fixture-context><span>Требуют внимания</span><b>5</b></button><button class="deals-quick-mode"><span>Просроченные</span><b>4</b></button><button class="deals-quick-mode"><span>Без ответственного</span><b>2</b></button><button class="deals-quick-mode"><span>Готовы к задатку</span><b>3</b></button></div>
+        <details class="deals-advanced-filters"><summary data-fixture-context>Поиск и расширенные фильтры</summary><div class="filters"><input placeholder="Поиск"><select><option>Рабочие</option></select><button class="btn light">Обновить</button></div></details>
+        <div class="deals-work-summary">Показано: 12 из 12.</div>
+        <div class="deal-list">
+          <article class="deal-card deals-work-card"><div class="deal-head"><div><div class="small">№ 1 · ID ABCD1234</div><div class="deal-title">Квартира — Чкалова, 4</div><div class="small deals-work-parties">продавец: Иванов · менеджер: Ковтун</div></div><span class="pill red">Высокий риск</span></div><div class="deal-meta"><div><span class="small">К задатку</span><b>65%</b></div><div><span class="small">Просрочено</span><b>2</b></div><div><span class="small">Документы</span><b>3</b></div></div><div class="deals-work-next"><span>Следующий шаг</span><b>Получить выписку ЕГРН</b></div><div class="deals-work-badges"><span class="pill red">просрочено: 2</span><span class="pill yellow">документы: 3</span><span class="pill yellow">расходы</span><span class="pill">Подготовка</span></div><div class="actions deals-work-actions"><a class="btn primary" data-fixture-primary href="#">Продолжить работу</a></div></article>
+          <article class="deal-card deals-work-card"><div class="deal-title">Дом — Прибрежная, 1</div><div class="actions deals-work-actions"><a class="btn primary" href="#">Продолжить работу</a></div></article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div data-fixture-surface="deal-card" hidden>
+    <main class="nav-v2-shell">
+      <section class="hero"><h1>Квартира — Чкалова, 4</h1><p>Продавец: Иванов · покупатель: Петров</p></section>
+      <section id="dealCompletionEvidenceV2" class="card deal-completion-evidence"><div class="deal-completion-head"><div><span class="deal-completion-eyebrow">Результат подтверждён сервером</span><h2>Документ «Выписка ЕГРН» проверен</h2><p>Показан факт из истории сделки.</p></div><span class="pill green">Проверен</span></div><div class="deal-completion-meta"><div><span>Кто</span><b>Юрист</b></div><div><span>Когда</span><b>Сегодня, 11:30</b></div><div><span>Подтверждение</span><b>Текущий серверный статус документа — «Проверен».</b></div></div><div class="deal-completion-next"><div><span>Следующее действие</span><h3>Согласовать дату задатка</h3></div><div class="deal-completion-next-meta"><span class="pill blue">Менеджер</span><span class="pill yellow">Сегодня</span></div><div class="actions"><button class="btn primary" data-fixture-primary>Открыть следующий шаг</button></div></div></section>
+      <section id="dealActionFocus" class="card deal-action-focus"><h2>Главное действие сейчас</h2><div class="actions deal-action-focus-actions"><button class="btn primary">Открыть действие</button></div></section>
+      <div class="status ok">Рабочая сделка Навигатора.</div>
+      <div class="kpi-row"><div class="metric"><span>К задатку</span><b>75%</b></div><div class="metric"><span>К сделке</span><b>68%</b></div><div class="metric"><span>Документы</span><b>2</b></div><div class="metric"><span>Задачи</span><b>3</b></div></div>
+      <div class="kpi-row"><div class="metric"><span>Статус</span><b>Подготовка</b></div><div class="metric"><span>Риск</span><b>Средний</b></div></div>
+      <section class="card"><h2>Перед передачей юристу</h2><div class="actions"><button class="btn light">Документы</button><button class="btn light">Риски</button><button class="btn light">Решения</button><button class="btn light">Комментарий</button></div></section>
+      <section class="card"><h2>Быстрые действия</h2><div class="actions"><button class="btn light">Юристу</button><button class="btn light">Брокеру</button><button class="btn green">Готово к задатку</button><button class="btn green">Готово к сделке</button><button class="btn light">Нужны документы</button></div></section>
+      <section class="card"><div class="tabs"><button class="tab active">Сводка</button><button class="tab">Риски</button><button class="tab">Документы</button><button class="tab">Решения</button><button class="tab">Задачи</button><button class="tab">Расходы</button><button class="tab">Комментарии</button></div><h2>Сводка</h2><div class="list-item">Следующий шаг: согласовать дату задатка.</div></section>
+    </main>
+  </div>
+
+  <div data-fixture-surface="manager" hidden>
+    <main class="nav-v2-shell">
+      <section class="hero manager-hero"><span class="role-home-eyebrow">Менеджерский контроль</span><h1>Что требует решения сегодня</h1><p>Сначала решите просроченные и блокирующие ситуации.</p></section>
+      <section class="kpi-row manager-primary-metrics"><div class="metric red"><span>Решить сегодня</span><b>4</b></div><div class="metric yellow"><span>Распределить</span><b>2</b></div><div class="metric red"><span>Риски</span><b>3</b></div><div class="metric red"><span>Просрочки</span><b>4</b></div></section>
+      <section class="card manager-confirmed-results"><div class="section-title"><div><h2>Подтверждённые результаты</h2></div><span class="pill green">сегодня: 1</span></div><div class="manager-confirmed-meta"><div><span>Кто</span><b>Юрист</b></div><div><span>Когда</span><b>11:30</b></div><div><span>Факт</span><b>Документ проверен сервером.</b></div></div><div class="actions manager-confirmed-actions"><a class="btn primary" href="#">Открыть следующий шаг</a></div></section>
+      <section class="card manager-readiness-summary"><h2>Правдивая готовность</h2><p>Операционная оценка.</p></section>
+      <details class="card manager-secondary-metrics"><summary>Дополнительные показатели</summary></details>
+      <details class="card manager-workload"><summary>Нагрузка СПН</summary></details>
+      <section class="card manager-queue"><div class="section-title"><div><h2>Очередь решений</h2><p class="muted">Сделки отсортированы по срочности.</p></div><div class="actions"><a class="btn light" href="#">Разобрать задачи</a><span class="pill red">4</span></div></div><div class="tabs manager-tabs"><button class="tab active" data-fixture-context>Решить сегодня · 4</button><button class="tab" data-fixture-context>Распределить · 2</button><button class="tab">Все · 12</button></div><div class="list"><article class="list-item manager-decision-card"><div class="section-title manager-decision-head"><div><b>Квартира — Чкалова, 4</b><span class="small">Подготовка · без активности 4 дня</span></div><span class="pill red">готовность 55%</span></div><div class="manager-card-labels"><span class="pill red">рисков: 2</span><span class="pill red">задач: 2</span><span class="pill yellow">документы: 3</span></div><section class="manager-main-action"><div><span class="small">Главное действие</span><b>Получить выписку ЕГРН</b></div><div class="manager-owner-due"><span>СПН</span><span class="pill red">Сегодня</span></div></section><div class="manager-reason-box"><b>Почему требует внимания</b><ul class="manager-reasons"><li>Просрочена задача</li><li>Есть блокирующий риск</li><li>Не хватает документа</li></ul></div><div class="actions manager-card-actions"><a class="btn primary" data-fixture-primary href="#">Разобрать задачу</a><a class="btn light" data-fixture-context href="#">Риски</a><a class="btn light" data-fixture-context href="#">Документы</a><a class="btn light" href="#">Ответственные</a></div></article></div></section>
+    </main>
+  </div>
+
+  <script>
+    const surface = new URLSearchParams(location.search).get('surface') || 'dashboard';
+    const classes = {
+      dashboard: 'nav-mobile-dashboard',
+      deals: 'nav-mobile-deals',
+      'deal-card': 'nav-mobile-deal-card',
+      manager: 'nav-mobile-manager'
+    };
+    document.body.classList.add(classes[surface] || classes.dashboard);
+    document.body.dataset.mobileSurface = surface;
+    document.querySelectorAll('[data-fixture-surface]').forEach((node) => {
+      node.hidden = node.dataset.fixtureSurface !== surface;
+    });
+  </script>
+</body>
+</html>
