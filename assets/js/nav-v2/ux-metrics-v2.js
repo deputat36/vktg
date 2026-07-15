@@ -15,6 +15,7 @@ const CARD_LIMIT = 40;
 const CONCURRENCY = 4;
 const WINDOW_DAYS = 7;
 let report = null;
+let reportSource = null;
 let busy = false;
 let errorText = '';
 
@@ -77,9 +78,8 @@ function serverOutcomeSection(server, sampling) {
   </section>`;
 }
 
-function privacySection(privacy) {
-  const safe = privacy && Object.values(privacy).every((value) => value === false || value === true);
-  return `<details class="card" ${safe ? '' : 'open'}>
+function privacySection() {
+  return `<details class="card">
     <summary><b>Что именно не собирается</b><span class="muted">Проверяемые ограничения privacy-контракта</span></summary>
     <div class="list" style="margin-top:14px">
       <div class="list-item"><b>Нет персональных данных</b><span>ФИО, email, телефон и роль конкретного сотрудника не попадают в отчёт.</span></div>
@@ -90,6 +90,14 @@ function privacySection(privacy) {
   </details>`;
 }
 
+function rebuildReport() {
+  if (!reportSource) return;
+  report = buildPrivacySafeUxReport({
+    ...reportSource,
+    journeyRecords: readPrivacySafeJourneyRecords()
+  });
+}
+
 function draw() {
   const local = report?.local_journey || {};
   const server = report?.server_outcomes || {};
@@ -98,11 +106,11 @@ function draw() {
     <section class="hero"><span class="role-home-eyebrow">Privacy-safe measurement</span><h1>UX-метрики Навигатора</h1><p>Проверяем, сокращается ли путь до действия и превращаются ли действия в подтверждённый результат — без персональных и сделочных данных.</p><div class="actions" style="justify-content:flex-start"><a class="btn light" href="./manager-v2.html">Вернуться к контролю</a>${report ? '<button id="downloadUxReport" class="btn primary" type="button">Скачать агрегированный JSON</button>' : ''}</div></section>
     ${errorText ? `<div class="status error" role="alert">${esc(errorText)}</div>` : ''}
     ${busy ? '<section class="card"><div class="status" role="status">Считаю агрегаты по существующим server events…</div></section>' : ''}
-    ${report ? `${localJourneySection(local)}${serverOutcomeSection(server, sampling)}${privacySection(report.privacy)}` : ''}
+    ${report ? `${localJourneySection(local)}${serverOutcomeSection(server, sampling)}${privacySection()}` : ''}
   </main>`;
   document.getElementById('clearUxJourney')?.addEventListener('click', () => {
     clearPrivacySafeJourneyRecords();
-    if (report) report = buildPrivacySafeUxReport({ ...report.__source, journeyRecords: readPrivacySafeJourneyRecords() });
+    rebuildReport();
     draw();
   });
   document.getElementById('downloadUxReport')?.addEventListener('click', downloadReport);
@@ -110,9 +118,7 @@ function draw() {
 
 function downloadReport() {
   if (!report) return;
-  const clean = { ...report };
-  delete clean.__source;
-  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -165,18 +171,18 @@ async function load() {
     });
     const successful = loaded.filter((entry) => entry?.ok).map((entry) => entry.value);
     const failures = loaded.length - successful.length;
-    const source = {
+    reportSource = {
       cardSamples: successful.map((item) => item.cardData),
       confirmedResults: sortManagerConfirmedResults(successful.map((item) => item.result)),
       now,
       windowDays: WINDOW_DAYS,
       sampleLimit: CARD_LIMIT
     };
-    report = buildPrivacySafeUxReport({ ...source, journeyRecords: readPrivacySafeJourneyRecords() });
-    Object.defineProperty(report, '__source', { value: source, enumerable: false, configurable: true });
+    rebuildReport();
     if (failures) errorText = `Не удалось прочитать карточки: ${failures}. Агрегаты построены по остальной выборке.`;
   } catch (error) {
     report = null;
+    reportSource = null;
     errorText = error.message || String(error);
   } finally {
     busy = false;
