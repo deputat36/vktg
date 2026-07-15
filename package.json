@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test:e2e:public": "playwright test tests/e2e/public-smoke.spec.js",
+    "test:e2e:public": "playwright test tests/e2e/public-smoke.spec.js tests/e2e/mobile-first-screen.spec.js",
     "test:e2e:authenticated": "playwright test tests/e2e/authenticated-smoke.spec.js",
     "test:e2e:contract": "python3 scripts/check_nav_v2_e2e_contract.py"
   },
