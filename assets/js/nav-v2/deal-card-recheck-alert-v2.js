@@ -1,5 +1,6 @@
 import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';
 import { applyDealCardSpnRework } from './deal-card-spn-rework-v2.js?v=20260715-01';
+import { applyLawyerDocumentCycle } from './deal-card-lawyer-document-cycle-v2.js?v=20260715-01';
 import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';
 import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';
 import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
@@ -16,6 +17,7 @@ let rerenderHookBound = false;
 
 function applyCardEnhancements() {
   applyDealCardSpnRework(cardData, profileData);
+  applyLawyerDocumentCycle(cardData, profileData);
   applyDealCardActionFocus(cardData, profileData);
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);

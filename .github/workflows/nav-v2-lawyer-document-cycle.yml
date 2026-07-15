@@ -1,0 +1,44 @@
+name: Navigator v2 lawyer document cycle
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-model-v2.js'
+      - 'assets/js/nav-v2/queue-v2.js'
+      - 'assets/css/nav-v2-lawyer-document-cycle.css'
+      - 'scripts/check_nav_v2_lawyer_document_cycle.py'
+      - 'scripts/check-nav-v2-lawyer-document-cycle.mjs'
+      - '.github/workflows/nav-v2-lawyer-document-cycle.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-document-cycle-model-v2.js'
+      - 'assets/js/nav-v2/queue-v2.js'
+      - 'assets/css/nav-v2-lawyer-document-cycle.css'
+      - 'scripts/check_nav_v2_lawyer_document_cycle.py'
+      - 'scripts/check-nav-v2-lawyer-document-cycle.mjs'
+      - '.github/workflows/nav-v2-lawyer-document-cycle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lawyer-document-cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deal-card-lawyer-document-cycle-model-v2.js
+          node --check assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js
+      - name: Check lawyer document structure
+        run: python3 scripts/check_nav_v2_lawyer_document_cycle.py
+      - name: Check lawyer document semantics
+        run: node scripts/check-nav-v2-lawyer-document-cycle.mjs

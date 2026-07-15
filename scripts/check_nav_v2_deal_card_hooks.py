@@ -11,6 +11,8 @@ ACTION_FOCUS_MODULE = ROOT / "assets/js/nav-v2/deal-card-action-focus-v2.js"
 ACTION_FOCUS_MODEL = ROOT / "assets/js/nav-v2/deal-card-action-focus-model-v2.js"
 SPN_REWORK_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-rework-v2.js"
 SPN_REWORK_MODEL = ROOT / "assets/js/nav-v2/deal-card-spn-rework-model-v2.js"
+LAWYER_DOCUMENT_MODULE = ROOT / "assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js"
+LAWYER_DOCUMENT_MODEL = ROOT / "assets/js/nav-v2/deal-card-lawyer-document-cycle-model-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 SPN_SAVE_CONFIRMATION_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-save-confirmation-v2.js"
@@ -33,6 +35,8 @@ def main() -> int:
         ACTION_FOCUS_MODEL,
         SPN_REWORK_MODULE,
         SPN_REWORK_MODEL,
+        LAWYER_DOCUMENT_MODULE,
+        LAWYER_DOCUMENT_MODEL,
         BAZA_MODULE,
         SPN_HANDOFF_MODULE,
         SPN_SAVE_CONFIRMATION_MODULE,
@@ -56,6 +60,8 @@ def main() -> int:
         action_model = ACTION_FOCUS_MODEL.read_text(encoding="utf-8")
         spn_rework = SPN_REWORK_MODULE.read_text(encoding="utf-8")
         spn_rework_model = SPN_REWORK_MODEL.read_text(encoding="utf-8")
+        lawyer_document = LAWYER_DOCUMENT_MODULE.read_text(encoding="utf-8")
+        lawyer_document_model = LAWYER_DOCUMENT_MODEL.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
         spn_save_confirmation = SPN_SAVE_CONFIRMATION_MODULE.read_text(encoding="utf-8")
@@ -82,6 +88,7 @@ def main() -> int:
         recheck_markers = (
             "export function applyDealCardRecheckAlert(data, profile)",
             "import { applyDealCardSpnRework } from './deal-card-spn-rework-v2.js?v=20260715-01';",
+            "import { applyLawyerDocumentCycle } from './deal-card-lawyer-document-cycle-v2.js?v=20260715-01';",
             "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
@@ -92,6 +99,7 @@ def main() -> int:
             "import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';",
             "import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';",
             "applyDealCardSpnRework(cardData, profileData);",
+            "applyLawyerDocumentCycle(cardData, profileData);",
             "applyDealCardActionFocus(cardData, profileData);",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
@@ -108,6 +116,8 @@ def main() -> int:
                 errors.append(f"deal-card enhancement lifecycle missing marker: {marker}")
         if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("applyDealCardSpnRework(cardData, profileData);"):
             errors.append("deal-card action focus must run after the unified SPN rework workflow")
+        if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("applyLawyerDocumentCycle(cardData, profileData);"):
+            errors.append("deal-card action focus must run after the lawyer document cycle")
 
         forbidden_recheck_markers = (
             "rpc('nav_v2_get_deal_card'",
@@ -151,6 +161,19 @@ def main() -> int:
         for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
             if marker in spn_rework_model:
                 errors.append(f"SPN rework model must remain pure: {marker}")
+
+        if "export function applyLawyerDocumentCycle(data, profile)" not in lawyer_document:
+            errors.append("lawyer document cycle must export its explicit lifecycle hook")
+        if lawyer_document.count("rpc(") != 1 or "nav_v2_update_document_workflow" not in lawyer_document:
+            errors.append("lawyer document cycle must use only the existing document workflow mutation RPC")
+        for marker in ("nav_v2_get_deal_card", "nav_v2_get_my_profile", "new MutationObserver", "localStorage", "sessionStorage"):
+            if marker in lawyer_document:
+                errors.append(f"lawyer document cycle contains duplicate bootstrap/storage behavior: {marker}")
+        if "export function buildLawyerDocumentCycle" not in lawyer_document_model:
+            errors.append("lawyer document cycle model must export buildLawyerDocumentCycle")
+        for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+            if marker in lawyer_document_model:
+                errors.append(f"lawyer document cycle model must remain pure: {marker}")
 
         if "export async function applyDealCardBazaHints(card, profile)" not in baza:
             errors.append("deal-card BAZA helper must export its explicit lifecycle hook")
@@ -301,6 +324,8 @@ def main() -> int:
             "deal-card-action-focus-model-v2.js",
             "deal-card-spn-rework-v2.js",
             "deal-card-spn-rework-model-v2.js",
+            "deal-card-lawyer-document-cycle-v2.js",
+            "deal-card-lawyer-document-cycle-model-v2.js",
             "deal-card-baza-hints-v2.js",
             "deal-card-spn-handoff-v2.js",
             "deal-card-spn-save-confirmation-v2.js",
@@ -314,7 +339,7 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-13"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-14"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
