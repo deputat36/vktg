@@ -10,7 +10,11 @@
   <div id="app">
     <main class="nav-v2-shell">
       <section class="card">
-        <h1>Поля карточки сделки</h1>
+        <h1>Поля Navigator v2</h1>
+        <div class="filters">
+          <input id="dealSearch" placeholder="Адрес, объект, клиент, СПН, статус или ID">
+          <select id="dealFilter"><option value="work">Рабочие без повторов</option></select>
+        </div>
         <div class="field">
           <label>Текущий статус</label>
           <select id="dealStatus"><option value="draft">Черновик</option><option value="need_info">Нужно дозаполнить</option></select>
