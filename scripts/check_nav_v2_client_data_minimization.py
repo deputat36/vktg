@@ -46,14 +46,22 @@ if not errors:
     require('migration', (
         'nav_v2_sanitize_client_deal_json',
         'nav_v2_guard_client_identifiers',
+        "if tg_op = 'INSERT' then",
+        'new.seller_name is distinct from old.seller_name',
+        'new.wizard_snapshot is distinct from old.wizard_snapshot',
+        'unrelated edits do not silently clean history',
         'nav_v2_deals_guard_client_identifiers',
+        'before insert or update of seller_name, buyer_name, seller_phone, buyer_phone, wizard_snapshot, deal_summary',
+        "execute 'alter function public.nav_v2_save_wizard_result(jsonb) set schema nav_v2_private'",
         'nav_v2_save_wizard_result_legacy_20260715',
         'create or replace function public.nav_v2_save_wizard_result',
         "'client_identifiers_minimized', true",
         'create or replace function public.nav_v2_update_deal_parties',
         'direct client identity arguments are ignored',
-        'Historical rows are not bulk-cleaned',
     ))
+    trigger_line = 'before insert or update of seller_name, buyer_name, seller_phone, buyer_phone, wizard_snapshot, deal_summary'
+    if trigger_line not in texts['migration']:
+        errors.append('identity trigger must exclude address/object_type to preserve unrelated historical edits')
     if 'update public.nav_deals_v2\n  set seller_name = null' in texts['migration']:
         errors.append('migration must not bulk-clean historical rows')
 
