@@ -38,7 +38,7 @@ const POLICIES = Object.freeze({
 });
 
 const NATIVE_CONFIRM_INVENTORY = Object.freeze([
-  Object.freeze({ key: 'demo_guard', reason: 'Короткий safety guard без обязательного ввода; нативный confirm сохраняется.' }),
+  Object.freeze({ key: 'demo_guard', reason: 'Короткий safety guard без обязательного ввода; нативный confirm сохраняется вне controlled flows.' }),
   Object.freeze({ key: 'document_assignment', reason: 'Контекст ответственного и срока уже виден рядом с кнопкой.' }),
   Object.freeze({ key: 'task_due_demo_guard', reason: 'Только подтверждение тестового изменения в демо-сделке.' }),
   Object.freeze({ key: 'spn_rework_final', reason: 'Замечания, причина и последствия уже показаны в раскрытой форме.' }),
@@ -90,10 +90,10 @@ export function accessibleDialogContract() {
     escapeCancelsWithoutMutation: true,
     cancelRestoresTriggerFocus: true,
     serverErrorPreservesInput: true,
-    promptReplayIsBounded: true,
+    existingRpcPayloadsOnly: true,
+    newRpcAllowed: false,
     nativeConfirmRetainedWhenReplacementAddsNoValue: true,
     positiveTabindexAllowed: false,
-    storageAllowed: false,
-    networkAllowed: false
+    storageAllowed: false
   });
 }
