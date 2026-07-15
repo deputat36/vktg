@@ -14,6 +14,12 @@ BUDGET = ROOT / "config/nav-v2-module-budget.json"
 PUBLIC_SMOKE = ROOT / "tests/e2e/public-smoke.spec.js"
 SEMANTIC = ROOT / "scripts/check-nav-v2-privacy-safe-ux-metrics.mjs"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-privacy-safe-ux-metrics.yml"
+DAILY_PAGES = tuple(ROOT / name for name in (
+    "dashboard-v2.html",
+    "deals-v2.html",
+    "deal-card-v2.html",
+    "manager-v2.html",
+))
 
 
 def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) -> None:
@@ -24,7 +30,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MODEL, SESSION, PAGE_MODULE, PAGE, CLEANUP, BUDGET, PUBLIC_SMOKE, SEMANTIC, WORKFLOW)
+    paths = (MODEL, SESSION, PAGE_MODULE, PAGE, CLEANUP, BUDGET, PUBLIC_SMOKE, SEMANTIC, WORKFLOW, *DAILY_PAGES)
     for path in paths:
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
@@ -117,13 +123,20 @@ def main() -> int:
         "ux-metrics-session-v2.js?v=20260715-01",
         "['owner', 'admin', 'manager']",
         "./ux-metrics-v2.html",
-        "data-nav-ux-metrics",
+        "dataset.navUxMetrics",
     ), CLEANUP.name, errors)
+
+    for daily_page in DAILY_PAGES:
+        text = daily_page.read_text(encoding="utf-8")
+        if "nav-base-menu-cleanup-v2.js?v=20260715-01" not in text:
+            errors.append(f"{daily_page.name}: missing current privacy-safe tracker cache-bust")
 
     budget = json.loads(BUDGET.read_text(encoding="utf-8"))
     metrics_budget = ((budget.get("pages") or {}).get("ux-metrics-v2.html") or {}).get("max_modules")
     if metrics_budget != 3:
         errors.append(f"ux-metrics-v2.html module budget must be 3, got {metrics_budget!r}")
+    if ((budget.get("pages") or {}).get("dashboard-v2.html") or {}).get("max_modules") != 2:
+        errors.append("dashboard-v2.html module budget must remain 2 after tracker installation")
 
     public_smoke = PUBLIC_SMOKE.read_text(encoding="utf-8")
     if "'/ux-metrics-v2.html'" not in public_smoke:
