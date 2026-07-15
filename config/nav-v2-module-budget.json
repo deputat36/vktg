@@ -8,6 +8,7 @@
     "spn-v2.html": { "max_modules": 18 },
     "queue-v2.html": { "max_modules": 3 },
     "manager-v2.html": { "max_modules": 3 },
+    "ux-metrics-v2.html": { "max_modules": 3 },
     "task-review-v2.html": { "max_modules": 3 },
     "broker-v2.html": { "max_modules": 3 },
     "viewer-v2.html": { "max_modules": 3 },
