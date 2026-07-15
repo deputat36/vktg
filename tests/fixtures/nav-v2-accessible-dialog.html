@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <link rel="stylesheet" href="/assets/css/nav-v2-accessible-dialog.css?v=20260715-01">
+  <title>Navigator v2 accessible dialog fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell mobile-first-screen-card">
+    <section class="hero"><h1>Карточка сделки: Просторная, 4А</h1></section>
+    <div id="pageStatus" class="status" role="status" aria-live="polite">Готово к действию.</div>
+
+    <section class="card">
+      <div class="section-title"><div><h2>Перед передачей юристу</h2></div><span class="pill yellow">есть пробелы</span></div>
+      <div class="list">
+        <div class="list-item">Не хватает обязательных документов: 2.</div>
+        <div class="list-item">Есть красные риски: 1.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Быстрые действия</h2>
+      <button id="lawyerHandoff" class="btn" data-quick-status="need_lawyer" type="button">Передать юристу</button>
+    </section>
+
+    <section class="card">
+      <h2>Документы</h2>
+      <div class="list">
+        <div class="list-item" id="documentItem">
+          <div class="doc-status"><div><b>Выписка ЕГРН</b></div></div>
+          <button id="documentProblem" class="btn red" data-doc-id="doc-1" data-doc-status="problem" type="button">Проблема</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Риски</h2>
+      <div class="list">
+        <div class="list-item" id="riskItem">
+          <b>Не получено согласие супруга</b>
+          <button id="riskResolve" class="btn green" data-risk-resolution="resolved" data-risk-id="risk-1" type="button">Устранить риск</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    localStorage.setItem('nav_session_v2', JSON.stringify({
+      access_token: 'fixture-access-token',
+      refresh_token: 'fixture-refresh-token',
+      user: { id: 'fixture-user', email: 'fixture@example.test' }
+    }));
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      document.querySelector('.hero h1').insertAdjacentHTML('afterbegin', '<span class="pill blue">ДЕМО</span> ');
+    }
+  </script>
+  <script type="module" src="/assets/js/nav-v2/accessible-dialog-v2.js?v=20260715-01"></script>
+</body>
+</html>
