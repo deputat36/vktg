@@ -1,5 +1,6 @@
 import { esc } from './supabase-v2.js';
 import { buildDealActionFocus } from './deal-card-action-focus-model-v2.js?v=20260714-01';
+import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
 
 function dateLabel(value) {
   if (!value) return 'Срок не указан';
@@ -39,9 +40,10 @@ function focusHtml(focus) {
   const taskNotice = focus.source === 'task'
     ? `<span class="pill blue">задача ${focus.taskStatus === 'in_progress' ? 'в работе' : 'открыта'}</span>`
     : `<span class="pill blue">источник: ${focus.source === 'risk' ? 'риск' : focus.source === 'document' ? 'документ' : 'следующий шаг сделки'}</span>`;
-  const relatedButton = focus.relatedTab && focus.relatedTab !== focus.primaryTab
-    ? `<button class="btn light" type="button" data-action-focus-tab="${esc(focus.relatedTab)}">${esc(tabLabel(focus.relatedTab))}</button>`
-    : '';
+  const actions = [{ tab: focus.primaryTab, taskId: focus.taskId, label: tabLabel(focus.primaryTab), primary: true }];
+  if (focus.relatedTab && focus.relatedTab !== focus.primaryTab) actions.push({ tab: focus.relatedTab, label: tabLabel(focus.relatedTab), primary: false });
+  const actionPlan = buildMobileFirstScreenPlan('deal-card', { actions });
+  const actionButtons = actionPlan.visibleActions.map((action) => `<button class="btn ${action.primary ? 'primary mobile-first-screen-primary-action' : 'light'}" type="button" data-action-focus-tab="${esc(action.tab)}"${action.taskId ? ` data-action-focus-task="${esc(action.taskId)}"` : ''}>${esc(action.label)}</button>`).join('');
 
   return `<section id="dealActionFocus" class="card deal-action-focus" aria-labelledby="dealActionFocusTitle">
     <div class="deal-action-focus-head">
@@ -50,20 +52,22 @@ function focusHtml(focus) {
         <h2 id="dealActionFocusTitle">${esc(focus.title)}</h2>
         ${focus.description ? `<p class="muted">${esc(focus.description)}</p>` : ''}
       </div>
-      <div class="deal-action-focus-pills">${taskNotice}${deadlinePill(focus)}</div>
-    </div>
-    <div class="deal-action-focus-grid">
-      <div><span>Ответственный</span><b>${esc(focus.responsible)}</b></div>
-      <div><span>Срок</span><b>${esc(focus.dueDate ? dateLabel(focus.dueDate) : 'Нужно назначить')}</b></div>
-      <div><span>Готовность</span><b>Задаток ${focus.readiness.deposit}% · Сделка ${focus.readiness.deal}%</b></div>
+      <div class="deal-action-focus-pills">${taskNotice}${deadlinePill(focus)}<span class="pill blue">${esc(focus.responsible)}</span></div>
     </div>
     <div class="deal-action-focus-result"><span>Как понять, что готово</span><b>${esc(focus.resultCriteria)}</b></div>
-    <div class="deal-action-focus-blockers">${blockerPills(focus)}</div>
-    ${readOnlyNotice}
-    <div class="actions deal-action-focus-actions">
-      <button class="btn primary" type="button" data-action-focus-tab="${esc(focus.primaryTab)}"${focus.taskId ? ` data-action-focus-task="${esc(focus.taskId)}"` : ''}>${esc(tabLabel(focus.primaryTab))}</button>
-      ${relatedButton}
-    </div>
+    <div class="actions deal-action-focus-actions">${actionButtons}</div>
+    <details class="mobile-first-screen-details deal-action-focus-details">
+      <summary>Ответственный и препятствия</summary>
+      <div class="mobile-first-screen-details-body">
+        <div class="deal-action-focus-grid">
+          <div><span>Ответственный</span><b>${esc(focus.responsible)}</b></div>
+          <div><span>Срок</span><b>${esc(focus.dueDate ? dateLabel(focus.dueDate) : 'Нужно назначить')}</b></div>
+          <div><span>Готовность</span><b>Задаток ${focus.readiness.deposit}% · Сделка ${focus.readiness.deal}%</b></div>
+        </div>
+        <div class="deal-action-focus-blockers">${blockerPills(focus)}</div>
+        ${readOnlyNotice}
+      </div>
+    </details>
   </section>`;
 }
 

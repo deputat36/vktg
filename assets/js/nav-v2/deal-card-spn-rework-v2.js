@@ -59,31 +59,40 @@ function submitEvidenceHtml() {
 
 function fixHtml(view) {
   const primary = view.readyToSubmit
-    ? '<button class="btn primary" type="button" data-spn-rework-submit>Отправить на повторную проверку</button>'
-    : `<button class="btn primary" type="button" data-spn-rework-route="${esc(view.firstRoute?.route || 'comments')}" data-spn-rework-target="${esc(view.firstRoute?.target || '')}">Исправить замечания</button>`;
+    ? '<button class="btn primary mobile-first-screen-primary-action" type="button" data-spn-rework-submit>Отправить на повторную проверку</button>'
+    : `<button class="btn primary mobile-first-screen-primary-action" type="button" data-spn-rework-route="${esc(view.firstRoute?.route || 'comments')}" data-spn-rework-target="${esc(view.firstRoute?.target || '')}">Исправить замечания</button>`;
   const secondarySubmit = view.canSubmit && !view.readyToSubmit
     ? '<button class="btn light" type="button" data-spn-rework-submit>Отправить после сохранения</button>'
     : '';
-  const submitArea = view.canSubmit ? `${submitEvidenceHtml()}<div class="actions spn-rework-actions">${primary}${secondarySubmit}<button class="btn light" type="button" data-spn-rework-route="comments">Открыть комментарии</button></div>`
+  const commentsButton = '<button class="btn light" type="button" data-spn-rework-route="comments">Открыть комментарии</button>';
+  const submitArea = view.canSubmit
+    ? (view.readyToSubmit
+      ? `${submitEvidenceHtml()}<div class="actions spn-rework-actions">${primary}${commentsButton}</div>`
+      : `<div class="actions spn-rework-actions">${primary}${commentsButton}</div>${submitEvidenceHtml()}${secondarySubmit ? `<div class="actions spn-rework-actions">${secondarySubmit}</div>` : ''}`)
     : '<div class="status warn">Исправления и повторную отправку фиксирует СПН, менеджер, администратор или владелец.</div>';
   return `<section id="${WORKFLOW_ID}" class="card spn-rework-workflow is-fix" data-spn-rework-phase="fix" aria-labelledby="spnReworkTitle">
     <div class="spn-rework-head">
       <div>
         <span class="spn-rework-eyebrow">Доработка СПН</span>
         <h2 id="spnReworkTitle">Исправьте замечания и верните карточку на проверку</h2>
-        <p>Все замечания собраны в одном месте. Сначала сохраните изменения в нужных разделах, затем опишите результат.</p>
+        <p><b>Причина возврата:</b> ${esc(view.reason)}. Сохраните изменения в нужных разделах, затем опишите результат.</p>
       </div>
       <span class="pill red">${view.unresolvedCount ? `не исправлено: ${view.unresolvedCount}` : 'готово к отправке'}</span>
     </div>
-    <div class="spn-rework-meta">
-      <div><span>Кто вернул</span><b>${esc(view.returnedBy)}</b></div>
-      <div><span>Когда</span><b>${esc(dateTime(view.returnedAt))}</b></div>
-      <div><span>Причина</span><b>${esc(view.reason)}</b></div>
-    </div>
-    ${remarksHtml(view.remarks)}
-    ${view.returnComment ? `<details class="spn-rework-details"><summary>Исходный комментарий</summary><pre>${esc(view.returnComment)}</pre></details>` : '<div class="status warn">Исходный комментарий возврата не найден. Список ниже построен по текущим пробелам карточки.</div>'}
-    ${view.unresolvedCount ? `<div class="status warn">По текущим данным ещё не исправлено пунктов: ${view.unresolvedCount}. Если фактическое исправление не отражается автоматически, объясните результат в комментарии.</div>` : '<div class="status ok">Все замечания, которые можно проверить по карточке, сейчас выглядят исправленными.</div>'}
     ${submitArea}
+    <details class="mobile-first-screen-details spn-rework-remarks">
+      <summary>Все замечания <span class="pill ${view.unresolvedCount ? 'red' : 'green'}">${view.unresolvedCount || 'исправлено'}</span></summary>
+      <div class="mobile-first-screen-details-body">
+        <div class="spn-rework-meta">
+          <div><span>Кто вернул</span><b>${esc(view.returnedBy)}</b></div>
+          <div><span>Когда</span><b>${esc(dateTime(view.returnedAt))}</b></div>
+          <div><span>Причина</span><b>${esc(view.reason)}</b></div>
+        </div>
+        ${remarksHtml(view.remarks)}
+        ${view.returnComment ? `<details class="spn-rework-details"><summary>Исходный комментарий</summary><pre>${esc(view.returnComment)}</pre></details>` : '<div class="status warn">Исходный комментарий возврата не найден. Список ниже построен по текущим пробелам карточки.</div>'}
+        ${view.unresolvedCount ? `<div class="status warn">По текущим данным ещё не исправлено пунктов: ${view.unresolvedCount}. Если фактическое исправление не отражается автоматически, объясните результат в комментарии.</div>` : '<div class="status ok">Все замечания, которые можно проверить по карточке, сейчас выглядят исправленными.</div>'}
+      </div>
+    </details>
     <div id="spnReworkStatusV2" class="status" aria-live="polite">После повторной отправки появятся получатель, время, новый статус и следующий шаг.</div>
   </section>`;
 }
@@ -109,7 +118,7 @@ function submittedHtml(view) {
     <div class="spn-rework-result"><span>Что было исправлено</span><p>${esc(view.completionComment)}</p></div>
     <div class="spn-rework-result"><span>Что произойдёт дальше</span><p>${esc(view.nextAction)}</p></div>
     <div class="actions spn-rework-actions">
-      <button class="btn primary" type="button" data-spn-rework-route="${primaryRoute}">${primaryLabel}</button>
+      <button class="btn primary mobile-first-screen-primary-action" type="button" data-spn-rework-route="${primaryRoute}">${primaryLabel}</button>
       <button class="btn light" type="button" data-spn-rework-route="risks">Связанные риски</button>
       <button class="btn light" type="button" data-spn-rework-route="comments">Комментарии</button>
     </div>

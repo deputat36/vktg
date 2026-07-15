@@ -45,7 +45,7 @@ for marker in required_model_markers:
     assert marker in model, f"confirmed results model marker missing: {marker}"
 
 assert "nav-v2-manager.css?v=20260715-01" in html
-assert "manager-v2.js?v=20260715-01" in html
+assert "manager-v2.js?v=20260715-02" in html
 for marker in [
     ".manager-confirmed-results",
     ".manager-confirmed-card",

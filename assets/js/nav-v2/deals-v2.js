@@ -6,6 +6,7 @@ import {
   isOverdueDeal,
   needsWorkAttention
 } from './deals-work-modes-v2.js?v=20260714-01';
+import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
 
 let allDeals = [];
 let profile = null;
@@ -278,10 +279,15 @@ function renderDealCard(deal, index) {
       ${riskPill(deal?.risk_level)}
     </div>
     ${reworkNotice}
-    <div class="deal-meta">${meta}</div>
     <div class="deals-work-next"><span>Следующий шаг</span><b>${esc(deal?.next_action || 'Открыть карточку и определить ближайшее действие')}</b></div>
-    <div class="deals-work-badges">${statusBadges(deal)}</div>
-    <div class="actions deals-work-actions"><a class="btn primary" href="${href}">${profile?.role === 'lawyer' ? 'Проверить сделку' : 'Продолжить работу'}</a></div>
+    <div class="actions deals-work-actions"><a class="btn primary mobile-first-screen-primary-action" href="${href}">${profile?.role === 'lawyer' ? 'Проверить сделку' : 'Продолжить работу'}</a></div>
+    <details class="mobile-first-screen-details deals-work-details">
+      <summary>Ответственные и препятствия</summary>
+      <div class="mobile-first-screen-details-body">
+        <div class="deal-meta">${meta}</div>
+        <div class="deals-work-badges">${statusBadges(deal)}</div>
+      </div>
+    </details>
   </article>`;
 }
 
@@ -337,9 +343,14 @@ function filterOptions() {
 }
 
 function renderQuickModes(workspace) {
-  return `<div class="deals-quick-modes" role="group" aria-label="Быстрые режимы списка">
-    ${(workspace.quickModes || []).map((mode) => `<button type="button" class="deals-quick-mode ${currentFilter === mode.key ? 'active' : ''}" data-deals-filter="${esc(mode.key)}" aria-pressed="${currentFilter === mode.key ? 'true' : 'false'}"><span>${esc(mode.label)}</span><b>${mode.count}</b></button>`).join('')}
-  </div>`;
+  const modes = workspace.quickModes || [];
+  const activeMode = modes.find((mode) => mode.key === currentFilter);
+  return `<details class="mobile-first-screen-details deals-quick-modes-panel">
+    <summary>Режим: ${esc(activeMode?.label || 'Рабочий список')} <span class="pill blue">${Number(activeMode?.count || 0)}</span></summary>
+    <div class="mobile-first-screen-details-body"><div class="deals-quick-modes" role="group" aria-label="Быстрые режимы списка">
+      ${modes.map((mode) => `<button type="button" class="deals-quick-mode ${currentFilter === mode.key ? 'active' : ''}" data-deals-filter="${esc(mode.key)}" aria-pressed="${currentFilter === mode.key ? 'true' : 'false'}"><span>${esc(mode.label)}</span><b>${mode.count}</b></button>`).join('')}
+    </div></div>
+  </details>`;
 }
 
 function emptyState() {
@@ -389,14 +400,19 @@ function render() {
     const newDealButton = ['owner','admin','manager','spn'].includes(profile?.role)
       ? '<a class="btn primary" href="./spn-v2.html">Новая сделка</a>'
       : '';
-    const cardsHtml = items.map(safeRenderDealCard).join('') || emptyState();
+    const mobilePlan = buildMobileFirstScreenPlan('deals', { items: items.map((deal, index) => ({ deal, index })) });
+    const firstCard = mobilePlan.primaryItem ? safeRenderDealCard(mobilePlan.primaryItem.deal, mobilePlan.primaryItem.index) : '';
+    const remainingCards = mobilePlan.secondaryItems.length
+      ? `<details class="mobile-first-screen-more deals-more"><summary>Ещё сделки <span class="pill blue">${mobilePlan.secondaryItems.length}</span></summary><div class="mobile-first-screen-more-list deal-list">${mobilePlan.secondaryItems.map((entry) => safeRenderDealCard(entry.deal, entry.index)).join('')}</div></details>`
+      : '';
+    const cardsHtml = firstCard || remainingCards ? `${firstCard}${remainingCards}` : emptyState();
     const reloadState = loadInProgress ? 'disabled aria-busy="true"' : '';
     const reloadText = loadInProgress ? 'Обновляю...' : 'Обновить';
     const refreshStatus = loadError
       ? `<div class="status error" role="alert">Не удалось обновить список. Ранее загруженные сделки сохранены. ${esc(loadError)} <button id="retryDeals" class="btn light" type="button">Повторить</button></div>`
       : (loadInProgress ? '<div class="status" role="status" aria-live="polite">Обновляю данные, список остаётся доступным.</div>' : '');
 
-    root.innerHTML = `<main class="nav-v2-shell">
+    root.innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
       <section class="hero"><h1>${heroTitle}</h1><p>${heroText}</p></section>
       <div class="status ${topStatusClass}">${esc(topStatusText)}</div>
       ${renderKpi(workspace)}

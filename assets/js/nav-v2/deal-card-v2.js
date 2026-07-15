@@ -1,5 +1,5 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, money, riskPill, statusText } from './supabase-v2.js';
-import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260711-02';
+import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-01';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let currentData = null;
@@ -476,7 +476,7 @@ function renderCard(data) {
   const risks = list(data, 'risks');
   const reviews = list(data, 'reviews');
   const partiesLine = dealPartiesLine(deal);
-  document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
+  document.getElementById('app').innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-card">
     <section class="hero"><h1>${demoBadge(deal)}${esc(dealHeadline(deal))}</h1><p>${esc(partiesLine || deal.next_action || (isLawyer() ? 'Проверить юридические риски, документы и условия сделки.' : 'Проверить карточку и определить следующий шаг.'))}</p></section>
     ${dealModePanel(deal)}
     ${isLawyer() ? legalPanel(data) : ''}

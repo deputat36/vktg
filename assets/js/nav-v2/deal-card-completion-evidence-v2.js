@@ -34,16 +34,19 @@ function panelHtml(model) {
       <div><span class="deal-completion-eyebrow">Результат подтверждён сервером</span><h2 id="dealCompletionEvidenceTitle">${esc(model.title)}</h2><p>Карточка уже загружена после сохранения. Показан факт из истории сделки, а не локальное обещание интерфейса.</p></div>
       <span class="pill green">${esc(model.state)}</span>
     </div>
-    <div class="deal-completion-meta">
-      <div><span>Кто зафиксировал</span><b>${esc(model.actor)}</b></div>
-      <div><span>Когда</span><b>${esc(dateTime(model.at))}</b></div>
-      <div><span>Подтверждение</span><b>${esc(model.serverFact)}</b></div>
-    </div>
+    <details class="mobile-first-screen-details deal-completion-meta-details">
+      <summary>Кто и когда подтвердил</summary>
+      <div class="mobile-first-screen-details-body deal-completion-meta">
+        <div><span>Кто зафиксировал</span><b>${esc(model.actor)}</b></div>
+        <div><span>Когда</span><b>${esc(dateTime(model.at))}</b></div>
+        <div><span>Подтверждение</span><b>${esc(model.serverFact)}</b></div>
+      </div>
+    </details>
     <div class="deal-completion-next">
       <div><span>Следующее действие выбрано автоматически</span><h3>${esc(action.title)}</h3></div>
       <div class="deal-completion-next-meta"><span class="pill blue">${esc(action.responsible)}</span><span class="pill ${dueTone(action)}">${esc(dueLabel(action))}</span></div>
       ${action.resultCriteria ? `<p><b>Готово, когда:</b> ${esc(action.resultCriteria)}</p>` : ''}
-      <div class="actions"><button class="btn primary" type="button" data-completion-next-tab="${esc(action.primaryTab)}"${action.taskId ? ` data-completion-next-task="${esc(action.taskId)}"` : ''}>${esc(tabLabel(action.primaryTab))}</button></div>
+      <div class="actions"><button class="btn primary mobile-first-screen-primary-action" type="button" data-completion-next-tab="${esc(action.primaryTab)}"${action.taskId ? ` data-completion-next-task="${esc(action.taskId)}"` : ''}>${esc(tabLabel(action.primaryTab))}</button></div>
     </div>
   </section>`;
 }

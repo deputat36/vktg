@@ -1,0 +1,51 @@
+name: Navigator v2 mobile first screen
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/dashboard-v2.js'
+      - 'assets/js/nav-v2/deals-v2.js'
+      - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-v2.js'
+      - 'assets/js/nav-v2/deal-card-completion-evidence-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
+      - 'assets/js/nav-v2/manager-v2.js'
+      - 'assets/js/nav-v2/mobile-first-screen-model-v2.js'
+      - 'assets/css/nav-v2-mobile-first-screen.css'
+      - 'tests/e2e/public-smoke.spec.js'
+      - 'scripts/check_nav_v2_mobile_first_screen.py'
+      - 'scripts/check-nav-v2-mobile-first-screen.mjs'
+      - '.github/workflows/nav-v2-mobile-first-screen.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/**'
+      - 'assets/css/nav-v2-mobile-first-screen.css'
+      - 'tests/e2e/public-smoke.spec.js'
+      - 'scripts/check_nav_v2_mobile_first_screen.py'
+      - 'scripts/check-nav-v2-mobile-first-screen.mjs'
+      - '.github/workflows/nav-v2-mobile-first-screen.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-first-screen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile static contract
+        run: python3 -m py_compile scripts/check_nav_v2_mobile_first_screen.py
+      - name: Check mobile first-screen structure
+        run: python3 scripts/check_nav_v2_mobile_first_screen.py
+      - name: Check mobile first-screen semantics
+        run: node scripts/check-nav-v2-mobile-first-screen.mjs

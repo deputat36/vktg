@@ -51,7 +51,7 @@ for marker in required_css_markers:
     if marker not in css:
         errors.append(f'nav-v2-role-home.css missing marker: {marker}')
 
-if 'dashboard-v2.js?v=20260714-01' not in html:
+if 'dashboard-v2.js?v=20260715-01' not in html:
     errors.append('dashboard-v2.html must use the new dashboard cache-bust')
 if 'nav-v2-role-home.css?v=20260714-01' not in html:
     errors.append('dashboard-v2.html must use the new role-home CSS cache-bust')

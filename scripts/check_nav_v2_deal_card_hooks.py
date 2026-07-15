@@ -81,7 +81,7 @@ def main() -> int:
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
         base_markers = (
-            "import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260711-02';",
+            "import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-01';",
             "renderCard(cardData);",
             "applyDealCardRecheckAlert(cardData, currentProfile);",
         )
@@ -95,8 +95,8 @@ def main() -> int:
             "export function applyDealCardRecheckAlert(data, profile)",
             "import { applyDealCardSpnRework } from './deal-card-spn-rework-v2.js?v=20260715-01';",
             "import { applyLawyerDocumentCycle } from './deal-card-lawyer-document-cycle-v2.js?v=20260715-01';",
-            "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
-            "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-01';",
+            "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260715-01';",
+            "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-02';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
@@ -337,7 +337,7 @@ def main() -> int:
             if marker in readable_values:
                 errors.append(f"readable values helper still contains legacy bootstrap behavior: {marker}")
 
-        if 'deal-card-v2.js?v=20260711-02' not in page:
+        if 'deal-card-v2.js?v=20260715-01' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
             "deal-card-recheck-alert-v2.js",

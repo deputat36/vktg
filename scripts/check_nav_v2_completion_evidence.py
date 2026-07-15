@@ -39,7 +39,7 @@ def main() -> int:
             errors.append(f"deal-card-v2.html: missing {marker!r}")
 
     lifecycle_markers = (
-        "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-01';",
+        "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-02';",
         "applyDealCardActionFocus(cardData, profileData);",
         "applyDealCardCompletionEvidence(cardData, profileData);",
         "queueMicrotask(applyCardEnhancements);",

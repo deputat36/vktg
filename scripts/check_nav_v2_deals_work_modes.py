@@ -34,7 +34,7 @@ def main() -> int:
 
     required_html = [
         "nav-v2-deals.css?v=20260714-01",
-        "deals-v2.js?v=20260714-01",
+        "deals-v2.js?v=20260715-01",
         "nav-base-menu-cleanup-v2.js",
         "role-menu-v2.js",
     ]

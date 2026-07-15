@@ -29,3 +29,43 @@ for (const path of guestPages) {
     await expectNoRuntimeFailures(failures, testInfo, path.replaceAll('/', '_'));
   });
 }
+
+test('mobile operational first screen keeps the primary action before secondary data', async ({ page }, testInfo) => {
+  const failures = captureRuntimeFailures(page);
+  await openPage(page, '/nav-v2.html?clean=1');
+  await page.setContent(`<!doctype html><html><head>
+    <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260701-0815">
+    <link rel="stylesheet" href="./assets/css/nav-v2-mobile-first-screen.css?v=20260715-01">
+  </head><body class="nav-v2"><main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
+    <section class="hero"><h1>Рабочие сделки</h1><p>Сначала выполните ближайшее действие, затем проверьте остальные показатели.</p></section>
+    <div class="status warn" data-test-secondary-status>Вторичная сводка</div>
+    <section class="kpi-row" data-test-secondary-kpi><div class="metric"><b>4</b></div></section>
+    <section class="card deals-workspace" data-test-primary-region>
+      <h2>Следующий шаг</h2>
+      <a class="btn primary mobile-first-screen-primary-action" href="#done">Продолжить работу</a>
+      <details class="mobile-first-screen-details"><summary>Ответственные и препятствия</summary><div class="mobile-first-screen-details-body"><p>Вторичные данные сделки</p></div></details>
+    </section>
+  </main></body></html>`);
+
+  const viewportWidth = page.viewportSize()?.width || 0;
+  const primaryOrder = await page.locator('[data-test-primary-region]').evaluate((element) => getComputedStyle(element).order);
+  const statusOrder = await page.locator('[data-test-secondary-status]').evaluate((element) => getComputedStyle(element).order);
+  const summary = page.locator('.mobile-first-screen-details > summary');
+  const detailBody = page.locator('.mobile-first-screen-details-body');
+
+  if (viewportWidth <= 430) {
+    expect(Number(primaryOrder)).toBeLessThan(Number(statusOrder));
+    await expect(summary).toBeVisible();
+    await expect(detailBody).toBeHidden();
+    await summary.click();
+    await expect(detailBody).toBeVisible();
+    const actionBox = await page.locator('.mobile-first-screen-primary-action').boundingBox();
+    const regionBox = await page.locator('[data-test-primary-region]').boundingBox();
+    expect(actionBox?.width || 0).toBeGreaterThan((regionBox?.width || 0) * 0.8);
+  } else {
+    await expect(summary).toBeHidden();
+    await expect(detailBody).toBeVisible();
+  }
+
+  await expectNoRuntimeFailures(failures, testInfo, 'mobile-first-screen');
+});
