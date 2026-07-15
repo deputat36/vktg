@@ -1,0 +1,428 @@
+@media (max-width: 430px) {
+  body.nav-mobile-first {
+    font-size: 14px;
+  }
+
+  .nav-mobile-first .nav-v2-shell {
+    padding: 10px 10px 96px;
+  }
+
+  .nav-mobile-first .hero {
+    margin-bottom: 10px;
+    padding: 14px 15px;
+    border-radius: 18px;
+    box-shadow: none;
+  }
+
+  .nav-mobile-first .hero h1 {
+    margin-bottom: 6px;
+    font-size: 24px;
+    line-height: 1.12;
+  }
+
+  .nav-mobile-first .hero p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.38;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .nav-mobile-first .card {
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .nav-mobile-first .status {
+    margin: 8px 0;
+    padding: 9px 10px;
+    border-radius: 14px;
+  }
+
+  .nav-mobile-first .section-title {
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+
+  .nav-mobile-first .section-title h2 {
+    font-size: 19px;
+    line-height: 1.25;
+  }
+
+  .nav-mobile-first .actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .nav-mobile-first .btn {
+    min-height: 42px;
+    padding: 10px 11px;
+  }
+
+  .nav-mobile-first .kpi-row {
+    display: flex;
+    grid-template-columns: none;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 10px;
+    padding-bottom: 3px;
+    scroll-snap-type: x proximity;
+  }
+
+  .nav-mobile-first .kpi-row .metric {
+    flex: 0 0 125px;
+    min-height: 76px;
+    padding: 10px;
+    scroll-snap-align: start;
+  }
+
+  .nav-mobile-first .kpi-row .metric b {
+    font-size: 21px;
+  }
+
+  /* Dashboard: one priority card is the mobile main action. */
+  .nav-mobile-dashboard .nav-v2-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-mobile-dashboard .role-home-hero {
+    order: -30;
+  }
+
+  .nav-mobile-dashboard .role-home-focus {
+    order: -29;
+  }
+
+  .nav-mobile-dashboard .role-home-profile {
+    order: 20;
+  }
+
+  .nav-mobile-dashboard .role-home-hero .role-home-actions,
+  .nav-mobile-dashboard .role-home-quick-actions {
+    display: none;
+  }
+
+  .nav-mobile-dashboard .role-home-focus > .section-title > .btn {
+    width: 100%;
+  }
+
+  .nav-mobile-dashboard .role-home-focus > .section-title .muted {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-card:nth-child(n + 2) {
+    display: none;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+    font-size: 15px;
+  }
+
+  .nav-mobile-dashboard .role-home-reason:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-main p {
+    margin: 8px 0;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-footer .small {
+    display: none;
+  }
+
+  .nav-mobile-dashboard .role-home-priority-footer .btn {
+    width: 100%;
+  }
+
+  /* Deals: workspace and first card precede the KPI strip. */
+  .nav-mobile-deals .nav-v2-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-mobile-deals .nav-v2-shell > .hero {
+    order: -30;
+  }
+
+  .nav-mobile-deals .nav-v2-shell > .status {
+    order: -29;
+  }
+
+  .nav-mobile-deals .nav-v2-shell > .deals-workspace {
+    order: -28;
+  }
+
+  .nav-mobile-deals .nav-v2-shell > .kpi-row {
+    order: 10;
+  }
+
+  .nav-mobile-deals .deals-workspace {
+    gap: 10px;
+  }
+
+  .nav-mobile-deals .deals-workspace > .section-title {
+    order: 0;
+  }
+
+  .nav-mobile-deals .deals-workspace > .section-title > .btn.primary {
+    display: none;
+  }
+
+  .nav-mobile-deals .deals-workspace > .deals-quick-modes {
+    order: 1;
+  }
+
+  .nav-mobile-deals .deals-workspace > .status {
+    order: 2;
+  }
+
+  .nav-mobile-deals .deals-workspace > .deals-advanced-filters {
+    order: 3;
+  }
+
+  .nav-mobile-deals .deals-workspace > .deal-list {
+    order: 4;
+  }
+
+  .nav-mobile-deals .deals-work-summary {
+    display: none;
+  }
+
+  .nav-mobile-deals .deals-quick-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .nav-mobile-deals .deals-quick-mode {
+    min-width: 0;
+    min-height: 56px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .nav-mobile-deals .deals-quick-mode:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-deals .deals-quick-mode span {
+    font-size: 12px;
+  }
+
+  .nav-mobile-deals .deals-quick-mode b {
+    font-size: 19px;
+  }
+
+  .nav-mobile-deals .deals-advanced-filters {
+    padding: 0 11px;
+    border-radius: 15px;
+  }
+
+  .nav-mobile-deals .deals-advanced-filters > summary {
+    padding: 11px 0;
+  }
+
+  .nav-mobile-deals .deals-work-card {
+    padding: 13px;
+  }
+
+  .nav-mobile-deals .deals-work-next {
+    margin: 8px 0;
+    padding: 11px;
+  }
+
+  .nav-mobile-deals .deals-work-badges .pill:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-deals .deal-meta {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+
+  .nav-mobile-deals .deal-meta > div {
+    flex: 0 0 105px;
+    padding: 8px;
+  }
+
+  .nav-mobile-deals .deals-work-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Deal card: completion or action focus leads; duplicate controls move below. */
+  .nav-mobile-deal-card .nav-v2-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > .hero {
+    order: -40;
+  }
+
+  .nav-mobile-deal-card #dealCompletionEvidenceV2 {
+    order: -39;
+  }
+
+  .nav-mobile-deal-card #lawyerDocumentCycleV2,
+  .nav-mobile-deal-card #spnReworkWorkflowV2 {
+    order: -38;
+  }
+
+  .nav-mobile-deal-card #dealActionFocus {
+    order: -37;
+  }
+
+  .nav-mobile-deal-card:has(#dealCompletionEvidenceV2) #dealActionFocus,
+  .nav-mobile-deal-card:has(#lawyerDocumentCycleV2) #dealActionFocus,
+  .nav-mobile-deal-card:has(#spnReworkWorkflowV2[data-spn-rework-phase="fix"]) #dealActionFocus {
+    display: none;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > section.card:last-of-type {
+    order: -30;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > .kpi-row {
+    order: -20;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > .kpi-row + .kpi-row {
+    display: none;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > section.card:nth-last-of-type(2) {
+    order: 20;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > .status {
+    order: 21;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > section.card:last-of-type > .tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > section.card:last-of-type > .tabs .tab {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .nav-mobile-deal-card .nav-v2-shell > section.card:nth-last-of-type(2) .actions .btn:nth-child(n + 4) {
+    display: none;
+  }
+
+  .nav-mobile-deal-card .deal-action-focus,
+  .nav-mobile-deal-card .deal-completion-evidence {
+    gap: 11px;
+  }
+
+  .nav-mobile-deal-card .deal-action-focus-grid,
+  .nav-mobile-deal-card .deal-completion-meta {
+    gap: 7px;
+  }
+
+  .nav-mobile-deal-card .deal-action-focus-grid > div,
+  .nav-mobile-deal-card .deal-completion-meta > div,
+  .nav-mobile-deal-card .deal-completion-next {
+    padding: 10px;
+    border-radius: 13px;
+  }
+
+  /* Manager: the first decision and no more than two secondary actions lead. */
+  .nav-mobile-manager .nav-v2-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-mobile-manager .manager-hero {
+    order: -40;
+  }
+
+  .nav-mobile-manager .manager-queue {
+    order: -39;
+    margin-top: 0 !important;
+  }
+
+  .nav-mobile-manager .manager-confirmed-results {
+    order: -30;
+  }
+
+  .nav-mobile-manager .manager-primary-metrics {
+    order: -20;
+  }
+
+  .nav-mobile-manager .manager-readiness-summary,
+  .nav-mobile-manager .manager-secondary-metrics,
+  .nav-mobile-manager .manager-workload {
+    order: 10;
+  }
+
+  .nav-mobile-manager .manager-queue > .section-title .actions .btn {
+    display: none;
+  }
+
+  .nav-mobile-manager .manager-tabs .tab:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-manager .manager-decision-card {
+    padding: 13px;
+  }
+
+  .nav-mobile-manager .manager-card-labels .pill:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-manager .manager-main-action,
+  .nav-mobile-manager .manager-confirmed-next {
+    gap: 9px;
+    padding: 11px;
+    border-radius: 14px;
+  }
+
+  .nav-mobile-manager .manager-reason-box {
+    margin-top: 9px;
+    padding: 10px 11px;
+  }
+
+  .nav-mobile-manager .manager-reasons li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .nav-mobile-manager .manager-card-actions .btn:nth-child(n + 4) {
+    display: none;
+  }
+
+  .nav-mobile-manager .manager-confirmed-meta {
+    gap: 7px;
+  }
+
+  .nav-mobile-manager .manager-confirmed-meta > div {
+    padding: 10px;
+    border-radius: 12px;
+  }
+}
