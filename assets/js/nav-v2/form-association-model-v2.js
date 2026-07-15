@@ -64,7 +64,7 @@ export function fieldValidationState({ fieldId, value = '', alternativeSelected 
   if (policy.alternativeSelector && alternativeSelected) {
     return Object.freeze({ invalid: false, required: false, reason: '' });
   }
-  if (!required && !length) return Object.freeze({ invalid: false, required: false, reason: '' });
+  if (!required && !length && !policy.alternativeSelector) return Object.freeze({ invalid: false, required: false, reason: '' });
   if (length < policy.minLength) {
     return Object.freeze({
       invalid: true,
