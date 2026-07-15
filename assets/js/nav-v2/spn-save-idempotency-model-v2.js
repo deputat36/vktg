@@ -1,3 +1,5 @@
+import { sanitizeClientDeal } from './client-data-minimization-model-v2.js?v=20260715-01';
+
 const LEASE_TTL_MS = 120_000;
 const RECEIPT_TTL_MS = 10 * 60_000;
 
@@ -39,7 +41,7 @@ function parseStored(raw) {
 export function wizardSubmissionFingerprint(draft, userId = '') {
   const payload = {
     user_id: text(userId) || null,
-    deal: stable(object(draft) || {})
+    deal: stable(sanitizeClientDeal(object(draft) || {}))
   };
   return hashText(JSON.stringify(payload));
 }
