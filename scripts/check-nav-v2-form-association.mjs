@@ -8,6 +8,8 @@ import {
 } from '../assets/js/nav-v2/form-association-model-v2.js';
 
 assert.deepEqual(formFieldIds(), [
+  'dealSearch',
+  'dealFilter',
   'dealStatus',
   'newComment',
   'spnReworkCompletionText',
@@ -15,12 +17,24 @@ assert.deepEqual(formFieldIds(), [
   'lawyerDocumentNoteV2'
 ]);
 
+assert.equal(formFieldPolicy('dealSearch').labelText, 'Поиск сделок');
+assert.equal(formFieldPolicy('dealFilter').labelText, 'Режим списка сделок');
 assert.equal(formFieldPolicy('spnReworkCompletionText').minLength, 10);
 assert.equal(formFieldPolicy('lawyerDocumentNoteV2').minLength, 5);
 assert.equal(formFieldPolicy('unknown'), null);
 
 assert.equal(mergeDescriptionIds('help-one help-two', 'help-two', 'error-one'), 'help-one help-two error-one');
 
+assert.deepEqual(fieldValidationState({ fieldId: 'dealSearch', value: '' }), {
+  invalid: false,
+  required: false,
+  reason: ''
+});
+assert.deepEqual(fieldValidationState({ fieldId: 'dealFilter', value: 'work' }), {
+  invalid: false,
+  required: false,
+  reason: ''
+});
 assert.deepEqual(fieldValidationState({ fieldId: 'newComment', value: '' }), {
   invalid: true,
   required: true,

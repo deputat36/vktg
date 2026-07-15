@@ -1,4 +1,18 @@
 const FIELD_POLICIES = Object.freeze({
+  dealSearch: Object.freeze({
+    fieldId: 'dealSearch',
+    labelText: 'Поиск сделок',
+    helpText: 'Ищет по адресу, объекту, клиенту, СПН, статусу или идентификатору сделки.',
+    required: false,
+    minLength: 0
+  }),
+  dealFilter: Object.freeze({
+    fieldId: 'dealFilter',
+    labelText: 'Режим списка сделок',
+    helpText: 'Ограничивает рабочую очередь выбранным режимом, не изменяя данные сделок.',
+    required: false,
+    minLength: 0
+  }),
   dealStatus: Object.freeze({
     fieldId: 'dealStatus',
     labelText: 'Текущий статус',

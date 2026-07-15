@@ -1,4 +1,5 @@
 import { rpc, esc } from './supabase-v2.js';
+import { applyFormAssociations } from './form-association-v2.js?v=20260715-01';
 
 const DEALS_LOADED_EVENT = 'nav-v2:deals-loaded';
 
@@ -133,6 +134,7 @@ function renderHints(article, deal) {
 }
 
 function apply() {
+  applyFormAssociations(document);
   if (!loaded || profile?.role !== 'spn') return;
   dealsById.forEach((deal, dealId) => {
     const article = findDealArticle(dealId);
