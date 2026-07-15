@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 retired viewer role fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell">
+    <section class="card" id="new-user-box">
+      <h1>Новый профиль</h1>
+      <div class="field">
+        <label for="newRole">Роль</label>
+        <select id="newRole">
+          <option value="spn" selected>СПН</option>
+          <option value="manager">Менеджер</option>
+          <option value="viewer">Наблюдатель</option>
+        </select>
+      </div>
+      <div id="adminStatus" class="status">Готово.</div>
+      <button id="addUser" class="btn primary" type="button">Сохранить профиль</button>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Пользователи</h2></div>
+      <div class="list-item" id="legacyViewerRow">
+        <span class="pill green">активен</span>
+        <div class="field"><label>ФИО</label><input data-name="legacy-viewer" value="Учебный пользователь"></div>
+        <div class="field"><label>Телефон</label><input data-phone="legacy-viewer" value=""></div>
+        <div class="field">
+          <label>Роль</label>
+          <select data-role="legacy-viewer">
+            <option value="spn">СПН</option>
+            <option value="manager">Менеджер</option>
+            <option value="viewer" selected>Наблюдатель</option>
+          </select>
+        </div>
+        <div class="field"><label>Менеджер</label><select data-manager="legacy-viewer"><option value="">Без менеджера</option></select></div>
+        <button class="btn primary" data-save-user="legacy-viewer" type="button">Сохранить роль</button>
+        <button data-toggle-user="legacy-viewer" data-active="false" type="button">Выключить</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.fixtureSaveCount = 0;
+    document.getElementById('addUser').onclick = () => { window.fixtureSaveCount += 1; };
+    document.querySelector('[data-save-user]').onclick = () => { window.fixtureSaveCount += 1; };
+  </script>
+  <script type="module" src="/assets/js/nav-v2/admin-profile-editor-ux-v2.js?v=20260715-01"></script>
+</body>
+</html>

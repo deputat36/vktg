@@ -3,6 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase
 
 const SESSION_KEY = 'nav_session_v2';
 const ACCEPT_PAGE = 'https://deputat36.github.io/vktg/nav-accept-invite-v2.html';
+const ASSIGNABLE_ROLES = new Set(['admin', 'manager', 'spn', 'lawyer', 'broker']);
 let managers = [];
 
 function session() {
@@ -112,7 +113,7 @@ function render() {
       <div class="field"><label>Email сотрудника</label><input id="email" type="email" placeholder="user@example.ru"></div>
       <div class="field"><label>ФИО</label><input id="fullName" placeholder="ФИО сотрудника"></div>
       <div class="field"><label>Телефон</label><input id="phone" placeholder="Можно оставить пустым"></div>
-      <div class="field"><label>Роль</label><select id="role"><option value="spn">СПН</option><option value="lawyer">Юрист</option><option value="broker">Брокер</option><option value="manager">Менеджер</option><option value="viewer">Наблюдатель</option><option value="admin">Админ</option></select></div>
+      <div class="field"><label>Роль</label><select id="role"><option value="spn">СПН</option><option value="lawyer">Юрист</option><option value="broker">Брокер</option><option value="manager">Менеджер</option><option value="admin">Админ</option></select><span class="small muted">Роль «Наблюдатель» выведена из использования. Для временного просмотра будет применяться точечный доступ к конкретной сделке.</span></div>
       <div class="field"><label>Менеджер</label><select id="managerId">${managerOptions()}</select><span id="managerHint" class="small">Для СПН менеджер обязателен.</span></div>
       <div id="status" class="status">Введите email сотрудника и выберите менеджера для роли СПН.</div>
       <div id="result"></div>
@@ -168,6 +169,12 @@ async function createAccessLink() {
     role: document.getElementById('role').value,
     manager_id: document.getElementById('managerId').value || null
   };
+
+  if (!ASSIGNABLE_ROLES.has(payload.role)) {
+    setStatus('Эта роль больше не назначается. Выберите рабочую роль сотрудника.', 'error');
+    document.getElementById('role').focus();
+    return;
+  }
 
   if (payload.role === 'spn' && !payload.manager_id) {
     setStatus('Для СПН обязательно выберите менеджера.', 'error');
