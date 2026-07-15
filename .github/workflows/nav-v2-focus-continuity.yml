@@ -1,0 +1,84 @@
+name: Navigator v2 keyboard focus continuity
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/css/nav-v2-mobile-first-screen.css'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
+      - 'assets/js/nav-v2/focus-continuity-*.js'
+      - 'scripts/check_nav_v2_focus_continuity.py'
+      - 'scripts/check-nav-v2-focus-continuity.mjs'
+      - 'tests/e2e/focus-continuity.spec.js'
+      - 'tests/fixtures/nav-v2-focus-continuity.html'
+      - '.github/workflows/nav-v2-focus-continuity.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/css/nav-v2-mobile-first-screen.css'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
+      - 'assets/js/nav-v2/focus-continuity-*.js'
+      - 'scripts/check_nav_v2_focus_continuity.py'
+      - 'scripts/check-nav-v2-focus-continuity.mjs'
+      - 'tests/e2e/focus-continuity.spec.js'
+      - 'tests/fixtures/nav-v2-focus-continuity.html'
+      - '.github/workflows/nav-v2-focus-continuity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/focus-continuity-model-v2.js
+          node --check assets/js/nav-v2/focus-continuity-v2.js
+          node --check assets/js/nav-v2/mobile-first-screen-v2.js
+          node --check scripts/check-nav-v2-focus-continuity.mjs
+          node --check tests/e2e/focus-continuity.spec.js
+      - name: Semantic focus contract
+        run: node scripts/check-nav-v2-focus-continuity.mjs
+      - name: Static focus contract
+        run: python3 scripts/check_nav_v2_focus_continuity.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_focus_continuity.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run keyboard focus regression
+        run: npx playwright test tests/e2e/focus-continuity.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload focus evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-focus-continuity-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
