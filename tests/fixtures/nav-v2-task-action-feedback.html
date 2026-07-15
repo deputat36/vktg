@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 task action feedback fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell mobile-first-screen-card">
+    <section class="hero"><h1><span id="demoBadge" class="pill blue" hidden>ДЕМО</span> Карточка сделки</h1></section>
+    <div id="pageStatus" class="status">Выберите действие по задаче.</div>
+    <section class="card">
+      <h2>Задачи</h2>
+      <div class="list">
+        <div class="list-item" id="taskItem">
+          <div><span class="pill yellow">важно</span> <span class="pill">открыта</span> <span class="pill blue">СПН</span></div>
+          <b>Получить документ</b>
+          <p class="muted">Запросить документ у клиента и подтвердить результат.</p>
+          <div class="actions">
+            <button id="taskProgress" class="btn light" data-task-status="in_progress" data-task-id="task-1" type="button">В работе</button>
+            <button id="taskDone" class="btn green" data-task-status="done" data-task-id="task-1" type="button">Готово</button>
+            <button id="taskOpen" class="btn light" data-task-status="open" data-task-id="task-1" type="button">Открыта</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    localStorage.setItem('nav_session_v2', JSON.stringify({
+      access_token: 'fixture-access-token',
+      refresh_token: 'fixture-refresh-token',
+      user: { id: 'fixture-user', email: 'fixture@example.test' }
+    }));
+    window.__baseTaskHandlerCalls = 0;
+    window.confirm = () => true;
+    document.querySelectorAll('[data-task-id][data-task-status]').forEach((button) => {
+      button.onclick = () => { window.__baseTaskHandlerCalls += 1; };
+    });
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      document.getElementById('demoBadge').hidden = false;
+    }
+  </script>
+  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260715-01"></script>
+</body>
+</html>
