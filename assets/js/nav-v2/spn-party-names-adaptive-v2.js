@@ -3,6 +3,9 @@ import {
   hasDirectClientIdentifiers,
   sanitizeClientDeal
 } from './client-data-minimization-model-v2.js?v=20260715-01';
+import { installSensitiveFreeTextGuard } from './sensitive-free-text-guard-v2.js?v=20260715-01';
+
+installSensitiveFreeTextGuard();
 
 const DRAFT_KEY = 'nav_deal_draft_v2';
 const CLEAN_RELOAD_KEY = 'nav_spn_minimized_draft_reload_v2';
