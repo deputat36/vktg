@@ -55,7 +55,7 @@ if not ERRORS:
         "applyAccessibilityContinuity",
         "sortOperationalRegions",
         "nextTabIndex",
-        "data-nav-dom-order",
+        "dataset.navDomOrder",
         "aria-expanded",
         "role', 'tablist",
         "role', 'tabpanel",
@@ -144,6 +144,7 @@ if not ERRORS:
         "mobile-first-screen-details",
         "data-tab=\"overview\"",
         "applyMobileFirstScreenDisclosure(document)",
+        'body class="nav-v2" tabindex="-1"',
     ):
         if marker not in fixture:
             ERRORS.append(f"Accessibility fixture missing marker: {marker}")
