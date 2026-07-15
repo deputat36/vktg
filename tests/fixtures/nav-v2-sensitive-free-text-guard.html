@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 sensitive free-text fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell">
+    <section class="card" id="commentCard">
+      <h1>Комментарий к сделке</h1>
+      <div class="field">
+        <label for="newComment">Рабочий комментарий</label>
+        <textarea id="newComment" placeholder="Статус, факт или следующий шаг"></textarea>
+      </div>
+      <button id="addComment" class="btn primary" type="button">Добавить комментарий</button>
+    </section>
+
+    <section class="card">
+      <h2>Диалог решения</h2>
+      <form id="decisionForm">
+        <div class="field">
+          <label for="decisionNote">Причина решения</label>
+          <textarea id="decisionNote"></textarea>
+        </div>
+        <button class="btn primary" type="submit">Сохранить решение</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Мастер сделки</h2>
+      <div class="field">
+        <label for="wizardNote">Комментарий СПН</label>
+        <textarea id="wizardNote"></textarea>
+      </div>
+      <button id="saveDraft" class="btn light" data-action="draft" type="button">Сохранить черновик</button>
+      <button id="saveDeal" class="btn green" data-action="save" type="button">Сохранить сделку</button>
+    </section>
+
+    <section class="card">
+      <h2>Служебное исключение</h2>
+      <div class="field">
+        <label for="allowedField">Поле с явным разрешением</label>
+        <textarea id="allowedField" data-allow-sensitive></textarea>
+      </div>
+      <button id="allowedSubmit" class="btn primary" data-sensitive-free-text-submit type="button">Сохранить разрешённое</button>
+    </section>
+  </main>
+
+  <script type="module">
+    import { installSensitiveFreeTextGuard } from '/assets/js/nav-v2/sensitive-free-text-guard-v2.js?v=20260715-01';
+    window.fixtureCounts = { comment: 0, form: 0, draft: 0, save: 0, allowed: 0 };
+    installSensitiveFreeTextGuard();
+    document.getElementById('addComment').addEventListener('click', () => { window.fixtureCounts.comment += 1; });
+    document.getElementById('decisionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      window.fixtureCounts.form += 1;
+    });
+    document.getElementById('saveDraft').addEventListener('click', () => { window.fixtureCounts.draft += 1; });
+    document.getElementById('saveDeal').addEventListener('click', () => { window.fixtureCounts.save += 1; });
+    document.getElementById('allowedSubmit').addEventListener('click', () => { window.fixtureCounts.allowed += 1; });
+  </script>
+</body>
+</html>
