@@ -1,0 +1,43 @@
+/* Shared keyboard and focus continuity for action-first Navigator v2 screens. */
+.nav-v2 a:focus-visible,
+.nav-v2 button:focus-visible,
+.nav-v2 input:focus-visible,
+.nav-v2 select:focus-visible,
+.nav-v2 textarea:focus-visible,
+.nav-v2 summary:focus-visible,
+.nav-v2 [role="tab"]:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.16);
+}
+
+.nav-v2 summary {
+  scroll-margin-top: 18px;
+}
+
+.nav-v2 [data-nav-focus-target],
+.nav-v2 [role="tabpanel"] {
+  scroll-margin-top: 18px;
+}
+
+.nav-v2 .nav-focus-landed {
+  outline: 3px solid #2563eb;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.nav-v2 [role="tablist"] [role="tab"][aria-selected="true"] {
+  position: relative;
+}
+
+.nav-v2 [role="tabpanel"]:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-v2 [data-nav-focus-target],
+  .nav-v2 [role="tabpanel"],
+  .nav-v2 summary {
+    scroll-behavior: auto;
+  }
+}
