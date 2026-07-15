@@ -26,6 +26,8 @@ on:
       - 'scripts/check_nav_v2_module_budget.py'
       - 'scripts/check_nav_v2_build_version.py'
       - 'scripts/check_nav_v2_deal_card_hooks.py'
+      - 'scripts/check_nav_v2_spn_rework_cycle.py'
+      - 'scripts/check-nav-v2-spn-rework-cycle.mjs'
       - 'scripts/check_nav_v2_risk_resolution.py'
       - 'scripts/check_nav_v2_operational_readiness.py'
       - 'scripts/check_nav_v2_operational_adoption.py'
@@ -70,6 +72,7 @@ on:
       - '.github/workflows/nav-v2-live-pages.yml'
       - '.github/workflows/nav-v2-release-drift.yml'
       - '.github/workflows/nav-v2-static.yml'
+      - '.github/workflows/nav-v2-spn-rework-cycle.yml'
       - '.github/workflows/nav-v2-authenticated-e2e.yml'
       - '.github/workflows/nav-v2-advisor-scope.yml'
       - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
@@ -186,6 +189,10 @@ jobs:
         run: python3 scripts/check_nav_v2_build_version.py
       - name: Check explicit deal-card hooks
         run: python3 scripts/check_nav_v2_deal_card_hooks.py
+      - name: Check SPN rework cycle
+        run: |
+          python3 scripts/check_nav_v2_spn_rework_cycle.py
+          node scripts/check-nav-v2-spn-rework-cycle.mjs
       - name: Check risk resolution lifecycle
         run: python3 scripts/check_nav_v2_risk_resolution.py
       - name: Check operational readiness preview

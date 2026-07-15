@@ -32,22 +32,22 @@ def main() -> int:
 
     for marker in (
         "nav-v2-deal-action-focus.css?v=20260714-01",
-        "deal-card-recheck-alert-v2.js?v=20260714-12",
+        "deal-card-recheck-alert-v2.js?v=20260715-13",
     ):
         if marker not in page:
             errors.append(f"deal-card-v2.html: missing {marker!r}")
 
     lifecycle_markers = (
         "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
-        "placeAlert();",
+        "applyDealCardSpnRework(cardData, profileData);",
         "applyDealCardActionFocus(cardData, profileData);",
         "queueMicrotask(applyCardEnhancements);",
     )
     for marker in lifecycle_markers:
         if marker not in lifecycle:
             errors.append(f"deal-card recheck lifecycle: missing {marker!r}")
-    if lifecycle.find("applyDealCardActionFocus(cardData, profileData);") < lifecycle.find("placeAlert();"):
-        errors.append("deal action focus must run after the recheck alert placement")
+    if lifecycle.find("applyDealCardActionFocus(cardData, profileData);") < lifecycle.find("applyDealCardSpnRework(cardData, profileData);"):
+        errors.append("deal action focus must run after the SPN rework workflow")
 
     hook_markers = (
         "export function applyDealCardActionFocus(data, profile)",

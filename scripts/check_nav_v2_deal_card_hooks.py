@@ -9,6 +9,8 @@ BASE_MODULE = ROOT / "assets/js/nav-v2/deal-card-v2.js"
 RECHECK_MODULE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 ACTION_FOCUS_MODULE = ROOT / "assets/js/nav-v2/deal-card-action-focus-v2.js"
 ACTION_FOCUS_MODEL = ROOT / "assets/js/nav-v2/deal-card-action-focus-model-v2.js"
+SPN_REWORK_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-rework-v2.js"
+SPN_REWORK_MODEL = ROOT / "assets/js/nav-v2/deal-card-spn-rework-model-v2.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 SPN_SAVE_CONFIRMATION_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-save-confirmation-v2.js"
@@ -29,6 +31,8 @@ def main() -> int:
         RECHECK_MODULE,
         ACTION_FOCUS_MODULE,
         ACTION_FOCUS_MODEL,
+        SPN_REWORK_MODULE,
+        SPN_REWORK_MODEL,
         BAZA_MODULE,
         SPN_HANDOFF_MODULE,
         SPN_SAVE_CONFIRMATION_MODULE,
@@ -50,6 +54,8 @@ def main() -> int:
         recheck = RECHECK_MODULE.read_text(encoding="utf-8")
         action_focus = ACTION_FOCUS_MODULE.read_text(encoding="utf-8")
         action_model = ACTION_FOCUS_MODEL.read_text(encoding="utf-8")
+        spn_rework = SPN_REWORK_MODULE.read_text(encoding="utf-8")
+        spn_rework_model = SPN_REWORK_MODEL.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
         spn_save_confirmation = SPN_SAVE_CONFIRMATION_MODULE.read_text(encoding="utf-8")
@@ -75,6 +81,7 @@ def main() -> int:
 
         recheck_markers = (
             "export function applyDealCardRecheckAlert(data, profile)",
+            "import { applyDealCardSpnRework } from './deal-card-spn-rework-v2.js?v=20260715-01';",
             "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260714-12';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
@@ -84,6 +91,7 @@ def main() -> int:
             "import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';",
             "import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';",
             "import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';",
+            "applyDealCardSpnRework(cardData, profileData);",
             "applyDealCardActionFocus(cardData, profileData);",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
@@ -98,8 +106,8 @@ def main() -> int:
         for marker in recheck_markers:
             if marker not in recheck:
                 errors.append(f"deal-card enhancement lifecycle missing marker: {marker}")
-        if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("placeAlert();"):
-            errors.append("deal-card action focus must run after recheck alert placement")
+        if recheck.find("applyDealCardActionFocus(cardData, profileData);") < recheck.find("applyDealCardSpnRework(cardData, profileData);"):
+            errors.append("deal-card action focus must run after the unified SPN rework workflow")
 
         forbidden_recheck_markers = (
             "rpc('nav_v2_get_deal_card'",
@@ -130,6 +138,19 @@ def main() -> int:
         for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
             if marker in action_model:
                 errors.append(f"deal-card action focus model must remain pure: {marker}")
+
+        if "export function applyDealCardSpnRework(data, profile)" not in spn_rework:
+            errors.append("SPN rework helper must export its explicit lifecycle hook")
+        for marker in ("nav_v2_get_deal_card", "nav_v2_get_my_profile", "new MutationObserver", "localStorage", "sessionStorage"):
+            if marker in spn_rework:
+                errors.append(f"SPN rework helper contains duplicate bootstrap/storage behavior: {marker}")
+        if spn_rework.count("rpc(") != 2:
+            errors.append(f"SPN rework helper must contain only its two existing mutation RPCs, got {spn_rework.count('rpc(')}")
+        if "export function buildSpnReworkModel" not in spn_rework_model:
+            errors.append("SPN rework model must export buildSpnReworkModel")
+        for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+            if marker in spn_rework_model:
+                errors.append(f"SPN rework model must remain pure: {marker}")
 
         if "export async function applyDealCardBazaHints(card, profile)" not in baza:
             errors.append("deal-card BAZA helper must export its explicit lifecycle hook")
@@ -278,6 +299,8 @@ def main() -> int:
             "deal-card-recheck-alert-v2.js",
             "deal-card-action-focus-v2.js",
             "deal-card-action-focus-model-v2.js",
+            "deal-card-spn-rework-v2.js",
+            "deal-card-spn-rework-model-v2.js",
             "deal-card-baza-hints-v2.js",
             "deal-card-spn-handoff-v2.js",
             "deal-card-spn-save-confirmation-v2.js",
@@ -291,13 +314,13 @@ def main() -> int:
             marker = f'<script type="module" src="./assets/js/nav-v2/{module}'
             if marker in page:
                 errors.append(f"{module} must not remain a standalone HTML entry module")
-        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260714-12"'
+        cache_mapping = '"./deal-card-recheck-alert-v2.js?v=20260711-02": "./assets/js/nav-v2/deal-card-recheck-alert-v2.js?v=20260715-13"'
         if cache_mapping not in page:
             errors.append("deal-card page must map the core enhancement specifier to the current cache-busted hook")
 
         max_modules = ((budget.get("pages") or {}).get("deal-card-v2.html") or {}).get("max_modules")
-        if max_modules != 22:
-            errors.append(f"deal-card module budget must remain 22, got {max_modules!r}")
+        if max_modules != 19:
+            errors.append(f"deal-card module budget must be 19 after rework lifecycle consolidation, got {max_modules!r}")
 
     if errors:
         print("Navigator v2 deal-card hook errors:")
@@ -305,7 +328,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 deal-card hook passed: shared lifecycle includes action focus and read-only SPN save confirmation")
+    print("Navigator v2 deal-card hook passed: shared lifecycle includes unified SPN rework, action focus and save confirmation")
     return 0
 
 

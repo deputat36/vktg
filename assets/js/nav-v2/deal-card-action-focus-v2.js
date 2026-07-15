@@ -97,7 +97,9 @@ export function applyDealCardActionFocus(data, profile) {
   const existing = document.getElementById('dealActionFocus');
   if (existing) existing.outerHTML = html;
   else {
-    const anchor = document.getElementById('spnRecheckAlert') || main.querySelector('.hero') || main.firstElementChild;
+    const rework = document.getElementById('spnReworkWorkflowV2');
+    const activeRework = rework?.dataset.spnReworkPhase === 'fix' || rework?.dataset.spnReworkPhase === 'submitted' ? rework : null;
+    const anchor = activeRework || main.querySelector('.hero') || main.firstElementChild;
     anchor?.insertAdjacentHTML('afterend', html);
   }
   bindActions();

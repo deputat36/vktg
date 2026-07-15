@@ -1,0 +1,48 @@
+name: Navigator v2 SPN rework cycle
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-model-v2.js'
+      - 'assets/css/nav-v2-spn-rework.css'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_spn_rework_cycle.py'
+      - 'scripts/check-nav-v2-spn-rework-cycle.mjs'
+      - '.github/workflows/nav-v2-spn-rework-cycle.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
+      - 'assets/js/nav-v2/deal-card-spn-rework-model-v2.js'
+      - 'assets/css/nav-v2-spn-rework.css'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_spn_rework_cycle.py'
+      - 'scripts/check-nav-v2-spn-rework-cycle.mjs'
+      - '.github/workflows/nav-v2-spn-rework-cycle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  spn-rework-cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deal-card-spn-rework-model-v2.js
+          node --check assets/js/nav-v2/deal-card-spn-rework-v2.js
+      - name: Check SPN rework structure
+        run: python3 scripts/check_nav_v2_spn_rework_cycle.py
+      - name: Check SPN rework semantics
+        run: node scripts/check-nav-v2-spn-rework-cycle.mjs
