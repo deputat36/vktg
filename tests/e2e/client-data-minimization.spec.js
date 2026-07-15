@@ -35,12 +35,17 @@ test('manually injected retired field is removed and scrubbed after input', asyn
 
   await page.evaluate(() => {
     const card = document.querySelector('#app .card');
-    card.insertAdjacentHTML('beforeend', '<div class="field"><label>Телефон</label><input data-field="buyerPhone"></div>');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field';
+    const input = document.createElement('input');
+    input.dataset.field = 'buyerPhone';
+    input.value = '+7 999 111-22-33';
+    wrapper.appendChild(input);
+    card.appendChild(wrapper);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  const injected = page.locator('[data-field="buyerPhone"]');
-  await injected.fill('+7 999 111-22-33');
 
-  await expect(injected).toHaveCount(0);
+  await expect(page.locator('[data-field="buyerPhone"]')).toHaveCount(0);
   await expect.poll(async () => (await draft(page)).buyerPhone).toBeUndefined();
   await expectNoRuntimeFailures(failures, testInfo, 'client-data-minimization-injected-field');
 });
