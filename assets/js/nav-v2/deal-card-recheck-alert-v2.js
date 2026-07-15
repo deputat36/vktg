@@ -7,6 +7,7 @@ import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=2026071
 import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';
 import { applyDealCardDocumentWorkflow } from './deal-card-doc-workflow-v2.js?v=20260711-06';
 import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';
+import { applyDealCardLawyerHandoffDialog } from './deal-card-lawyer-handoff-dialog-v2.js?v=20260715-01';
 import { applyDealCardTaskDueDate } from './deal-card-task-due-date-v2.js?v=20260711-07';
 import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08';
 import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';
@@ -28,6 +29,7 @@ function applyCardEnhancements() {
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);
   applyDealCardDocumentProblemDialog(cardData);
+  applyDealCardLawyerHandoffDialog(cardData);
   applyDealCardTaskDueDate(cardData);
   applyDealCardExpenseLabels();
   applyDealCardReadableValues();
