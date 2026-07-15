@@ -4,243 +4,140 @@
 
 - Дата: 2026-07-15.
 - Репозиторий: `deputat36/vktg`.
-- Текущий `main`: `90063c346974c0f8328d7528b5b6c34d46eda8a8` — merge PR #327.
+- Текущий `main`: `4a9c404ee14c19fb8f5e67a9ab632f894fc2f7eb` — merge PR #331.
 - Supabase project: `ofewxuqfjhamgerwzull`.
-- Supabase status по последней проверке: `ACTIVE_HEALTHY`.
+- Последний подтверждённый статус проекта: `ACTIVE_HEALTHY`.
 - Последняя подтверждённая production migration: `20260714125054_nav_v2_exact_duplicate_review_pack`.
-- Supabase branches: только production `main`.
-- Isolated authenticated target: не создан.
-- `authenticated-smoke=skipped` не является authenticated evidence.
-- PR #327 использовал существующий RPC, но не менял schema, grants, RPC definition/surface, Auth, Edge Functions или рабочие строки.
-- Открытых PR после merge #327 не было на момент подготовки handoff.
+- PR #329 и #331 не меняли schema, grants, RPC definitions, Auth, Edge Functions или рабочие строки.
+- Открытых PR после merge #331 не было на момент подготовки handoff.
 
-## Завершённая продуктовая цепочка
+## Что уже завершено
 
-### PR #288–#292 — action-first основа
+### PR #288–#302 — action-first основа
 
-- dashboard показывает объяснимые приоритеты;
-- список сделок имеет role-aware рабочие режимы;
-- карточка показывает одно главное действие, ответственного, срок и критерий результата;
-- менеджерские кнопки ведут в конкретный remediation workspace.
+- role-aware dashboard и список сделок;
+- одно главное действие в карточке;
+- manager remediation routes;
+- цикл доработки СПН;
+- документный цикл юриста;
+- server-confirmed completion evidence;
+- manager confirmed results;
+- mobile operational first screen.
 
-### PR #294 — единый цикл доработки СПН
+### PR #306–#323 — privacy и accessibility foundation
 
-`замечание → где исправить → сохранить → повторно отправить → увидеть серверное подтверждение`
+- privacy-safe enum-only UX contract без collector/storage;
+- keyboard/focus continuity;
+- accessible busy/success/error feedback;
+- named main/regions/groups и heading hierarchy;
+- form labels, help/error association;
+- choice-group semantics.
 
-### PR #296 — документный цикл юриста
+### PR #325 — controlled dialog риска
 
-`нужен → запрошен → получен → проверен / проблема`
-
-### PR #298–#300 — подтверждённый результат
-
-- audit event принимается только при совпадении с текущим состоянием;
-- stale/no-op/backward события отбрасываются;
-- manager видит backlog и server-confirmed результаты;
-- manager workspace остаётся read-only.
-
-### PR #302 — мобильный первый экран
-
-На 360–430 px главное действие показывается до KPI и вторичных списков. Desktop остаётся раскрытым.
-
-### PR #306 — privacy-safe UX measurement contract
-
-- только локальный enum-only `CustomEvent`;
-- нет UUID, URL, ФИО, адресов, комментариев и свободного текста;
-- нет storage, network transport, RPC или collector;
-- click не считается подтверждённым результатом.
-
-### PR #309 — keyboard/focus continuity
-
-- `:focus-visible`, forced-colors fallback и reduced-motion;
-- disclosure получает `aria-expanded`/`aria-controls`;
-- keyboard-переход фокусирует рабочий panel;
-- pointer-навигация не получает принудительный focus jump.
-
-### PR #313 — accessible async feedback
-
-`действие → busy → success/error → server-confirmed reload → следующий фокус`
-
-- busy: `role=status`, `aria-live=polite`, `aria-busy=true`;
-- error: `role=alert`, `aria-live=assertive`;
-- keyboard error получает фокус, pointer action — нет;
-- введённые данные сохраняются;
-- success использует allowlisted enum `nav_focus`.
-
-### PR #315 — screen-reader структура
-
-- один named `main` от одного `h1`;
-- action-first секции связаны с `h2`;
-- рабочие карточки имеют heading level 3;
-- KPI — named `role=group`;
-- live status/alert не становятся лишними landmarks.
-
-### PR #318 и #321 — form labels/help/errors
-
-Охвачены поля карточки и списка сделок:
-
-- `dealStatus`;
-- `newComment`;
-- `spnReworkCompletionText`;
-- `spnReworkReturnReason`;
-- `lawyerDocumentNoteV2`;
-- `dealSearch`;
-- `dealFilter`.
-
-Поведение:
-
-- placeholder не является единственным именем;
-- visual label связан через `for/id`;
-- help связан через `aria-describedby`;
-- client error связан через `aria-errormessage`;
-- `aria-invalid` появляется только при реальной field error;
-- correction/alternative очищают invalid state;
-- server error не создаёт ложное invalid state.
-
-### PR #323 — повторяющиеся choice groups
-
-Охвачены:
-
-1. замечания для возврата СПН;
-2. быстрые статусы сделки;
-3. юридические решения;
-4. состояния текущего документа.
-
-- checkbox group получает нативный `fieldset/legend`;
-- button groups получают bounded `role=group`;
-- общий help связан через `aria-describedby`;
-- индивидуальные control names сохраняются;
-- Tab/Space/Enter остаются нативными;
-- field/group error используют один существующий status;
-- positive tabindex не добавляется.
-
-### PR #325 — controlled dialog изменения риска
-
-Проведён bounded inventory десяти нативных `confirm/prompt` в основных deal-card flows.
-
-Заменён маршрут:
-
-`confirm изменения риска → отдельный prompt комментария`
-
-на один controlled `<dialog>`.
-
-- stable accessible name/description;
-- в одном окне видны действие, название риска, последствия и demo warning;
-- комментарий необязательный, но имеет label/help;
-- Escape/Cancel не выполняют mutation;
-- фокус возвращается к запускающей кнопке;
-- draft хранится только в `WeakMap` по DOM-trigger;
-- draft сохраняется после cancel и server error;
-- draft очищается только после успешного `nav_v2_update_risk_resolution`;
-- native fallback остаётся при отсутствии поддержки `<dialog>`.
+- один dialog вместо confirm + prompt;
+- действие, риск, последствия и demo warning в одном окне;
+- Escape/Cancel без mutation;
+- focus return;
+- необязательный комментарий хранится только в памяти;
+- draft сохраняется после cancel/server error и очищается после успеха;
+- существующий risk RPC и payload не менялись.
 
 ### PR #327 — обязательная причина проблемы документа
 
-Закрыт маршрут:
-
-`нажать «Проблема» → увидеть документ и последствия → ввести обязательную причину → исправить inline validation → сохранить существующим RPC`
-
-#### Поведение
-
-- используется тот же shared `action-dialog-v2.js`, второй dialog runtime не создан;
-- dialog показывает название документа и новое состояние «Проблема»;
-- demo-сделка получает явное предупреждение внутри dialog;
-- textarea имеет stable label/help;
-- пустая причина остаётся внутри dialog;
-- validation error связан через `aria-invalid` и `aria-errormessage`;
-- поле с ошибкой получает фокус;
-- Escape/Cancel закрывают dialog без mutation;
-- фокус возвращается к кнопке «Проблема»;
-- draft причины хранится только в shared `WeakMap`;
-- draft сохраняется после cancel и server error;
-- draft очищается только после успешного RPC;
-- старый `prompt` остаётся только аварийным fallback, если enhancement не загрузился.
-
-#### Mutation contract
-
-Сохранён существующий RPC и payload:
-
-- `nav_v2_update_document_workflow`;
-- `p_document_id`;
-- `p_status = 'problem'`;
-- `p_assigned_to = null`;
-- `p_responsible_role = null`;
-- `p_due_date = null`;
-- `p_note` с обязательной причиной.
-
-Role permissions, document taxonomy, lawyer document cycle и SPN rework не менялись.
-
-#### Архитектура
-
-- `action-dialog-model-v2.js` расширен policy `deal-document-problem`;
-- shared runtime получил prompt-only fallback через `fallbackConfirm=false`;
-- новый bounded enhancement: `deal-card-document-problem-dialog-v2.js`;
-- enhancement подключён после существующего document workflow через `deal-card-recheck-alert-v2.js`;
-- risk/document dialog объединены одним import-map remap на `action-dialog-*-v2.js?v=20260715-02`;
-- active hook remap: `deal-card-recheck-alert-v2.js?v=20260715-02` → `20260715-20`;
-- legacy remap `20260711-02` → `20260715-15` сохранён;
-- HTML entry-module budget не увеличен.
-
-## Проверки PR #327
-
-Финальный head: `e62aa8034c33616f5a353b39b9c2dbae058460f1`.
-
-PASS — 16/16 workflow:
-
-- JavaScript/Python syntax;
-- full static suite и release integrity;
-- shared action-dialog semantic/source contract;
-- dedicated document-problem source/privacy contract;
-- exact existing RPC payload;
-- desktop/mobile Playwright;
-- document context и demo warning;
-- required reason и inline error;
-- Escape/Cancel without mutation;
+- shared dialog показывает документ и новое состояние;
+- причина обязательна;
+- inline error связан через `aria-invalid` и `aria-errormessage`;
+- Escape/Cancel без mutation;
 - focus return;
-- memory-only draft recovery after cancel/server error;
-- draft clear only after success;
-- existing risk dialog regression;
-- form association regression;
-- accessible async feedback regression;
-- keyboard focus continuity;
-- screen structure;
-- mobile first screen;
-- SPN rework;
-- lawyer document cycle;
-- completion evidence;
-- deal action focus;
-- privacy-safe UX measurement;
-- BAZA checks;
+- memory-only draft recovery;
+- существующий document RPC и payload не менялись.
+
+### PR #329 — review передачи юристу
+
+Dialog открывается только при непустом списке препятствий.
+
+- показывается весь список из блока «Перед передачей юристу»;
+- показываются последствия и demo warning;
+- Escape/Cancel без mutation и с focus return;
+- server error повторно разрешает кнопку;
+- при состоянии «можно передавать» базовый прямой handler остаётся нетронутым;
+- используется существующий status RPC с состоянием `need_lawyer`.
+
+Финальный head: `58ad1ebcc522822cd8fd34168a2ca03c0f82970e`.
+
+PASS:
+
+- 17/17 workflows;
+- 10 dedicated desktop/mobile scenarios;
+- exact status payload;
+- ready-state direct action;
+- предыдущие risk/document/form/async/focus contracts;
+- review threads: 0.
+
+Первый browser run упал только из-за неоднозначного тестового locator: исходная кнопка и confirm-кнопка имели одинаковый текст. Product runtime был корректен; финальный spec ограничивает поиск открытым dialog.
+
+### PR #330 — полный аудит
+
+Добавлены:
+
+- `docs/NAV_V2_FULL_AUDIT_2026-07-15.md`;
+- `docs/NAV_V2_TECHNICAL_AUDIT_2026-07-15.md`;
+- `docs/NAV_V2_LEGAL_COMPLIANCE_AUDIT_2026-07-15.md`.
+
+Аудит является обзором и планом. Он не отменяет ручные ограничения и не разрешает production mutations.
+
+### PR #331 — live feedback трёх dialog-flow
+
+Cross-flow recovery audit выявил общий пробел: после закрытия dialog текст mutation выводился в `#pageStatus`, но busy/error не имели гарантированной live-region семантики.
+
+Добавлен `assets/js/nav-v2/page-action-feedback-v2.js`.
+
+Контракт:
+
+- busy: polite status, atomic, busy=true;
+- success: polite status, busy=false;
+- error: assertive alert, busy=false;
+- один существующий `#pageStatus`;
+- без focus jump;
+- без дополнительных live regions.
+
+Интегрированы:
+
+1. risk resolution;
+2. document problem;
+3. lawyer handoff.
+
+Существующие RPC и payload не менялись. Helper не содержит RPC, storage, collector, transport или observer. HTML entry-module budget не увеличен. Active hook release: `20260715-22`.
+
+Финальный head: `c50ad80f06c5b190864ba03e7d4e9bcc3e239796`.
+
+PASS:
+
+- 18/18 workflows;
+- full static suite;
+- desktop/mobile live-region regression;
+- busy/success/error/idle transitions;
+- один status node после повторных переходов;
+- dialog, form, focus, screen structure и mobile regressions;
 - public desktop/mobile smoke;
 - review threads: 0.
 
-Первый dedicated browser run упал только потому, что намеренно смоделированный HTTP 400 создавал стандартную браузерную запись `Failed to load resource` в `console.error`. Product recovery, status, payload и draft были корректны. Финальный тест фильтрует только точную ожидаемую запись mocked HTTP 400; остальные `console.error` и `pageerror` остаются запрещёнными. Повторный desktop/mobile run — PASS.
-
-Workflow `Navigator v2 authenticated browser E2E` имеет conclusion `success`, но job `authenticated-smoke` был `skipped`. Это не authenticated matrix PASS и не снимает gate #282.
+Authenticated browser workflow завершился успешно на public job, но authenticated job был пропущен. Это не authenticated evidence.
 
 ## Post-merge source smoke
 
-Канонический `main` подтверждает:
+`main` подтверждает:
 
-- document enhancement связывается только с `[data-doc-id][data-doc-status="problem"]`;
-- base document workflow выполняется до dialog enhancement;
-- shared runtime один для risk и document flows;
-- document module содержит ровно один существующий mutation RPC;
-- draft очищается внутри success-path до reload;
-- catch повторно разрешает кнопку и не очищает draft;
-- storage, collector, telemetry, новый RPC и новый HTML entry module не добавлены;
-- active release `deal-card-recheck-alert-v2.js?v=20260715-20` опубликован.
+- один shared helper управляет live semantics `#pageStatus`;
+- три dialog-модуля импортируют helper;
+- active module versions — `v02`;
+- hook release — `20260715-22`;
+- каждый flow сохраняет прежний RPC и payload;
+- helper не меняет focus и не создаёт новые status nodes;
+- backend и рабочие данные не менялись.
 
-## Supabase и рабочие данные
-
-PR #327 не выполнял Supabase read/write и не менял backend.
-
-Подтверждено ранее 15 июля:
-
-- project status: `ACTIVE_HEALTHY`;
-- branches: только production `main`;
-- latest live migration: `20260714125054`.
-
-Последний read-only baseline до frontend-срезов:
+## Последний read-only baseline
 
 - Deals: 23;
 - Tasks: 98;
@@ -248,93 +145,52 @@ PR #327 не выполнял Supabase read/write и не менял backend.
 - Documents: 198;
 - Events: 118.
 
-Counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
+Counts могут изменяться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
-## Ручные gates
+## Ручные ограничения
 
-### Exact duplicate cleanup
-
-- issue #273 открыта;
-- owner decision не предоставлен;
-- удаление, объединение и архивирование запрещено.
-
-### Operational pilot
-
-- шесть evidence-файлов не предоставлены;
-- pilot mutation запрещена.
-
-### Responsibility correction
-
-- четыре evidence-файла не предоставлены;
-- не менять `seller_spn_id`, `buyer_spn_id`, `manager_id`.
-
-### Production-readonly workflow
-
-- ручной запуск `navigator-production-readonly` с `allow_drift=false` не предоставлен;
-- source/browser smoke не подменяет workflow.
-
-### Isolated authenticated E2E
-
-- issue #282 без точного cost approval;
-- generic-команда `продолжай` не является approval;
-- не вызывать `confirm_cost`;
-- не создавать Supabase branch, Auth users, secrets или synthetic target.
+- По issue #273 нет решения владельца: duplicate cleanup запрещён.
+- Для operational pilot не предоставлен полный evidence-пакет: pilot mutation запрещена.
+- Для responsibility correction нет evidence: не менять ответственных в рабочих строках.
+- Production-readonly workflow с запретом drift не запускался вручную.
+- Для isolated authenticated E2E нет отдельного подтверждения расходов: не создавать дополнительную среду, тестовых пользователей и секреты.
 
 ## Следующий безопасный продуктовый slice
 
-P1 UX — controlled review передачи юристу с длинным issue list (`deal-lawyer-handoff`).
+P1 UX — task permission/action feedback и завершение task-flow.
 
 Цель:
 
-`нажать «Передать юристу» → увидеть все незакрытые пункты и последствия → подтвердить осознанную передачу или вернуться к исправлению → сохранить существующим status RPC`
+`нажать действие задачи → понять права → получить доступное состояние проверки/сохранения → увидеть результат или понятную ошибку`
 
 Требования:
 
-1. Использовать существующие `action-dialog-model-v2.js` и `action-dialog-v2.js`; второй runtime не создавать.
-2. Заменить только длинный `confirmLawyerHandoff()` при наличии незакрытых пунктов.
-3. Если список препятствий пуст, сохранить прямое действие без лишнего dialog.
-4. Dialog должен показывать все issue items, итоговое действие и demo warning.
-5. Причина/комментарий не обязательны, если текущий business rule их не требует.
-6. Escape/Cancel не выполняют mutation и возвращают фокус к исходной кнопке.
-7. Сохранить `nav_v2_update_deal_status` и payload `p_status='need_lawyer'` без изменений.
-8. Не менять role permissions, quick status taxonomy, lawyer cycle или manager routing.
-9. Native fallback должен оставаться bounded и не создавать второй confirm после dialog.
-10. Добавить semantic/source contract и desktop/mobile regression.
-11. Без новых RPC, storage, collector, telemetry, backend или Supabase branch.
+1. Проверить `task-action-guard-v2.js`, task buttons и completion evidence.
+2. Не дублировать permission/RPC логику.
+3. Переиспользовать `page-action-feedback-v2.js` для permission check и task mutation busy/success/error.
+4. Сохранить текущие роли, status taxonomy и payload.
+5. Проверить завершение и повторное открытие задачи; новый status не вводить без backend contract.
+6. Permission error должен объяснять ответственного и не скрывать задачу.
+7. Не создавать focus jump для pointer.
+8. Новый observer не добавлять; существующий observer заменить explicit lifecycle только при доказанной эквивалентности.
+9. Добавить source contract и desktop/mobile regression.
+10. Без новых RPC, storage, collector, telemetry, backend или Supabase branch.
 
-После этого провести небольшой post-dialog recovery audit только трёх изменённых flows: risk, document problem, lawyer handoff.
+После этого выполнить read-only сверку task closure с техническим аудитом PR #330.
 
-Measurement backend остаётся заблокирован до решения о denominator, дедупликации, минимальной выборке, retention, доступах и privacy review.
+## Не повторять без новой причины
 
-## NEXT_WORK_QUEUE
-
-- P1 UX — controlled review для lawyer handoff с длинным issue list.
-- P1 UX — post-dialog recovery audit трёх изменённых flows.
-- P1 MANUAL MEASUREMENT — collector/aggregation/retention/access policy.
-- P0 MANUAL — owner duplicate decision #273.
-- P0 MANUAL — шесть pilot evidence-файлов.
-- P0 MANUAL — четыре responsibility evidence-файла.
-- P0 MANUAL — production-readonly workflow `allow_drift=false`.
-- P0 MANUAL COST APPROVAL — issue #282.
-
-## DO NOT REPEAT без новой причины
-
-- общий технический аудит;
+- общий аудит;
 - action-first dashboard/list/card/manager;
 - SPN rework и lawyer document lifecycle;
-- completion evidence и manager confirmed results;
 - mobile first screen;
-- privacy-safe measurement contract;
-- keyboard/focus continuity;
-- async feedback;
-- landmarks/headings;
-- form labels и choice-group semantics;
-- risk action dialog PR #325;
+- privacy/focus/async/landmark/form/choice foundation;
+- risk dialog PR #325;
 - document problem dialog PR #327;
-- новый collector/storage/telemetry backend без отдельного решения;
-- duplicate/pilot/responsibility mutations без evidence/owner decision;
-- isolated authenticated E2E без exact cost approval.
+- lawyer handoff dialog PR #329;
+- dialog live feedback PR #331;
+- production mutations без требуемых решений и evidence.
 
 ## Команда следующего запуска
 
-`@GitHub продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #327. Начни отдельный slice deal-lawyer-handoff: переиспользуй shared action dialog для длинного списка незакрытых пунктов, сохрани прямой action без dialog при пустом списке и существующий nav_v2_update_deal_status payload need_lawyer. Escape/Cancel without mutation, focus return, demo context. Не трогай другие confirm/prompt. Без новых RPC, storage, collector, telemetry, backend и платной Supabase branch.`
+`@GitHub продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #331. Начни task permission/action feedback slice: не дублируй permission или task RPC, переиспользуй page-action-feedback, проверь completion/reopen и сохрани роли, status taxonomy и payload. Без новых RPC, storage, collector, telemetry, backend и платной среды.`
