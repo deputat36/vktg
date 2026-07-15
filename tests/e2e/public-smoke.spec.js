@@ -7,6 +7,7 @@ const guestPages = [
   '/deals-v2.html',
   '/queue-v2.html',
   '/manager-v2.html',
+  '/ux-metrics-v2.html',
   '/task-review-v2.html',
   '/broker-v2.html',
   '/viewer-v2.html',
