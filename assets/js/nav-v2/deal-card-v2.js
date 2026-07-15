@@ -237,19 +237,6 @@ function lawyerHandoffIssues(data) {
   return { issues, missingDocs, redRisks, blockingReviews, urgentTasks, ok: issues.length === 0 };
 }
 
-function lawyerReturnText() {
-  const h = lawyerHandoffIssues(currentData);
-  const lines = ['Юрист: карточка возвращена СПН на доработку. Нужно уточнить данные, документы или условия сделки.'];
-  if (h.issues.length) {
-    lines.push('', 'Что доработать:');
-    h.issues.forEach((item, index) => lines.push(`${index + 1}. ${item}`));
-  } else {
-    lines.push('', 'Комментарий юриста: требуется уточнить детали перед продолжением подготовки сделки.');
-  }
-  lines.push('', 'После исправления нажмите «Отправить на повторную проверку» в верхнем блоке карточки.');
-  return lines.join('\n');
-}
-
 function spnBeforeLawyerPanel(data) {
   if (isLawyer()) return '';
   const deal = data.deal;
@@ -520,12 +507,13 @@ async function runLegalAction(action) {
   }[action];
 
   if (action === 'return_spn') {
-    if (!confirmDemoAction('вернуть СПН на доработку')) return;
-    try {
-      setPageStatus('Возвращаю СПН на доработку...');
-      await rpc('nav_v2_return_spn_rework', { p_deal_id: dealId, p_body: lawyerReturnText() }, 12000);
-      await load();
-    } catch (e) { setPageStatus('Ошибка возврата СПН: ' + e.message, 'error'); }
+    const form = document.querySelector('[data-spn-rework-return-form]');
+    if (!form) {
+      setPageStatus('Блок возврата ещё загружается. Повторите действие через секунду.', 'warn');
+      return;
+    }
+    form.open = true;
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 

@@ -1,0 +1,189 @@
+.spn-rework-workflow {
+  border: 2px solid rgba(245, 158, 11, 0.34);
+  background: linear-gradient(180deg, #fffdf7, #ffffff);
+}
+
+.spn-rework-workflow.is-submitted {
+  border-color: rgba(22, 163, 74, 0.3);
+  background: linear-gradient(180deg, #f7fff9, #ffffff);
+}
+
+.spn-rework-head,
+.spn-rework-item,
+.spn-rework-option,
+.spn-rework-workflow summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.spn-rework-head h2 {
+  margin: 7px 0 5px;
+}
+
+.spn-rework-head p {
+  margin: 0;
+  color: #475569;
+}
+
+.spn-rework-eyebrow {
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.is-submitted .spn-rework-eyebrow {
+  color: #15803d;
+}
+
+.spn-rework-meta,
+.spn-rework-confirmation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.spn-rework-confirmation {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.spn-rework-meta > div,
+.spn-rework-confirmation > div {
+  padding: 12px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.spn-rework-meta span,
+.spn-rework-confirmation span,
+.spn-rework-result span {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.spn-rework-list,
+.spn-rework-options {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.spn-rework-item,
+.spn-rework-option {
+  padding: 13px;
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.spn-rework-item.unresolved {
+  border-color: #fecaca;
+}
+
+.spn-rework-item.resolved {
+  border-color: #bbf7d0;
+}
+
+.spn-rework-item-main {
+  min-width: 0;
+}
+
+.spn-rework-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.spn-rework-item p,
+.spn-rework-option small {
+  display: block;
+  margin: 6px 0 0;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.spn-rework-details,
+.spn-rework-evidence,
+.spn-rework-result,
+.spn-rework-return-body {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.spn-rework-details summary,
+.spn-rework-workflow.is-return summary {
+  cursor: pointer;
+}
+
+.spn-rework-details pre {
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  font: inherit;
+  color: #334155;
+}
+
+.spn-rework-evidence textarea {
+  min-height: 110px;
+}
+
+.spn-rework-workflow.is-return > details > summary {
+  align-items: center;
+  color: #1e293b;
+}
+
+.spn-rework-workflow.is-return > details > summary span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.spn-rework-option {
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.spn-rework-option input {
+  margin-top: 3px;
+}
+
+.spn-rework-option > span:nth-child(2) {
+  flex: 1;
+}
+
+.spn-rework-actions {
+  justify-content: flex-start;
+}
+
+@media(max-width:860px) {
+  .spn-rework-head,
+  .spn-rework-item,
+  .spn-rework-workflow summary {
+    flex-direction: column;
+  }
+
+  .spn-rework-meta,
+  .spn-rework-confirmation {
+    grid-template-columns: 1fr;
+  }
+
+  .spn-rework-item .btn,
+  .spn-rework-actions .btn {
+    width: 100%;
+  }
+
+  .spn-rework-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
