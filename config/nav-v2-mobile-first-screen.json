@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "max_width_px": 430,
+  "min_test_width_px": 360,
+  "first_screen_height_px": 900,
+  "surfaces": {
+    "dashboard": {
+      "required_primary_actions": 1,
+      "max_context_actions": 2,
+      "visible_priority_cards": 1
+    },
+    "deals": {
+      "required_primary_actions": 1,
+      "max_context_actions": 3,
+      "visible_quick_modes": 2
+    },
+    "deal-card": {
+      "required_primary_actions": 1,
+      "max_context_actions": 2,
+      "hide_duplicate_action_focus_after_completion": true
+    },
+    "manager": {
+      "required_primary_actions": 1,
+      "max_context_actions": 2,
+      "visible_queue_filters": 2
+    }
+  }
+}
