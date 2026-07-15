@@ -1,0 +1,38 @@
+name: Navigator v2 manager confirmed results
+
+on:
+  pull_request:
+    paths:
+      - 'manager-v2.html'
+      - 'assets/css/nav-v2-manager.css'
+      - 'assets/js/nav-v2/manager-v2.js'
+      - 'assets/js/nav-v2/manager-confirmed-results-model-v2.js'
+      - 'assets/js/nav-v2/deal-card-completion-evidence-model-v2.js'
+      - 'assets/js/nav-v2/deal-card-action-focus-model-v2.js'
+      - 'scripts/check_nav_v2_manager_confirmed_results.py'
+      - 'scripts/check-nav-v2-manager-confirmed-results.mjs'
+      - 'scripts/check_nav_v2_operational_readiness.py'
+      - 'scripts/check-nav-v2-manager-action-routes.mjs'
+      - '.github/workflows/nav-v2-manager-confirmed-results.yml'
+
+jobs:
+  manager-confirmed-results:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check manager confirmed results contract
+        run: python3 scripts/check_nav_v2_manager_confirmed_results.py
+      - name: Check manager confirmed result semantics
+        run: node scripts/check-nav-v2-manager-confirmed-results.mjs
+      - name: Recheck operational readiness contract
+        run: python3 scripts/check_nav_v2_operational_readiness.py
+      - name: Recheck manager action routes
+        run: node scripts/check-nav-v2-manager-action-routes.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/manager-v2.js
+          node --check assets/js/nav-v2/manager-confirmed-results-model-v2.js
+      - name: Compile Python contracts
+        run: |
+          python3 -m py_compile scripts/check_nav_v2_manager_confirmed_results.py
+          python3 -m py_compile scripts/check_nav_v2_operational_readiness.py

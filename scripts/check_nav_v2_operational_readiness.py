@@ -9,6 +9,7 @@ MIGRATION = ROOT / "supabase/migrations/20260712162609_nav_v2_operational_readin
 PAGE = ROOT / "manager-v2.html"
 MODULE = ROOT / "assets/js/nav-v2/manager-v2.js"
 ACTION_ROUTE = ROOT / "assets/js/nav-v2/manager-action-route-v2.js"
+CONFIRMED_RESULTS = ROOT / "assets/js/nav-v2/manager-confirmed-results-model-v2.js"
 MANAGER_CSS = ROOT / "assets/css/nav-v2-manager.css"
 MENU = ROOT / "assets/js/nav-v2/role-menu-v2.js"
 ROLE_CONTRACT = ROOT / "config/nav-v2-role-contract.json"
@@ -24,7 +25,10 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MIGRATION, PAGE, MODULE, ACTION_ROUTE, MANAGER_CSS, MENU, ROLE_CONTRACT, RPC_SURFACE, WORKFLOW)
+    paths = (
+        MIGRATION, PAGE, MODULE, ACTION_ROUTE, CONFIRMED_RESULTS, MANAGER_CSS,
+        MENU, ROLE_CONTRACT, RPC_SURFACE, WORKFLOW,
+    )
     for path in paths:
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
@@ -66,8 +70,8 @@ def main() -> int:
     require(page, (
         "Content-Security-Policy",
         "assets/css/nav-v2-role-home.css?v=20260712-01",
-        "assets/css/nav-v2-manager.css?v=20260712-01",
-        "assets/js/nav-v2/manager-v2.js?v=20260714-03",
+        "assets/css/nav-v2-manager.css?v=20260715-01",
+        "assets/js/nav-v2/manager-v2.js?v=20260715-01",
         "assets/js/nav-v2/role-menu-v2.js?v=20260713-01",
         'aria-live="polite"',
     ), PAGE.name, errors)
@@ -75,13 +79,17 @@ def main() -> int:
     module = MODULE.read_text(encoding="utf-8")
     require(module, (
         "import { buildManagerActionRoute, managerItemNeedsDistribution } from './manager-action-route-v2.js?v=20260714-01';",
+        "manager-confirmed-results-model-v2.js?v=20260715-01",
         "rpc('nav_v2_get_operational_readiness_preview'",
+        "rpc('nav_v2_get_deal_card'",
         "['owner', 'admin', 'manager']",
         "Почему сделка требует внимания",
         "Главное действие",
         "actionButtons(item)",
         "data-manager-action-kind",
         "Режим контроля",
+        "Подтверждённые результаты",
+        "Серверное подтверждение",
         "Правдивая готовность",
         "Дополнительные показатели контроля",
         "Показать расчёт готовности",
@@ -111,12 +119,29 @@ def main() -> int:
         if marker in route_model:
             errors.append(f"manager route model must remain pure/read-only: {marker}")
 
+    confirmed_model = CONFIRMED_RESULTS.read_text(encoding="utf-8")
+    require(confirmed_model, (
+        "buildDealCompletionEvidence",
+        "DEFAULT_MAX_AGE_DAYS = 7",
+        "DEFAULT_TIME_ZONE = 'Europe/Moscow'",
+        "managerResultCandidate",
+        "buildManagerConfirmedResult",
+        "sortManagerConfirmedResults",
+        "summarizeManagerConfirmedResults",
+    ), CONFIRMED_RESULTS.name, errors)
+    for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+        if marker in confirmed_model:
+            errors.append(f"manager confirmed results model must remain pure/read-only: {marker}")
+
     css = MANAGER_CSS.read_text(encoding="utf-8")
     require(css, (
         ".manager-primary-metrics",
         ".manager-main-action",
         ".manager-reason-box",
         ".manager-card-details",
+        ".manager-confirmed-results",
+        ".manager-confirmed-card",
+        ".manager-confirmed-next",
         "@media (max-width: 860px)",
     ), MANAGER_CSS.name, errors)
 
@@ -135,6 +160,8 @@ def main() -> int:
     surface = json.loads(RPC_SURFACE.read_text(encoding="utf-8"))
     if "nav_v2_get_operational_readiness_preview" not in surface["frontend_api"]:
         errors.append("operational preview RPC is not classified as frontend_api")
+    if "nav_v2_get_deal_card" not in surface["frontend_api"]:
+        errors.append("deal card RPC is not classified as frontend_api")
 
     workflow = WORKFLOW.read_text(encoding="utf-8")
     if "python3 scripts/check_nav_v2_operational_readiness.py" not in workflow:
@@ -146,7 +173,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 operational readiness passed: server preview and direct manager action routes checked")
+    print("Navigator v2 operational readiness passed: server preview, confirmed results and direct manager action routes checked")
     return 0
 
 
