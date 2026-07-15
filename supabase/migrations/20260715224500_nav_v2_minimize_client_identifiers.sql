@@ -58,13 +58,52 @@ returns trigger
 language plpgsql
 set search_path to 'public', 'nav_v2_private'
 as $function$
+declare
+  v_identity_changed boolean := false;
 begin
-  new.seller_name := null;
-  new.buyer_name := null;
-  new.seller_phone := null;
-  new.buyer_phone := null;
+  if tg_op = 'INSERT' then
+    new.seller_name := null;
+    new.buyer_name := null;
+    new.seller_phone := null;
+    new.buyer_phone := null;
 
-  if jsonb_typeof(new.wizard_snapshot) = 'object'
+    if jsonb_typeof(new.wizard_snapshot) = 'object'
+       and jsonb_typeof(new.wizard_snapshot->'deal') = 'object' then
+      new.wizard_snapshot := jsonb_set(
+        new.wizard_snapshot,
+        '{deal}',
+        nav_v2_private.nav_v2_sanitize_client_deal_json(new.wizard_snapshot->'deal'),
+        true
+      );
+    end if;
+
+    if jsonb_typeof(new.deal_summary) = 'object' then
+      new.deal_summary := nav_v2_private.nav_v2_sanitize_client_deal_json(new.deal_summary);
+    end if;
+
+    new.title := nav_v2_private.nav_v2_neutral_deal_title(new.object_type, new.address);
+    return new;
+  end if;
+
+  if new.seller_name is distinct from old.seller_name then
+    new.seller_name := null;
+    v_identity_changed := true;
+  end if;
+  if new.buyer_name is distinct from old.buyer_name then
+    new.buyer_name := null;
+    v_identity_changed := true;
+  end if;
+  if new.seller_phone is distinct from old.seller_phone then
+    new.seller_phone := null;
+    v_identity_changed := true;
+  end if;
+  if new.buyer_phone is distinct from old.buyer_phone then
+    new.buyer_phone := null;
+    v_identity_changed := true;
+  end if;
+
+  if new.wizard_snapshot is distinct from old.wizard_snapshot
+     and jsonb_typeof(new.wizard_snapshot) = 'object'
      and jsonb_typeof(new.wizard_snapshot->'deal') = 'object' then
     new.wizard_snapshot := jsonb_set(
       new.wizard_snapshot,
@@ -74,17 +113,21 @@ begin
     );
   end if;
 
-  if jsonb_typeof(new.deal_summary) = 'object' then
+  if new.deal_summary is distinct from old.deal_summary
+     and jsonb_typeof(new.deal_summary) = 'object' then
     new.deal_summary := nav_v2_private.nav_v2_sanitize_client_deal_json(new.deal_summary);
   end if;
 
-  new.title := nav_v2_private.nav_v2_neutral_deal_title(new.object_type, new.address);
+  if v_identity_changed then
+    new.title := nav_v2_private.nav_v2_neutral_deal_title(new.object_type, new.address);
+  end if;
+
   return new;
 end;
 $function$;
 
 comment on function nav_v2_private.nav_v2_guard_client_identifiers()
-is 'Table-bound minimization for new or explicitly identity-modifying deal writes. Historical rows are not bulk-cleaned.';
+is 'Minimizes every new deal. On historical rows it sanitizes only identity or JSON fields explicitly changed by the current write; unrelated edits do not silently clean history.';
 
 revoke all on function nav_v2_private.nav_v2_guard_client_identifiers() from public;
 revoke all on function nav_v2_private.nav_v2_guard_client_identifiers() from anon;
@@ -92,7 +135,7 @@ revoke all on function nav_v2_private.nav_v2_guard_client_identifiers() from aut
 
 drop trigger if exists nav_v2_deals_guard_client_identifiers on public.nav_deals_v2;
 create trigger nav_v2_deals_guard_client_identifiers
-before insert or update of seller_name, buyer_name, seller_phone, buyer_phone, wizard_snapshot, deal_summary, address, object_type
+before insert or update of seller_name, buyer_name, seller_phone, buyer_phone, wizard_snapshot, deal_summary
 on public.nav_deals_v2
 for each row
 execute function nav_v2_private.nav_v2_guard_client_identifiers();
@@ -103,8 +146,8 @@ begin
     if to_regprocedure('public.nav_v2_save_wizard_result(jsonb)') is null then
       raise exception 'Expected public.nav_v2_save_wizard_result(jsonb) before minimization wrapper';
     end if;
-    alter function public.nav_v2_save_wizard_result(jsonb) set schema nav_v2_private;
-    alter function nav_v2_private.nav_v2_save_wizard_result(jsonb) rename to nav_v2_save_wizard_result_legacy_20260715;
+    execute 'alter function public.nav_v2_save_wizard_result(jsonb) set schema nav_v2_private';
+    execute 'alter function nav_v2_private.nav_v2_save_wizard_result(jsonb) rename to nav_v2_save_wizard_result_legacy_20260715';
   end if;
 end;
 $migration$;
