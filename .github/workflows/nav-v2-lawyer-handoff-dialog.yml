@@ -9,7 +9,7 @@ on:
       - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
       - 'scripts/check-nav-v2-action-dialog.mjs'
       - 'scripts/check_nav_v2_action_dialog.py'
-      - 'tests/e2e/lawyer-handoff-dialog.spec.js'
+      - 'tests/e2e/lawyer-handoff-dialog-v2.spec.js'
       - 'tests/fixtures/nav-v2-lawyer-handoff-dialog.html'
       - '.github/workflows/nav-v2-lawyer-handoff-dialog.yml'
   push:
@@ -22,7 +22,7 @@ on:
       - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
       - 'scripts/check-nav-v2-action-dialog.mjs'
       - 'scripts/check_nav_v2_action_dialog.py'
-      - 'tests/e2e/lawyer-handoff-dialog.spec.js'
+      - 'tests/e2e/lawyer-handoff-dialog-v2.spec.js'
       - 'tests/fixtures/nav-v2-lawyer-handoff-dialog.html'
       - '.github/workflows/nav-v2-lawyer-handoff-dialog.yml'
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
           node --check assets/js/nav-v2/deal-card-lawyer-handoff-dialog-v2.js
           node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
           node --check scripts/check-nav-v2-action-dialog.mjs
-          node --check tests/e2e/lawyer-handoff-dialog.spec.js
+          node --check tests/e2e/lawyer-handoff-dialog-v2.spec.js
       - name: Shared action dialog semantic contract
         run: node scripts/check-nav-v2-action-dialog.mjs
       - name: Shared action dialog source contract
@@ -66,7 +66,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run lawyer handoff dialog regression
-        run: npx playwright test tests/e2e/lawyer-handoff-dialog.spec.js --project=chromium-desktop --project=chromium-mobile
+        run: npx playwright test tests/e2e/lawyer-handoff-dialog-v2.spec.js --project=chromium-desktop --project=chromium-mobile
       - name: Upload lawyer handoff evidence
         if: always()
         uses: actions/upload-artifact@v4
