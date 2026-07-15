@@ -20,6 +20,8 @@ test('action-first keyboard focus remains visible and continuous', async ({ page
 
   const details = page.locator('#contextDetails');
   const summary = details.locator('summary');
+  await page.evaluate(() => { document.getElementById('contextDetails').open = false; });
+  await expect(details).not.toHaveAttribute('open', '');
   await summary.focus();
   await page.keyboard.press('Enter');
   await expect(details).toHaveAttribute('open', '');
