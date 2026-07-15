@@ -4,8 +4,11 @@ on:
   pull_request:
     paths:
       - 'deal-card-v2.html'
+      - 'deals-v2.html'
       - 'assets/js/nav-v2/form-association-*.js'
       - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deals-spn-priority-hints-v2.js'
+      - 'assets/js/nav-v2/deals-v2.js'
       - 'scripts/check-nav-v2-form-association.mjs'
       - 'scripts/check_nav_v2_form_association.py'
       - 'scripts/check_nav_v2_async_feedback.py'
@@ -17,8 +20,11 @@ on:
       - main
     paths:
       - 'deal-card-v2.html'
+      - 'deals-v2.html'
       - 'assets/js/nav-v2/form-association-*.js'
       - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deals-spn-priority-hints-v2.js'
+      - 'assets/js/nav-v2/deals-v2.js'
       - 'scripts/check-nav-v2-form-association.mjs'
       - 'scripts/check_nav_v2_form_association.py'
       - 'tests/e2e/form-association.spec.js'
@@ -43,6 +49,7 @@ jobs:
           node --check assets/js/nav-v2/form-association-model-v2.js
           node --check assets/js/nav-v2/form-association-v2.js
           node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+          node --check assets/js/nav-v2/deals-spn-priority-hints-v2.js
           node --check scripts/check-nav-v2-form-association.mjs
           node --check tests/e2e/form-association.spec.js
       - name: Semantic form association contract
