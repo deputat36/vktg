@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 client data minimization fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell">
+    <section class="card">
+      <h2>Покупатель</h2>
+      <p class="muted">Укажите деньги, контакт или комментарий по покупателю.</p>
+      <div class="field"><label>Имя покупателя</label><input data-field="buyerName" value="Секретный покупатель"></div>
+      <div class="field"><label>Телефон покупателя</label><input data-field="buyerPhone" value="+7 900 000-00-00"></div>
+      <div class="field"><label>Комментарий</label><textarea data-field="buyerComment"></textarea></div>
+    </section>
+  </main>
+  <script>
+    const legacyDraft = {
+      objectType: 'flat_mkd',
+      address: 'Северный район, дом 7',
+      sellerName: 'Секретный продавец',
+      sellerPhone: '+7 900 000-00-01',
+      buyerName: 'Секретный покупатель',
+      buyerPhone: '+7 900 000-00-02',
+      payments: ['mortgage'],
+      buyerComment: 'Ипотека предварительно одобрена'
+    };
+    if (!localStorage.getItem('nav_deal_draft_v2')) {
+      localStorage.setItem('nav_deal_draft_v2', JSON.stringify(legacyDraft));
+    }
+    document.addEventListener('input', (event) => {
+      const field = event.target?.dataset?.field;
+      if (!field) return;
+      const draft = JSON.parse(localStorage.getItem('nav_deal_draft_v2') || '{}');
+      draft[field] = event.target.value;
+      localStorage.setItem('nav_deal_draft_v2', JSON.stringify(draft));
+    });
+  </script>
+  <script type="module" src="/assets/js/nav-v2/spn-party-names-adaptive-v2.js?v=20260715-01"></script>
+</body>
+</html>
