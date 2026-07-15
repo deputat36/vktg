@@ -3,6 +3,7 @@ import { captureRuntimeFailures, expectNoRuntimeFailures, openPage } from './hel
 
 const fixture = '/tests/fixtures/nav-v2-document-problem-dialog.html';
 const rpcPattern = '**/rest/v1/rpc/**';
+const expectedMockedHttp400 = 'console.error: Failed to load resource: the server responded with a status of 400 (Bad Request)';
 
 async function routeRpc(page, handler) {
   await page.route(rpcPattern, async (route) => handler(route, route.request()));
@@ -107,7 +108,8 @@ test('server error preserves document reason for a repeat attempt', async ({ pag
   await trigger.click();
   await expect(page.getByRole('textbox', { name: 'Что не так с документом' })).toHaveValue('В выписке неверно указана площадь');
   await page.getByRole('button', { name: 'Отмена' }).click();
-  await expectNoRuntimeFailures(failures, testInfo, 'document-problem-dialog-server-error');
+  const unexpectedFailures = failures.filter((failure) => failure !== expectedMockedHttp400);
+  await expectNoRuntimeFailures(unexpectedFailures, testInfo, 'document-problem-dialog-server-error');
 });
 
 test('successful document problem uses the existing RPC payload', async ({ page }, testInfo) => {
