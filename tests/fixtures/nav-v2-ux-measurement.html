@@ -7,16 +7,18 @@
   <link rel="stylesheet" href="../../assets/css/nav-v2.css?v=20260701-0815">
 </head>
 <body class="nav-v2">
-  <main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
-    <section class="hero"><h1>Рабочая сделка</h1><p>Синтетический fixture без рабочих данных.</p></section>
-    <section class="card deals-workspace">
-      <a id="primaryAction" class="btn primary mobile-first-screen-primary-action" href="#done">Продолжить работу</a>
-      <details id="contextDetails" class="mobile-first-screen-details">
-        <summary>Дополнительный контекст</summary>
-        <div class="mobile-first-screen-details-body">Тестовый контекст</div>
-      </details>
-    </section>
-  </main>
+  <div id="app">
+    <main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
+      <section class="hero"><h1>Рабочая сделка</h1><p>Синтетический fixture без рабочих данных.</p></section>
+      <section class="card deals-workspace">
+        <a id="primaryAction" class="btn primary mobile-first-screen-primary-action" href="#done">Продолжить работу</a>
+        <details id="contextDetails" class="mobile-first-screen-details">
+          <summary>Дополнительный контекст</summary>
+          <div class="mobile-first-screen-details-body">Тестовый контекст</div>
+        </details>
+      </section>
+    </main>
+  </div>
   <script>
     window.__NAV_V2_UX_EVENTS__ = [];
     window.addEventListener('nav-v2:ux-measurement', (event) => {
