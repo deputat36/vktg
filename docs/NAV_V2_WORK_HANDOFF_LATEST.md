@@ -153,7 +153,7 @@ Counts могут изменяться от реальной работы пол
 - Для operational pilot не предоставлен полный evidence-пакет: pilot mutation запрещена.
 - Для responsibility correction нет evidence: не менять ответственных в рабочих строках.
 - Production-readonly workflow с запретом drift не запускался вручную.
-- Для isolated authenticated E2E нет отдельного подтверждения расходов: не создавать дополнительную среду, тестовых пользователей и секреты.
+- Для isolated authenticated E2E требуется отдельное явное решение; до него среду не создавать.
 
 ## Следующий безопасный продуктовый slice
 
@@ -193,4 +193,4 @@ P1 UX — task permission/action feedback и завершение task-flow.
 
 ## Команда следующего запуска
 
-`@GitHub продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #331. Начни task permission/action feedback slice: не дублируй permission или task RPC, переиспользуй page-action-feedback, проверь completion/reopen и сохрани роли, status taxonomy и payload. Без новых RPC, storage, collector, telemetry, backend и платной среды.`
+`@GitHub продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #331. Начни task permission/action feedback slice: не дублируй permission или task RPC, переиспользуй page-action-feedback, проверь completion/reopen и сохрани роли, status taxonomy и payload. Без новых RPC, storage, collector, telemetry и backend.`
