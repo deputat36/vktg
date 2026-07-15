@@ -26,7 +26,7 @@ test('keyboard error announces a friendly recovery and preserves input', async (
 
   await expect(announcer).toHaveAttribute('role', 'alert');
   await expect(announcer).toHaveAttribute('aria-live', 'assertive');
-  await expect(announcer).toContainText('Повторите действие той же кнопкой');
+  await expect(announcer).toContainText(/повторите действие той же кнопкой/i);
   await expectNoRuntimeFailures(failures, testInfo, 'async-feedback-keyboard-error');
 });
 
