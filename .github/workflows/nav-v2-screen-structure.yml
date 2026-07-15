@@ -1,0 +1,82 @@
+name: Navigator v2 screen structure
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/focus-continuity-v2.js'
+      - 'assets/js/nav-v2/screen-structure-*.js'
+      - 'scripts/check_nav_v2_screen_structure.py'
+      - 'scripts/check-nav-v2-screen-structure.mjs'
+      - 'tests/e2e/screen-structure.spec.js'
+      - 'tests/fixtures/nav-v2-screen-structure.html'
+      - '.github/workflows/nav-v2-screen-structure.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/focus-continuity-v2.js'
+      - 'assets/js/nav-v2/screen-structure-*.js'
+      - 'scripts/check_nav_v2_screen_structure.py'
+      - 'scripts/check-nav-v2-screen-structure.mjs'
+      - 'tests/e2e/screen-structure.spec.js'
+      - 'tests/fixtures/nav-v2-screen-structure.html'
+      - '.github/workflows/nav-v2-screen-structure.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/screen-structure-model-v2.js
+          node --check assets/js/nav-v2/screen-structure-v2.js
+          node --check assets/js/nav-v2/focus-continuity-v2.js
+          node --check scripts/check-nav-v2-screen-structure.mjs
+          node --check tests/e2e/screen-structure.spec.js
+      - name: Semantic screen structure contract
+        run: node scripts/check-nav-v2-screen-structure.mjs
+      - name: Static screen structure contract
+        run: python3 scripts/check_nav_v2_screen_structure.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_screen_structure.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run screen-reader-oriented structure regression
+        run: npx playwright test tests/e2e/screen-structure.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload screen structure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-screen-structure-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
