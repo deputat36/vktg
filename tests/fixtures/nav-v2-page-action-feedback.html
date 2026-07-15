@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 page action feedback fixture</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell">
+    <h1>Обратная связь действия</h1>
+    <div id="pageStatus" class="status">Готово к действию.</div>
+    <div class="actions">
+      <button id="showBusy" class="btn" type="button">Ожидание</button>
+      <button id="showSuccess" class="btn" type="button">Успех</button>
+      <button id="showError" class="btn" type="button">Ошибка</button>
+      <button id="showIdle" class="btn" type="button">Сброс</button>
+    </div>
+  </main>
+  <script type="module">
+    import { applyPageActionFeedback } from '/assets/js/nav-v2/page-action-feedback-v2.js?v=20260715-01';
+    document.getElementById('showBusy').onclick = () => applyPageActionFeedback('Сохраняю действие...', 'busy');
+    document.getElementById('showSuccess').onclick = () => applyPageActionFeedback('Действие сохранено.', 'success');
+    document.getElementById('showError').onclick = () => applyPageActionFeedback('Не удалось сохранить действие.', 'error');
+    document.getElementById('showIdle').onclick = () => applyPageActionFeedback('Готово к действию.', 'idle');
+  </script>
+</body>
+</html>

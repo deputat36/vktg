@@ -1,0 +1,84 @@
+name: Navigator v2 page action feedback
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/page-action-feedback-v2.js'
+      - 'assets/js/nav-v2/deal-card-risk-resolution-v2.js'
+      - 'assets/js/nav-v2/deal-card-document-problem-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-handoff-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check_nav_v2_page_action_feedback.py'
+      - 'tests/e2e/page-action-feedback.spec.js'
+      - 'tests/fixtures/nav-v2-page-action-feedback.html'
+      - '.github/workflows/nav-v2-page-action-feedback.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/page-action-feedback-v2.js'
+      - 'assets/js/nav-v2/deal-card-risk-resolution-v2.js'
+      - 'assets/js/nav-v2/deal-card-document-problem-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-lawyer-handoff-dialog-v2.js'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'scripts/check_nav_v2_page_action_feedback.py'
+      - 'tests/e2e/page-action-feedback.spec.js'
+      - 'tests/fixtures/nav-v2-page-action-feedback.html'
+      - '.github/workflows/nav-v2-page-action-feedback.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/page-action-feedback-v2.js
+          node --check assets/js/nav-v2/deal-card-risk-resolution-v2.js
+          node --check assets/js/nav-v2/deal-card-document-problem-dialog-v2.js
+          node --check assets/js/nav-v2/deal-card-lawyer-handoff-dialog-v2.js
+          node --check tests/e2e/page-action-feedback.spec.js
+      - name: Page action feedback source contract
+        run: python3 scripts/check_nav_v2_page_action_feedback.py
+      - name: Compatible dialog and async contracts
+        run: |
+          python3 scripts/check_nav_v2_action_dialog.py
+          python3 scripts/check_nav_v2_document_problem_dialog.py
+          python3 scripts/check_nav_v2_risk_resolution.py
+          python3 scripts/check_nav_v2_async_feedback.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_page_action_feedback.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run page action feedback regression
+        run: npx playwright test tests/e2e/page-action-feedback.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload page action feedback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-page-action-feedback-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
