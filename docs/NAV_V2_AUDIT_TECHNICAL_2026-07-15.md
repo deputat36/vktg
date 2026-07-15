@@ -4,7 +4,7 @@
 
 ## Проверенная база
 
-- `main`: `90063c346974c0f8328d7528b5b6c34d46eda8a8`;
+- `main`: `bbb82b51adb59b0235824a221e6fa5668103be58`, после PR #329;
 - production Supabase: `ofewxuqfjhamgerwzull`;
 - статус: `ACTIVE_HEALTHY`;
 - регион: `eu-west-1`;
@@ -140,7 +140,9 @@ Leaked-password protection отключён.
 
 ## CI
 
-PR #327 имеет зелёные static, JS, BAZA, rework, lawyer, mobile, completion, dialogs, form, keyboard, screen structure и public desktop/mobile checks.
+PR #329 имеет зелёные static, JavaScript, BAZA, SPN rework, lawyer document, action focus, mobile, completion, document dialog, form, action dialog, lawyer handoff dialog, keyboard, screen structure и privacy checks.
+
+Новый lawyer handoff dialog улучшает review незакрытых пунктов перед передачей юристу и сохраняет frontend-only границу.
 
 Но `authenticated-smoke` внутри общего workflow пропущен. Green workflow не подтверждает реальные JWT/RLS/mutation flows для ролей.
 
