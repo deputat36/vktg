@@ -85,7 +85,7 @@ def main() -> int:
         text = page.read_text(encoding="utf-8")
         for marker in (
             "nav-v2-mobile-first-screen.css?v=20260715-02",
-            '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-03"',
+            '"./mobile-first-screen-v2.js?v=20260715-01": "./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-04"',
         ):
             if marker not in text:
                 errors.append(f"{page.name}: missing focus release marker {marker!r}")
