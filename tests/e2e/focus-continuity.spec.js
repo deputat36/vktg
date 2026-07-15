@@ -20,20 +20,29 @@ test('action-first keyboard focus remains visible and continuous', async ({ page
 
   const details = page.locator('#contextDetails');
   const summary = details.locator('summary');
-  await page.evaluate(() => { document.getElementById('contextDetails').open = false; });
-  await expect(details).not.toHaveAttribute('open', '');
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await expect(details).toHaveAttribute('open', '');
-  await expect(summary).toBeFocused();
-  await expect(summary).toHaveAttribute('aria-expanded', 'true');
+  const compact = (page.viewportSize()?.width || 0) <= 430;
   await expect(summary).toHaveAttribute('aria-controls', /navFocusDisclosure/);
 
-  await page.locator('#contextAction').focus();
-  await page.evaluate(() => { document.getElementById('contextDetails').open = false; });
-  await expect(details).not.toHaveAttribute('open', '');
-  await expect(summary).toBeFocused();
-  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  if (compact) {
+    await page.evaluate(() => { document.getElementById('contextDetails').open = false; });
+    await expect(details).not.toHaveAttribute('open', '');
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(details).toHaveAttribute('open', '');
+    await expect(summary).toBeFocused();
+    await expect(summary).toHaveAttribute('aria-expanded', 'true');
+
+    await page.locator('#contextAction').focus();
+    await page.evaluate(() => { document.getElementById('contextDetails').open = false; });
+    await expect(details).not.toHaveAttribute('open', '');
+    await expect(summary).toBeFocused();
+    await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  } else {
+    await expect(details).toHaveAttribute('open', '');
+    await expect(summary).toBeHidden();
+    await expect(page.locator('#contextAction')).toBeVisible();
+    await expect(summary).toHaveAttribute('aria-expanded', 'true');
+  }
 
   await page.locator('#docsTab').focus();
   await page.keyboard.press('Enter');
