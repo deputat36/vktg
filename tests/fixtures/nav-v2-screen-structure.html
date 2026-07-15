@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 screen structure fixture</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { applyScreenStructure } from '../../assets/js/nav-v2/screen-structure-v2.js?v=20260715-01';
+
+    const app = document.getElementById('app');
+    const surface = new URLSearchParams(location.search).get('surface') || 'dashboard';
+    const fixtures = {
+      dashboard: `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-dashboard">
+        <section class="hero"><h1>Рабочий стол менеджера</h1><p>Главные решения на сегодня.</p></section>
+        <section class="card role-home-profile" id="unnamedCard"><div>Профиль сотрудника</div></section>
+        <section class="card role-home-focus"><h2>Что делать сейчас</h2><article class="role-home-priority-card"><h3>Сделка на Просторной</h3><a class="mobile-first-screen-primary-action" href="#">Открыть карточку</a></article></section>
+        <section class="kpi-row"><div class="metric"><span>Сделки</span><b>3</b></div></section>
+        <section class="card role-home-quick-actions"><h2>Быстрые действия</h2></section>
+        <section class="card role-home-recent"><h2>Последние сделки</h2></section>
+        <div class="status" role="status" aria-live="polite">Сводка обновлена</div>
+      </main>`,
+      deals: `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
+        <section class="hero"><h1>Рабочие сделки</h1><p>Очередь сделок.</p></section>
+        <div class="kpi-row"><div class="metric"><span>На контроле</span><b>2</b></div></div>
+        <section class="card deals-workspace"><h2>Сделки для работы</h2>
+          <article class="deal-card deals-work-card"><div class="deal-title">Квартира — Просторная, 4А</div><a class="mobile-first-screen-primary-action" href="#">Продолжить работу</a></article>
+          <article class="deal-card deals-work-card"><div class="deal-title">Дом — Северный микрорайон</div><a href="#">Продолжить работу</a></article>
+        </section>
+        <div class="status" role="alert">Не удалось обновить список</div>
+      </main>`,
+      deal_card: `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-card">
+        <section class="hero"><h1>Карточка сделки: Просторная, 4А</h1></section>
+        <div class="kpi-row"><div class="metric"><span>К задатку</span><b>80%</b></div></div>
+        <div class="kpi-row"><div class="metric"><span>Риск</span><b>Средний</b></div></div>
+        <section id="dealActionFocus" class="card"><h2>Главное действие по сделке</h2><button class="mobile-first-screen-primary-action">Исправить карточку</button></section>
+        <section id="spnReworkWorkflowV2" class="card"><h2>Исправьте замечания</h2></section>
+        <section class="card"><div class="tabs"><button data-tab="docs" class="active">Документы</button></div><h2>Документы для проверки</h2></section>
+        <div class="status" role="status" aria-live="polite">Документы загружены</div>
+      </main>`,
+      manager: `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-manager">
+        <section class="hero"><h1>Что требует решения сегодня</h1></section>
+        <section class="kpi-row manager-primary-metrics" aria-label="Главные показатели контроля"><div class="metric"><span>Решить</span><b>2</b></div></section>
+        <section class="card manager-confirmed-results"><h2>Подтверждённые результаты</h2>
+          <article class="list-item manager-confirmed-card"><h3>Документ проверен</h3><section class="manager-confirmed-next" aria-label="Следующий шаг после подтверждённого результата"><b>Передать на сделку</b></section></article>
+        </section>
+        <section class="card manager-readiness-summary"><h2>Правдивая готовность</h2></section>
+        <section class="card manager-queue"><h2>Очередь решений</h2>
+          <article class="list-item manager-decision-card"><div class="manager-decision-head"><b>Квартира — Просторная, 4А</b></div><section class="manager-main-action" aria-label="Главное действие по сделке"><b>Назначить юриста</b></section></article>
+          <article class="list-item manager-decision-card"><div class="manager-decision-head"><b>Дом — Северный микрорайон</b></div><section class="manager-main-action" aria-label="Главное действие по сделке"><b>Снять просрочку</b></section></article>
+        </section>
+        <div class="status" role="status">Очередь сформирована</div>
+      </main>`
+    };
+
+    app.innerHTML = fixtures[surface] || fixtures.dashboard;
+    applyScreenStructure(document);
+  </script>
+</body>
+</html>
