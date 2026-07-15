@@ -1,4 +1,5 @@
 import './ux-measurement-v2.js?v=20260715-01';
+import { applyAccessibilityContinuity } from './accessibility-continuity-v2.js?v=20260715-01';
 
 const DISCLOSURE_SELECTOR = '.mobile-first-screen-more, .mobile-first-screen-details';
 let mediaQuery = null;
@@ -15,6 +16,7 @@ function syncDisclosures(root = document) {
   root.querySelectorAll(DISCLOSURE_SELECTOR).forEach((details) => {
     if (details instanceof HTMLDetailsElement) details.open = !compact;
   });
+  applyAccessibilityContinuity(root, compact);
 }
 
 export function applyMobileFirstScreenDisclosure(root = document) {
