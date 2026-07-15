@@ -2,8 +2,10 @@ import {
   fieldValidationState,
   formFieldIds,
   formFieldPolicy,
+  formGroupIds,
+  formGroupPolicy,
   mergeDescriptionIds
-} from './form-association-model-v2.js?v=20260715-01';
+} from './form-association-model-v2.js?v=20260715-02';
 
 const STATUS_BY_FIELD = Object.freeze({
   dealStatus: 'pageStatus',
@@ -38,6 +40,9 @@ function labelForField(field) {
 function existingHelp(field) {
   if (field.id === 'spnReworkCompletionText') {
     return field.closest('.spn-rework-evidence')?.querySelector('p.small') || null;
+  }
+  if (field.id === 'spnReworkReturnReason') {
+    return document.getElementById('spnReworkReturnHelp');
   }
   return null;
 }
@@ -85,10 +90,44 @@ function validationFor(field) {
   });
 }
 
+function groupPoliciesForField(fieldId) {
+  return formGroupIds()
+    .map(formGroupPolicy)
+    .filter((policy) => policy?.validationFieldId === fieldId);
+}
+
+function resolveGroup(policy, root = document) {
+  if (!policy?.selector) return null;
+  const group = root.querySelector?.(policy.selector) || document.querySelector(policy.selector);
+  return group instanceof HTMLElement ? group : null;
+}
+
+function clearGroupErrorForField(fieldId) {
+  groupPoliciesForField(fieldId).forEach((policy) => {
+    const group = resolveGroup(policy);
+    if (!group) return;
+    group.removeAttribute('aria-invalid');
+    group.removeAttribute('aria-errormessage');
+    delete group.dataset.navGroupError;
+  });
+}
+
+function applyGroupErrorForField(fieldId, status) {
+  if (!(status instanceof HTMLElement)) return;
+  groupPoliciesForField(fieldId).forEach((policy) => {
+    const group = resolveGroup(policy);
+    if (!group) return;
+    group.setAttribute('aria-invalid', 'true');
+    group.setAttribute('aria-errormessage', status.id);
+    group.dataset.navGroupError = status.id;
+  });
+}
+
 function clearFieldError(field) {
   field.removeAttribute('aria-invalid');
   field.removeAttribute('aria-errormessage');
   delete field.dataset.navFieldError;
+  clearGroupErrorForField(field.id);
 }
 
 function applyFieldError(field, status) {
@@ -97,6 +136,7 @@ function applyFieldError(field, status) {
   field.setAttribute('aria-invalid', 'true');
   field.setAttribute('aria-errormessage', status.id);
   field.dataset.navFieldError = status.id;
+  applyGroupErrorForField(field.id, status);
 }
 
 function syncFieldValidity(field) {
@@ -120,14 +160,55 @@ function prepareField(field) {
   syncFieldValidity(field);
 }
 
-function prepareReturnOptions(root = document) {
-  const group = root.querySelector('.spn-rework-options');
-  if (!(group instanceof HTMLElement)) return;
+function ensureGroupHelp(group, policy) {
+  const existing = policy.helpId ? document.getElementById(policy.helpId) : null;
+  if (existing instanceof HTMLElement) return existing;
+  const id = `${policy.groupId}Help`;
+  let help = document.getElementById(id);
+  if (!(help instanceof HTMLElement)) {
+    help = document.createElement('span');
+    help.id = id;
+    help.textContent = policy.helpText;
+    help.dataset.navGroupHelp = policy.groupId;
+    hiddenStyle(help);
+    group.append(help);
+  }
+  return help;
+}
+
+function ensureGroupName(group, policy) {
+  if (group instanceof HTMLFieldSetElement) {
+    let legend = group.querySelector(':scope > legend');
+    if (!(legend instanceof HTMLLegendElement)) {
+      legend = document.createElement('legend');
+      legend.textContent = policy.labelText;
+      hiddenStyle(legend);
+      group.prepend(legend);
+    }
+    if (!String(legend.textContent || '').trim()) legend.textContent = policy.labelText;
+    group.removeAttribute('role');
+    group.removeAttribute('aria-label');
+    return;
+  }
   group.setAttribute('role', 'group');
-  if (!group.getAttribute('aria-label')) group.setAttribute('aria-label', 'Замечания для возврата СПН');
-  const reason = root.getElementById?.('spnReworkReturnReason') || document.getElementById('spnReworkReturnReason');
-  const helpId = reason?.getAttribute('aria-describedby');
-  if (helpId) group.setAttribute('aria-describedby', helpId);
+  if (!group.getAttribute('aria-label') && !group.getAttribute('aria-labelledby')) {
+    group.setAttribute('aria-label', policy.labelText);
+  }
+}
+
+function prepareGroup(group, policy) {
+  ensureGroupName(group, policy);
+  const help = ensureGroupHelp(group, policy);
+  group.setAttribute('aria-describedby', mergeDescriptionIds(group.getAttribute('aria-describedby'), help?.id));
+  group.dataset.navFormGroup = policy.groupId;
+}
+
+function prepareGroups(root = document) {
+  formGroupIds().forEach((groupId) => {
+    const policy = formGroupPolicy(groupId);
+    const group = resolveGroup(policy, root);
+    if (group) prepareGroup(group, policy);
+  });
 }
 
 function actionConfig(control) {
@@ -176,7 +257,7 @@ export function applyFormAssociations(root = document) {
     const field = root.getElementById?.(fieldId) || document.getElementById(fieldId);
     if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) prepareField(field);
   });
-  prepareReturnOptions(root);
+  prepareGroups(root);
 }
 
 export function installFormAssociationLifecycle() {
