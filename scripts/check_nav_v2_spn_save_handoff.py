@@ -76,7 +76,7 @@ def main() -> int:
     ), HOOK.name, errors)
 
     card_page = CARD_PAGE.read_text(encoding="utf-8")
-    if "deal-card-recheck-alert-v2.js?v=20260715-13" not in card_page:
+    if "deal-card-recheck-alert-v2.js?v=20260715-14" not in card_page:
         errors.append("deal-card importmap does not publish the current SPN handoff lifecycle version")
 
     workflow = WORKFLOW.read_text(encoding="utf-8")

@@ -109,8 +109,8 @@ function primaryAction(x) {
   const q = x.lawyer_queue || 'other';
   const r = reviewSummary(x);
   if (n(r.blocking_reviews_count)) return { label: 'Открыть решение', anchor: 'reviews' };
-  if (q === 'problem_docs') return { label: 'Разобрать проблемный документ', anchor: 'problemDocsV2' };
-  if (q === 'overdue_docs' || q === 'docs') return { label: 'Проверить документы', anchor: 'docs' };
+  if (q === 'problem_docs') return { label: 'Разобрать проблемный документ', anchor: 'lawyerDocumentCycleV2' };
+  if (q === 'overdue_docs' || q === 'docs') return { label: 'Проверить документы', anchor: 'lawyerDocumentCycleV2' };
   if (q === 'resubmitted' || q === 'rework') return { label: 'Проверить доработку СПН', anchor: 'comments' };
   return { label: 'Провести юридическую проверку', anchor: 'risks' };
 }
