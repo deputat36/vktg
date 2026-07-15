@@ -1,0 +1,70 @@
+name: Navigator v2 privacy-safe UX measurement
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/js/nav-v2/ux-measurement-model-v2.js'
+      - 'assets/js/nav-v2/ux-server-measurement-model-v2.js'
+      - 'assets/js/nav-v2/ux-measurement-v2.js'
+      - 'docs/NAV_V2_UX_MEASUREMENT_CONTRACT.md'
+      - 'scripts/check-nav-v2-ux-measurement.mjs'
+      - 'scripts/check_nav_v2_ux_measurement.py'
+      - 'tests/e2e/ux-measurement.spec.js'
+      - 'tests/fixtures/nav-v2-ux-measurement.html'
+      - '.github/workflows/nav-v2-ux-measurement.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/ux-measurement-model-v2.js
+          node --check assets/js/nav-v2/ux-server-measurement-model-v2.js
+          node --check assets/js/nav-v2/ux-measurement-v2.js
+          node --check scripts/check-nav-v2-ux-measurement.mjs
+          node --check tests/e2e/ux-measurement.spec.js
+      - name: Semantic contract
+        run: node scripts/check-nav-v2-ux-measurement.mjs
+      - name: Static privacy contract
+        run: python3 scripts/check_nav_v2_ux_measurement.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_ux_measurement.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run event-only browser regression
+        run: npx playwright test tests/e2e/ux-measurement.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload UX browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-ux-measurement-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
