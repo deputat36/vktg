@@ -8,7 +8,7 @@ ACCEPT = ROOT / 'assets/js/nav-v2/nav-accept-invite-v2.js'
 LOADER = ROOT / 'assets/js/nav-v2/admin-loader-v2.js'
 SYSTEM = ROOT / 'assets/js/nav-v2/nav-system-check-v2.js'
 SYSTEM_PAGE = ROOT / 'nav-system-check-v2.html'
-MIGRATION = ROOT / 'supabase/migrations/20260715195732_nav_v2_retire_viewer_assignment.sql'
+MIGRATION = ROOT / 'supabase/migrations/20260715213000_nav_v2_retire_viewer_assignment.sql'
 paths = (EDGE, ACCESS, ACCEPT, LOADER, SYSTEM, SYSTEM_PAGE, MIGRATION)
 errors = [f'Missing invite-flow file: {p.relative_to(ROOT)}' for p in paths if not p.exists()]
 
@@ -40,7 +40,7 @@ if not errors:
         "ASSIGNABLE_ROLES = new Set(['admin', 'manager', 'spn', 'lawyer', 'broker'])",
         "action: 'access_link'",
         'if (!ASSIGNABLE_ROLES.has(payload.role))',
-        "if (payload.role === 'spn' && !payload.manager_id)",
+        "if (payload.role === 'spn' and not payload.manager_id)",
         'Для СПН обязательно выберите менеджера.',
         'manager.required = required',
         'makeSafeAccessLink',
