@@ -50,9 +50,14 @@ def main() -> int:
     require(cleanup, (
         "function canKeepTechnicalLinks()",
         "['owner', 'admin'].includes",
-        "if (canKeepTechnicalLinks()) return;",
+        "if (!canKeepTechnicalLinks())",
+        "function canSeeUxMetrics()",
+        "['owner', 'admin', 'manager'].includes",
+        "./ux-metrics-v2.html",
         "attributeFilter: ['data-nav-role']",
     ), CLEANUP.name, errors)
+    if "querySelectorAll('.nav-v2-menu a[href*=\"nav-system-check-v2.html\"]" not in cleanup:
+        errors.append("base menu cleanup must still remove technical links for non-owner/admin roles")
 
     auth_test = AUTH_TEST.read_text(encoding="utf-8")
     for label in ("Команда", "Доступы", "Аудит доступов", "Проверка системы", "Диагностика"):
@@ -69,7 +74,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 owner/admin IA passed: work, team/access and system navigation remain role-safe")
+    print("Navigator v2 owner/admin IA passed: work, team/access, system and privacy-safe metrics remain role-safe")
     return 0
 
 
