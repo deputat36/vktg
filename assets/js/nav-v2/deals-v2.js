@@ -7,6 +7,7 @@ import {
   needsWorkAttention
 } from './deals-work-modes-v2.js?v=20260714-01';
 import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 
 let allDeals = [];
 let profile = null;
@@ -428,6 +429,7 @@ function render() {
         <div class="deal-list">${cardsHtml}</div>
       </section>
     </main>`;
+    applyMobileFirstScreenDisclosure(root);
 
     const filter = document.getElementById('dealFilter');
     const search = document.getElementById('dealSearch');

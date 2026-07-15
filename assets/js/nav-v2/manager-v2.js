@@ -1,6 +1,7 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, statusText } from './supabase-v2.js';
 import { buildManagerActionRoute, managerItemNeedsDistribution } from './manager-action-route-v2.js?v=20260714-01';
 import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 import {
   buildManagerConfirmedResult,
   managerResultCandidate,
@@ -293,6 +294,7 @@ function draw() {
       <div class="list">${managerQueueRows(rows)}</div>
     </section>` : `<section class="card"><p role="status" aria-live="polite">${busy ? 'Формирую очередь решений…' : 'Очередь ещё не загружена.'}</p></section>`}
   </main>`;
+  applyMobileFirstScreenDisclosure(app);
   bindFilters();
 }
 

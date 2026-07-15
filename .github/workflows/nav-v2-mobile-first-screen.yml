@@ -16,6 +16,7 @@ on:
       - 'assets/js/nav-v2/deal-card-spn-rework-v2.js'
       - 'assets/js/nav-v2/manager-v2.js'
       - 'assets/js/nav-v2/mobile-first-screen-model-v2.js'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
       - 'assets/css/nav-v2-mobile-first-screen.css'
       - 'tests/e2e/public-smoke.spec.js'
       - 'scripts/check_nav_v2_mobile_first_screen.py'

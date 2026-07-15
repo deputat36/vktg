@@ -11,6 +11,7 @@ import { applyDealCardExpenseLabels } from './expense-labels-v2.js?v=20260711-08
 import { applyDealCardReadableValues } from './readable-card-values-v2.js?v=20260711-09';
 import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260712-10';
 import { applySpnSaveConfirmation } from './deal-card-spn-save-confirmation-v2.js?v=20260713-11';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 
 let cardData = null;
 let profileData = null;
@@ -30,6 +31,7 @@ function applyCardEnhancements() {
   applyDealResponsibilitySnapshot(cardData);
   void applySpnSaveConfirmation(cardData);
   void applyDealCardBazaHints(cardData, profileData);
+  applyMobileFirstScreenDisclosure();
 }
 
 function bindRerenderHook() {

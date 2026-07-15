@@ -7,7 +7,7 @@ errors: list[str] = []
 pages = {
     "dashboard-v2.html": "dashboard-v2.js?v=20260715-01",
     "deals-v2.html": "deals-v2.js?v=20260715-01",
-    "deal-card-v2.html": "deal-card-v2.js?v=20260715-01",
+    "deal-card-v2.html": "deal-card-v2.js?v=20260715-02",
     "manager-v2.html": "manager-v2.js?v=20260715-02",
 }
 for page, module_marker in pages.items():
@@ -34,6 +34,19 @@ for forbidden in ["rpc(", "localStorage", "sessionStorage", "nav_v2_update_", "n
     if forbidden in model:
         errors.append(f"mobile-first-screen model must remain pure/read-only: {forbidden}")
 
+disclosure = (ROOT / "assets/js/nav-v2/mobile-first-screen-v2.js").read_text(encoding="utf-8")
+for marker in [
+    "export function applyMobileFirstScreenDisclosure",
+    "window.matchMedia('(max-width: 430px)')",
+    "details.open = !compact",
+    "addEventListener('change'",
+]:
+    if marker not in disclosure:
+        errors.append(f"mobile first-screen disclosure hook missing marker: {marker}")
+for forbidden in ["MutationObserver", "rpc(", "localStorage", "sessionStorage"]:
+    if forbidden in disclosure:
+        errors.append(f"mobile disclosure hook must stay DOM-only and read-only: {forbidden}")
+
 sources = {
     "dashboard": (ROOT / "assets/js/nav-v2/dashboard-v2.js").read_text(encoding="utf-8"),
     "deals": (ROOT / "assets/js/nav-v2/deals-v2.js").read_text(encoding="utf-8"),
@@ -43,7 +56,7 @@ sources = {
 required_sources = {
     "dashboard": ["buildMobileFirstScreenPlan('dashboard'", "mobile-first-screen-dashboard", "role-home-priority-more"],
     "deals": ["buildMobileFirstScreenPlan('deals'", "mobile-first-screen-deals", "deals-quick-modes-panel", "deals-more"],
-    "deal-card": ["mobile-first-screen-card", "deal-card-recheck-alert-v2.js?v=20260715-01"],
+    "deal-card": ["mobile-first-screen-card", "deal-card-recheck-alert-v2.js?v=20260715-02"],
     "manager": ["buildMobileFirstScreenPlan('manager'", "mobile-first-screen-manager", "manager-filter-panel", "manager-more-decisions"],
 }
 for name, markers in required_sources.items():
@@ -85,6 +98,7 @@ for marker in [
     "viewportWidth <= 430",
     "mobile-first-screen-primary-action",
     "toBeLessThan",
+    "applyMobileFirstScreenDisclosure(document)",
 ]:
     if marker not in public_smoke:
         errors.append(f"public mobile regression missing marker: {marker}")

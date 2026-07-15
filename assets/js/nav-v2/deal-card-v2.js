@@ -1,5 +1,5 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, money, riskPill, statusText } from './supabase-v2.js';
-import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-01';
+import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-02';
 
 const dealId = new URLSearchParams(location.search).get('id');
 let currentData = null;

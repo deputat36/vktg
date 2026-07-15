@@ -81,7 +81,7 @@ def main() -> int:
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))
 
         base_markers = (
-            "import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-01';",
+            "import { applyDealCardRecheckAlert } from './deal-card-recheck-alert-v2.js?v=20260715-02';",
             "renderCard(cardData);",
             "applyDealCardRecheckAlert(cardData, currentProfile);",
         )
@@ -337,7 +337,7 @@ def main() -> int:
             if marker in readable_values:
                 errors.append(f"readable values helper still contains legacy bootstrap behavior: {marker}")
 
-        if 'deal-card-v2.js?v=20260715-01' not in page:
+        if 'deal-card-v2.js?v=20260715-02' not in page:
             errors.append("deal-card-v2.html missing explicit-hook cache-bust")
         standalone_modules = (
             "deal-card-recheck-alert-v2.js",

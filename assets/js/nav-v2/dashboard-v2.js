@@ -1,6 +1,7 @@
 import { getCachedUser, renderAuthBox, rpc, signOut, esc, riskPill, statusText } from './supabase-v2.js';
 import { buildDashboardFocus } from './dashboard-priority-v2.js?v=20260714-01';
 import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 
 function shortId(id) {
   return String(id || '').slice(0, 8).toUpperCase();
@@ -236,6 +237,7 @@ function renderShell(profile, bodyHtml) {
   </main>`;
 
   const logout = document.getElementById('dashLogout');
+  applyMobileFirstScreenDisclosure();
   if (logout) {
     logout.onclick = async () => {
       logout.disabled = true;

@@ -46,6 +46,10 @@ test('mobile operational first screen keeps the primary action before secondary 
       <details class="mobile-first-screen-details"><summary>Ответственные и препятствия</summary><div class="mobile-first-screen-details-body"><p>Вторичные данные сделки</p></div></details>
     </section>
   </main></body></html>`);
+  await page.evaluate(async () => {
+    const { applyMobileFirstScreenDisclosure } = await import('./assets/js/nav-v2/mobile-first-screen-v2.js?v=20260715-01');
+    applyMobileFirstScreenDisclosure(document);
+  });
 
   const viewportWidth = page.viewportSize()?.width || 0;
   const primaryOrder = await page.locator('[data-test-primary-region]').evaluate((element) => getComputedStyle(element).order);
