@@ -1,0 +1,82 @@
+name: Navigator v2 retired viewer role
+
+on:
+  pull_request:
+    paths:
+      - 'admin-v2.html'
+      - 'assets/js/nav-v2/admin-loader-v2.js'
+      - 'assets/js/nav-v2/admin-profile-editor-ux-v2.js'
+      - 'assets/js/nav-v2/nav-temp-password-v2.js'
+      - 'supabase/functions/nav-invite-user/index.ts'
+      - 'supabase/migrations/20260715213000_nav_v2_retire_viewer_assignment.sql'
+      - 'config/nav-v2-data-minimization.json'
+      - 'docs/NAV_V2_DATA_MINIMIZATION_BASELINE_2026-07-15.md'
+      - 'scripts/check_nav_v2_retired_viewer_role.py'
+      - 'tests/fixtures/nav-v2-retired-viewer-role.html'
+      - 'tests/e2e/retired-viewer-role.spec.js'
+      - '.github/workflows/nav-v2-retired-viewer-role.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'admin-v2.html'
+      - 'assets/js/nav-v2/admin-loader-v2.js'
+      - 'assets/js/nav-v2/admin-profile-editor-ux-v2.js'
+      - 'assets/js/nav-v2/nav-temp-password-v2.js'
+      - 'supabase/functions/nav-invite-user/index.ts'
+      - 'supabase/migrations/20260715213000_nav_v2_retire_viewer_assignment.sql'
+      - 'config/nav-v2-data-minimization.json'
+      - 'docs/NAV_V2_DATA_MINIMIZATION_BASELINE_2026-07-15.md'
+      - 'scripts/check_nav_v2_retired_viewer_role.py'
+      - 'tests/fixtures/nav-v2-retired-viewer-role.html'
+      - 'tests/e2e/retired-viewer-role.spec.js'
+      - '.github/workflows/nav-v2-retired-viewer-role.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/admin-loader-v2.js
+          node --check assets/js/nav-v2/admin-profile-editor-ux-v2.js
+          node --check assets/js/nav-v2/nav-temp-password-v2.js
+          node --check tests/e2e/retired-viewer-role.spec.js
+      - name: Retired viewer role source contract
+        run: python3 scripts/check_nav_v2_retired_viewer_role.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_retired_viewer_role.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run retired viewer role regression
+        run: npx playwright test tests/e2e/retired-viewer-role.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload retired viewer role evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-retired-viewer-role-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
