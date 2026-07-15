@@ -1,5 +1,7 @@
 import { setupTop, getCachedUser, renderAuthBox, rpc, esc, statusText } from './supabase-v2.js';
 import { buildManagerActionRoute, managerItemNeedsDistribution } from './manager-action-route-v2.js?v=20260714-01';
+import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 import {
   buildManagerConfirmedResult,
   managerResultCandidate,
@@ -117,10 +119,12 @@ function reasonList(reasons) {
 
 function actionButtons(item) {
   const route = buildManagerActionRoute(item);
-  return `<div class="actions manager-card-actions" style="justify-content:flex-start">
-    <a class="btn primary" data-manager-action-kind="${esc(route.primary.kind)}" href="${esc(route.primary.href)}">${esc(route.primary.label)}</a>
-    ${route.secondary.map((action) => `<a class="btn light" data-manager-action-kind="${esc(action.kind)}" href="${esc(action.href)}">${esc(action.label)}</a>`).join('')}
-  </div>`;
+  const plan = buildMobileFirstScreenPlan('manager', { actions: [route.primary, ...route.secondary] });
+  const visible = plan.visibleActions.map((action, index) => `<a class="btn ${index === 0 ? 'primary mobile-first-screen-primary-action' : 'light'}" data-manager-action-kind="${esc(action.kind)}" href="${esc(action.href)}">${esc(action.label)}</a>`).join('');
+  const overflow = plan.overflowActions.length
+    ? `<details class="mobile-first-screen-details manager-action-overflow"><summary>Ещё действия</summary><div class="mobile-first-screen-details-body actions">${plan.overflowActions.map((action) => `<a class="btn light" data-manager-action-kind="${esc(action.kind)}" href="${esc(action.href)}">${esc(action.label)}</a>`).join('')}</div></details>`
+    : '';
+  return `<div class="actions manager-card-actions" style="justify-content:flex-start">${visible}${overflow}</div>`;
 }
 
 function itemRow(item) {
@@ -247,10 +251,23 @@ function bindFilters() {
   });
 }
 
+function managerQueueRows(rows) {
+  const plan = buildMobileFirstScreenPlan('manager', { items: rows });
+  if (!plan.primaryItem) return '<div class="empty">В выбранной очереди нет сделок.</div>';
+  const remaining = plan.secondaryItems.length
+    ? `<details class="mobile-first-screen-more manager-more-decisions"><summary>Ещё решения <span class="pill blue">${plan.secondaryItems.length}</span></summary><div class="mobile-first-screen-more-list list">${plan.secondaryItems.map(itemRow).join('')}</div></details>`
+    : '';
+  return `${itemRow(plan.primaryItem)}${remaining}`;
+}
+
+function activeManagerFilterLabel() {
+  return ({ today: 'Решить сегодня', unassigned: 'Нужно распределить', all: 'Все на контроле' })[activeFilter] || 'Решить сегодня';
+}
+
 function draw() {
   const s = summary();
   const rows = visibleItems();
-  app.innerHTML = `<main class="nav-v2-shell">
+  app.innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-manager">
     <section class="hero manager-hero"><span class="role-home-eyebrow">Менеджерский контроль</span><h1>Что требует решения сегодня</h1><p>Сначала решите просроченные и блокирующие ситуации. Ниже отдельно показано, что уже завершено и подтверждено сервером.</p></section>
     ${errorText ? `<div class="status error" role="alert">${esc(errorText)}</div>` : ''}
     ${preview?.preview_only ? '<div class="status ok" role="status"><b>Режим контроля.</b> Данные рассчитаны без изменения сделок, назначений и сроков.</div>' : ''}
@@ -272,11 +289,12 @@ function draw() {
       <div class="list">${workload().map(workloadRow).join('') || '<div class="empty">Ответственные СПН не назначены.</div>'}</div>
     </details>
     <section class="card manager-queue" style="margin-top:18px">
-      <div class="section-title"><div><h2>Очередь решений</h2><p class="muted">Сделки отсортированы по готовности, сроку и давности активности.</p></div><div class="actions"><a class="btn light" href="./task-review-v2.html">Разобрать задачи</a><span class="pill ${rows.length ? 'red' : 'green'}">${rows.length}</span></div></div>
-      <div class="tabs manager-tabs">${filterButton('today', 'Решить сегодня', todayCount())}${filterButton('unassigned', 'Нужно распределить', distributionCount())}${filterButton('all', 'Все на контроле', items().length)}</div>
-      <div class="list">${rows.map(itemRow).join('') || '<div class="empty">В выбранной очереди нет сделок.</div>'}</div>
+      <div class="section-title"><div><h2>Очередь решений</h2><p class="muted">Сделки отсортированы по готовности, сроку и давности активности.</p></div><span class="pill ${rows.length ? 'red' : 'green'}">${rows.length}</span></div>
+      <details class="mobile-first-screen-details manager-filter-panel"><summary>Очередь: ${esc(activeManagerFilterLabel())} <span class="pill ${rows.length ? 'red' : 'green'}">${rows.length}</span></summary><div class="mobile-first-screen-details-body"><div class="tabs manager-tabs">${filterButton('today', 'Решить сегодня', todayCount())}${filterButton('unassigned', 'Нужно распределить', distributionCount())}${filterButton('all', 'Все на контроле', items().length)}</div><div class="actions"><a class="btn light" href="./task-review-v2.html">Разобрать задачи</a></div></div></details>
+      <div class="list">${managerQueueRows(rows)}</div>
     </section>` : `<section class="card"><p role="status" aria-live="polite">${busy ? 'Формирую очередь решений…' : 'Очередь ещё не загружена.'}</p></section>`}
   </main>`;
+  applyMobileFirstScreenDisclosure(app);
   bindFilters();
 }
 

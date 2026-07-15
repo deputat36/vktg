@@ -1,0 +1,153 @@
+/* Shared progressive disclosure for the 360–430 px operational first screen. */
+.mobile-first-screen-more > summary,
+.mobile-first-screen-details > summary {
+  display: none;
+}
+
+.mobile-first-screen-more > .mobile-first-screen-more-list,
+.mobile-first-screen-details > .mobile-first-screen-details-body {
+  display: grid;
+}
+
+.mobile-first-screen-more-list {
+  gap: 12px;
+}
+
+@media (min-width: 431px) {
+  .deals-more,
+  .deals-more > .mobile-first-screen-more-list {
+    display: contents;
+  }
+}
+
+@media (max-width: 430px) {
+  .mobile-first-screen-page {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-first-screen-page > * { order: 10; }
+
+  .mobile-first-screen-page > .hero {
+    order: 0;
+    margin-bottom: 12px;
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .mobile-first-screen-page > .hero h1 {
+    margin-bottom: 6px;
+    font-size: 25px;
+  }
+
+  .mobile-first-screen-page > .hero p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .mobile-first-screen-page .card {
+    padding: 14px;
+  }
+
+  .mobile-first-screen-more,
+  .mobile-first-screen-details {
+    margin-top: 10px;
+  }
+
+  .mobile-first-screen-more > summary,
+  .mobile-first-screen-details > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #dbe4f0;
+    border-radius: 13px;
+    background: #f8fafc;
+    color: #1d4ed8;
+    cursor: pointer;
+    font-weight: 800;
+    list-style: none;
+  }
+
+  .mobile-first-screen-more > summary::-webkit-details-marker,
+  .mobile-first-screen-details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-first-screen-more:not([open]) > .mobile-first-screen-more-list,
+  .mobile-first-screen-details:not([open]) > .mobile-first-screen-details-body {
+    display: none;
+  }
+
+  .mobile-first-screen-more[open] > summary,
+  .mobile-first-screen-details[open] > summary {
+    margin-bottom: 10px;
+  }
+
+  .mobile-first-screen-page .mobile-first-screen-primary-action {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  /* Dashboard: priority before profile and aggregate reporting. */
+  .mobile-first-screen-dashboard > .role-home-focus { order: 1; }
+  .mobile-first-screen-dashboard > .role-home-profile { order: 20; }
+  .mobile-first-screen-dashboard > .role-home-profile-notice { order: 19; }
+  .mobile-first-screen-dashboard > .kpi-row { order: 10; }
+  .mobile-first-screen-dashboard > .role-home-quick-actions { order: 18; }
+  .mobile-first-screen-dashboard > .role-home-recent { order: 12; }
+  .mobile-first-screen-dashboard .role-home-focus .section-title > a { display: none; }
+  .mobile-first-screen-dashboard .role-home-priority-card { padding: 12px; }
+  .mobile-first-screen-dashboard .role-home-priority-main p { margin: 9px 0; }
+
+  /* Deals: one next step and its CTA before metrics, filters and the remaining list. */
+  .mobile-first-screen-deals > .deals-workspace { order: 1; }
+  .mobile-first-screen-deals > .status { order: 8; }
+  .mobile-first-screen-deals > .kpi-row { order: 9; }
+  .mobile-first-screen-deals .deals-quick-modes-panel { margin: 0; }
+  .mobile-first-screen-deals .deals-work-card .deal-meta { margin: 10px 0; }
+  .mobile-first-screen-deals .deals-work-next { margin: 10px 0; }
+  .mobile-first-screen-deals .deals-work-actions { margin: 10px 0 0; }
+
+  /* Card: result/next action stays above legacy metrics and mutation toolboxes. */
+  .mobile-first-screen-card > * { order: 8; }
+  .mobile-first-screen-card > .hero { order: 0; }
+  .mobile-first-screen-card > #spnReworkWorkflowV2,
+  .mobile-first-screen-card > #lawyerDocumentCycleV2,
+  .mobile-first-screen-card > #dealCompletionEvidenceV2,
+  .mobile-first-screen-card > #dealActionFocus { order: 1; }
+  .mobile-first-screen-card > .kpi-row { order: 8; }
+  .mobile-first-screen-card > .deal-card-secondary { order: 9; }
+  .mobile-first-screen-card .deal-action-focus,
+  .mobile-first-screen-card .deal-completion-evidence { gap: 11px; }
+  .mobile-first-screen-card .deal-action-focus-head,
+  .mobile-first-screen-card .deal-completion-head { gap: 10px; }
+  .mobile-first-screen-card .deal-action-focus-head h2,
+  .mobile-first-screen-card .deal-completion-head h2 { font-size: 20px; }
+  .mobile-first-screen-card .deal-action-focus-result,
+  .mobile-first-screen-card .deal-completion-next { padding: 12px; }
+  .mobile-first-screen-card .deal-action-focus-actions,
+  .mobile-first-screen-card .deal-completion-next .actions { margin-top: 0; }
+  .mobile-first-screen-card .deal-completion-evidence .deal-completion-next { order: 1; }
+  .mobile-first-screen-card .deal-completion-evidence .deal-completion-meta-details { order: 2; }
+
+  /* Manager: the first decision precedes aggregate readiness and confirmed history. */
+  .mobile-first-screen-manager > .manager-queue { order: 1; margin-top: 0 !important; }
+  .mobile-first-screen-manager > .manager-confirmed-results { order: 4; }
+  .mobile-first-screen-manager > .manager-primary-metrics { order: 6; }
+  .mobile-first-screen-manager > .manager-readiness-summary { order: 7; }
+  .mobile-first-screen-manager > .manager-secondary-metrics { order: 8; }
+  .mobile-first-screen-manager > .manager-workload { order: 9; }
+  .mobile-first-screen-manager > .status { order: 5; }
+  .mobile-first-screen-manager .manager-queue > .section-title .actions { width: 100%; }
+  .mobile-first-screen-manager .manager-queue > .section-title .actions .btn { width: 100%; }
+  .mobile-first-screen-manager .manager-main-action { padding: 12px; }
+  .mobile-first-screen-manager .manager-reason-box { margin-top: 10px; padding: 11px; }
+  .mobile-first-screen-manager .manager-card-actions { display: grid; grid-template-columns: 1fr; }
+}

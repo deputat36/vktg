@@ -32,6 +32,8 @@ on:
       - 'scripts/check-nav-v2-lawyer-document-cycle.mjs'
       - 'scripts/check_nav_v2_completion_evidence.py'
       - 'scripts/check-nav-v2-completion-evidence.mjs'
+      - 'scripts/check_nav_v2_mobile_first_screen.py'
+      - 'scripts/check-nav-v2-mobile-first-screen.mjs'
       - 'scripts/check_nav_v2_risk_resolution.py'
       - 'scripts/check_nav_v2_operational_readiness.py'
       - 'scripts/check_nav_v2_operational_adoption.py'
@@ -79,6 +81,7 @@ on:
       - '.github/workflows/nav-v2-spn-rework-cycle.yml'
       - '.github/workflows/nav-v2-lawyer-document-cycle.yml'
       - '.github/workflows/nav-v2-completion-evidence.yml'
+      - '.github/workflows/nav-v2-mobile-first-screen.yml'
       - '.github/workflows/nav-v2-authenticated-e2e.yml'
       - '.github/workflows/nav-v2-advisor-scope.yml'
       - '.github/workflows/nav-v2-operational-pilot-shortlist.yml'
@@ -207,6 +210,10 @@ jobs:
         run: |
           python3 scripts/check_nav_v2_completion_evidence.py
           node scripts/check-nav-v2-completion-evidence.mjs
+      - name: Check mobile operational first screen
+        run: |
+          python3 scripts/check_nav_v2_mobile_first_screen.py
+          node scripts/check-nav-v2-mobile-first-screen.mjs
       - name: Check risk resolution lifecycle
         run: python3 scripts/check_nav_v2_risk_resolution.py
       - name: Check operational readiness preview

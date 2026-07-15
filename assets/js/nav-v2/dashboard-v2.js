@@ -1,5 +1,7 @@
 import { getCachedUser, renderAuthBox, rpc, signOut, esc, riskPill, statusText } from './supabase-v2.js';
 import { buildDashboardFocus } from './dashboard-priority-v2.js?v=20260714-01';
+import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
+import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=20260715-01';
 
 function shortId(id) {
   return String(id || '').slice(0, 8).toUpperCase();
@@ -140,7 +142,7 @@ function profileNotice(profile) {
   if (!clean(profile?.manager_name) && !clean(profile?.manager_id)) missing.push('не назначен менеджер');
   if (!clean(profile?.phone)) missing.push('не указан телефон');
   if (!missing.length) return '';
-  return `<div class="status warn" role="status"><b>Профиль СПН нужно уточнить:</b> ${esc(missing.join(', '))}. Обратитесь к администратору, чтобы передача сделок команде работала без ошибок.</div>`;
+  return `<div class="status warn role-home-profile-notice" role="status"><b>Профиль СПН нужно уточнить:</b> ${esc(missing.join(', '))}. Обратитесь к администратору, чтобы передача сделок команде работала без ошибок.</div>`;
 }
 
 function metric(label, value, cls = '') {
@@ -187,7 +189,7 @@ function priorityCard(item, index) {
       <p><b>Следующий шаг:</b> ${esc(deal.next_action || 'Открыть карточку и определить ближайшее действие.')}</p>
       <div class="role-home-priority-footer">
         <span class="small">Задаток ${Number(deal.readiness_deposit || 0)}% · Сделка ${Number(deal.readiness_deal || 0)}%</span>
-        <a class="btn primary" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a>
+        <a class="btn primary mobile-first-screen-primary-action" href="./deal-card-v2.html?id=${encodeURIComponent(deal.id)}">Открыть карточку</a>
       </div>
     </div>
   </article>`;
@@ -207,7 +209,7 @@ function renderShell(profile, bodyHtml) {
   const workspace = roleWorkspace(role);
   const email = profile?.email || getCachedUser()?.email || '';
   const canSeeSystemCheck = role === 'owner' || role === 'admin';
-  document.getElementById('app').innerHTML = `<main class="nav-v2-shell">
+  document.getElementById('app').innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-dashboard">
     <section class="hero role-home-hero">
       <span class="role-home-eyebrow">${esc(roleName(role))}</span>
       <h1>${esc(workspace.title)}</h1>
@@ -235,6 +237,7 @@ function renderShell(profile, bodyHtml) {
   </main>`;
 
   const logout = document.getElementById('dashLogout');
+  applyMobileFirstScreenDisclosure();
   if (logout) {
     logout.onclick = async () => {
       logout.disabled = true;
@@ -250,7 +253,11 @@ function renderDashboard(data) {
   const workspace = roleWorkspace(profile.role);
   const deals = Array.isArray(data?.items) ? data.items : [];
   const focus = buildDashboardFocus(deals, profile.role, 3);
-  const priorityHtml = focus.items.map(priorityCard).join('');
+  const mobilePlan = buildMobileFirstScreenPlan('dashboard', { items: focus.items });
+  const priorityHtml = mobilePlan.primaryItem ? priorityCard(mobilePlan.primaryItem, 0) : '';
+  const secondaryPriorityHtml = mobilePlan.secondaryItems.length
+    ? `<details class="mobile-first-screen-more role-home-priority-more"><summary>Ещё приоритеты <span class="pill blue">${mobilePlan.secondaryItems.length}</span></summary><div class="mobile-first-screen-more-list role-home-priority-more-list">${mobilePlan.secondaryItems.map((item, index) => priorityCard(item, index + 1)).join('')}</div></details>`
+    : '';
   const exclusions = [];
   if (focus.hiddenDemoCount) exclusions.push(`демо-карточек скрыто: ${focus.hiddenDemoCount}`);
   if (focus.hiddenDuplicateCount) exclusions.push(`точных повторов объединено: ${focus.hiddenDuplicateCount}`);
@@ -266,7 +273,7 @@ function renderDashboard(data) {
         <a class="btn light" href="${esc(workspace.primaryHref)}">Открыть всю очередь</a>
       </div>
       ${exclusions.length ? `<div class="role-home-data-note">Сводка очищена: ${esc(exclusions.join(' · '))}.</div>` : ''}
-      <div class="role-home-priority-list">${priorityHtml || '<div class="empty">Приоритетных сделок пока нет.</div>'}</div>
+      <div class="role-home-priority-list">${priorityHtml || '<div class="empty">Приоритетных сделок пока нет.</div>'}${secondaryPriorityHtml}</div>
     </section>
     <section class="kpi-row" aria-label="Рабочая сводка без демо и точных повторов">
       ${metric(workspace.firstMetric, focus.workingDealCount)}
@@ -285,7 +292,7 @@ function renderDashboard(data) {
         <a class="btn light" href="./dashboard-v2.html">Обновить сводку</a>
       </div>
     </section>
-    <section class="card">
+    <section class="card role-home-recent">
       <div class="section-title">
         <div><h2>${esc(workspace.listTitle)}</h2><p class="muted">Показаны шесть последних рабочих карточек без демо и точных повторов.</p></div>
         <a class="btn light" href="./deals-v2.html">Открыть все сделки</a>
