@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "scope": "navigator_v2_client_and_deal_data",
+  "owner": "Алексей Ковтун",
+  "status": "approved_direction",
+  "principles": [
+    "Navigator coordinates preparation and control and does not duplicate the primary CRM.",
+    "Store facts, statuses, responsibilities, deadlines and decisions instead of direct client identifiers.",
+    "Do not store files or full requisites of client documents.",
+    "Protect new data first; historical cleanup requires a separate preview and owner decision."
+  ],
+  "classes": {
+    "process": [
+      "internal_deal_code",
+      "external_crm_reference",
+      "deal_status",
+      "risk_level",
+      "object_type",
+      "representation_model",
+      "participant_counts_and_roles",
+      "legally_relevant_facts_without_identity",
+      "amounts_and_deadlines",
+      "document_statuses",
+      "tasks_and_completion_evidence",
+      "specialist_decisions",
+      "employee_assignments",
+      "next_action",
+      "audit_event_types_and_timestamps"
+    ],
+    "limited": {
+      "address": "Prefer a neutral object label, district or external CRM reference.",
+      "object_registration_reference": "Prefer received, checked or mismatch status instead of the full value.",
+      "wizard_snapshot": "Sanitize before browser persistence and server save.",
+      "comments_and_notes": "Use short professional facts and structured reasons.",
+      "event_data": "Use an allowlist and never copy the full deal payload."
+    },
+    "forbidden_new_categories": [
+      "client_names_and_contacts",
+      "client_identity_document_requisites",
+      "personal_financial_requisites",
+      "client_document_files_or_photos",
+      "personal_data_of_children",
+      "special_category_personal_data"
+    ]
+  },
+  "display_rules": {
+    "client_parties": ["Продавец 1", "Продавец 2", "Покупатель 1", "Представитель", "Законный представитель"],
+    "deal_title": "Use an internal code and neutral object description.",
+    "document_record": "Store type, status, responsible employee, due date, verification result and short problem category."
+  },
+  "retired_roles": {
+    "viewer": {
+      "assignable": false,
+      "enum_retained_for_compatibility": true,
+      "replacement": "Time-bounded read-only access to one explicitly selected deal when a real business need appears."
+    }
+  },
+  "historical_data": {
+    "automatic_cleanup_allowed": false,
+    "required_before_cleanup": ["aggregated inventory", "row-count preview", "recovery path", "owner approval", "post-cleanup verification"]
+  }
+}
