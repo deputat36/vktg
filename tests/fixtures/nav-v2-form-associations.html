@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigator v2 form associations fixture</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { applyScreenStructure } from '../../assets/js/nav-v2/screen-structure-v2.js?v=20260715-02';
+
+    const app = document.getElementById('app');
+    const surface = new URLSearchParams(location.search).get('surface') || 'deals';
+
+    if (surface === 'deals') {
+      app.innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-deals">
+        <section class="hero"><h1>Рабочие сделки</h1></section>
+        <section class="card deals-workspace"><h2>Сделки для работы</h2>
+          <details open><summary>Поиск и расширенные фильтры</summary>
+            <div class="filters">
+              <input id="dealSearch" placeholder="Адрес, объект, клиент, СПН, статус или ID">
+              <select id="dealFilter"><option>Рабочие без повторов</option></select>
+              <input id="unknownPlaceholderOnly" placeholder="Неизвестное поле">
+            </div>
+          </details>
+        </section>
+      </main>`;
+    } else {
+      app.innerHTML = `<main class="nav-v2-shell mobile-first-screen-page mobile-first-screen-card">
+        <section class="hero"><h1>Карточка сделки: Просторная, 4А</h1></section>
+        <section class="card"><h2>Сводка</h2>
+          <div class="field"><label>Текущий статус</label><select id="dealStatus"><option>Подготовка</option></select></div>
+          <div id="pageStatus" class="status">Готово к действию.</div>
+        </section>
+        <section class="card"><h2>Комментарии</h2>
+          <div class="field"><label>Новый комментарий</label><textarea id="newComment" placeholder="Напишите комментарий для команды"></textarea></div>
+          <button id="addComment" type="button">Добавить комментарий</button>
+        </section>
+        <section id="spnReworkWorkflowV2" class="card"><h2>Исправьте замечания</h2>
+          <div class="field"><label for="spnReworkCompletionText">Что именно исправлено</label><textarea id="spnReworkCompletionText" placeholder="Перечислите изменения"></textarea></div>
+          <button type="button" data-spn-rework-submit>Отправить на проверку</button>
+          <label><input type="checkbox" data-spn-rework-option value="docs"> Документы</label>
+          <div class="field"><label for="spnReworkReturnReason">Главная причина или другое замечание</label><textarea id="spnReworkReturnReason"></textarea></div>
+          <button type="button" data-spn-rework-return>Вернуть СПН</button>
+          <div id="spnReworkStatusV2" class="status">Готово к действию.</div>
+        </section>
+        <section id="lawyerDocumentCycleV2" class="card"><h2>Документный цикл</h2>
+          <div class="field"><label for="lawyerDocumentNoteV2">Комментарий к действию</label><textarea id="lawyerDocumentNoteV2"></textarea></div>
+          <button type="button" data-lawyer-document-action="problem" data-lawyer-document-note-required="1">Проблема</button>
+          <div id="lawyerDocumentStatusV2" class="status">Готово к действию.</div>
+        </section>
+      </main>`;
+
+      const pageStatus = document.getElementById('pageStatus');
+      document.getElementById('addComment').addEventListener('click', () => {
+        if (!document.getElementById('newComment').value.trim()) {
+          pageStatus.className = 'status error';
+          pageStatus.textContent = 'Комментарий пустой.';
+        } else {
+          pageStatus.className = 'status warn';
+          pageStatus.textContent = 'Добавляю комментарий...';
+        }
+      });
+      document.querySelector('[data-spn-rework-submit]').addEventListener('click', () => {
+        const field = document.getElementById('spnReworkCompletionText');
+        const status = document.getElementById('spnReworkStatusV2');
+        status.className = field.value.trim().length < 10 ? 'status error' : 'status warn';
+        status.textContent = field.value.trim().length < 10 ? 'Перечислите, что именно исправлено.' : 'Отправляю карточку...';
+      });
+      document.querySelector('[data-spn-rework-return]').addEventListener('click', () => {
+        const selected = document.querySelector('[data-spn-rework-option]').checked;
+        const field = document.getElementById('spnReworkReturnReason');
+        const status = document.getElementById('spnReworkStatusV2');
+        const invalid = !selected && field.value.trim().length < 10;
+        status.className = invalid ? 'status error' : 'status warn';
+        status.textContent = invalid ? 'Выберите замечание или опишите конкретную причину возврата.' : 'Фиксирую возврат...';
+      });
+      document.querySelector('[data-lawyer-document-action]').addEventListener('click', () => {
+        const field = document.getElementById('lawyerDocumentNoteV2');
+        const status = document.getElementById('lawyerDocumentStatusV2');
+        status.className = field.value.trim().length < 5 ? 'status error' : 'status warn';
+        status.textContent = field.value.trim().length < 5 ? 'Опишите конкретную проблему по документу.' : 'Сохраняю действие...';
+      });
+    }
+
+    applyScreenStructure(document);
+  </script>
+</body>
+</html>
