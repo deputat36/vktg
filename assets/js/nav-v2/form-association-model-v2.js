@@ -55,16 +55,18 @@ const FIELD_POLICIES = Object.freeze({
 const GROUP_POLICIES = Object.freeze({
   spnReworkReturnOptions: Object.freeze({
     groupId: 'spnReworkReturnOptions',
-    selector: '#spnReworkReturnOptions',
+    selector: '.spn-rework-options',
+    closestSelector: '',
     labelText: 'Замечания для возврата СПН',
     helpText: 'Выберите одно или несколько фактических замечаний либо опишите главную причину ниже.',
-    helpId: 'spnReworkReturnHelp',
+    helpId: '',
     validationFieldId: 'spnReworkReturnReason',
     nativeFieldset: true
   }),
   dealQuickStatusActions: Object.freeze({
     groupId: 'dealQuickStatusActions',
-    selector: '[data-nav-choice-group="deal-quick-status"]',
+    selector: '[data-quick-status]',
+    closestSelector: '.actions',
     labelText: 'Быстрое изменение статуса сделки',
     helpText: 'Выберите одно действие. Каждая кнопка сразу запускает соответствующее изменение статуса.',
     helpId: '',
@@ -73,7 +75,8 @@ const GROUP_POLICIES = Object.freeze({
   }),
   dealLegalActions: Object.freeze({
     groupId: 'dealLegalActions',
-    selector: '[data-nav-choice-group="deal-legal-action"]',
+    selector: '[data-legal-action]',
+    closestSelector: '.actions',
     labelText: 'Юридическое решение по сделке',
     helpText: 'Выберите одно юридическое решение или перейдите к документам и истории решений.',
     helpId: '',
@@ -82,7 +85,8 @@ const GROUP_POLICIES = Object.freeze({
   }),
   lawyerDocumentActions: Object.freeze({
     groupId: 'lawyerDocumentActions',
-    selector: '[data-nav-choice-group="lawyer-document-action"]',
+    selector: '[data-lawyer-document-action]',
+    closestSelector: '.lawyer-document-actions',
     labelText: 'Состояние текущего документа',
     helpText: 'Выберите новое состояние документа. Для проблемы сначала укажите конкретную причину.',
     helpId: '',
