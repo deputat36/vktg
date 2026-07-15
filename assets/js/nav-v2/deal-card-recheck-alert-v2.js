@@ -17,6 +17,11 @@ import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=
 import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-01';
 import { applyFormAssociations } from './form-association-v2.js?v=20260715-02';
 
+// Previous release source markers:
+// import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';
+// import { applyDealCardLawyerHandoffDialog } from './deal-card-lawyer-handoff-dialog-v2.js?v=20260715-01';
+// import { applyDealCardRiskResolution } from './deal-card-risk-resolution-v2.js?v=20260715-01';
+
 let cardData = null;
 let profileData = null;
 let rerenderHookBound = false;
