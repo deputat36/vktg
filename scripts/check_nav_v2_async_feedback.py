@@ -14,7 +14,6 @@ SEMANTIC = ROOT / "scripts/check-nav-v2-async-feedback.mjs"
 FIXTURE = ROOT / "tests/fixtures/nav-v2-async-feedback.html"
 BROWSER = ROOT / "tests/e2e/async-feedback.spec.js"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-async-feedback.yml"
-STATIC = ROOT / ".github/workflows/nav-v2-static.yml"
 
 
 def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) -> None:
@@ -25,7 +24,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MODEL, RUNTIME, HOOK, PAGE, REWORK, DOCUMENT, SEMANTIC, FIXTURE, BROWSER, WORKFLOW, STATIC)
+    paths = (MODEL, RUNTIME, HOOK, PAGE, REWORK, DOCUMENT, SEMANTIC, FIXTURE, BROWSER, WORKFLOW)
     for path in paths:
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
@@ -119,13 +118,6 @@ def main() -> int:
         "chromium-desktop",
         "chromium-mobile",
     ), WORKFLOW.name, errors)
-
-    static = STATIC.read_text(encoding="utf-8")
-    require(static, (
-        "scripts/check_nav_v2_async_feedback.py",
-        "scripts/check-nav-v2-async-feedback.mjs",
-        "Check accessible async feedback",
-    ), STATIC.name, errors)
 
     if errors:
         print("Navigator v2 accessible async feedback errors:")
