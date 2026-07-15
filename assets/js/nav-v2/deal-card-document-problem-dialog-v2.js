@@ -1,45 +1,27 @@
 import { rpc } from './supabase-v2.js';
 import { buildDocumentProblemDialog } from './action-dialog-model-v2.js?v=20260715-02';
 import { clearActionDialogDraft, requestActionDialog } from './action-dialog-v2.js?v=20260715-02';
+import { applyPageActionFeedback } from './page-action-feedback-v2.js?v=20260715-01';
 
 let cardData = null;
 
-function documents() {
-  return Array.isArray(cardData?.documents) ? cardData.documents : [];
-}
-
+function documents() { return Array.isArray(cardData?.documents) ? cardData.documents : []; }
 function isDemoDeal() {
   const deal = cardData?.deal || {};
-  return deal?.deal_summary?.demo === true
-    || deal?.wizard_snapshot?.demo === true
-    || String(deal?.title || '').startsWith('ДЕМО:');
+  return deal?.deal_summary?.demo === true || deal?.wizard_snapshot?.demo === true || String(deal?.title || '').startsWith('ДЕМО:');
 }
-
-function documentTitle(documentId) {
-  return documents().find((item) => String(item?.id || '') === String(documentId || ''))?.title || '';
-}
-
-function setPageStatus(message, tone = 'info') {
-  const status = document.getElementById('pageStatus');
-  if (!status) return;
-  status.className = `status ${tone}`;
-  status.textContent = message;
-}
+function documentTitle(documentId) { return documents().find((item) => String(item?.id || '') === String(documentId || ''))?.title || ''; }
+function setPageStatus(message, type = 'busy') { return applyPageActionFeedback(message, type === 'ok' ? 'success' : type === 'error' ? 'error' : 'busy'); }
 
 async function saveProblem(button) {
-  const config = buildDocumentProblemDialog({
-    documentTitle: documentTitle(button.dataset.docId),
-    isDemo: isDemoDeal()
-  });
+  const config = buildDocumentProblemDialog({ documentTitle: documentTitle(button.dataset.docId), isDemo: isDemoDeal() });
   const decision = await requestActionDialog(config, button);
   if (!decision.confirmed) return;
-
   const note = String(decision.value || '').trim();
   if (!note) {
     setPageStatus('Для проблемного документа нужна короткая причина.', 'error');
     return;
   }
-
   button.disabled = true;
   setPageStatus('Обновляю документ...');
   try {
