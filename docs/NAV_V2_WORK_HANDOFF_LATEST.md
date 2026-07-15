@@ -3,39 +3,38 @@
 ## Точка продолжения
 
 - Дата: 2026-07-15.
-- Текущий `main`: `902910f09a65fa5c186d39bfdded44ebdf8c85b8` — merge PR #302.
+- Текущий `main`: `ce2d91ef09b20e4e21693b5f2362dbd38184f740` — merge PR #306.
+- Репозиторий: `deputat36/vktg`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260714125054_nav_v2_exact_duplicate_review_pack`.
-- Public operational report version: 8.
 - Supabase branches: только production `main`.
 - Isolated authenticated target: не создан.
-- `authenticated-smoke=skipped` не является authenticated PASS.
-- Открытых PR после merge #302: 0 на момент подготовки handoff.
+- `authenticated-smoke=skipped` внутри PR browser workflow не является authenticated evidence.
+- Рабочие данные, Auth users, schema, grants, RPC и Edge Functions в PR #306 не менялись.
 
-## Завершённая action-first UX-цепочка
+## Завершённая продуктовая цепочка
 
-### PR #288 — рабочий стол «Что делать сейчас»
+### PR #288 — dashboard «Что делать сейчас»
 
 - три объяснимых приоритета;
 - role-aware действия;
 - рабочие KPI без demo и точных повторов;
-- шесть последних рабочих сделок вместо длинного списка;
+- шесть последних рабочих сделок;
 - pure priority model и semantic CI.
 
 ### PR #290 — рабочие режимы списка сделок
 
 - demo скрыты по умолчанию;
-- точные повторы объединены, ранняя карточка остаётся;
-- быстрые role-aware режимы;
+- точные повторы объединены в рабочем режиме;
+- role-aware быстрые режимы;
 - полный исходный список доступен через расширенный фильтр;
 - используется существующий `nav_v2_get_deals_list`.
 
-### PR #291 — action-first карточка сделки
+### PR #291 — action-first карточка
 
 - один блок `Главное действие сейчас`;
-- ответственный, срок и критерий готового результата;
-- fallback по риску, документу или `next_action`;
-- точный переход в рабочую вкладку;
+- ответственный, срок и критерий результата;
+- точный переход в нужный раздел;
 - без нового read RPC.
 
 ### PR #292 — прямые маршруты менеджера
@@ -43,23 +42,22 @@
 - задачи → `#tasks`;
 - риски → `#risks`;
 - документы → `#docs`;
-- пробелы ответственности → `manager-source-remediation-v2.html`;
+- ответственность → `manager-source-remediation-v2.html`;
 - используется read-only preview операционной готовности.
 
 ### PR #294 — единый цикл доработки СПН
 
 Закрыт маршрут:
 
-`замечание → где исправить → сохранить → отправить повторно → увидеть подтверждение принятия`
+`замечание → где исправить → сохранить → повторно отправить → увидеть серверное подтверждение`
 
 - структурированный возврат;
 - достоверное `исправлено / не исправлено`;
 - обязательный комментарий СПН;
 - server-confirmed результат после reload;
-- использованы существующие `nav_v2_return_spn_rework` и `nav_v2_submit_spn_rework`;
-- новых RPC, migrations, grants и production mutations нет.
+- используются существующие `nav_v2_return_spn_rework` и `nav_v2_submit_spn_rework`.
 
-### PR #296 — единый документный цикл юриста
+### PR #296 — документный цикл юриста
 
 Закрыт маршрут:
 
@@ -68,156 +66,139 @@
 - один приоритетный документ;
 - сторона, причина, влияние, ответственный и срок;
 - существующий `nav_v2_update_document_workflow`;
-- server-confirmed результат и автоматический выбор следующего документа;
-- без дополнительного read RPC;
-- новых RPC, migrations, grants и production mutations нет.
+- server-confirmed результат и следующий документ;
+- без дополнительного read RPC.
 
-### PR #298 — серверное подтверждение результата и следующий шаг
+### PR #298 — подтверждение результата и следующий шаг
 
 Закрыт маршрут:
 
 `сохранить → подтвердить сервером → показать результат → выбрать следующий шаг`
 
-- завершённая задача, проверенный документ, устранённый риск или переход сделки вперёд;
+- завершённая задача, проверенный документ, устранённый риск или переход сделки;
 - audit event принимается только при совпадении с текущим состоянием сущности;
 - no-op, обратные, повторно открытые и старше семи дней события отбрасываются;
 - показаны автор/роль, время и серверный факт;
-- action-first модель сразу выбирает следующий шаг, ответственного, срок и критерий готовности;
-- новых RPC, migrations, grants и production mutations нет.
+- автоматически выбираются следующий шаг, ответственный, срок и критерий.
 
 ### PR #300 — менеджерский контроль подтверждённых результатов
 
-Менеджер теперь видит две независимые картины:
+Менеджер видит отдельно:
 
 1. что требует решения;
-2. что фактически завершено и подтверждено сервером.
+2. что действительно завершено и подтверждено сервером.
 
-Новый блок `Подтверждённые результаты` показывает:
-
-- завершённую задачу, проверенный документ, устранённый риск или переход сделки вперёд;
-- сделку и результат;
-- автора или достоверно определимую роль;
-- точное время;
-- понятный серверный факт;
-- следующий шаг;
-- следующего ответственного;
-- контрольный срок;
-- критерий готового результата;
-- одну основную кнопку точного перехода.
-
-Режимы:
-
-- `Сегодня` — точный календарный день в `Europe/Moscow`, а не последние 24 часа;
-- `За 7 дней` — только актуальные подтверждённые результаты.
-
-Архитектура и ограничения:
-
-- переиспользуется `nav_v2_get_operational_readiness_preview`;
-- подробная карточка читается существующим `nav_v2_get_deal_card` только для сделок с недавней активностью;
-- максимум 40 карточек за один цикл;
-- максимум 4 параллельных read-запроса;
-- pure-модель повторно использует `buildDealCompletionEvidence` из PR #298;
-- manager module не вызывает `nav_v2_update_*`, `nav_v2_add_*` или `nav_v2_save_*`;
-- новых migrations, RPC, grants, Auth users, Supabase branches и production mutations нет.
-
-Основные файлы:
-
-- `assets/js/nav-v2/manager-confirmed-results-model-v2.js`;
-- `assets/js/nav-v2/manager-v2.js`;
-- `assets/css/nav-v2-manager.css`;
-- `scripts/check-nav-v2-manager-confirmed-results.mjs`;
-- `scripts/check_nav_v2_manager_confirmed_results.py`;
-- `.github/workflows/nav-v2-manager-confirmed-results.yml`.
+- режимы `Сегодня` и `За 7 дней`;
+- календарный день рассчитывается в `Europe/Moscow`;
+- максимум 40 карточек и 4 параллельных read-запроса;
+- manager module остаётся read-only.
 
 ### PR #302 — мобильный операционный первый экран
 
-На ширине 360–430 px четыре ежедневных экрана теперь показывают действие до вторичной отчётности:
+На ширине 360–430 px:
 
-- dashboard — первый объяснимый приоритет до профиля и KPI;
-- список сделок — следующий шаг первой сделки и одна основная CTA до агрегатов и остальных карточек;
-- карточка — доработка СПН, документный фокус юриста, подтверждённый результат или текущее главное действие до legacy KPI и быстрых mutation-панелей;
-- manager — первая сделка очереди решений до готовности, нагрузки и истории подтверждённых результатов.
+- dashboard показывает первый приоритет до профиля и KPI;
+- список показывает следующую работу первой сделки до агрегатов;
+- карточка поднимает доработку, документный цикл, подтверждённый результат или action focus;
+- manager показывает первую сделку очереди решений до отчётных блоков;
+- дополнительная информация доступна через progressive disclosure;
+- desktop-содержимое остаётся раскрытым;
+- page module budgets не увеличены.
 
-Дополнительные приоритеты, сделки, режимы, фильтры и метаданные остаются доступны через progressive disclosure. Общий viewport hook явно раскрывает их на desktop и сворачивает на mobile; изменение ширины синхронизируется без `MutationObserver`.
+### PR #306 — privacy-safe UX measurement contract
 
-Pure policy ограничивает первый экран:
+Добавлен минимальный измерительный слой без collector и без хранения.
 
-- dashboard/deals/deal-card — не более двух видимых действий;
-- manager — одно главное и до двух контекстных действий;
-- overflow не удаляется и остаётся доступным после раскрытия.
+Browser runtime:
 
-Срез использует уже загруженные payload. Новых RPC, migrations, grants, Auth users, browser storage и production mutations нет.
+- использует локальный `CustomEvent` `nav-v2:ux-measurement`;
+- фиксирует только открытие главного действия и первое раскрытие дополнительного контекста;
+- содержит только enum-поля: поверхность, viewport, тип действия, позиция и диапазон времени;
+- работает на dashboard, deals, deal card и manager page;
+- подключён через существующий `mobile-first-screen-v2.js`, поэтому page entry-module budgets не выросли;
+- import maps направляют старый mobile lifecycle URL на cache-busted `20260715-02`.
 
-## Проверки PR #300
+Pure server measurement model:
 
-- dedicated manager confirmed results semantic regression: PASS;
-- dedicated static/read-only contract: PASS;
-- manager action routes: PASS;
-- operational readiness contract: PASS;
+- переиспользует `buildDealCompletionEvidence`;
+- определяет server-confirmed результат задачи, документа, риска или статуса;
+- находит возврат СПН, более позднюю повторную отправку и более позднее решение проверки;
+- выдаёт только диапазоны времени `возврат → отправка` и `отправка → решение`;
+- не подключён к browser transport и ничего не отправляет.
+
+Privacy contract:
+
+- нет `fetch`, `sendBeacon`, WebSocket, RPC или Supabase transport;
+- нет `localStorage`, `sessionStorage`, IndexedDB или cookies;
+- нет UUID, URL сделки, адресов, ФИО, телефонов, email, комментариев, документов, стоимости и точных server timestamps;
+- роль пользователя не отправляется браузером;
+- click не считается результатом;
+- неизвестные поля отбрасываются enum-моделью;
+- запрещены персональные рейтинги;
+- управленческий разрез не допускается при выборке менее пяти завершённых циклов;
+- текущий контракт не разрешает таблицу telemetry, collector, retention или новый отчёт.
+
+Параллельный PR #307 закрыт без merge, потому что добавлял `sessionStorage`, отдельный отчётный экран и увеличивал module budgets до утверждения measurement policy.
+
+## Проверки PR #306
+
+Финальный head: `7aead3ad901f25cc913277798d97b332558b385f`.
+
+- privacy-safe semantic Node regression: PASS;
+- Python static privacy contract: PASS;
+- JavaScript и Python syntax: PASS;
+- page module budgets: PASS без увеличения лимитов;
 - полный Navigator v2 static suite: PASS;
-- JavaScript syntax: PASS;
-- public desktop/mobile browser smoke: PASS;
-- public browser evidence uploaded: PASS;
-- review threads: 0;
-- authenticated job: `skipped`, не считается authenticated evidence.
+- dashboard priority: PASS;
+- deals work modes: PASS;
+- deal action focus: PASS;
+- SPN rework cycle: PASS;
+- lawyer document cycle: PASS;
+- completion evidence: PASS;
+- manager action routes: PASS;
+- manager confirmed results: PASS;
+- mobile first screen: PASS;
+- BAZA checks: PASS;
+- synthetic Playwright desktop/mobile: PASS;
+- browser evidence uploaded: PASS;
+- public guest gates: PASS;
+- review threads: 0.
 
-Первый CI-запуск упал только потому, что старый operational readiness contract ожидал предыдущие cache-busting версии CSS/JS. Продуктовая semantic regression уже была зелёной. Контракт обновлён на фактические release-маркеры, после чего все обязательные проверки прошли.
+Первый CI-запуск выявил два инфраструктурных дефекта реализации теста:
 
-## Проверки PR #302
+1. отдельный entry script превысил module budget — runtime перенесён в общий mobile lifecycle, лимиты не увеличивались;
+2. synthetic fixture не содержал стандартный `#app` — исправлен только fixture.
 
-- dedicated mobile first-screen semantic/static workflow: PASS;
-- полный Navigator v2 static suite: 52/52 команд PASS;
-- JavaScript syntax: PASS;
-- совместимые dashboard/deals/card/SPN/completion/manager workflows: PASS;
-- public desktop/mobile Playwright: 32/32 PASS;
-- новый browser-сценарий подтверждает desktop disclosure и мобильный порядок/раскрытие/ширину CTA;
-- 23/23 запущенных workflows: success;
-- review threads: 0;
-- authenticated job внутри browser workflow: `skipped`, не считается authenticated evidence.
+После исправлений все запущенные workflows завершились успешно.
 
-Первый public browser run выявил подтверждённый desktop-дефект: закрытый `<details>` скрывал содержимое сильнее обычного CSS. Общий viewport hook исправил причину; повторный desktop/mobile run прошёл 32/32.
+## Post-merge source smoke после PR #306
 
-## Post-merge source smoke после PR #300
+Канонический `main` содержит:
 
-Канонический `main` содержит актуальные release-маркеры:
+- `assets/js/nav-v2/ux-measurement-model-v2.js` со schema version 1 и закрытыми enum;
+- `assets/js/nav-v2/ux-measurement-v2.js` с локальным `CustomEvent` и marker `event-only-v1`;
+- `assets/js/nav-v2/ux-server-measurement-model-v2.js` с server-confirmed outcome/rework definitions;
+- `assets/js/nav-v2/mobile-first-screen-v2.js` импортирует UX runtime;
+- четыре рабочих HTML remap mobile lifecycle `20260715-01` → `20260715-02`;
+- `docs/NAV_V2_UX_MEASUREMENT_CONTRACT.md` с privacy, sampling и backend guardrails;
+- dedicated semantic/static/browser workflow.
 
-- `manager-v2.html` → `nav-v2-manager.css?v=20260715-01`;
-- `manager-v2.html` → `manager-v2.js?v=20260715-01`;
-- `manager-v2.js` подключает `manager-confirmed-results-model-v2.js?v=20260715-01`;
-- модель содержит семидневную актуальность и часовой пояс `Europe/Moscow`;
-- модель повторно использует `buildDealCompletionEvidence`;
-- manager UI содержит `Подтверждённые результаты`, `Сегодня`, `За 7 дней`, серверный факт и следующий ответственный шаг.
-
-Прямое независимое чтение GitHub Pages из текущего рабочего окружения не выполнено из-за сетевого ограничения среды. Public desktop/mobile GitHub Actions smoke прошёл на merge-кандидате. При следующем запуске можно повторить live Pages smoke, не меняя данные.
-
-## Post-merge source smoke после PR #302
-
-Канонический `main` подтверждён через GitHub connector:
-
-- все четыре HTML подключают `nav-v2-mobile-first-screen.css?v=20260715-01`;
-- dashboard → `dashboard-v2.js?v=20260715-01`;
-- deals → `deals-v2.js?v=20260715-01`;
-- deal card → `deal-card-v2.js?v=20260715-02`;
-- manager → `manager-v2.js?v=20260715-02`;
-- `mobile-first-screen-v2.js` содержит `details.open = !compact` и resize sync;
-- CSS содержит отдельные правила 360–430 px и desktop `display: contents` для списка.
-
-Прямое чтение GitHub Pages снова заблокировано сетевой политикой текущей среды. Это не подменяется source smoke: browser evidence получено в обязательном GitHub Actions job на merge-кандидате.
+Прямое независимое чтение GitHub Pages из текущего рабочего окружения не выполнялось из-за сетевой политики среды. Это не подменено source-проверкой: public desktop/mobile browser evidence получено в GitHub Actions на merge-кандидате.
 
 ## Supabase и рабочие данные
 
-PR #302 frontend-only:
+PR #306 frontend/docs/tests-only:
 
-- schema не менялась;
 - migrations не добавлялись;
-- grants и RPC definitions не менялись;
+- schema не менялась;
+- RPC и grants не менялись;
 - Auth users не создавались;
 - Edge Functions не менялись;
 - production rows не менялись;
 - preview branch не создавалась;
 - service-role secret не использовался.
 
-Read-only production-сверка после merge #302:
+Последний подтверждённый read-only baseline до PR #306:
 
 - Deals: 23;
 - Tasks: 98;
@@ -226,28 +207,19 @@ Read-only production-сверка после merge #302:
 - Events: 118;
 - latest live migration: `20260714125054`.
 
-Значения совпали с предыдущим baseline. Latest production migration также осталась `20260714125054`; frontend-only merge не изменил schema или рабочие строки.
-
-## Security и release state
-
-- latest migration baseline: `20260714125054`;
-- live → canonical alias: `20260714125054` → `20260714130000`;
-- canonical source blob: `cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14`;
-- connector-equivalent evidence: `docs/NAV_V2_LIVE_VERIFICATION_20260714.md`;
-- ручной workflow `navigator-production-readonly` с `allow_drift=false` ещё не запускался;
-- Advisor whitelist: 48/48, missing 0, unexpected 0;
-- leaked-password protection заблокирована до isolated authenticated E2E.
+PR #306 не выполнял production read/write и не претендует на новый live baseline.
 
 ## Ручные gates — проверены один раз 15 июля
 
 ### Exact duplicate cleanup
 
-- issue #273 без owner decision;
-- удаление, объединение и архивирование дублей запрещено.
+- issue #273 открыт;
+- owner decision по четырём группам не предоставлен;
+- удаление, объединение и архивирование запрещено.
 
 ### Operational pilot
 
-- шесть файлов от owner decision до responsible acknowledgement не предоставлены;
+- шесть evidence-файлов от owner decision до responsible acknowledgement не предоставлены;
 - pilot mutation запрещена.
 
 ### Responsibility correction
@@ -257,31 +229,44 @@ Read-only production-сверка после merge #302:
 
 ### Production-readonly workflow
 
-- ручной запуск с `allow_drift=false` не предоставлен;
-- не подменять его локальной или source-проверкой.
+- ручной запуск `navigator-production-readonly` с `allow_drift=false` не предоставлен;
+- source/browser smoke не подменяет этот workflow.
 
 ### Isolated authenticated E2E
 
 - issue #282 без точного cost approval;
 - generic-команда `продолжай` не является cost approval;
 - не вызывать `confirm_cost`;
-- не создавать branch, Auth users, secrets или synthetic target.
+- не создавать Supabase branch, Auth users, secrets или synthetic target.
 
-## UX_NEXT_WORK_QUEUE
+## Следующий безопасный продуктовый slice
 
-Не добавлять новые отчёты. Следующий безопасный продуктовый slice:
+P1 UX — keyboard/focus/accessibility continuity для action-first экранов.
 
-1. Подготовить минимальный privacy-safe UX measurement slice для кликов до главного действия, подтверждённых результатов, возвратов СПН и времени повторной проверки.
-2. Сначала найти и переиспользовать существующий audit/event payload; не создавать отдельный backend до доказанной необходимости.
-3. Не считать page view или локальный клик подтверждённым результатом: завершение по-прежнему требует совпадения server event с текущим состоянием сущности.
-4. Не хранить стороны сделки, адреса, комментарии, телефоны, email или browser draft в telemetry.
-5. Дать owner/manager проверяемое определение метрик и явные ограничения выборки до любого production write.
+1. Проверить dashboard, deals, deal card и manager page клавиатурой на desktop и mobile viewport.
+2. Главное действие должно быть первым логичным интерактивным элементом рабочего блока.
+3. После раскрытия progressive disclosure фокус не должен теряться или перескакивать в скрытую область.
+4. После перехода во вкладку карточки фокус должен попадать на заголовок/рабочий блок, а не оставаться на исчезнувшей кнопке.
+5. Все primary/context actions должны иметь различимые accessible names и видимый focus state.
+6. Не менять role-aware права, mutation handlers, Supabase или рабочие данные.
+7. Добавить semantic/static и public Playwright keyboard regressions.
+
+Measurement backend остаётся заблокирован до отдельного решения, где утверждены:
+
+- управленческое решение, которое меняется от метрики;
+- denominator и дедупликация;
+- минимальная выборка;
+- retention;
+- доступы;
+- запрет идентификаторов и свободного текста;
+- privacy review.
 
 ## NEXT_WORK_QUEUE
 
-- P1 UX — измеримые UX-события без изменения рабочих данных.
+- P1 UX — keyboard/focus/accessibility continuity четырёх action-first экранов.
+- P1 MANUAL MEASUREMENT — решение о необходимости collector/aggregation, denominator, retention и access policy.
 - P0 MANUAL — owner duplicate decision #273.
-- P0 MANUAL — шесть pilot-файлов.
+- P0 MANUAL — шесть pilot evidence-файлов.
 - P0 MANUAL — четыре responsibility evidence-файла.
 - P0 MANUAL — production-readonly workflow `allow_drift=false`.
 - P0 MANUAL COST APPROVAL — issue #282.
@@ -289,12 +274,14 @@ Read-only production-сверка после merge #302:
 ## DO NOT REPEAT без новой причины
 
 - общий технический аудит;
-- dashboard/list/deal-card/manager action-first UX PR #288/#290/#291/#292;
-- SPN rework lifecycle PR #294;
+- dashboard/list/deal-card/manager action-first PR #288/#290/#291/#292;
+- SPN rework PR #294;
 - lawyer document lifecycle PR #296;
-- completion evidence/automatic next step PR #298;
+- completion evidence PR #298;
 - manager confirmed results PR #300;
-- mobile operational first screen PR #302;
+- mobile first-screen PR #302;
+- privacy-safe event schema/contract PR #306;
+- новый UX report, collector, session storage или telemetry backend без отдельного решения;
 - public guest/no-JWT/private-helper smoke;
 - risk lifecycle #218;
 - readiness/task taxonomy/broker/viewer/lawyer previews;
@@ -307,4 +294,4 @@ Read-only production-сверка после merge #302:
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #302. Один раз проверь ручные gates. Если они не изменились, не повторяй action-first цепочку, SPN rework, документный цикл юриста, completion evidence, manager confirmed results и mobile first-screen. Начни privacy-safe UX measurement slice: определи клики до главного действия, подтверждённые результаты, возвраты СПН и время повторной проверки; переиспользуй существующие server events, не выдавай локальный клик за результат и не передавай персональные или сделочные данные в telemetry. Сначала докажи необходимость backend; без этого не добавляй RPC/migration и не меняй рабочие данные. Не создавай платную Supabase branch без точного approval #282. Заверши branch → PR → CI → merge → post-merge smoke → handoff.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #306. Один раз проверь ручные gates. Если они не изменились, не повторяй action-first, SPN rework, документный цикл, completion evidence, manager confirmed results, mobile first-screen и privacy-safe measurement contract. Начни keyboard/focus/accessibility continuity slice для dashboard, deals, deal card и manager page: логичный порядок фокуса, видимый focus state, сохранение фокуса при раскрытии и точный focus target после переходов. Добавь semantic/static/public desktop-mobile keyboard regressions. Не создавай UX collector/report/storage/backend без отдельного решения о denominator, retention, доступах и privacy. Не меняй рабочие данные и не создавай платную Supabase branch без точного approval #282. Заверши branch → PR → CI → merge → post-merge smoke → handoff.`
