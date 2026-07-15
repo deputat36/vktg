@@ -1,0 +1,70 @@
+name: Navigator v2 accessibility continuity
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'deal-card-v2.html'
+      - 'manager-v2.html'
+      - 'assets/css/nav-v2-focus-continuity.css'
+      - 'assets/js/nav-v2/accessibility-continuity-model-v2.js'
+      - 'assets/js/nav-v2/accessibility-continuity-v2.js'
+      - 'assets/js/nav-v2/mobile-first-screen-v2.js'
+      - 'scripts/check-nav-v2-accessibility-continuity.mjs'
+      - 'scripts/check_nav_v2_accessibility_continuity.py'
+      - 'tests/e2e/accessibility-continuity.spec.js'
+      - 'tests/fixtures/nav-v2-accessibility-continuity.html'
+      - '.github/workflows/nav-v2-accessibility-continuity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/accessibility-continuity-model-v2.js
+          node --check assets/js/nav-v2/accessibility-continuity-v2.js
+          node --check assets/js/nav-v2/mobile-first-screen-v2.js
+          node --check scripts/check-nav-v2-accessibility-continuity.mjs
+          node --check tests/e2e/accessibility-continuity.spec.js
+      - name: Semantic contract
+        run: node scripts/check-nav-v2-accessibility-continuity.mjs
+      - name: Static accessibility contract
+        run: python3 scripts/check_nav_v2_accessibility_continuity.py
+      - name: Python syntax
+        run: python3 -m py_compile scripts/check_nav_v2_accessibility_continuity.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run keyboard and focus regressions
+        run: npx playwright test tests/e2e/accessibility-continuity.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload accessibility browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-accessibility-continuity-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
