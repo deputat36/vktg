@@ -1,4 +1,5 @@
 import './ux-measurement-v2.js?v=20260715-01';
+import { applyActionFocusContinuity } from './focus-continuity-v2.js?v=20260715-01';
 
 const DISCLOSURE_SELECTOR = '.mobile-first-screen-more, .mobile-first-screen-details';
 let mediaQuery = null;
@@ -20,7 +21,11 @@ function syncDisclosures(root = document) {
 export function applyMobileFirstScreenDisclosure(root = document) {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
   syncDisclosures(root);
+  applyActionFocusContinuity(root);
   if (resizeBound) return;
-  mobileQuery().addEventListener('change', () => syncDisclosures(document));
+  mobileQuery().addEventListener('change', () => {
+    syncDisclosures(document);
+    applyActionFocusContinuity(document);
+  });
   resizeBound = true;
 }
