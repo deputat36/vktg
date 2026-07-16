@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "cases": [
+    {"id":"legacy_complete","task":{"id":"20000000-0000-4000-8000-000000000001","task_contract_version":null,"can_change_status":true},"action":"complete","input":{},"expected":{"ok":true,"mode":"legacy","rpc":"nav_v2_update_task_status","status":"done"}},
+    {"id":"legacy_bounded_action_rejected","task":{"id":"20000000-0000-4000-8000-000000000001","task_contract_version":null,"can_change_status":true},"action":"waiting_external","input":{},"expected":{"ok":false,"mode":"legacy"}},
+    {"id":"bounded_start","task":{"id":"20000000-0000-4000-8000-000000000002","task_contract_version":2,"can_start":true},"action":"start","input":{"client_request_id":"30000000-0000-4000-8000-000000000001"},"expected":{"ok":true,"mode":"bounded","rpc":"nav_v2_start_bounded_task"}},
+    {"id":"bounded_complete","task":{"id":"20000000-0000-4000-8000-000000000002","task_contract_version":2,"can_complete":true},"action":"complete","input":{"evidence_reference_id":"40000000-0000-4000-8000-000000000001","client_request_id":"30000000-0000-4000-8000-000000000002"},"expected":{"ok":true,"mode":"bounded","rpc":"nav_v2_complete_bounded_task"}},
+    {"id":"bounded_complete_missing_evidence","task":{"id":"20000000-0000-4000-8000-000000000002","task_contract_version":2,"can_complete":true},"action":"complete","input":{"client_request_id":"30000000-0000-4000-8000-000000000003"},"expected":{"ok":false,"mode":"bounded"}},
+    {"id":"bounded_waiting","task":{"id":"20000000-0000-4000-8000-000000000003","task_contract_version":2,"can_set_active_outcome":true},"action":"waiting_external","input":{"reason_code":"awaiting_document","review_date":"2026-07-24","client_request_id":"30000000-0000-4000-8000-000000000004"},"expected":{"ok":true,"mode":"bounded","rpc":"nav_v2_set_bounded_task_active_outcome"}},
+    {"id":"bounded_proposal","task":{"id":"20000000-0000-4000-8000-000000000004","task_contract_version":2,"can_propose_terminal_outcome":true},"action":"propose_not_applicable","input":{"reason_code":"no_longer_required","client_request_id":"30000000-0000-4000-8000-000000000005"},"expected":{"ok":true,"mode":"bounded","rpc":"nav_v2_propose_bounded_task_terminal_outcome"}},
+    {"id":"bounded_decision","task":{"id":"20000000-0000-4000-8000-000000000004","task_contract_version":2,"can_decide_terminal_outcome":true},"action":"decision_confirm","input":{"client_request_id":"30000000-0000-4000-8000-000000000006"},"expected":{"ok":true,"mode":"bounded","rpc":"nav_v2_decide_bounded_task_terminal_outcome"}},
+    {"id":"bounded_reopen_rejected","task":{"id":"20000000-0000-4000-8000-000000000006","task_contract_version":2,"can_start":true},"action":"reopen","input":{"client_request_id":"30000000-0000-4000-8000-000000000007"},"expected":{"ok":false,"mode":"bounded"}},
+    {"id":"bounded_permission_rejected","task":{"id":"20000000-0000-4000-8000-000000000005","task_contract_version":2,"can_complete":false},"action":"complete","input":{"evidence_reference_id":"40000000-0000-4000-8000-000000000002","client_request_id":"30000000-0000-4000-8000-000000000008"},"expected":{"ok":false,"mode":"bounded"}}
+  ],
+  "edge_cases": [
+    {"id":"edge_legacy","action":"legacy_update_task_status","payload":{"task_id":"20000000-0000-4000-8000-000000000001","status":"done"},"valid":true,"rpc":"nav_v2_update_task_status"},
+    {"id":"edge_complete","action":"bounded_task_complete","payload":{"task_id":"20000000-0000-4000-8000-000000000002","evidence_reference_id":"40000000-0000-4000-8000-000000000001","client_request_id":"30000000-0000-4000-8000-000000000002"},"valid":true,"rpc":"nav_v2_complete_bounded_task"},
+    {"id":"edge_unknown_field","action":"bounded_task_start","payload":{"task_id":"20000000-0000-4000-8000-000000000002","client_request_id":"30000000-0000-4000-8000-000000000001","client_name":"forbidden"},"valid":false},
+    {"id":"edge_replaced_missing","action":"bounded_task_terminal_proposal","payload":{"task_id":"20000000-0000-4000-8000-000000000004","outcome_code":"replaced","reason_code":"replaced_by_specific_task","client_request_id":"30000000-0000-4000-8000-000000000005"},"valid":false}
+  ]
+}
