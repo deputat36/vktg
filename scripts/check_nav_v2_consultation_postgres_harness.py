@@ -90,26 +90,28 @@ def main() -> int:
         "PostgreSQL consultation harness rollback passed",
     ), ROLLBACK.name, errors)
 
+    sql_paths = (
+        "tests/sql/nav_v2_consultation_harness_setup.sql",
+        "supabase/prototypes/nav_v2_consultation_lifecycle.sql",
+        "supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql",
+        "tests/sql/nav_v2_consultation_harness_assertions.sql",
+        "tests/sql/nav_v2_consultation_harness_rollback.sql",
+    )
     require(workflow, (
         "postgres:17",
         "POSTGRES_DB: navigator_harness",
         "sudo apt-get install -y postgresql-client",
-        "psql -f tests/sql/nav_v2_consultation_harness_setup.sql",
-        "psql -f supabase/prototypes/nav_v2_consultation_lifecycle.sql",
-        "psql -f supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql",
-        "psql -f tests/sql/nav_v2_consultation_harness_assertions.sql",
-        "psql -f tests/sql/nav_v2_consultation_harness_rollback.sql",
+        "psql -v ON_ERROR_STOP=1 -f",
+        *sql_paths,
         "python3 scripts/check_nav_v2_consultation_postgres_harness.py",
         "nav-v2-consultation-postgres-harness",
     ), WORKFLOW.name, errors)
 
-    apply_lines = [
-        "psql -f supabase/prototypes/nav_v2_consultation_lifecycle.sql",
-        "psql -f supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql",
-    ]
-    positions = [workflow.find(line) for line in apply_lines]
+    positions = [workflow.find(path) for path in sql_paths]
     if any(position < 0 for position in positions) or positions != sorted(positions):
-        errors.append("workflow must apply base SQL before hardening overlay")
+        errors.append("workflow must run setup, base, hardening, assertions and rollback in order")
+    if workflow.count("psql -v ON_ERROR_STOP=1 -f") < len(sql_paths):
+        errors.append("every SQL step must use fail-fast ON_ERROR_STOP")
 
     require(doc, (
         "PostgreSQL 17",
