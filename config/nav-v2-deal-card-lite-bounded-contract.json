@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "base_dto_path": "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+  "overlay_path": "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
+  "public_signature": "nav_v2_get_deal_card_lite(uuid)",
+  "dto_version": 2,
+  "task_fields": [
+    "id",
+    "title",
+    "status",
+    "priority",
+    "assigned_role",
+    "due_date",
+    "task_contract_version",
+    "task_type",
+    "evidence_kind",
+    "completion_criterion_code",
+    "gate_scope",
+    "subject_kind",
+    "outcome_code",
+    "outcome_state",
+    "outcome_reason_code",
+    "outcome_review_date",
+    "is_bounded",
+    "legacy_status_path",
+    "requires_evidence_reference",
+    "supports_reopen",
+    "can_change_status",
+    "can_start",
+    "can_complete",
+    "can_set_active_outcome",
+    "can_propose_terminal_outcome",
+    "can_decide_terminal_outcome"
+  ],
+  "legacy_rules": {
+    "can_change_status_uses_existing_helper": true,
+    "governed_permissions_false": true,
+    "legacy_status_path": true,
+    "supports_reopen": true
+  },
+  "bounded_rules": {
+    "can_change_status": false,
+    "legacy_status_path": false,
+    "requires_evidence_reference": true,
+    "supports_reopen": false,
+    "active_statuses": ["open", "in_progress"],
+    "terminal_proposal_blocks_operational_actions": true,
+    "decision_permission_requires_proposed_terminal_outcome": true
+  },
+  "forbidden_task_fields": [
+    "description",
+    "client_name",
+    "seller_name",
+    "buyer_name",
+    "phone",
+    "email",
+    "document_url",
+    "free_form_evidence"
+  ],
+  "consumer_blockers_closed": [
+    "lite_dto_contract_fields_missing"
+  ],
+  "consumer_blockers_remaining": [
+    "evidence_input_missing",
+    "reopen_semantics_undefined",
+    "duplicate_handlers",
+    "edge_deployment_order",
+    "governed_action_validation_missing"
+  ],
+  "production_gate": "Do not deploy until contract-aware UI preview, dual-path browser E2E, authenticated mutation E2E and a separate migration PR are complete."
+}
