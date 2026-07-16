@@ -8,6 +8,7 @@ on:
       - 'docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md'
       - 'assets/js/nav-v2/deal-card-v2.js'
       - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
       - 'assets/js/nav-v2/task-action-router-v2.js'
       - 'supabase/functions/nav-v2-deal-api/index.ts'
       - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
