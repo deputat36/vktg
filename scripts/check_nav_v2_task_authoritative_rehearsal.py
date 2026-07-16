@@ -86,7 +86,7 @@ def main()->int:
     require(doc,(
         'repository-only integration rehearsal',
         'capture phase',
-        'competing handlers',
+        'Competing handlers',
         'Legacy actions',
         'Bounded actions',
         'Bounded reopen',
