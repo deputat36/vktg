@@ -1,0 +1,48 @@
+name: Navigator v2 consultation intake
+
+on:
+  pull_request:
+    paths:
+      - 'consultation-v2.html'
+      - 'assets/css/nav-v2-consultation.css'
+      - 'assets/js/nav-v2/consultation-intake-model-v2.js'
+      - 'assets/js/nav-v2/consultation-v2.js'
+      - 'config/nav-v2-module-budget.json'
+      - 'fixtures/nav-v2-consultation-intake-scenarios.json'
+      - 'docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md'
+      - 'scripts/check-nav-v2-consultation-intake.mjs'
+      - 'scripts/check_nav_v2_consultation_intake.py'
+      - '.github/workflows/nav-v2-consultation-intake.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consultation-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate source contract
+        run: python3 scripts/check_nav_v2_consultation_intake.py
+      - name: Run semantic scenarios
+        run: node scripts/check-nav-v2-consultation-intake.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/consultation-intake-model-v2.js
+          node --check assets/js/nav-v2/consultation-v2.js
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_consultation_intake.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-consultation-intake
+          path: |
+            consultation-v2.html
+            fixtures/nav-v2-consultation-intake-scenarios.json
+            docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md
+          if-no-files-found: error
