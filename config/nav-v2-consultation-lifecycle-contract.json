@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "project_id": "ofewxuqfjhamgerwzull",
+  "prototype_path": "supabase/prototypes/nav_v2_consultation_lifecycle.sql",
+  "tables": [
+    "public.nav_consultations_v2",
+    "public.nav_consultation_messages_v2"
+  ],
+  "statuses": [
+    "new",
+    "need_info",
+    "answered",
+    "convert_to_preparation",
+    "closed",
+    "cancelled"
+  ],
+  "decision_to_status": {
+    "answer": "answered",
+    "need_info": "need_info",
+    "convert_to_preparation": "convert_to_preparation"
+  },
+  "requester_roles": ["spn", "manager", "lawyer", "owner", "admin"],
+  "forbidden_requester_roles": ["broker", "viewer"],
+  "queue_roles": ["lawyer", "manager", "owner", "admin"],
+  "decision_roles": ["lawyer", "owner", "admin"],
+  "role_rules": {
+    "spn": {
+      "create": true,
+      "view_own": true,
+      "clarify_own": true,
+      "decide": false
+    },
+    "manager": {
+      "create": true,
+      "view_team": true,
+      "decide": false
+    },
+    "lawyer": {
+      "create": true,
+      "view_unassigned_or_self_assigned": true,
+      "decide_unassigned_or_self_assigned": true
+    },
+    "owner_admin": {
+      "create": true,
+      "view_all": true,
+      "decide": true
+    },
+    "broker": {
+      "create": false,
+      "view": false,
+      "decide": false
+    },
+    "viewer": {
+      "create": false,
+      "view": false,
+      "decide": false
+    }
+  },
+  "transition_rules": [
+    {"from": null, "action": "create", "to": "new"},
+    {"from": "new", "action": "answer", "to": "answered"},
+    {"from": "new", "action": "need_info", "to": "need_info"},
+    {"from": "new", "action": "convert_to_preparation", "to": "convert_to_preparation"},
+    {"from": "need_info", "action": "clarify", "to": "new"},
+    {"from": "answered", "action": "close", "to": "closed"},
+    {"from": "convert_to_preparation", "action": "close", "to": "closed"},
+    {"from": "new", "action": "cancel", "to": "cancelled"},
+    {"from": "need_info", "action": "cancel", "to": "cancelled"}
+  ],
+  "public_rpcs": [
+    "nav_v2_create_consultation(jsonb)",
+    "nav_v2_get_consultation_queue(integer)",
+    "nav_v2_get_consultation(uuid)",
+    "nav_v2_decide_consultation(uuid,text,text)",
+    "nav_v2_add_consultation_clarification(uuid,text)",
+    "nav_v2_close_consultation(uuid,text,text)"
+  ],
+  "queue_item_keys": [
+    "id",
+    "reference",
+    "status",
+    "request_type",
+    "representation_model",
+    "object_type",
+    "stage",
+    "funding_sources",
+    "circumstances_count",
+    "planned_event_date",
+    "has_external_documents",
+    "requester_name",
+    "requester_role",
+    "assigned_lawyer_name",
+    "message_count",
+    "latest_message_at",
+    "created_at",
+    "updated_at",
+    "age_hours",
+    "priority_code",
+    "actionable_for_lawyer",
+    "next_action"
+  ],
+  "queue_forbidden_keys": [
+    "question",
+    "body",
+    "safe_reference",
+    "document_source_url",
+    "client_name",
+    "seller_name",
+    "buyer_name",
+    "phone",
+    "email",
+    "passport",
+    "snils",
+    "cadastral_number",
+    "address",
+    "wizard_snapshot",
+    "deal_summary"
+  ],
+  "detail_sections": [
+    "profile",
+    "consultation",
+    "permissions",
+    "conversion_draft",
+    "messages"
+  ],
+  "forbidden_payload_keys": [
+    "client_name",
+    "seller_name",
+    "buyer_name",
+    "phone",
+    "seller_phone",
+    "buyer_phone",
+    "email",
+    "passport",
+    "snils",
+    "cadastral_number",
+    "address",
+    "unit_number"
+  ],
+  "privacy_findings": [
+    "email",
+    "phone",
+    "passport",
+    "snils",
+    "cadastral_number",
+    "unit_number",
+    "long_payment_number"
+  ],
+  "funding_routes": {
+    "cash": {"lawyer": true, "broker_parallel": false},
+    "matcap": {"lawyer": true, "broker_parallel": false},
+    "certificate": {"lawyer": true, "broker_parallel": false},
+    "mortgage": {"lawyer": true, "broker_parallel": true},
+    "military_mortgage": {"lawyer": true, "broker_parallel": true},
+    "mortgage_plus_matcap": {
+      "lawyer": true,
+      "broker_parallel": true,
+      "broker_scope": "mortgage_consultation_program_approval_only"
+    }
+  },
+  "no_backlog_guarantees": {
+    "deal_created": false,
+    "tasks_created": false,
+    "documents_created": false,
+    "risks_created": false,
+    "conversion_is_draft_only": true
+  },
+  "document_source_policy": {
+    "persist_url": false,
+    "persist_presence_flag_only": true,
+    "production_gate": "Owner must approve source domains and retention rules before any document URL is persisted."
+  },
+  "security_contract": {
+    "tables_have_rls_enabled": true,
+    "direct_anon_access": false,
+    "direct_authenticated_table_access": false,
+    "public_function_execute_revoked": true,
+    "anon_function_execute_revoked": true,
+    "authenticated_execute_explicitly_granted": true,
+    "security_definer_requires_auth_uid_and_active_profile": true,
+    "private_helpers_not_executable_by_authenticated": true
+  },
+  "production_gate": "Apply only after isolated authenticated role/mutation E2E for spn, manager, lawyer, broker, viewer, owner/admin; security advisor review; approved document-source retention policy; and explicit rollout review."
+}
