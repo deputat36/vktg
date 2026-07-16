@@ -4,6 +4,7 @@
     "owner_admin": {
       "menu_routes": [
         "dashboard-v2.html",
+        "consultation-v2.html",
         "spn-v2.html",
         "deals-v2.html",
         "manager-v2.html",
@@ -21,6 +22,7 @@
       "menu_routes": [
         "dashboard-v2.html",
         "manager-v2.html",
+        "consultation-v2.html",
         "operational-adoption-v2.html",
         "manager-source-remediation-v2.html",
         "deals-v2.html"
@@ -29,6 +31,7 @@
     "spn": {
       "menu_routes": [
         "dashboard-v2.html",
+        "consultation-v2.html",
         "spn-v2.html",
         "deals-v2.html"
       ]
@@ -37,6 +40,7 @@
       "menu_routes": [
         "dashboard-v2.html",
         "queue-v2.html",
+        "consultation-v2.html",
         "deals-v2.html"
       ]
     },
