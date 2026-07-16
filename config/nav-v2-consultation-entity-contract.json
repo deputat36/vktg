@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_consultation_entity.sql",
+  "tables": [
+    "public.nav_consultations_v2",
+    "public.nav_consultation_messages_v2",
+    "public.nav_consultation_events_v2"
+  ],
+  "statuses": ["new", "need_info", "answered", "converted", "closed"],
+  "priorities": ["normal", "high", "urgent"],
+  "lawyer_decisions": ["answer", "need_info", "convert_to_preparation"],
+  "conversion_modes": ["deposit", "deal"],
+  "allowed_create_roles": ["owner", "admin", "manager", "spn", "lawyer"],
+  "forbidden_roles": ["broker", "viewer"],
+  "access_matrix": {
+    "spn": "created_by_self_only",
+    "manager": "creator_manager_id_matches",
+    "lawyer": "unassigned_open_queue_or_assigned_or_authored",
+    "owner_admin": "all",
+    "broker": "none",
+    "viewer": "none"
+  },
+  "rpc_surface": [
+    {"name": "nav_v2_create_consultation", "kind": "mutation", "production_execute_granted": false},
+    {"name": "nav_v2_get_consultations_list", "kind": "read", "production_execute_granted": false},
+    {"name": "nav_v2_get_consultation_card", "kind": "read", "production_execute_granted": false},
+    {"name": "nav_v2_decide_consultation", "kind": "mutation", "production_execute_granted": false},
+    {"name": "nav_v2_reply_consultation", "kind": "mutation", "production_execute_granted": false},
+    {"name": "nav_v2_request_consultation_conversion", "kind": "mutation", "production_execute_granted": false},
+    {"name": "nav_v2_bind_consultation_conversion", "kind": "mutation", "production_execute_granted": false},
+    {"name": "nav_v2_close_consultation", "kind": "mutation", "production_execute_granted": false}
+  ],
+  "list_dto_keys": [
+    "id", "status", "priority", "question_preview", "side", "stage", "object_type",
+    "safe_orienter", "funding_codes", "circumstance_codes", "planned_date",
+    "broker_scope_needed", "lawyer_state", "lawyer_name", "created_by_name",
+    "decision", "conversion_mode", "has_documents_url", "conversion_requested",
+    "created_at", "updated_at"
+  ],
+  "card_dto_keys": [
+    "id", "status", "priority", "question", "side", "stage", "object_type",
+    "safe_orienter", "funding_codes", "circumstance_codes", "planned_date",
+    "documents_url", "known_facts", "broker_scope_needed", "lawyer_id", "lawyer_name",
+    "created_by", "created_by_name", "decision", "answer_text", "conversion_mode",
+    "conversion_requested_at", "converted_deal_id", "close_reason", "created_at", "updated_at"
+  ],
+  "forbidden_client_keys": [
+    "seller_name", "seller_phone", "buyer_name", "buyer_phone", "client_name", "client_phone",
+    "email", "passport", "snils", "bank_card", "cadastral_number", "address", "unit_number",
+    "wizard_snapshot", "deal_summary"
+  ],
+  "privacy_rules": {
+    "server_validation_required": true,
+    "reject_email": true,
+    "reject_phone": true,
+    "reject_passport": true,
+    "reject_snils": true,
+    "reject_card_like_digits": true,
+    "reject_cadastral_number": true,
+    "reject_unit_level_address": true,
+    "reject_possible_full_name": true,
+    "documents_url_https_only": true
+  },
+  "broker_scope": {
+    "trigger": ["mortgage", "military_mortgage"],
+    "matcap_without_mortgage": false,
+    "certificate_without_mortgage": false,
+    "legal_queue_access": false,
+    "responsibility": "mortgage_consultation_program_selection_bank_approval_training_only"
+  },
+  "conversion_contract": {
+    "lawyer_decision_required": "convert_to_preparation",
+    "request_returns_safe_wizard_draft": true,
+    "request_creates_deal": false,
+    "request_creates_tasks": false,
+    "request_creates_documents": false,
+    "request_creates_risks": false,
+    "status_converted_requires_bound_deal_id": true,
+    "existing_wizard_is_explicit_user_action": true
+  },
+  "audit_contract": {
+    "append_only_messages": true,
+    "append_only_events": true,
+    "event_data_contains_free_text": false,
+    "event_types": [
+      "consultation_created", "lawyer_decision", "requester_replied",
+      "conversion_requested", "conversion_bound", "consultation_closed"
+    ]
+  },
+  "security_contract": {
+    "rls_enabled": true,
+    "direct_table_policies": "deny_by_default_no_policies",
+    "direct_table_grants_added": false,
+    "rpc_grants_added": false,
+    "explicit_revokes": ["public", "anon", "authenticated"],
+    "security_definer_requires_authenticated_role_checks": true
+  },
+  "production_gate": "Apply only after isolated synthetic SQL execution, authenticated role/mutation E2E, DTO privacy review, advisor review, rollback rehearsal and separate deploy PR."
+}
