@@ -14,7 +14,11 @@ SPN_PAGE = ROOT / "spn-v2.html"
 DEALS_PAGE = ROOT / "deals-v2.html"
 CONSUMERS = {
     "dashboard_v2": [ROOT / "assets/js/nav-v2/dashboard-v2.js"],
-    "deals_v2": [ROOT / "assets/js/nav-v2/deals-v2.js", ROOT / "assets/js/nav-v2/deals-work-modes-v2.js"],
+    "deals_v2": [
+        ROOT / "assets/js/nav-v2/deals-v2.js",
+        ROOT / "assets/js/nav-v2/deals-work-modes-v2.js",
+        ROOT / "assets/js/nav-v2/dashboard-priority-v2.js",
+    ],
     "spn_priority_hints": [ROOT / "assets/js/nav-v2/deals-spn-priority-hints-v2.js"],
     "spn_save_recovery": [ROOT / "assets/js/nav-v2/spn-save-idempotency-guard-v2.js"],
     "responsibility_and_handoff": [
@@ -161,7 +165,7 @@ def main() -> int:
         if forbidden in handoff:
             errors.append(f"handoff summary still depends on client identifier: {forbidden}")
     require(handoff, (
-        "без ФИО и телефоны клиентов".replace("телефоны", "телефоны"),
+        "ФИО и телефоны клиентов",
         "Ответственные / юрист",
         "безопасным полям списка",
     ), "deals-handoff-summary-v2.js", errors)
