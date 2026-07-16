@@ -5,6 +5,7 @@ on:
     paths:
       - 'deal-card-v2.html'
       - 'assets/css/nav-v2-outcome-preview.css'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
       - 'assets/js/nav-v2/work-item-outcome-model-v2.js'
       - 'assets/js/nav-v2/work-item-outcome-preview-v2.js'
       - 'config/nav-v2-module-budget.json'
@@ -33,6 +34,7 @@ jobs:
         run: |
           node --check assets/js/nav-v2/work-item-outcome-model-v2.js
           node --check assets/js/nav-v2/work-item-outcome-preview-v2.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
       - name: Compile checker
         run: python3 -m py_compile scripts/check_nav_v2_work_item_outcome_preview.py
       - name: Upload evidence
