@@ -1,0 +1,51 @@
+name: Navigator v2 bounded task UI preview
+
+on:
+  pull_request:
+    paths:
+      - 'bounded-task-ui-preview-v2.html'
+      - 'assets/css/nav-v2-bounded-task-ui-preview.css'
+      - 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
+      - 'assets/js/nav-v2/bounded-task-server-adapter-v2.js'
+      - 'fixtures/nav-v2-bounded-task-ui-preview-scenarios.json'
+      - 'scripts/check-nav-v2-bounded-task-ui-preview.mjs'
+      - 'scripts/check_nav_v2_bounded_task_ui_preview.py'
+      - 'docs/NAV_V2_BOUNDED_TASK_UI_PREVIEW_2026-07-16.md'
+      - 'config/nav-v2-module-budget.json'
+      - 'assets/js/nav-v2/role-menu-v2.js'
+      - '.github/workflows/nav-v2-bounded-task-ui-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-task-ui-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate source contract
+        run: python3 scripts/check_nav_v2_bounded_task_ui_preview.py
+      - name: Run semantic regression
+        run: node scripts/check-nav-v2-bounded-task-ui-preview.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/bounded-task-ui-preview-v2.js
+          node --check assets/js/nav-v2/bounded-task-server-adapter-v2.js
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_bounded_task_ui_preview.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-task-ui-preview
+          path: |
+            bounded-task-ui-preview-v2.html
+            assets/css/nav-v2-bounded-task-ui-preview.css
+            assets/js/nav-v2/bounded-task-ui-preview-v2.js
+            fixtures/nav-v2-bounded-task-ui-preview-scenarios.json
+            docs/NAV_V2_BOUNDED_TASK_UI_PREVIEW_2026-07-16.md
+          if-no-files-found: error
