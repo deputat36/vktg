@@ -1,10 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "synthetic_only": true,
   "payload_cases": [
     {
       "id": "basic_question",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000001",
         "question": "Можно ли выходить на задаток после наследства?",
         "side": "seller",
         "stage": "first_question",
@@ -17,6 +18,7 @@
         "known_facts": "Право зарегистрировано, срок владения уточняется."
       },
       "expected": {
+        "client_request_id": "10000000-0000-4000-8000-000000000001",
         "request_type": "legal_answer",
         "representation_model": "seller",
         "stage": "question",
@@ -29,6 +31,7 @@
     {
       "id": "deposit_partner",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000002",
         "question": "Какие условия нужно согласовать до подписания соглашения о задатке?",
         "side": "partner",
         "stage": "deposit_planned",
@@ -50,6 +53,7 @@
     {
       "id": "mortgage_matcap",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000003",
         "question": "Какую правовую схему предусмотреть при ипотеке с материнским капиталом?",
         "side": "buyer",
         "stage": "preparing_deal",
@@ -72,6 +76,7 @@
     {
       "id": "document_url_stripped",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000004",
         "question": "Достаточно ли представленных документов для первичной проверки?",
         "side": "seller",
         "stage": "first_question",
@@ -92,6 +97,7 @@
     {
       "id": "minor_codes_are_lossless_in_text",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000005",
         "question": "Какие разрешения и условия нужны до задатка?",
         "side": "both",
         "stage": "before_deposit",
@@ -112,6 +118,7 @@
     {
       "id": "spouse_is_preserved_in_text",
       "input": {
+        "client_request_id": "10000000-0000-4000-8000-000000000006",
         "question": "Нужно ли дополнительное согласие для оформления сделки?",
         "side": "seller",
         "stage": "preparing_deal",
@@ -130,116 +137,49 @@
       }
     }
   ],
+  "idempotency_cases": [
+    {"id":"valid_uuid","value":"20000000-0000-4000-8000-000000000001","valid":true},
+    {"id":"uppercase_uuid","value":"20000000-0000-4000-8000-00000000000A","valid":true,"normalized":"20000000-0000-4000-8000-00000000000a"},
+    {"id":"missing_uuid","value":"","valid":false},
+    {"id":"malformed_uuid","value":"not-a-uuid","valid":false}
+  ],
   "queue_case": {
     "input": {
-      "profile": {"id": "00000000-0000-0000-0000-000000000001", "full_name": "Юрист Тестовый", "role": "lawyer", "email": "hidden@example.test"},
-      "summary": {"total": 1, "new_count": 1, "need_info_count": 0, "urgent_high_count": 1, "actionable_count": 1, "internal": "drop"},
+      "profile": {"id":"00000000-0000-0000-0000-000000000001","full_name":"Юрист Тестовый","role":"lawyer","email":"drop"},
+      "summary": {"total":1,"new_count":1,"need_info_count":0,"urgent_high_count":1,"actionable_count":1,"internal":"drop"},
       "items": [{
-        "id": "00000000-0000-0000-0000-000000000010",
-        "reference": "Консультация 00000000",
-        "status": "new",
-        "request_type": "deposit_precheck",
-        "representation_model": "seller",
-        "object_type": "flat",
-        "stage": "deposit_soon",
-        "funding_sources": ["cash"],
-        "circumstances_count": 1,
-        "planned_event_date": "2026-07-20",
-        "has_external_documents": true,
-        "requester_name": "СПН Тестовый",
-        "requester_role": "spn",
-        "assigned_lawyer_name": null,
-        "message_count": 1,
-        "latest_message_at": "2026-07-16T10:00:00Z",
-        "created_at": "2026-07-16T10:00:00Z",
-        "updated_at": "2026-07-16T10:00:00Z",
-        "age_hours": 2,
-        "priority_code": "high",
-        "actionable_for_lawyer": true,
-        "next_action": "Ответить",
-        "question": "DROP",
-        "body": "DROP",
-        "safe_reference": "DROP",
-        "phone": "+7 900 000-00-00",
-        "wizard_snapshot": {"drop": true}
+        "id":"00000000-0000-0000-0000-000000000010","reference":"Консультация 00000000","status":"new","request_type":"deposit_precheck","representation_model":"seller","object_type":"flat","stage":"deposit_soon","funding_sources":["cash"],"circumstances_count":1,"planned_event_date":"2026-07-20","has_external_documents":true,"requester_name":"СПН Тестовый","requester_role":"spn","assigned_lawyer_name":null,"message_count":1,"latest_message_at":"2026-07-16T10:00:00Z","created_at":"2026-07-16T10:00:00Z","updated_at":"2026-07-16T10:00:00Z","age_hours":2,"priority_code":"high","actionable_for_lawyer":true,"next_action":"Ответить","question":"DROP","body":"DROP","safe_reference":"DROP","phone":"+7 900 000-00-00","wizard_snapshot":{"drop":true}
       }]
     },
-    "forbidden_after_minimization": ["email", "internal", "question", "body", "safe_reference", "phone", "wizard_snapshot"]
+    "forbidden_after_minimization": ["email","internal","question","body","safe_reference","phone","wizard_snapshot"]
   },
   "detail_case": {
     "input": {
-      "profile": {"id": "00000000-0000-0000-0000-000000000001", "full_name": "Юрист Тестовый", "role": "lawyer", "email": "drop"},
-      "consultation": {
-        "id": "00000000-0000-0000-0000-000000000010",
-        "reference": "Консультация 00000000",
-        "status": "convert_to_preparation",
-        "request_type": "deposit_precheck",
-        "representation_model": "seller",
-        "object_type": "flat",
-        "safe_reference": "Безопасный ориентир",
-        "stage": "deposit_soon",
-        "funding_sources": ["cash"],
-        "circumstances": ["inheritance"],
-        "planned_event_date": "2026-07-20",
-        "has_external_documents": false,
-        "response_decision": "convert_to_preparation",
-        "requester_name": "СПН Тестовый",
-        "requester_role": "spn",
-        "manager_name": null,
-        "assigned_lawyer_name": "Юрист Тестовый",
-        "created_at": "2026-07-16T10:00:00Z",
-        "updated_at": "2026-07-16T11:00:00Z",
-        "closed_at": null,
-        "seller_phone": "drop"
-      },
-      "permissions": {"can_decide": false, "can_clarify": false, "can_close": true, "admin": "drop"},
-      "conversion_draft": {
-        "consultation_id": "00000000-0000-0000-0000-000000000010",
-        "preparation_mode": "deposit",
-        "representation_model": "seller",
-        "object_type": "flat",
-        "safe_reference": "Безопасный ориентир",
-        "funding_sources": ["cash"],
-        "circumstances": ["inheritance"],
-        "planned_event_date": "2026-07-20",
-        "has_external_documents": false,
-        "client_name": "drop"
-      },
-      "messages": [{
-        "id": "00000000-0000-0000-0000-000000000020",
-        "author_name": "Юрист Тестовый",
-        "author_role": "lawyer",
-        "message_type": "conversion_recommendation",
-        "body": "Нужна полная подготовка к задатку.",
-        "created_at": "2026-07-16T11:00:00Z",
-        "author_email": "drop"
-      }]
+      "profile": {"id":"00000000-0000-0000-0000-000000000001","full_name":"Юрист Тестовый","role":"lawyer","email":"drop"},
+      "consultation": {"id":"00000000-0000-0000-0000-000000000010","reference":"Консультация 00000000","status":"convert_to_preparation","request_type":"deposit_precheck","representation_model":"seller","object_type":"flat","safe_reference":"Безопасный ориентир","stage":"deposit_soon","funding_sources":["cash"],"circumstances":["inheritance"],"planned_event_date":"2026-07-20","has_external_documents":false,"response_decision":"convert_to_preparation","conversion_mode":"deposit","requester_name":"СПН Тестовый","requester_role":"spn","manager_name":null,"assigned_lawyer_name":"Юрист Тестовый","created_at":"2026-07-16T10:00:00Z","updated_at":"2026-07-16T11:00:00Z","closed_at":null,"seller_phone":"drop"},
+      "permissions": {"can_decide":false,"can_clarify":false,"can_close":true,"admin":"drop"},
+      "conversion_draft": {"consultation_id":"00000000-0000-0000-0000-000000000010","preparation_mode":"deposit","representation_model":"seller","object_type":"flat","safe_reference":"Безопасный ориентир","funding_sources":["cash"],"circumstances":["inheritance"],"planned_event_date":"2026-07-20","has_external_documents":false,"creates_deal":false,"creates_backlog":false,"client_name":"drop"},
+      "messages": [{"id":"00000000-0000-0000-0000-000000000020","author_name":"Юрист Тестовый","author_role":"lawyer","message_type":"conversion_recommendation","body":"Нужна полная подготовка к задатку.","created_at":"2026-07-16T11:00:00Z","author_email":"drop"}]
     }
   },
   "decision_cases": [
-    {"decision": "answer", "label": "Дать ответ", "next_status": "answered"},
-    {"decision": "need_info", "label": "Запросить уточнение", "next_status": "need_info"},
-    {"decision": "convert_to_preparation", "label": "Нужна полная подготовка", "next_status": "convert_to_preparation"},
-    {"decision": "unsupported", "expected": null}
+    {"id":"answer_valid","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"answer","body":"Можно продолжать после выполнения указанных условий.","conversion_mode":null},"valid":true,"next_status":"answered"},
+    {"id":"need_info_valid","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"need_info","body":"Уточните основание права и порядок расчётов.","conversion_mode":null},"valid":true,"next_status":"need_info"},
+    {"id":"convert_deposit","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"convert_to_preparation","body":"Нужна полная подготовка задатка с проверкой условий.","conversion_mode":"deposit"},"valid":true,"next_status":"convert_to_preparation"},
+    {"id":"convert_deal","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"convert_to_preparation","body":"Нужна полная подготовка сделки и договорных документов.","conversion_mode":"deal"},"valid":true,"next_status":"convert_to_preparation"},
+    {"id":"convert_without_mode","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"convert_to_preparation","body":"Нужна полная подготовка по этому запросу.","conversion_mode":null},"valid":false},
+    {"id":"answer_with_mode","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"answer","body":"Достаточно обычного юридического ответа.","conversion_mode":"deal"},"valid":false},
+    {"id":"invalid_consultation_id","input":{"consultation_id":"bad-id","decision":"answer","body":"Достаточно обычного юридического ответа.","conversion_mode":null},"valid":false},
+    {"id":"short_body","input":{"consultation_id":"00000000-0000-0000-0000-000000000010","decision":"answer","body":"коротко","conversion_mode":null},"valid":false}
   ],
-  "conversion_case": {
-    "input": {
-      "consultation_id": "00000000-0000-0000-0000-000000000010",
-      "preparation_mode": "deposit",
-      "representation_model": "partner_agency",
-      "object_type": "room_share",
-      "safe_reference": "Безопасный ориентир",
-      "funding_sources": ["mortgage", "matcap"],
-      "circumstances": ["children", "shares"],
-      "planned_event_date": "2026-07-20",
-      "has_external_documents": true
+  "conversion_cases": [
+    {
+      "id":"safe_conversion",
+      "input":{"consultation_id":"00000000-0000-0000-0000-000000000010","preparation_mode":"deposit","representation_model":"partner_agency","object_type":"room_share","safe_reference":"Безопасный ориентир","funding_sources":["mortgage","matcap"],"circumstances":["children","shares"],"planned_event_date":"2026-07-20","has_external_documents":true,"creates_deal":false,"creates_backlog":false},
+      "expected":{"preparationMode":"deposit","representation":"partner_agency","payments":["mortgage","matcap"],"flags":["minorSeller","shares"],"consultationHasExternalDocuments":true}
     },
-    "expected": {
-      "preparationMode": "deposit",
-      "representation": "partner_agency",
-      "payments": ["mortgage", "matcap"],
-      "flags": ["minorSeller", "shares"],
-      "consultationHasExternalDocuments": true
-    }
-  }
+    {"id":"unsafe_deal_claim","input":{"preparation_mode":"deposit","creates_deal":true,"creates_backlog":false},"expected":null},
+    {"id":"unsafe_backlog_claim","input":{"preparation_mode":"deal","creates_deal":false,"creates_backlog":true},"expected":null},
+    {"id":"unknown_mode","input":{"preparation_mode":"unknown","creates_deal":false,"creates_backlog":false},"expected":null}
+  ]
 }
