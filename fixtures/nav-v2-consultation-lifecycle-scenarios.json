@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "transition_cases": [
+    {"id":"spn_create","role":"spn","from":null,"action":"create","allowed":true,"to":"new"},
+    {"id":"manager_create","role":"manager","from":null,"action":"create","allowed":true,"to":"new"},
+    {"id":"lawyer_answer","role":"lawyer","from":"new","action":"answer","allowed":true,"to":"answered"},
+    {"id":"lawyer_need_info","role":"lawyer","from":"new","action":"need_info","allowed":true,"to":"need_info"},
+    {"id":"lawyer_convert","role":"lawyer","from":"new","action":"convert_to_preparation","allowed":true,"to":"convert_to_preparation"},
+    {"id":"spn_clarify","role":"spn","from":"need_info","action":"clarify","allowed":true,"to":"new"},
+    {"id":"spn_close_answered","role":"spn","from":"answered","action":"close","allowed":true,"to":"closed"},
+    {"id":"spn_close_conversion","role":"spn","from":"convert_to_preparation","action":"close","allowed":true,"to":"closed"},
+    {"id":"spn_cancel_new","role":"spn","from":"new","action":"cancel","allowed":true,"to":"cancelled"},
+    {"id":"spn_cannot_decide","role":"spn","from":"new","action":"answer","allowed":false,"to":null},
+    {"id":"manager_cannot_decide","role":"manager","from":"new","action":"convert_to_preparation","allowed":false,"to":null},
+    {"id":"broker_cannot_create","role":"broker","from":null,"action":"create","allowed":false,"to":null},
+    {"id":"viewer_cannot_create","role":"viewer","from":null,"action":"create","allowed":false,"to":null},
+    {"id":"lawyer_cannot_decide_need_info_without_clarification","role":"lawyer","from":"need_info","action":"answer","allowed":false,"to":null},
+    {"id":"closed_is_terminal","role":"owner","from":"closed","action":"answer","allowed":false,"to":null},
+    {"id":"cancelled_is_terminal","role":"admin","from":"cancelled","action":"convert_to_preparation","allowed":false,"to":null}
+  ],
+  "visibility_cases": [
+    {"id":"spn_view_own","role":"spn","relation":"creator","allowed":true},
+    {"id":"spn_view_other","role":"spn","relation":"none","allowed":false},
+    {"id":"manager_view_team","role":"manager","relation":"requester_manager","allowed":true},
+    {"id":"manager_view_other_team","role":"manager","relation":"none","allowed":false},
+    {"id":"lawyer_view_unassigned","role":"lawyer","relation":"unassigned","allowed":true},
+    {"id":"lawyer_view_self_assigned","role":"lawyer","relation":"assigned_self","allowed":true},
+    {"id":"lawyer_view_other_assigned","role":"lawyer","relation":"assigned_other","allowed":false},
+    {"id":"owner_view_all","role":"owner","relation":"none","allowed":true},
+    {"id":"admin_view_all","role":"admin","relation":"none","allowed":true},
+    {"id":"broker_no_legal_view","role":"broker","relation":"none","allowed":false},
+    {"id":"viewer_no_legal_view","role":"viewer","relation":"none","allowed":false}
+  ],
+  "funding_cases": [
+    {"id":"cash","sources":["cash"],"lawyer":true,"broker_parallel":false},
+    {"id":"matcap","sources":["matcap"],"lawyer":true,"broker_parallel":false},
+    {"id":"certificate","sources":["certificate"],"lawyer":true,"broker_parallel":false},
+    {"id":"mortgage","sources":["mortgage"],"lawyer":true,"broker_parallel":true},
+    {"id":"military_mortgage","sources":["military_mortgage"],"lawyer":true,"broker_parallel":true},
+    {"id":"mortgage_matcap","sources":["mortgage","matcap"],"lawyer":true,"broker_parallel":true,"broker_scope":"mortgage_consultation_program_approval_only"},
+    {"id":"certificate_cash","sources":["certificate","cash"],"lawyer":true,"broker_parallel":false}
+  ],
+  "privacy_cases": [
+    {"id":"safe_question","text":"Нужно понять, можно ли выходить на задаток при наследстве и какие условия зафиксировать.","blocked":false},
+    {"id":"safe_reference","text":"Северный микрорайон, кирпичный дом, двухкомнатная квартира без номера помещения.","blocked":false},
+    {"id":"phone","text":"Позвонить клиенту +7 900 123-45-67","blocked":true,"finding":"phone"},
+    {"id":"email","text":"Документы отправлены на client@example.com","blocked":true,"finding":"email"},
+    {"id":"passport","text":"Паспорт 1234 567890","blocked":true,"finding":"passport"},
+    {"id":"snils","text":"СНИЛС 123-456-789 01","blocked":true,"finding":"snils"},
+    {"id":"cadastral","text":"Кадастровый номер 36:04:0102030:123","blocked":true,"finding":"cadastral_number"},
+    {"id":"unit","text":"квартира 57","blocked":true,"finding":"unit_number"},
+    {"id":"office_unit","text":"офис №12","blocked":true,"finding":"unit_number"},
+    {"id":"long_payment_number","text":"Карта 4276 0000 0000 0000","blocked":true,"finding":"long_payment_number"}
+  ],
+  "queue_contract_cases": [
+    {"id":"question_hidden_from_queue","forbidden_key":"question"},
+    {"id":"body_hidden_from_queue","forbidden_key":"body"},
+    {"id":"safe_reference_hidden_from_queue","forbidden_key":"safe_reference"},
+    {"id":"document_url_not_persisted","forbidden_key":"document_source_url"},
+    {"id":"client_phone_hidden","forbidden_key":"phone"}
+  ],
+  "no_backlog_cases": [
+    {"id":"create_no_deal","created_entity":"deal","expected":false},
+    {"id":"create_no_tasks","created_entity":"tasks","expected":false},
+    {"id":"create_no_documents","created_entity":"documents","expected":false},
+    {"id":"create_no_risks","created_entity":"risks","expected":false},
+    {"id":"convert_returns_draft_only","created_entity":"conversion_draft","expected":true}
+  ]
+}
