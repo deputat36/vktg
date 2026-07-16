@@ -6,7 +6,9 @@ on:
       - 'config/nav-v2-consultation-lifecycle-contract.json'
       - 'fixtures/nav-v2-consultation-lifecycle-scenarios.json'
       - 'supabase/prototypes/nav_v2_consultation_lifecycle.sql'
+      - 'supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql'
       - 'docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md'
+      - 'docs/NAV_V2_WORK_HANDOFF_LATEST.md'
       - 'scripts/check_nav_v2_consultation_lifecycle.py'
       - '.github/workflows/nav-v2-consultation-lifecycle.yml'
   workflow_dispatch:
@@ -36,5 +38,6 @@ jobs:
             config/nav-v2-consultation-lifecycle-contract.json
             fixtures/nav-v2-consultation-lifecycle-scenarios.json
             supabase/prototypes/nav_v2_consultation_lifecycle.sql
+            supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql
             docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md
           if-no-files-found: error
