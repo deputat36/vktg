@@ -47,7 +47,7 @@ def main() -> int:
         "Быстрая консультация юриста",
         "Repository-only preview",
         "assets/css/nav-v2-consultation.css?v=20260716-02",
-        "assets/js/nav-v2/consultation-v2.js?v=20260716-02",
+        "assets/js/nav-v2/consultation-v2.js?v=20260716-03",
         "Сделка, задачи, документы и риски автоматически не создаются",
     ), PAGE.name, errors)
 
