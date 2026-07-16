@@ -6,6 +6,7 @@
     "deals-v2.html": { "max_modules": 9 },
     "deal-card-v2.html": { "max_modules": 19 },
     "spn-v2.html": { "max_modules": 18 },
+    "consultation-v2.html": { "max_modules": 2 },
     "queue-v2.html": { "max_modules": 3 },
     "manager-v2.html": { "max_modules": 3 },
     "task-review-v2.html": { "max_modules": 3 },
