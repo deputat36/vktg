@@ -168,7 +168,7 @@ def main() -> int:
     require(doc, (
         "repository-only consumer contract",
         "client_request_id",
-        "идемпотент",
+        "Идемпотентный",
         "nav_v2_create_consultation",
         "nav_v2_decide_consultation",
         "p_conversion_mode",
