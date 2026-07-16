@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "plan_cases": [
+    {
+      "id": "no_represented_side",
+      "seller_spn_present": false,
+      "buyer_spn_present": false,
+      "expected_sides": [],
+      "expected_items": 0
+    },
+    {
+      "id": "seller_only",
+      "seller_spn_present": true,
+      "buyer_spn_present": false,
+      "expected_sides": ["seller"],
+      "expected_items": 4
+    },
+    {
+      "id": "buyer_only",
+      "seller_spn_present": false,
+      "buyer_spn_present": true,
+      "expected_sides": ["buyer"],
+      "expected_items": 4
+    },
+    {
+      "id": "both_sides",
+      "seller_spn_present": true,
+      "buyer_spn_present": true,
+      "expected_sides": ["seller", "buyer"],
+      "expected_items": 8
+    }
+  ],
+  "readiness_cases": [
+    {
+      "id": "signed_service_agreement",
+      "items": [
+        {"document_type":"service_agreement","status":"signed","is_required":true,"required_stage":"before_work","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":1,"required_incomplete":0,"before_deposit_incomplete":0,"before_deal_incomplete":0,"after_deal_incomplete":0,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "prepared_service_agreement_is_active",
+      "items": [
+        {"document_type":"service_agreement","status":"prepared","is_required":true,"required_stage":"before_work","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":0,"required_incomplete":1,"before_deposit_incomplete":1,"before_deal_incomplete":1,"after_deal_incomplete":0,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "sent_for_signature_is_active",
+      "items": [
+        {"document_type":"service_agreement","status":"sent_for_signature","is_required":true,"required_stage":"before_deposit","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":0,"required_incomplete":1,"before_deposit_incomplete":1,"before_deal_incomplete":1,"after_deal_incomplete":0,"problems":0,"awaiting_signature":1}
+    },
+    {
+      "id": "completion_act_after_deal_only",
+      "items": [
+        {"document_type":"completion_act","status":"planned","is_required":true,"required_stage":"after_deal","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":0,"required_incomplete":1,"before_deposit_incomplete":0,"before_deal_incomplete":0,"after_deal_incomplete":1,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "optional_inspection_act_not_blocking",
+      "items": [
+        {"document_type":"inspection_act","status":"planned","is_required":false,"required_stage":"conditional","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":0,"required_incomplete":0,"before_deposit_incomplete":0,"before_deal_incomplete":0,"after_deal_incomplete":0,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "proposed_not_applicable_stays_active",
+      "items": [
+        {"document_type":"addendum","status":"planned","is_required":true,"required_stage":"before_deal","outcome_code":"not_applicable","outcome_state":"proposed"}
+      ],
+      "expected": {"complete":0,"required_incomplete":1,"before_deposit_incomplete":0,"before_deal_incomplete":1,"after_deal_incomplete":0,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "confirmed_not_applicable_complete",
+      "items": [
+        {"document_type":"addendum","status":"planned","is_required":true,"required_stage":"before_deal","outcome_code":"not_applicable","outcome_state":"confirmed"}
+      ],
+      "expected": {"complete":1,"required_incomplete":0,"before_deposit_incomplete":0,"before_deal_incomplete":0,"after_deal_incomplete":0,"problems":0,"awaiting_signature":0}
+    },
+    {
+      "id": "problem_required_document",
+      "items": [
+        {"document_type":"service_agreement","status":"problem","is_required":true,"required_stage":"before_work","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":0,"required_incomplete":1,"before_deposit_incomplete":1,"before_deal_incomplete":1,"after_deal_incomplete":0,"problems":1,"awaiting_signature":0}
+    },
+    {
+      "id": "mixed_corporate_cycle",
+      "items": [
+        {"document_type":"service_agreement","status":"signed","is_required":true,"required_stage":"before_work","outcome_code":null,"outcome_state":null},
+        {"document_type":"inspection_act","status":"signed","is_required":false,"required_stage":"conditional","outcome_code":null,"outcome_state":null},
+        {"document_type":"addendum","status":"planned","is_required":false,"required_stage":"conditional","outcome_code":null,"outcome_state":null},
+        {"document_type":"completion_act","status":"sent_for_signature","is_required":true,"required_stage":"after_deal","outcome_code":null,"outcome_state":null}
+      ],
+      "expected": {"complete":2,"required_incomplete":1,"before_deposit_incomplete":0,"before_deal_incomplete":0,"after_deal_incomplete":1,"problems":0,"awaiting_signature":1}
+    }
+  ],
+  "role_cases": [
+    {"id":"spn_owns_collection","role":"spn","action":"update_operational_status","allowed":true},
+    {"id":"spn_proposes_exception","role":"spn","action":"propose_exception","allowed":true},
+    {"id":"spn_cannot_confirm_exception","role":"spn","action":"confirm_exception","allowed":false},
+    {"id":"manager_confirms_process_exception","role":"manager","action":"confirm_exception","allowed":true},
+    {"id":"manager_cannot_change_legal_readiness","role":"manager","action":"change_legal_readiness","allowed":false},
+    {"id":"lawyer_not_default_owner","role":"lawyer","action":"update_operational_status","allowed":false},
+    {"id":"broker_no_access","role":"broker","action":"view_corporate_documents","allowed":false},
+    {"id":"owner_confirms_exception","role":"owner","action":"confirm_exception","allowed":true},
+    {"id":"admin_confirms_exception","role":"admin","action":"confirm_exception","allowed":true}
+  ],
+  "privacy_cases": [
+    {"id":"no_client_name_field","forbidden":"client_name"},
+    {"id":"no_phone_field","forbidden":"phone"},
+    {"id":"no_email_field","forbidden":"email"},
+    {"id":"no_signature_image","forbidden":"signature_image"},
+    {"id":"no_scan_url","forbidden":"scan_url"},
+    {"id":"no_document_url","forbidden":"document_url"}
+  ]
+}
