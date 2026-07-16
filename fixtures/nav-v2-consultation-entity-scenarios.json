@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "profiles": {
+    "spn_a": {"role": "spn", "manager_id": "manager_a"},
+    "spn_b": {"role": "spn", "manager_id": "manager_b"},
+    "manager_a": {"role": "manager", "manager_id": null},
+    "manager_b": {"role": "manager", "manager_id": null},
+    "lawyer_a": {"role": "lawyer", "manager_id": null},
+    "lawyer_b": {"role": "lawyer", "manager_id": null},
+    "broker_a": {"role": "broker", "manager_id": null},
+    "viewer_a": {"role": "viewer", "manager_id": null},
+    "owner_a": {"role": "owner", "manager_id": null}
+  },
+  "access_cases": [
+    {"id": "creator_views_own", "actor": "spn_a", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": true},
+    {"id": "other_spn_denied", "actor": "spn_b", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": false},
+    {"id": "creator_manager_views", "actor": "manager_a", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": true},
+    {"id": "other_manager_denied", "actor": "manager_b", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": false},
+    {"id": "lawyer_sees_unassigned_new", "actor": "lawyer_a", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": true},
+    {"id": "lawyer_sees_assigned", "actor": "lawyer_a", "creator": "spn_a", "status": "answered", "lawyer_id": "lawyer_a", "authored": [], "expected": true},
+    {"id": "other_lawyer_denied_after_assignment", "actor": "lawyer_b", "creator": "spn_a", "status": "answered", "lawyer_id": "lawyer_a", "authored": [], "expected": false},
+    {"id": "authoring_lawyer_keeps_history", "actor": "lawyer_b", "creator": "spn_a", "status": "closed", "lawyer_id": "lawyer_a", "authored": ["lawyer_b"], "expected": true},
+    {"id": "owner_views_all", "actor": "owner_a", "creator": "spn_a", "status": "closed", "lawyer_id": "lawyer_a", "authored": [], "expected": true},
+    {"id": "broker_denied_legal_queue", "actor": "broker_a", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": false},
+    {"id": "viewer_denied", "actor": "viewer_a", "creator": "spn_a", "status": "new", "lawyer_id": null, "authored": [], "expected": false}
+  ],
+  "lifecycle_cases": [
+    {"id": "create", "from": null, "action": "create", "actor_role": "spn", "decision": null, "conversion_requested": false, "deal_bound": false, "expected_status": "new", "allowed": true},
+    {"id": "lawyer_needs_info", "from": "new", "action": "decide", "actor_role": "lawyer", "decision": "need_info", "conversion_requested": false, "deal_bound": false, "expected_status": "need_info", "allowed": true},
+    {"id": "requester_replies", "from": "need_info", "action": "reply", "actor_role": "spn", "decision": "need_info", "conversion_requested": false, "deal_bound": false, "expected_status": "new", "allowed": true},
+    {"id": "lawyer_answers", "from": "new", "action": "decide", "actor_role": "lawyer", "decision": "answer", "conversion_requested": false, "deal_bound": false, "expected_status": "answered", "allowed": true},
+    {"id": "lawyer_routes_conversion", "from": "new", "action": "decide", "actor_role": "lawyer", "decision": "convert_to_preparation", "conversion_mode": "deposit", "conversion_requested": false, "deal_bound": false, "expected_status": "answered", "allowed": true},
+    {"id": "request_conversion", "from": "answered", "action": "request_conversion", "actor_role": "spn", "decision": "convert_to_preparation", "conversion_mode": "deposit", "conversion_requested": false, "deal_bound": false, "expected_status": "answered", "allowed": true, "creates_deal": false, "creates_backlog": false},
+    {"id": "bind_conversion", "from": "answered", "action": "bind_conversion", "actor_role": "spn", "decision": "convert_to_preparation", "conversion_mode": "deal", "conversion_requested": true, "deal_bound": true, "expected_status": "converted", "allowed": true},
+    {"id": "bind_without_request_denied", "from": "answered", "action": "bind_conversion", "actor_role": "spn", "decision": "convert_to_preparation", "conversion_mode": "deal", "conversion_requested": false, "deal_bound": true, "expected_status": "answered", "allowed": false},
+    {"id": "request_without_lawyer_route_denied", "from": "answered", "action": "request_conversion", "actor_role": "spn", "decision": "answer", "conversion_requested": false, "deal_bound": false, "expected_status": "answered", "allowed": false},
+    {"id": "broker_decision_denied", "from": "new", "action": "decide", "actor_role": "broker", "decision": "answer", "conversion_requested": false, "deal_bound": false, "expected_status": "new", "allowed": false},
+    {"id": "viewer_reply_denied", "from": "need_info", "action": "reply", "actor_role": "viewer", "decision": "need_info", "conversion_requested": false, "deal_bound": false, "expected_status": "need_info", "allowed": false},
+    {"id": "close_answered", "from": "answered", "action": "close", "actor_role": "spn", "decision": "answer", "conversion_requested": false, "deal_bound": false, "expected_status": "closed", "allowed": true},
+    {"id": "close_converted_denied", "from": "converted", "action": "close", "actor_role": "spn", "decision": "convert_to_preparation", "conversion_requested": true, "deal_bound": true, "expected_status": "converted", "allowed": false}
+  ],
+  "funding_cases": [
+    {"id": "cash", "funding": ["cash"], "broker_scope_needed": false},
+    {"id": "matcap", "funding": ["matcap"], "broker_scope_needed": false},
+    {"id": "certificate", "funding": ["certificate"], "broker_scope_needed": false},
+    {"id": "mortgage", "funding": ["mortgage"], "broker_scope_needed": true},
+    {"id": "military_mortgage", "funding": ["military_mortgage"], "broker_scope_needed": true},
+    {"id": "mortgage_matcap", "funding": ["mortgage", "matcap"], "broker_scope_needed": true},
+    {"id": "certificate_cash", "funding": ["certificate", "cash"], "broker_scope_needed": false}
+  ],
+  "dto_forbidden_keys": [
+    "seller_name", "seller_phone", "buyer_name", "buyer_phone", "client_name", "client_phone",
+    "email", "passport", "snils", "bank_card", "cadastral_number", "address", "unit_number",
+    "wizard_snapshot", "deal_summary"
+  ],
+  "required_event_types": [
+    "consultation_created", "lawyer_decision", "requester_replied",
+    "conversion_requested", "conversion_bound", "consultation_closed"
+  ]
+}
