@@ -142,7 +142,7 @@ def main() -> int:
         "deferred",
         "legacy",
         "target",
-        "Ипотечный брокер",
+        "ипотечного брокера",
         "Маткапитал, сертификаты",
         "Production gate",
         "Rollback",
