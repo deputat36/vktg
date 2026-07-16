@@ -118,7 +118,7 @@ def main() -> int:
         "PostgreSQL 17",
         "одноразовой базе",
         "base → hardening",
-        "idempotency",
+        "идемпотент",
         "broker/viewer",
         "маткапитал",
         "ипотека",
