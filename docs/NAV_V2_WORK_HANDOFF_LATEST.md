@@ -4,14 +4,15 @@
 
 - Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `cff78e5ff17224dc6dbde4a560effa175e93a35b` — squash merge PR #363.
+- Production `main`: `6f1202185b5d287c0933351479068c92562bbdcf` — squash merge PR #366.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
-- Последняя подтверждённая production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
+- Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
+- Последняя общая production migration: `20260716133531_leader_calculation_revisions`; она не относится к Navigator.
 - Consultation, corporate-document и bounded-task SQL находятся только в `supabase/prototypes`.
-- В PR #350–#363 production Supabase не менялся, кроме ограниченной correction migration PR #349.
-- Production Auth, Edge Functions, RLS/grants, status guards и назначения сотрудников не менялись.
+- Production consultation/corporate-document таблиц и RPC нет.
+- Production Auth, Edge Functions, Navigator RLS/grants, status guards и назначения сотрудников после PR #349 не менялись.
 
 Live counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
@@ -75,11 +76,12 @@ Navigator не является CRM, файловым архивом или ав
 - `docs/NAV_V2_MORTGAGE_BROKER_SCOPE_2026-07-16.md` — зона ответственности брокера.
 - `docs/NAV_V2_WORK_ITEM_OUTCOME_CONTRACT_2026-07-16.md` — исходы документов и рисков.
 - `docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md` — outcome-aware readiness.
-- `docs/NAV_V2_OUTCOME_READINESS_SCENARIOS_2026-07-16.md` — synthetic readiness matrix.
 - `docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md` — быстрый frontend preview.
 - `docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md` — lightweight consultation lifecycle.
 - `docs/NAV_V2_CONSULTATION_SERVER_ADAPTER_2026-07-16.md` — frontend/server consumer contract.
+- `docs/NAV_V2_CONSULTATION_POSTGRES_HARNESS_2026-07-16.md` — executable consultation SQL regression.
 - `docs/NAV_V2_CORPORATE_DOCUMENTS_CONTRACT_2026-07-16.md` — отдельный корпоративный цикл.
+- `docs/NAV_V2_CORPORATE_DOCUMENT_MUTATIONS_2026-07-16.md` — governed corporate mutations.
 - `docs/NAV_V2_BOUNDED_TASK_CONTRACT_2026-07-16.md` — bounded taxonomy, SLA и evidence.
 
 ## Live baseline 16 июля 2026 года
@@ -89,10 +91,13 @@ Read-only срез:
 - 5 активных профилей: owner, lawyer, 3 СПН;
 - активного manager и broker нет;
 - 23 сделки;
-- 98 задач; все без сохранённых `task_type` и `sla_days`;
+- 98 production-задач;
+- все 98 задач имеют `task_type = null` и `sla_days = null`;
+- production task table пока содержит только старые поля и старый nullable type constraint;
+- bounded task contract columns существуют только в repository prototype;
 - 198 документов: 182 `needed`, 12 `received`, 4 `checked`;
 - 53 риска: после PR #349 — 49 открыты и 4 закрыты;
-- production consultation и corporate-document таблиц/RPC нет.
+- production consultation и corporate-document сущностей нет.
 
 Не использовать сырые показатели для оценки сотрудников: присутствуют тестовые, учебные и исторические записи.
 
@@ -108,7 +113,7 @@ Read-only срез:
 - outcome-aware readiness;
 - synthetic role/funding/readiness scenarios.
 
-### Fast consultation preview
+### PR #356 — fast consultation preview
 
 - один экран минимальных фактов;
 - структурированная передача юристу;
@@ -116,41 +121,43 @@ Read-only срез:
 - безопасный локальный draft полного мастера;
 - официальный role menu не менялся.
 
-### PR #358 — lightweight consultation lifecycle
+### PR #358 и hardening commit `8c9e6d1…`
 
-Repository-only:
+Repository-only consultation lifecycle:
 
-- `nav_consultations_v2`;
-- `nav_consultation_messages_v2`;
+- `nav_consultations_v2` и messages;
 - create/list/detail/decision/clarification/close RPC;
-- role and privacy matrix;
-- `answer`, `need_info`, `convert_to_preparation`;
-- conversion draft без сделки и backlog.
-
-Squash merge: `6fa1e59c991739178c1dc7948ff4758ac40676bd`.
-
-### Consultation hardening overlay
-
-Commit `8c9e6d1a8ef359fb0ee0f51edaccc596562ea480` добавил repository-only hardening:
-
 - idempotent create через `client_request_id`;
 - explicit payload allowlist;
 - role-scoped list;
 - ограничение неназначенного юриста;
 - обязательный `conversion_mode=deposit|deal`;
 - расширенный privacy guard;
-- effective ACL только для будущего isolated service-role harness.
+- effective ACL только для isolated service-role harness.
 
-### PR #359 — consultation server adapter
+### PR #359 и PR #365 — consultation adapter
 
 - frontend-коды приведены к server contract;
-- известные факты и точные обстоятельства не теряются;
 - URL исключён из будущего payload;
 - queue/detail DTO используют allowlist;
-- решения юриста и conversion draft формализованы;
+- stable UUID хранится только в `sessionStorage`;
+- create и four-argument decide имеют точные transport-free previews;
+- unsafe conversion draft отклоняется;
 - undeployed RPC не вызываются.
 
-Squash merge: `a32d03f4e2bd2251045ce15f6f772b574c008c39`.
+Последний merge: `131be05b1fba1d1e0c734937d132e9f9930ad0b1`.
+
+### PR #362 — consultation PostgreSQL 17 harness
+
+- synthetic Auth, роли и профили;
+- base → hardening execution;
+- реальные ACL, privacy, idempotency и lifecycle assertions;
+- `need_info → clarification → new`;
+- explicit `deposit/deal` conversion;
+- no-backlog proof;
+- rollback rehearsal.
+
+Squash merge: `6ec3d053e16c69d696789115fcc68a742922c721`.
 
 ### PR #361 — корпоративные документы
 
@@ -167,6 +174,23 @@ Squash merge: `a32d03f4e2bd2251045ce15f6f772b574c008c39`.
 - никакого изменения legal readiness, risk gates или deal status.
 
 Squash merge: `62a8c99764257b8f039f64c0dafa954cd18e08ba`.
+
+### PR #366 — governed corporate document mutations
+
+- явная инициализация только выбранных строк;
+- обязательный `client_request_id` и stored-result replay;
+- явная ошибка при повторном использовании UUID другой операцией;
+- СПН работает только со своей стороной;
+- сторонний СПН не может быть назначен;
+- bounded transitions `planned/prepared/sent/signed/problem`;
+- evidence для шаблона, способа подписания и внешнего подтверждения;
+- прямой `cancelled` запрещён;
+- `not_applicable/replaced/cancelled` проходят proposal → manager/owner/admin decision;
+- audit event table;
+- service-role-only repository ACL;
+- PostgreSQL 17 assertions и rollback прошли.
+
+Squash merge: `6f1202185b5d287c0933351479068c92562bbdcf`.
 
 ### PR #363 — bounded task contract v2
 
@@ -199,29 +223,42 @@ Squash merge: `cff78e5ff17224dc6dbde4a560effa175e93a35b`.
 
 ## Следующий безопасный slice
 
-P0/P1 — executable PostgreSQL 17 harness для consultation base + hardening overlay без платной Supabase branch.
+P0/P1 — governed bounded-task mutations + executable PostgreSQL 17 harness.
 
-### Harness должен
+### Mutation contract должен
 
-- запустить ephemeral PostgreSQL 17 в GitHub Actions;
-- создать synthetic `auth.users`, `auth.uid()`, JWT role и `nav_user_profiles`;
-- применить consultation base SQL и hardening overlay;
-- проверить DDL, constraints, indexes, RLS и effective ACL;
-- проверить create/idempotency и unknown-key rejection;
-- проверить списки СПН, менеджера, юриста и owner/admin;
-- проверить broker/viewer denial;
-- проверить доступ неназначенного юриста к исторической карточке;
-- проверить `need_info → clarification → new`;
-- проверить answer и explicit convert `deposit/deal`;
-- проверить отсутствие insert в deals/tasks/documents/risks;
-- проверить privacy rejections;
-- проверить broker route только по ипотеке;
-- уничтожить service container после CI.
+- создавать только одну явно подтверждённую задачу или небольшой выбранный batch;
+- запрещать массовый backfill существующих 98 задач;
+- требовать `client_request_id`;
+- брать criterion, evidence kinds, owner roles и default/max SLA из catalog;
+- проверять назначенного сотрудника и доступ к сделке;
+- поддерживать `open → in_progress`;
+- завершать `done` только с confirmed evidence и outcome `completed`;
+- оставлять `waiting_external/deferred` активными и требовать review date;
+- проводить `not_applicable/replaced/cancelled` через proposal → confirmation;
+- требовать replacement task той же сделки;
+- вести audit events;
+- не менять readiness, risk gates или deal status автоматически;
+- не создавать документы, риски и дополнительные задачи;
+- не выдавать authenticated grants до отдельного deploy PR.
 
-После harness:
+### PostgreSQL harness должен
 
-1. исправить реальные SQL/ACL ошибки;
-2. подготовить mutation-contract previews для corporate documents и bounded tasks;
+- воспроизвести реальные task enums и базовые columns;
+- применить bounded task contract;
+- применить mutation overlay;
+- проверить СПН/manager/lawyer/broker/owner/admin/viewer;
+- проверить owner role per task catalog;
+- проверить default/max SLA;
+- проверить idempotency и unknown-key rejection;
+- проверить evidence и terminal outcomes;
+- проверить no-backfill и no-cross-surface mutations;
+- выполнить rollback rehearsal.
+
+После task mutation harness:
+
+1. repository-only frontend mutation previews;
+2. controlled review selected legacy tasks без массового backfill;
 3. authenticated application E2E после approval среды;
 4. отдельный deploy PR с объединёнными migrations и минимальными grants;
 5. только после deploy добавить официальные menu/routes;
@@ -263,11 +300,11 @@ P0/P1 — executable PostgreSQL 17 harness для consultation base + hardening 
 - DTO/privacy masking;
 - outcome/readiness prototypes;
 - fast consultation preview;
-- consultation lifecycle base/hardening/adapter;
-- corporate document contract;
+- consultation lifecycle base/hardening/adapter/harness;
+- corporate document contract/mutations/harness;
 - bounded task taxonomy contract;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #363. Сначала создай executable PostgreSQL 17 harness для consultation base + hardening overlay. Не применяй prototypes к production, не создавай платную Supabase branch, не меняй production grants/RLS/Auth и не используй skipped authenticated job как доказательство.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #366. Создай repository-only governed mutation contract и executable PostgreSQL 17 harness для bounded tasks. Не выполняй массовый backfill, не применяй prototypes к production, не создавай платную Supabase branch и не меняй production grants/RLS/Auth.`
