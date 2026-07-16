@@ -1,0 +1,483 @@
+{
+  "schema_version": 1,
+  "status": "synthetic_only",
+  "production_applied": false,
+  "readiness_scenarios": [
+    {
+      "id": "document_checked",
+      "title": "Проверенный обязательный документ",
+      "documents": [
+        {"status": "checked", "required_for_deposit": true, "required_for_deal": true}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_received_not_checked",
+      "title": "Документ получен, но не проверен",
+      "documents": [
+        {"status": "received", "required_for_deposit": true, "required_for_deal": true}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": false,
+        "target_deposit_documents": 1,
+        "target_deal_documents": 1,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 1,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_proposed_not_applicable",
+      "title": "СПН предложил не применять документ",
+      "documents": [
+        {"status": "needed", "required_for_deposit": true, "required_for_deal": true, "outcome_code": "not_applicable", "outcome_state": "proposed"}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": false,
+        "target_deposit_documents": 1,
+        "target_deal_documents": 1,
+        "legacy_deposit_documents": 1,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 1,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_confirmed_not_applicable",
+      "title": "Профильная роль подтвердила, что документ не применим",
+      "documents": [
+        {"status": "needed", "required_for_deposit": true, "required_for_deal": true, "outcome_code": "not_applicable", "outcome_state": "confirmed"}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 1,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 1,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_confirmed_replaced",
+      "title": "Документ подтверждённо заменён другим",
+      "documents": [
+        {"id": "doc-old", "status": "needed", "required_for_deposit": true, "required_for_deal": true, "outcome_code": "replaced", "outcome_state": "confirmed", "replacement_document_id": "doc-new"},
+        {"id": "doc-new", "status": "checked", "required_for_deposit": false, "required_for_deal": false}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 1,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 1,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_external_wait",
+      "title": "Документ ожидается от внешней стороны",
+      "documents": [
+        {"status": "requested", "required_for_deposit": true, "required_for_deal": true, "outcome_code": "external_wait", "outcome_state": "confirmed", "external_party": "нотариус"}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": false,
+        "target_deposit_documents": 1,
+        "target_deal_documents": 1,
+        "legacy_deposit_documents": 1,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 1,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_deferred",
+      "title": "Документ отложен до следующего этапа",
+      "documents": [
+        {"status": "needed", "required_for_deposit": false, "required_for_deal": true, "outcome_code": "deferred", "outcome_state": "confirmed", "deferred_until": "2026-08-01"}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": false,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 1,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 1,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "document_problem",
+      "title": "Проблемный документ",
+      "documents": [
+        {"status": "problem", "required_for_deposit": true, "required_for_deal": true}
+      ],
+      "risks": [],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": false,
+        "target_deposit_documents": 1,
+        "target_deal_documents": 1,
+        "legacy_deposit_documents": 1,
+        "legacy_deal_documents": 1,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 1,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "legal_risk_proposed_resolution",
+      "title": "СПН предложил устранение юридического риска",
+      "documents": [],
+      "risks": [
+        {"assigned_role": "lawyer", "blocks_deposit": true, "blocks_deal": true, "is_resolved": false, "resolution_code": "mitigated", "resolution_state": "proposed"}
+      ],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": false,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 1,
+        "active_deal_risks": 1,
+        "proposed_risk_resolutions": 1,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "legal_risk_confirmed_resolution",
+      "title": "Юрист подтвердил устранение риска",
+      "documents": [],
+      "risks": [
+        {"assigned_role": "lawyer", "blocks_deposit": true, "blocks_deal": true, "is_resolved": true, "resolution_code": "mitigated", "resolution_state": "confirmed"}
+      ],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 1,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "mortgage_risk_proposed_resolution",
+      "title": "Предложено решение ипотечного риска",
+      "documents": [],
+      "risks": [
+        {"assigned_role": "broker", "blocks_deposit": false, "blocks_deal": true, "is_resolved": false, "resolution_code": "mitigated", "resolution_state": "proposed"}
+      ],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": false,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 1,
+        "proposed_risk_resolutions": 1,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "mortgage_risk_confirmed_resolution",
+      "title": "Ипотечный брокер подтвердил решение ипотечного риска",
+      "documents": [],
+      "risks": [
+        {"assigned_role": "broker", "blocks_deposit": false, "blocks_deal": true, "is_resolved": true, "resolution_code": "mitigated", "resolution_state": "confirmed"}
+      ],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 1,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "blocking_review_deposit",
+      "title": "Review блокирует только задаток",
+      "documents": [],
+      "risks": [],
+      "reviews": [
+        {"decision": "changes_requested", "blocks_deposit": true, "blocks_deal": false}
+      ],
+      "expected": {
+        "deposit_ready": false,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 1,
+        "deal_review_blocks": 0
+      }
+    },
+    {
+      "id": "blocking_review_deal",
+      "title": "Review блокирует только сделку",
+      "documents": [],
+      "risks": [],
+      "reviews": [
+        {"decision": "changes_requested", "blocks_deposit": false, "blocks_deal": true}
+      ],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": false,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 0,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 1
+      }
+    },
+    {
+      "id": "legacy_resolved_risk_without_code",
+      "title": "Старый закрытый риск без структурированного кода",
+      "documents": [],
+      "risks": [
+        {"assigned_role": "lawyer", "blocks_deposit": true, "blocks_deal": true, "is_resolved": true}
+      ],
+      "reviews": [],
+      "expected": {
+        "deposit_ready": true,
+        "deal_ready": true,
+        "target_deposit_documents": 0,
+        "target_deal_documents": 0,
+        "legacy_deposit_documents": 0,
+        "legacy_deal_documents": 0,
+        "received_not_checked": 0,
+        "proposed_document_outcomes": 0,
+        "confirmed_document_outcomes": 0,
+        "external_wait": 0,
+        "deferred": 0,
+        "problem": 0,
+        "active_deposit_risks": 0,
+        "active_deal_risks": 0,
+        "proposed_risk_resolutions": 0,
+        "confirmed_risk_resolutions": 0,
+        "legacy_resolved_without_code": 1,
+        "deposit_review_blocks": 0,
+        "deal_review_blocks": 0
+      }
+    }
+  ],
+  "role_decision_cases": [
+    {"id": "spn_cannot_confirm_legal_document", "item_type": "document", "actor_role": "spn", "responsible_role": "lawyer", "category": "basis", "expected_can_confirm": false},
+    {"id": "lawyer_confirms_legal_document", "item_type": "document", "actor_role": "lawyer", "responsible_role": "lawyer", "category": "basis", "expected_can_confirm": true},
+    {"id": "broker_cannot_confirm_legal_document", "item_type": "document", "actor_role": "broker", "responsible_role": "lawyer", "category": "basis", "expected_can_confirm": false},
+    {"id": "broker_confirms_mortgage_document", "item_type": "document", "actor_role": "broker", "responsible_role": "broker", "category": "mortgage", "expected_can_confirm": true},
+    {"id": "manager_confirms_corporate_document", "item_type": "document", "actor_role": "manager", "responsible_role": "spn", "category": "corporate", "expected_can_confirm": true},
+    {"id": "manager_cannot_confirm_legal_document", "item_type": "document", "actor_role": "manager", "responsible_role": "lawyer", "category": "basis", "expected_can_confirm": false},
+    {"id": "owner_confirms_any_document", "item_type": "document", "actor_role": "owner", "responsible_role": "lawyer", "category": "basis", "expected_can_confirm": true},
+    {"id": "spn_cannot_confirm_legal_risk", "item_type": "risk", "actor_role": "spn", "assigned_role": "lawyer", "expected_can_confirm": false},
+    {"id": "lawyer_confirms_legal_risk", "item_type": "risk", "actor_role": "lawyer", "assigned_role": "lawyer", "expected_can_confirm": true},
+    {"id": "broker_cannot_confirm_legal_risk", "item_type": "risk", "actor_role": "broker", "assigned_role": "lawyer", "expected_can_confirm": false},
+    {"id": "broker_confirms_mortgage_risk", "item_type": "risk", "actor_role": "broker", "assigned_role": "broker", "expected_can_confirm": true},
+    {"id": "manager_confirms_process_risk", "item_type": "risk", "actor_role": "manager", "assigned_role": "spn", "expected_can_confirm": true},
+    {"id": "manager_cannot_confirm_legal_risk", "item_type": "risk", "actor_role": "manager", "assigned_role": "lawyer", "expected_can_confirm": false},
+    {"id": "admin_confirms_any_risk", "item_type": "risk", "actor_role": "admin", "assigned_role": "lawyer", "expected_can_confirm": true}
+  ],
+  "funding_route_cases": [
+    {"id": "cash", "payments": ["cash"], "expected_broker_needed": false, "expected_lawyer_needed_from_funding": false},
+    {"id": "mortgage", "payments": ["mortgage"], "expected_broker_needed": true, "expected_lawyer_needed_from_funding": false},
+    {"id": "military_mortgage", "payments": ["militaryMortgage"], "expected_broker_needed": true, "expected_lawyer_needed_from_funding": false},
+    {"id": "matcap_without_mortgage", "payments": ["matcap"], "expected_broker_needed": false, "expected_lawyer_needed_from_funding": true},
+    {"id": "certificate_without_mortgage", "payments": ["certificate"], "expected_broker_needed": false, "expected_lawyer_needed_from_funding": true},
+    {"id": "mortgage_with_matcap", "payments": ["mortgage", "matcap"], "expected_broker_needed": true, "expected_lawyer_needed_from_funding": true},
+    {"id": "mortgage_with_certificate", "payments": ["mortgage", "certificate"], "expected_broker_needed": true, "expected_lawyer_needed_from_funding": true}
+  ]
+}
