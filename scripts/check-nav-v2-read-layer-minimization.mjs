@@ -78,5 +78,10 @@ assert.equal(maskDealAddress('ул. Бланская, 67А, офис 12'), 'ул
 assert.equal(maskDealAddress('ул. Просторная, 4А'), 'ул. Просторная, 4А');
 assert.equal(shortDealId('abcdef12-0000'), 'ABCDEF12');
 assert.equal(neutralDealReference({ deal_id: dealId }), 'Сделка · 12345678');
+assert.equal(
+  neutralDealReference({ deal_id: dealId, title: 'ДЕМО: тестовая сделка' }),
+  'ДЕМО: Сделка · 12345678',
+  'demo prefix must survive minimization so test-action confirmation remains active'
+);
 
 console.log('Navigator v2 read-layer minimization semantic regression passed');
