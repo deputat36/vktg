@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_corporate_documents.sql",
+  "table": "public.nav_deal_corporate_documents_v2",
+  "document_types": {
+    "service_agreement": {
+      "label": "Договор оказания услуг",
+      "default_required": true,
+      "default_stage": "before_work"
+    },
+    "inspection_act": {
+      "label": "Акт осмотра",
+      "default_required": false,
+      "default_stage": "conditional"
+    },
+    "addendum": {
+      "label": "Дополнительное соглашение",
+      "default_required": false,
+      "default_stage": "conditional"
+    },
+    "completion_act": {
+      "label": "Акт выполненных работ",
+      "default_required": true,
+      "default_stage": "after_deal"
+    }
+  },
+  "statuses": [
+    "planned",
+    "prepared",
+    "sent_for_signature",
+    "signed",
+    "problem",
+    "cancelled"
+  ],
+  "required_stages": [
+    "before_work",
+    "before_deposit",
+    "before_deal",
+    "after_deal",
+    "conditional"
+  ],
+  "signing_methods": ["unknown", "paper", "online"],
+  "outcomes": ["not_applicable", "replaced", "cancelled"],
+  "outcome_states": ["proposed", "confirmed", "rejected"],
+  "completion_rules": {
+    "signed": "complete",
+    "planned": "active",
+    "prepared": "active",
+    "sent_for_signature": "active",
+    "problem": "active_and_blocking_for_configured_corporate_stage",
+    "cancelled_status": "terminal_but_requires_audited_reason_in_future_mutation_contract",
+    "proposed_outcome": "active_pending_manager_confirmation",
+    "confirmed_not_applicable": "complete_exception",
+    "confirmed_replaced": "complete_exception_requires_replacement_id",
+    "confirmed_cancelled": "complete_exception"
+  },
+  "role_rules": {
+    "spn": {
+      "owns_operational_collection": true,
+      "may_propose_exception": true,
+      "may_confirm_exception": false
+    },
+    "manager": {
+      "oversees_team": true,
+      "may_confirm_process_exception": true,
+      "may_change_legal_readiness": false
+    },
+    "lawyer": {
+      "default_responsibility": false,
+      "legal_document_scope_unchanged": true
+    },
+    "broker": {
+      "access": false,
+      "default_responsibility": false
+    },
+    "owner_admin": {
+      "view_all": true,
+      "may_confirm_exception": true
+    }
+  },
+  "inference_policy": {
+    "represented_seller": "seller_spn_id is not null",
+    "represented_buyer": "buyer_spn_id is not null",
+    "requires_user_confirmation": true,
+    "automatic_insert": false,
+    "reason": "legacy representation fields are inconsistent"
+  },
+  "recommended_plan_per_represented_side": [
+    {
+      "document_type": "service_agreement",
+      "is_required": true,
+      "required_stage": "before_work"
+    },
+    {
+      "document_type": "inspection_act",
+      "is_required": false,
+      "required_stage": "conditional"
+    },
+    {
+      "document_type": "addendum",
+      "is_required": false,
+      "required_stage": "conditional"
+    },
+    {
+      "document_type": "completion_act",
+      "is_required": true,
+      "required_stage": "after_deal"
+    }
+  ],
+  "public_rpcs": [
+    "nav_v2_preview_corporate_document_plan(uuid)",
+    "nav_v2_get_corporate_document_readiness(uuid)"
+  ],
+  "preview_keys": [
+    "profile",
+    "deal_id",
+    "preview_only",
+    "inference_source",
+    "requires_user_confirmation",
+    "existing_items_count",
+    "recommended_items",
+    "legal_readiness_changed",
+    "backlog_created"
+  ],
+  "preview_item_keys": [
+    "party_side",
+    "document_type",
+    "is_required",
+    "required_stage",
+    "responsible_role",
+    "rationale",
+    "already_initialized"
+  ],
+  "readiness_item_keys": [
+    "id",
+    "party_side",
+    "document_type",
+    "status",
+    "is_required",
+    "required_stage",
+    "responsible_role",
+    "assigned_to_name",
+    "due_date",
+    "signing_method",
+    "template_code",
+    "template_version",
+    "has_external_signature_reference",
+    "outcome_code",
+    "outcome_state",
+    "is_complete",
+    "created_at",
+    "updated_at"
+  ],
+  "readiness_summary_keys": [
+    "total",
+    "complete",
+    "required_incomplete",
+    "before_deposit_incomplete",
+    "before_deal_incomplete",
+    "after_deal_incomplete",
+    "problems",
+    "awaiting_signature"
+  ],
+  "privacy_forbidden_fields": [
+    "client_name",
+    "seller_name",
+    "buyer_name",
+    "phone",
+    "email",
+    "passport",
+    "snils",
+    "signature_image",
+    "scan_url",
+    "document_url"
+  ],
+  "separation_guarantees": {
+    "existing_legal_document_table_changed": false,
+    "legal_readiness_changed": false,
+    "risk_gate_changed": false,
+    "deal_status_changed": false,
+    "automatic_rows_created": false
+  },
+  "future_mutation_contract": [
+    "explicit_initialize_selected_items",
+    "update_assignment_due_date_template_and_status",
+    "propose_exception",
+    "manager_or_owner_confirm_exception",
+    "audit_every_transition"
+  ],
+  "production_gate": "Authenticated role/mutation E2E, office policy confirmation for required stages, approved template registry, security advisor review, rollback validation and separate deployment PR."
+}
