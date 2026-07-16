@@ -1,0 +1,42 @@
+name: Navigator v2 corporate documents contract
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-corporate-documents-contract.json'
+      - 'fixtures/nav-v2-corporate-documents-scenarios.json'
+      - 'supabase/prototypes/nav_v2_corporate_documents.sql'
+      - 'supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql'
+      - 'scripts/check_nav_v2_corporate_documents_contract.py'
+      - 'docs/NAV_V2_CORPORATE_DOCUMENTS_CONTRACT_2026-07-16.md'
+      - '.github/workflows/nav-v2-corporate-documents-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  corporate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate corporate document contract
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_corporate_documents_contract.py 2>&1 | tee corporate-document-contract-output.txt
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_corporate_documents_contract.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-corporate-documents-contract
+          path: |
+            corporate-document-contract-output.txt
+            config/nav-v2-corporate-documents-contract.json
+            fixtures/nav-v2-corporate-documents-scenarios.json
+            supabase/prototypes/nav_v2_corporate_documents.sql
+            supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql
+            docs/NAV_V2_CORPORATE_DOCUMENTS_CONTRACT_2026-07-16.md
+          if-no-files-found: error
