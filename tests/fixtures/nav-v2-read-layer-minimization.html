@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Read layer minimization fixture</title>
+</head>
+<body>
+  <main id="app">
+    <button id="run" type="button">Минимизировать</button>
+    <pre id="result" aria-live="polite"></pre>
+  </main>
+  <script type="module">
+    import { minimizeNavigatorReadPayload } from '../../assets/js/nav-v2/read-layer-minimization-model-v2.js?v=20260716-01';
+
+    const raw = {
+      profile: { full_name: 'Алексей Ковтун', phone: '+7 900 000-00-00', role: 'manager' },
+      deals: [{
+        id: 'abcdef12-1234-1234-1234-1234567890ab',
+        title: 'Иванов — Петров',
+        display_title: 'Иванов — Петров',
+        object_type: 'flat_mkd',
+        address: 'г. Борисоглебск, ул. Бланская, д. 67А, кв. 15',
+        seller_name: 'Иванов Иван Иванович',
+        buyer_phone: '+7 900 111-22-33',
+        readiness_deposit: 60,
+        wizard_snapshot: { buyerName: 'Петров Пётр Петрович', floor: 4 }
+      }],
+      tasks: [{
+        id: 'task-1',
+        deal_id: 'abcdef12-1234-1234-1234-1234567890ab',
+        deal_title: 'Иванов — Петров',
+        title: 'Проверить выписку',
+        status: 'open'
+      }]
+    };
+
+    document.getElementById('run').addEventListener('click', () => {
+      const output = minimizeNavigatorReadPayload(raw);
+      document.getElementById('result').textContent = JSON.stringify(output, null, 2);
+      window.fixtureOutput = output;
+    });
+  </script>
+</body>
+</html>
