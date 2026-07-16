@@ -2,7 +2,7 @@ import { clearCachedProfiles, getCachedProfile, getCachedUser, getMyProfile, sig
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 const USER_WAIT_TIMEOUT_MS = 15000;
-const OWNER_WORK_PAGES = new Set(['dashboard', 'spn', 'deals', 'manager', 'adoption', 'remediation', 'queue']);
+const OWNER_WORK_PAGES = new Set(['dashboard', 'spn', 'consultation', 'deals', 'manager', 'adoption', 'remediation', 'queue']);
 const OWNER_TEAM_PAGES = new Set(['admin', 'access', 'audit']);
 const OWNER_SYSTEM_PAGES = new Set(['check', 'diagnostics']);
 
@@ -40,6 +40,7 @@ function ensureMenuGroupStyles() {
 
 function getActivePage() {
   const path = location.pathname;
+  if (path.includes('consultation-v2')) return 'consultation';
   if (path.includes('dashboard-v2')) return 'dashboard';
   if (path.includes('manager-source-remediation-v2')) return 'remediation';
   if (path.includes('operational-adoption-v2')) return 'adoption';
@@ -89,6 +90,7 @@ function buildMenu(role) {
   if (role === 'lawyer') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'queue', './queue-v2.html', 'Кабинет юриста'));
+    links.push(makeLink(active, 'consultation', './consultation-v2.html', 'Шаблон консультации'));
     links.push(makeLink(active, 'deals', './deals-v2.html?filter=lawyer', 'Все сделки'));
   } else if (role === 'broker') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
@@ -96,11 +98,13 @@ function buildMenu(role) {
     links.push(makeLink(active, 'deals', './deals-v2.html?filter=broker', 'Все финансовые сделки'));
   } else if (role === 'spn') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
+    links.push(makeLink(active, 'consultation', './consultation-v2.html', 'Быстрая консультация'));
     links.push(makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Мои сделки'));
   } else if (role === 'manager') {
     links.push(makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'));
     links.push(makeLink(active, 'manager', './manager-v2.html', 'Контроль сделок'));
+    links.push(makeLink(active, 'consultation', './consultation-v2.html', 'Быстрая консультация'));
     links.push(makeLink(active, 'adoption', './operational-adoption-v2.html', 'Движение и результат'));
     links.push(makeLink(active, 'remediation', './manager-source-remediation-v2.html', 'Исправить источники'));
     links.push(makeLink(active, 'deals', './deals-v2.html', 'Сделки команды'));
@@ -110,6 +114,7 @@ function buildMenu(role) {
   } else if (role === 'owner' || role === 'admin') {
     const workLinks = [
       makeLink(active, 'dashboard', './dashboard-v2.html', 'Рабочий стол'),
+      makeLink(active, 'consultation', './consultation-v2.html', 'Быстрая консультация'),
       makeLink(active, 'spn', './spn-v2.html', 'Новая сделка'),
       makeLink(active, 'deals', './deals-v2.html', 'Сделки'),
       makeLink(active, 'manager', './manager-v2.html', 'Контроль сделок'),
