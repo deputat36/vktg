@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_integration_rehearsal",
+  "production_changed": false,
+  "runtime_integrated": false,
+  "transport_enabled": false,
+  "candidate_path": "assets/js/nav-v2/task-action-authoritative-rehearsal-v2.js",
+  "router_path": "assets/js/nav-v2/task-action-router-v2.js",
+  "fixture_path": "tests/fixtures/nav-v2-task-authoritative-rehearsal.html",
+  "browser_test_path": "tests/e2e/task-action-authoritative-rehearsal.spec.js",
+  "required_actions": [
+    "legacy_complete",
+    "bounded_start",
+    "bounded_complete",
+    "bounded_waiting_external",
+    "bounded_deferred",
+    "bounded_terminal_proposal",
+    "bounded_terminal_decision",
+    "bounded_reopen_rejected"
+  ],
+  "assertions": {
+    "one_authoritative_call_per_click": true,
+    "base_listener_calls": 0,
+    "guard_listener_calls": 0,
+    "network_rpc_calls": 0,
+    "bounded_reopen_rpc": false
+  },
+  "remaining_deployment_blockers": [
+    "production_guard_not_migrated",
+    "production_base_listener_not_removed",
+    "edge_actions_not_integrated",
+    "authenticated_application_e2e_missing",
+    "database_migrations_not_deployed",
+    "frontend_transport_disabled",
+    "controlled_pilot_not_approved"
+  ]
+}

@@ -1,0 +1,45 @@
+name: Navigator v2 task authoritative handler rehearsal
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-task-authoritative-handler-rehearsal.json'
+      - 'assets/js/nav-v2/task-action-authoritative-rehearsal-v2.js'
+      - 'tests/fixtures/nav-v2-task-authoritative-rehearsal.html'
+      - 'tests/e2e/task-action-authoritative-rehearsal.spec.js'
+      - 'scripts/check_nav_v2_task_authoritative_rehearsal.py'
+      - 'docs/NAV_V2_TASK_AUTHORITATIVE_HANDLER_REHEARSAL_2026-07-16.md'
+      - '.github/workflows/nav-v2-task-authoritative-rehearsal.yml'
+  workflow_dispatch:
+
+jobs:
+  authoritative-rehearsal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate rehearsal source contract
+        run: python3 scripts/check_nav_v2_task_authoritative_rehearsal.py
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_task_authoritative_rehearsal.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/task-action-authoritative-rehearsal-v2.js
+          node --check tests/e2e/task-action-authoritative-rehearsal.spec.js
+      - name: Install browser dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run synthetic authoritative handler rehearsal
+        run: npx playwright test tests/e2e/task-action-authoritative-rehearsal.spec.js --project=chromium-desktop
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-task-authoritative-rehearsal
+          path: |
+            config/nav-v2-task-authoritative-handler-rehearsal.json
+            docs/NAV_V2_TASK_AUTHORITATIVE_HANDLER_REHEARSAL_2026-07-16.md
+            tests/e2e/task-action-authoritative-rehearsal.spec.js
