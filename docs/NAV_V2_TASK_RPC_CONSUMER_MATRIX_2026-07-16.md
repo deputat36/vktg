@@ -1,127 +1,138 @@
-# Navigator v2 — task RPC consumer matrix
+# Navigator v2 — task RPC consumer matrix v2
 
 Дата: 16 июля 2026 года.
 
-Статус: repository-only deployment gate. Runtime-код и production Supabase не меняются.
+Статус: repository-only deployment gate v2. Runtime-код и production Supabase не меняются.
 
 ## Итог
 
-Bounded-task database contract и transport-free adapter готовы, но frontend ещё не готов к deployment.
+После PR #371–#375 закрыты основные проектные пробелы bounded-task интерфейса, но deployment всё ещё запрещён.
 
-Старые RPC:
+Готовы:
 
-- `nav_v2_add_task`;
-- `nav_v2_update_task_status`.
+- controlled legacy review pack;
+- точная inventory старых RPC consumers;
+- contract-aware lite DTO;
+- direct-link bounded task UI preview;
+- evidence input preview;
+- explicit waiting/deferred controls;
+- immutable bounded completion semantics;
+- pure dual-path router;
+- validated Edge action contract;
+- synthetic dual-path browser regression.
 
-## nav_v2_add_task
+Не готовы:
 
-Активных runtime consumers в `assets/js/nav-v2` и Edge Functions не найдено.
+- интеграция одного authoritative handler в рабочую карточку;
+- удаление конкурирующего base listener;
+- интеграция Edge actions;
+- database deployment и minimal grants;
+- authenticated application E2E;
+- включение frontend transport;
+- controlled pilot.
 
-RPC остаётся в `config/nav-v2-rpc-surface.json` и historical SQL/security inventory. После deployment governed create transport его нужно удалить из `frontend_api`, но это не основной blocker текущего UI.
+## PR #371 — controlled legacy review
 
-## nav_v2_update_task_status
+Read-only review pack показывает нейтральные ссылки, source/status/role/assignee/due date/age и высокоуверенные suggestions.
 
-### `assets/js/nav-v2/deal-card-v2.js`
+Он не меняет строки, не создаёт bounded tasks, не завершает задачи и не используется для оценки сотрудников.
 
-Карточка сделки напрямую вызывает старый RPC и показывает три кнопки:
+## PR #372 — consumer inventory
 
-- `in_progress`;
-- `done`;
-- `open`.
+Зафиксированы три активных consumer path старого `nav_v2_update_task_status`:
 
-Для contract-v2 задач прямой вызов недопустим:
+1. `assets/js/nav-v2/deal-card-v2.js` — base listener;
+2. `assets/js/nav-v2/task-action-guard-v2.js` — основной перехватывающий handler;
+3. `supabase/functions/nav-v2-deal-api/index.ts` — Edge action facade.
 
-- `done` требует evidence UUID;
-- `open` после завершения не имеет утверждённой governed semantics;
-- active waits должны отображаться как явные `waiting_external`, `deferred` и Resume.
+Активных runtime consumers `nav_v2_add_task` нет.
 
-### `assets/js/nav-v2/task-action-guard-v2.js`
+## PR #373 — lite DTO v2
 
-Guard перехватывает те же кнопки, выполняет permission read через lite DTO и сам вызывает `nav_v2_update_task_status`.
-
-Это фактически основной handler. Перед migration он должен получить `task_contract_version` и governed permissions из lite DTO, затем разделить:
-
-- legacy row → старый status RPC;
-- contract-v2 row → start/complete/outcome RPC.
-
-Base handler карточки не должен конкурировать с guard.
-
-### `supabase/functions/nav-v2-deal-api/index.ts`
-
-Edge Function имеет action `update_task_status` и проксирует старый RPC.
-
-Его нельзя переключать раньше database deployment. Нужны отдельные governed actions с точной UUID/enum/date validation. Legacy action должен явно отклонять contract-v2 rows.
-
-## Lite DTO blocker
-
-Текущий `nav_v2_get_deal_card_lite` task DTO возвращает только:
-
-- id;
-- title;
-- status;
-- priority;
-- assigned role;
-- due date;
-- `can_change_status`.
-
-Для contract-aware UI нужны:
+Repository overlay `nav_v2_get_deal_card_lite_bounded_tasks.sql` добавляет:
 
 - contract version и task type;
-- evidence kind и criterion;
-- gate scope;
-- outcome code/state/review date;
+- evidence kind и completion criterion;
+- gate scope и outcomes;
+- `legacy_status_path`;
+- `requires_evidence_reference`;
+- `supports_reopen`;
 - отдельные permissions start/complete/active outcome/proposal/decision.
 
-Пока этих полей нет, guard не может безопасно выбрать mutation route.
+Production DTO не менялся.
 
-## Test consumers
+## PR #374 — UI preview
 
-Старый payload закреплён в:
+Direct-link synthetic preview показывает coexistence legacy и bounded tasks, evidence UUID, waiting/deferred, terminal proposal/decision и exact RPC preview.
 
-- `tests/e2e/task-action-feedback.spec.js`;
-- `scripts/check_nav_v2_task_action_feedback.py`;
-- `tests/fixtures/nav-v2-task-action-feedback.html`.
+Страница не входит в role menu и не вызывает Supabase.
 
-E2E отдельно требует completion и reopen через один старый RPC. Этот контракт должен быть заменён на dual-path tests:
+## PR #375 — dual-path contract
 
-- legacy status path;
-- bounded start path;
-- bounded completion с evidence;
-- active waits;
-- terminal proposal/decision;
-- отсутствие duplicate handlers.
+Pure router `task-action-router-v2.js` выбирает ровно один route preview:
 
-## Не готов к deployment
+- legacy row → старый status RPC;
+- bounded row → governed start/complete/outcome RPC.
 
-Обязательные решения:
+Bounded reopen запрещён. Завершённая bounded-задача неизменяема; новая работа создаётся отдельной audited-задачей.
 
-1. evidence picker/reference для кнопки «Готово»;
-2. semantics reopen completed task;
-3. явные Waiting external / Deferred / Resume controls;
-4. расширение lite DTO;
-5. один authoritative click handler;
-6. новые Edge Function actions;
-7. обновлённые browser/source tests;
-8. coexistence с 98 legacy rows без mass backfill.
+Edge action contract проверяет UUID, enum/date, replacement и unknown fields, но не импортирован в deployed `index.ts`.
 
-## Deployment order
+Synthetic Playwright regression подтверждает legacy/bounded выбор маршрута и отсутствие сетевых RPC вызовов.
 
-1. repository-only lite DTO extension;
-2. contract-aware UI preview;
-3. dual-path E2E;
-4. authenticated application E2E;
-5. database migrations и minimal grants;
-6. Edge Function deployment;
-7. frontend transport switch;
-8. controlled pilot;
-9. удаление legacy inventory только при нуле runtime consumers.
+## Закрытые blockers
+
+- `lite_dto_contract_fields_missing`;
+- `evidence_input_missing`;
+- `reopen_semantics_undefined`;
+- `governed_action_validation_missing`;
+- `dual_path_browser_contract_missing`.
+
+## Оставшиеся blockers
+
+### Authoritative handler
+
+`task-action-guard-v2.js` должен стать единственным владельцем task action flow и использовать dual-path router.
+
+Base listener в `deal-card-v2.js` необходимо удалить или полностью отключить, чтобы один клик не мог вызвать два mutation path.
+
+### Edge integration
+
+`task-action-contract-v2.js` должен быть подключён к `nav-v2-deal-api/index.ts` только после database deployment.
+
+Legacy action остаётся legacy-only и обязана отклонять contract-v2 row.
+
+### Database и access
+
+Bounded schema, audit table и RPC отсутствуют в production. Нужен отдельный migration/deploy PR с minimal grants и security advisor review.
+
+### Authenticated application E2E
+
+Skipped authenticated job не считается доказательством. Нужны реальные роли СПН, lawyer, broker, manager, owner/admin и coexistence legacy/bounded rows.
+
+### Transport и pilot
+
+Frontend transport остаётся выключенным до полного deployment order и controlled pilot.
+
+## Следующий safe slice
+
+Repository-only integration rehearsal:
+
+1. создать отключённый authoritative handler candidate поверх synthetic fixture;
+2. доказать отсутствие duplicate listener;
+3. проверить DTO → router → Edge payload mapping;
+4. не импортировать candidate в production карточку;
+5. не вызывать сеть;
+6. обновить source/browser contracts.
+
+После rehearsal можно подготовить реальную runtime-интеграцию отдельным PR, всё ещё с transport disabled.
 
 ## Production gate
 
-Deployment запрещён, пока matrix имеет `deployment_ready=false` или checker находит неучтённый runtime consumer.
+Deployment запрещён, пока `deployment_ready=false` и остаётся хотя бы один integration/E2E/deploy/pilot blocker.
 
-Skipped authenticated job не считается доказательством. Review pack и consumer matrix не используются для оценки сотрудников.
+98 legacy tasks продолжают существовать без массового backfill. Review pack и pilot metrics не используются для оценки сотрудников.
 
 ## Rollback
 
-Этот slice меняет только matrix, checker, workflow и документацию. Rollback — удалить эти repository artifacts. Runtime и database state не затрагиваются.
+Этот slice меняет только matrix, checker, workflow, handoff и документацию. Rollback — вернуть предыдущие repository artifacts. Runtime и database state не затрагиваются.

@@ -1,14 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "repository_only_deployment_gate",
   "production_changed": false,
   "deployment_ready": false,
+  "latest_main": "1a0fcc008b7e52a16cbd201a9139a35b7223c33c",
   "legacy_rpcs": {
     "nav_v2_add_task": {
       "active_runtime_consumers": [],
       "inventory_paths": ["config/nav-v2-rpc-surface.json"],
       "replacement": "nav_v2_create_bounded_tasks",
-      "migration_action": "Remove from frontend_api after governed create transport is deployed and all server-side creators are separately audited.",
+      "migration_action": "Remove from frontend_api only after governed create transport is deployed and server-side creators are audited.",
       "deployment_blocker": false
     },
     "nav_v2_update_task_status": {
@@ -17,28 +18,31 @@
           "path": "assets/js/nav-v2/deal-card-v2.js",
           "surface": "deal_card_base_handler",
           "current_actions": ["open", "in_progress", "done"],
-          "migration": "Render contract-aware controls; legacy rows retain old RPC, contract-v2 rows use start/complete/outcome RPC.",
-          "blockers": ["evidence_input_missing", "reopen_semantics_undefined"]
+          "migration": "Remove the competing task-status listener when the authoritative router is integrated.",
+          "remaining_blockers": ["authoritative_handler_not_integrated", "duplicate_runtime_handlers"]
         },
         {
           "path": "assets/js/nav-v2/task-action-guard-v2.js",
           "surface": "primary_intercepting_handler",
           "current_actions": ["open", "in_progress", "done"],
-          "migration": "Branch by task_contract_version from lite DTO and call governed adapter/transport for contract-v2 rows.",
-          "blockers": ["lite_dto_contract_fields_missing", "evidence_input_missing", "reopen_semantics_undefined"]
+          "migration": "Integrate the pure dual-path router, preserving legacy rows and using governed actions for contract-v2 rows.",
+          "remaining_blockers": ["authoritative_handler_not_integrated", "frontend_transport_disabled"]
         },
         {
           "path": "supabase/functions/nav-v2-deal-api/index.ts",
           "surface": "edge_function_action_facade",
           "current_actions": ["update_task_status"],
-          "migration": "Keep legacy action explicitly legacy-only and add separately validated governed actions after DB deployment.",
-          "blockers": ["edge_deployment_order", "governed_action_validation_missing"]
+          "migration": "Keep the legacy action legacy-only and integrate validated governed actions after database deployment.",
+          "remaining_blockers": ["edge_actions_not_integrated", "database_deployment_order"]
         }
       ],
       "test_and_contract_consumers": [
         "tests/e2e/task-action-feedback.spec.js",
         "scripts/check_nav_v2_task_action_feedback.py",
         "tests/fixtures/nav-v2-task-action-feedback.html",
+        "tests/e2e/task-action-dual-path.spec.js",
+        "assets/js/nav-v2/task-action-router-v2.js",
+        "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
         "config/nav-v2-rpc-surface.json"
       ],
       "replacement_rpcs": [
@@ -51,45 +55,61 @@
       "deployment_blocker": true
     }
   },
-  "required_lite_task_fields": [
-    "task_contract_version",
-    "task_type",
-    "evidence_kind",
-    "completion_criterion_code",
-    "gate_scope",
-    "outcome_code",
-    "outcome_state",
-    "outcome_review_date",
-    "can_start",
-    "can_complete",
-    "can_set_active_outcome",
-    "can_propose_terminal_outcome",
-    "can_decide_terminal_outcome"
+  "lite_dto": {
+    "overlay_path": "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
+    "dto_version": 2,
+    "required_fields_present": [
+      "task_contract_version",
+      "task_type",
+      "evidence_kind",
+      "completion_criterion_code",
+      "gate_scope",
+      "outcome_code",
+      "outcome_state",
+      "outcome_review_date",
+      "legacy_status_path",
+      "requires_evidence_reference",
+      "supports_reopen",
+      "can_start",
+      "can_complete",
+      "can_set_active_outcome",
+      "can_propose_terminal_outcome",
+      "can_decide_terminal_outcome"
+    ]
+  },
+  "closed_blockers": [
+    "lite_dto_contract_fields_missing",
+    "evidence_input_missing",
+    "reopen_semantics_undefined",
+    "governed_action_validation_missing",
+    "dual_path_browser_contract_missing"
   ],
-  "current_lite_task_fields": [
-    "id",
-    "title",
-    "status",
-    "priority",
-    "assigned_role",
-    "due_date",
-    "can_change_status"
+  "remaining_blockers": [
+    "authoritative_handler_not_integrated",
+    "duplicate_runtime_handlers",
+    "edge_actions_not_integrated",
+    "database_migrations_not_deployed",
+    "minimal_grants_not_deployed",
+    "authenticated_application_e2e_missing",
+    "frontend_transport_disabled",
+    "controlled_pilot_not_approved"
   ],
-  "required_ui_decisions": {
-    "completion_evidence": "Define a bounded evidence picker/reference flow before enabling Done for contract-v2 tasks.",
-    "reopen_semantics": "Choose whether a completed contract-v2 task is immutable, replaced by a new task, or reopened by a new audited mutation.",
-    "active_waits": "Replace generic Open with explicit Resume / Waiting external / Deferred actions.",
-    "duplicate_handlers": "Keep one authoritative click handler; base handler must not race the guard.",
-    "legacy_coexistence": "Legacy rows continue using nav_v2_update_task_status until individually reviewed; no mass migration."
+  "artifacts": {
+    "bounded_adapter": "assets/js/nav-v2/bounded-task-server-adapter-v2.js",
+    "lite_dto_overlay": "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
+    "ui_preview": "bounded-task-ui-preview-v2.html",
+    "dual_path_router": "assets/js/nav-v2/task-action-router-v2.js",
+    "edge_action_contract": "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+    "dual_path_e2e": "tests/e2e/task-action-dual-path.spec.js"
   },
   "deployment_order": [
-    "extend_lite_dto_repository_prototype",
-    "build_contract_aware_ui_preview",
-    "update_e2e_and_source_contracts",
+    "integrate_authoritative_router_with_transport_disabled",
+    "remove_competing_base_listener",
+    "repository_source_and_browser_regression",
     "authenticated_application_e2e",
     "deploy_database_migrations_and_minimal_grants",
-    "deploy_edge_function_actions",
-    "switch_frontend_transport",
+    "integrate_and_deploy_edge_actions",
+    "enable_frontend_transport_for_controlled_pilot",
     "controlled_pilot",
     "remove_legacy_inventory_only_after_zero_runtime_consumers"
   ],
