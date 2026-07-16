@@ -20,7 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate consultation lifecycle contract
-        run: python3 scripts/check_nav_v2_consultation_lifecycle.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_consultation_lifecycle.py 2>&1 | tee consultation-contract-output.txt
       - name: Compile checker
         run: python3 -m py_compile scripts/check_nav_v2_consultation_lifecycle.py
       - name: Upload evidence
@@ -29,6 +32,7 @@ jobs:
         with:
           name: nav-v2-consultation-lifecycle
           path: |
+            consultation-contract-output.txt
             config/nav-v2-consultation-lifecycle-contract.json
             fixtures/nav-v2-consultation-lifecycle-scenarios.json
             supabase/prototypes/nav_v2_consultation_lifecycle.sql
