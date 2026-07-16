@@ -31,9 +31,16 @@ def require(name, markers):
 if not errors:
     require('model', (
         'detectSensitiveFreeText',
+        'redactSensitiveFreeText',
         'sensitiveFreeTextMessage',
         'hasSensitiveFreeText',
         'luhnValid',
+        'REDACTION_LABELS',
+        '[email клиента скрыт]',
+        '[телефон клиента скрыт]',
+        '[паспортные данные скрыты]',
+        '[СНИЛС скрыт]',
+        '[номер карты скрыт]',
         'EMAIL_RE',
         'PHONE_RE',
         'PASSPORT_RE',
@@ -86,6 +93,12 @@ if not errors:
         '123-456-789 01',
         '4111 1111 1111 1111',
         'Цена сделки 4 500 000 рублей',
+        'redactSensitiveFreeText',
+        '[email клиента скрыт]',
+        '[телефон клиента скрыт]',
+        '[паспортные данные скрыты]',
+        '[СНИЛС скрыт]',
+        '[номер карты скрыт]',
         'semantic regression passed',
     ))
     require('fixture', (

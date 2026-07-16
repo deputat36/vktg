@@ -3,6 +3,7 @@ import {
   detectSensitiveFreeText,
   hasSensitiveFreeText,
   luhnValid,
+  redactSensitiveFreeText,
   sensitiveFreeTextMessage
 } from '../assets/js/nav-v2/sensitive-free-text-model-v2.js';
 
@@ -31,14 +32,29 @@ for (const safe of [
   'Риск 3 из 5, срок 10 дней.'
 ]) {
   assert.equal(hasSensitiveFreeText(safe), false, safe);
+  assert.equal(redactSensitiveFreeText(safe), safe, `safe text changed: ${safe}`);
 }
 
-const mixed = detectSensitiveFreeText('Email test@example.ru, телефон +7 900 111-22-33, паспорт 1234 567890');
-assert.deepEqual(mixed.map((item) => item.type).sort(), ['email', 'passport', 'phone']);
+const mixedSource = 'Email test@example.ru, телефон +7 900 111-22-33, паспорт 1234 567890, СНИЛС 123-456-789 01, карта 4111 1111 1111 1111.';
+const mixed = detectSensitiveFreeText(mixedSource);
+assert.deepEqual(mixed.map((item) => item.type).sort(), ['bank_card', 'email', 'passport', 'phone', 'snils']);
 assert.match(sensitiveFreeTextMessage(mixed), /email клиента/);
 assert.match(sensitiveFreeTextMessage(mixed), /телефон клиента/);
 assert.match(sensitiveFreeTextMessage(mixed), /серия и номер паспорта/);
 assert.doesNotMatch(sensitiveFreeTextMessage(mixed), /test@example/);
 assert.equal(sensitiveFreeTextMessage([]), '');
+
+const redacted = redactSensitiveFreeText(mixedSource);
+assert.equal(redacted.includes('[email клиента скрыт]'), true);
+assert.equal(redacted.includes('[телефон клиента скрыт]'), true);
+assert.equal(redacted.includes('[паспортные данные скрыты]'), true);
+assert.equal(redacted.includes('[СНИЛС скрыт]'), true);
+assert.equal(redacted.includes('[номер карты скрыт]'), true);
+assert.doesNotMatch(redacted, /test@example\.ru/);
+assert.doesNotMatch(redacted, /900 111-22-33/);
+assert.doesNotMatch(redacted, /1234 567890/);
+assert.doesNotMatch(redacted, /123-456-789 01/);
+assert.doesNotMatch(redacted, /4111 1111 1111 1111/);
+assert.equal(redactSensitiveFreeText('Карта 4111 1111 1111 1112'), 'Карта 4111 1111 1111 1112');
 
 console.log('Navigator v2 sensitive free-text semantic regression passed');
