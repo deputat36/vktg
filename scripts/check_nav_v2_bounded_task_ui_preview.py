@@ -47,11 +47,11 @@ def main()->int:
         'boundedTaskPreviewRole',
         'boundedTaskPreviewList',
         'boundedTaskPreviewInspector',
+        "connect-src 'self' https://ofewxuqfjhamgerwzull.supabase.co wss://ofewxuqfjhamgerwzull.supabase.co",
+        'upgrade-insecure-requests',
         'assets/css/nav-v2-bounded-task-ui-preview.css?v=20260716-01',
         'assets/js/nav-v2/bounded-task-ui-preview-v2.js?v=20260716-01',
     ),PAGE.name,errors)
-    if 'supabase.co' in page or 'connect-src' in page:
-        errors.append('preview page must not declare Supabase/network connectivity')
     if 'bounded-task-ui-preview-v2.html' in role_menu:
         errors.append('repository-only UI preview must not be in production role menu')
     if (budget.get('pages') or {}).get(PAGE.name)!={'max_modules':1}:
