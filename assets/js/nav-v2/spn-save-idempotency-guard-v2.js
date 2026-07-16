@@ -70,21 +70,38 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function findCreatedDeal(draft, startedAt) {
-  const address = normalize(draft.address);
+function matchesCreatedDeal(deal, draft, startedAt) {
   const objectType = normalize(draft.objectType);
-  if (!address && !objectType) return null;
+  const preparationMode = normalize(draft.preparationMode);
+  const address = normalize(draft.address);
+  const responseObjectType = normalize(deal?.object_type);
+  const responsePreparationMode = normalize(deal?.preparation_mode);
+  const responseAddress = normalize(deal?.address);
+
+  if (deal?.created_by_current_user === false) return false;
+  if (objectType && responseObjectType !== objectType) return false;
+  if (preparationMode && responsePreparationMode && responsePreparationMode !== preparationMode) return false;
+
+  // Старый production DTO не возвращает created_by_current_user и preparation_mode.
+  // До серверного rollout сохраняем прежнюю точную проверку адреса как fallback.
+  // Новый минимальный DTO подтверждает автора булевым фактом и не раскрывает адрес помещения.
+  if (deal?.created_by_current_user !== true && address && responseAddress !== address) return false;
+
+  const created = Date.parse(deal?.created_at || '');
+  return !Number.isFinite(created) || created >= Number(startedAt) - 10_000;
+}
+
+async function findCreatedDeal(draft, startedAt) {
+  const objectType = normalize(draft.objectType);
+  const preparationMode = normalize(draft.preparationMode);
+  const address = normalize(draft.address);
+  if (!address && !objectType && !preparationMode) return null;
+
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     try {
       const data = await rpc('nav_v2_get_deals_list', { p_limit: 80 }, 30000);
       const items = Array.isArray(data?.items) ? data.items : [];
-      const matches = items.filter((deal) => {
-        const addressMatch = address ? normalize(deal.address) === address : true;
-        const typeMatch = objectType ? normalize(deal.object_type) === objectType : true;
-        if (!addressMatch || !typeMatch) return false;
-        const created = Date.parse(deal.created_at || '');
-        return !Number.isFinite(created) || created >= Number(startedAt) - 10_000;
-      });
+      const matches = items.filter((deal) => matchesCreatedDeal(deal, draft, startedAt));
       if (matches[0]?.id) return matches[0];
     } catch (_) {}
     await sleep(700 * attempt);

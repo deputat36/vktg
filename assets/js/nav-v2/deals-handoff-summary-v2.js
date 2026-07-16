@@ -22,7 +22,7 @@ function findCard(id) {
   return link ? link.closest('article.deal-card') : null;
 }
 
-function clientsLine(deal) {
+function responsibilityLine(deal) {
   const seller = clean(deal && deal.seller_spn);
   const buyer = clean(deal && deal.buyer_spn);
   const profile = state && state.profile ? state.profile : {};
@@ -38,24 +38,22 @@ function clientsLine(deal) {
   if (seller && buyer) return 'Продавца ведёт: ' + seller + '. Покупателя ведёт: ' + buyer + '.';
   if (seller) return 'Продавца ведёт: ' + seller + '.';
   if (buyer) return 'Покупателя ведёт: ' + buyer + '.';
-  return 'СПН по клиентам пока не назначен.';
+  return 'СПН по сторонам пока не назначен.';
 }
 
 function lawyerLine(deal) {
   const name = clean(deal && deal.lawyer);
   if (name) return 'Юрист: ' + name + '.';
   if (deal && (deal.lawyer_needed || deal.status === 'need_lawyer')) return 'Юрист нужен для рисков и договоров.';
-  return 'Юрист подключается при рисках или договоре.';
+  return 'Юрист подключается при рисках или подготовке договора.';
 }
 
 function localHandoffGaps(deal) {
   const gaps = [];
-  if (!clean(deal && deal.seller_name)) gaps.push('ФИО продавца');
-  if (!clean(deal && deal.seller_phone)) gaps.push('телефон продавца');
-  if (!clean(deal && deal.buyer_name)) gaps.push('ФИО покупателя');
-  if (!clean(deal && deal.buyer_phone)) gaps.push('телефон покупателя');
+  // Списковый DTO не должен возвращать ФИО и телефоны клиентов.
+  // Локальный fallback оценивает только безопасные рабочие факты.
   if (!clean(deal && deal.object_type)) gaps.push('тип объекта');
-  if (!clean(deal && deal.address)) gaps.push('адрес');
+  if (!clean(deal && deal.address)) gaps.push('ориентир объекта');
   if (Number(deal && deal.price_total || 0) <= 0) gaps.push('цена');
   if ((deal && deal.settlements_agreed) !== true) gaps.push('расчёты');
   if ((deal && deal.expenses_agreed) !== true) gaps.push('расходы');
@@ -74,10 +72,11 @@ function readinessLine(deal) {
     const score = Number(server.handoff_readiness_score || 0);
     if (!count) return 'Передача юристу: базовые данные заполнены, готовность 100%.';
     const shown = gaps.length ? gaps.slice(0, 4).join(', ') : 'откройте карточку для деталей';
-    const tail = gaps.length > 4 ? ' и ещё ' + (gaps.length - 4) : '';
+    const hiddenCount = Math.max(0, count - gaps.length);
+    const tail = hiddenCount ? ' и ещё ' + hiddenCount : '';
     return 'Перед юристом дозаполнить: ' + shown + tail + '. Готовность: ' + score + '%, пробелов: ' + count + '.';
   }
-  if (!gaps.length) return 'Передача юристу: базовые данные заполнены.';
+  if (!gaps.length) return 'Передача юристу: безопасный минимум списка заполнен; детали проверьте в карточке.';
   const shown = gaps.slice(0, 4).join(', ');
   const tail = gaps.length > 4 ? ' и ещё ' + (gaps.length - 4) : '';
   return 'Перед юристом дозаполнить: ' + shown + tail + '.';
@@ -95,7 +94,7 @@ async function loadScores() {
     scoreKey = key;
     apply();
   } catch (_) {
-    // Если серверная оценка недоступна, остаётся локальный fallback по полям списка.
+    // Если серверная оценка недоступна, остаётся локальный fallback по безопасным полям списка.
   } finally {
     scoreLoading = false;
   }
@@ -105,7 +104,7 @@ function applyOne(deal) {
   const card = findCard(deal.id);
   if (!card) return;
   let box = card.querySelector('[data-handoff-summary]');
-  const key = clientsLine(deal) + '|' + lawyerLine(deal) + '|' + readinessLine(deal);
+  const key = responsibilityLine(deal) + '|' + lawyerLine(deal) + '|' + readinessLine(deal);
   if (box && box.dataset.key === key) return;
   if (!box) {
     box = document.createElement('div');
@@ -119,9 +118,9 @@ function applyOne(deal) {
   box.dataset.key = key;
   box.innerHTML = '';
   const b = document.createElement('b');
-  b.textContent = 'Клиенты / юрист: ';
+  b.textContent = 'Ответственные / юрист: ';
   box.appendChild(b);
-  box.appendChild(document.createTextNode(clientsLine(deal)));
+  box.appendChild(document.createTextNode(responsibilityLine(deal)));
   box.appendChild(document.createElement('br'));
   const muted = document.createElement('span');
   muted.className = 'muted';
