@@ -1,0 +1,40 @@
+name: Navigator v2 task RPC consumer matrix
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-task-rpc-consumer-matrix.json'
+      - 'scripts/check_nav_v2_task_rpc_consumer_matrix.py'
+      - 'docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md'
+      - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql'
+      - 'tests/e2e/task-action-feedback.spec.js'
+      - 'tests/fixtures/nav-v2-task-action-feedback.html'
+      - 'scripts/check_nav_v2_task_action_feedback.py'
+      - 'config/nav-v2-rpc-surface.json'
+      - '.github/workflows/nav-v2-task-rpc-consumer-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  task-rpc-consumer-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate consumer matrix
+        run: python3 scripts/check_nav_v2_task_rpc_consumer_matrix.py
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_task_rpc_consumer_matrix.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-task-rpc-consumer-matrix
+          path: |
+            config/nav-v2-task-rpc-consumer-matrix.json
+            docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md
+          if-no-files-found: error
