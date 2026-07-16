@@ -4,11 +4,11 @@
 
 - Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Production `main` перед текущим PR: `c218eec001f91f96b00f7d604b9adf4ccd31142f` — squash merge PR #354.
+- Production `main` перед текущим PR: `c8427ef3fa1cd50e8700dcd25cda314686a0793b` — squash merge PR #356.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Production Supabase в PR #350–#354 и текущем consultation-preview не менялся.
-- Edge Functions, Auth, RLS и grants в этих волнах не менялись.
+- Production Supabase в PR #350–#356 и текущем consultation entity prototype не менялся.
+- Edge Functions, Auth, production RLS и grants не менялись.
 
 Counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
@@ -70,10 +70,11 @@ Navigator не является CRM, файловым архивом или ав
 - `docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md` — outcome-aware readiness.
 - `docs/NAV_V2_OUTCOME_READINESS_SCENARIOS_2026-07-16.md` — синтетическая scenario matrix.
 - `docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md` — быстрый consultation intake preview.
+- `docs/NAV_V2_CONSULTATION_ENTITY_PROTOTYPE_2026-07-16.md` — серверная consultation entity и RPC lifecycle.
 
 ## Live baseline 16 июля 2026 года
 
-- 5 активных профилей: owner, lawyer, 3 SPN;
+- 5 активных профилей: owner, lawyer, 3 SPН;
 - активного manager и broker нет;
 - 23 сделки;
 - 98 задач, большинство открыты и просрочены, `task_type` не заполнен;
@@ -89,68 +90,80 @@ Navigator не является CRM, файловым архивом или ав
 
 - `broker_needed` создаётся только для ипотеки/военной ипотеки;
 - маткапитал и сертификаты не направляют карточку брокеру;
-- 4 автоматически ошибочно направленные карточки исправлены ограниченной production migration;
-- ручные назначения и ипотечные сделки не менялись.
+- 4 автоматически ошибочно направленные карточки исправлены ограниченной production migration.
 
-### PR #350 — DTO списка сделок
+### PR #350–#354 — privacy, outcomes и readiness
 
-- explicit allowlist для `nav_v2_get_deals_list`;
-- клиентские ФИО/телефоны, raw `next_action`, `deal_summary`, `wizard_snapshot` и unit-level address исключены из prototype contract;
-- save recovery и handoff подготовлены к минимальному DTO;
+- минимальный DTO списка сделок;
+- evidence-only duplicate handling;
+- двухэтапные исходы документов и рисков;
+- frontend preview без mutation;
+- outcome-aware readiness;
+- 15 readiness, 14 role и 7 funding synthetic scenarios;
 - production не менялся.
-
-### PR #351 — outcome-контракт
-
-- документы: `not_applicable`, `replaced`, `cancelled`, `external_wait`, `deferred`;
-- риски: `mitigated`, `not_applicable`, `superseded`, `accepted_by_specialist`, `cancelled`;
-- состояния `proposed`, `confirmed`, `rejected`;
-- СПН предлагает, профильная роль подтверждает;
-- SQL только в `supabase/prototypes`.
-
-### PR #352 — frontend preview outcomes
-
-- role-aware preview встроен в существующий lifecycle карточки;
-- СПН видит «предложить исход/решение», а не «закрыть»;
-- нет новых mutation RPC, повторных read RPC или отдельного HTML entry module;
-- production не менялся.
-
-### PR #353 — outcome-aware readiness prototype
-
-- `checked` — штатное завершение документа;
-- только confirmed `not_applicable/replaced/cancelled` закрывают документ как исключение;
-- `received`, proposed outcomes, `external_wait` и `deferred` остаются активными;
-- proposed/rejected risk resolution не снимает блокировку;
-- готовность к задатку и сделке считается раздельно;
-- RPC read-only, без grants и клиентских идентификаторов.
-
-### PR #354 — synthetic outcome/readiness scenario matrix
-
-- 15 сценариев готовности документов, рисков и review;
-- 14 positive/negative role cases;
-- 7 funding route cases;
-- маткапитал и сертификаты без ипотеки не относятся к брокеру;
-- fixtures не вставляются в Supabase.
 
 ### PR #355 — закрыт без merge
 
-- ранняя версия consultation preview преждевременно меняла официальный role menu;
-- закрыта как superseded;
-- не считать её частью `main`.
+Ранняя consultation-версия преждевременно меняла официальный role menu и была закрыта как superseded.
 
-## Текущий consultation preview
-
-Текущая ветка добавляет repository-only экран `consultation-v2.html`:
+### PR #356 — быстрый consultation preview
 
 - один экран минимальных фактов;
-- готовый структурированный текст для eChat;
-- предварительная маршрутизация без выдачи за юридическое заключение;
-- ипотечный брокер подключается только при ипотеке/военной ипотеке;
+- структурированный текст для eChat;
+- privacy guard для контактов, документов, кадастрового номера, ФИО и номера помещения;
+- безопасный перенос в локальный draft полного мастера;
+- брокер только для ипотеки/военной ипотеки;
 - маткапитал и сертификаты без ипотеки остаются у СПН и юриста;
-- privacy guard блокирует клиентские контакты, паспортные данные, кадастровые номера и номера помещений;
-- безопасные факты можно явно перенести в локальный draft полного мастера;
-- консультация не сохраняется в Supabase;
-- официальный role menu не меняется;
-- сделка, документы, риски и задачи не создаются.
+- официальный role menu и Supabase не менялись;
+- CI и public desktop/mobile smoke зелёные;
+- merge commit `c8427ef3fa1cd50e8700dcd25cda314686a0793b`.
+
+## Текущая волна — consultation entity prototype
+
+Repository-only SQL проектирует:
+
+- `nav_consultations_v2`;
+- append-only `nav_consultation_messages_v2`;
+- append-only `nav_consultation_events_v2`;
+- idempotent create;
+- role-scoped list/card DTO;
+- решения `answer`, `need_info`, `convert_to_preparation`;
+- ответ СПН на уточнение;
+- безопасный wizard draft;
+- статус `converted` только после явной привязки созданной сделки;
+- закрытие с причиной.
+
+### Access model
+
+- СПН — свои консультации;
+- менеджер — консультации своей команды;
+- юрист — неназначенная открытая очередь, назначенные и ранее обработанные им консультации;
+- owner/admin — весь контур;
+- broker — без доступа к юридической очереди;
+- viewer — без доступа.
+
+### Security model
+
+- server-side privacy validation повторяет frontend guard;
+- create принимает explicit allowlist полей;
+- список не возвращает ответ, known facts и documents URL;
+- карточка возвращает их только после проверки видимости;
+- RLS включён, прямых policies нет: deny-by-default;
+- direct table grants отсутствуют;
+- все RPC и private helpers явно revoked у `PUBLIC`, `anon`, `authenticated`;
+- production GRANT отсутствует.
+
+### Conversion contract
+
+`request_consultation_conversion` возвращает safe draft, но:
+
+- не создаёт сделку;
+- не создаёт задачи;
+- не создаёт документы;
+- не создаёт риски;
+- не ставит `converted`.
+
+Пользователь явно проходит существующий мастер. Bind RPC только связывает уже созданную доступную сделку.
 
 ## Принцип дальнейшей работы
 
@@ -160,66 +173,41 @@ Navigator не является CRM, файловым архивом или ав
 
 Автоматический backlog нельзя расширять без completion contract.
 
-## Следующий безопасный slice после consultation preview
+## Следующий безопасный slice после entity prototype
 
-P0/P1 — repository-only серверная модель консультации и очередь юриста.
+P0/P1 — executable PostgreSQL 17 harness в GitHub Actions без Supabase branch.
 
-### Consultation entity
+### Требования harness
 
-Минимальные поля:
+- ephemeral PostgreSQL 17 service;
+- stub `auth.uid()` и request JWT role;
+- минимальные synthetic `nav_user_profiles`, `nav_deals_v2`, `nav_deal_events_v2` и private helpers;
+- выполнение `supabase/prototypes/nav_v2_consultation_entity.sql`;
+- проверка DDL, constraints, indexes, RLS и ACL;
+- synthetic роли: owner, manager, два СПН, два юриста, broker, viewer;
+- create/idempotency;
+- list/card access matrix;
+- `need_info → reply → new`;
+- answer;
+- convert request без deal/backlog;
+- bind только после request и доступной сделки;
+- broker/viewer denial;
+- privacy rejections;
+- matcap/certificate без broker scope;
+- mortgage/военная ипотека с broker scope;
+- transaction rollback или уничтожение service container после CI.
 
-- `id`;
-- `created_by`;
-- `created_at`, `updated_at`;
-- `status`: `new`, `need_info`, `answered`, `converted`, `closed`;
-- безопасный structured intake без клиентских идентификаторов;
-- `lawyer_id` или состояние ожидания назначения;
-- `priority`;
-- `planned_date`;
-- безопасная ссылка на утверждённый внешний источник;
-- `answer_text` или отдельная response entity;
-- `converted_deal_id` после явного преобразования.
+### После SQL harness
 
-### RPC prototype
-
-- create consultation;
-- get visible consultation list;
-- get consultation card;
-- lawyer decision: `answer`, `need_info`, `convert_to_preparation`;
-- SPN response to `need_info`;
-- explicit conversion to deposit/deal preparation;
-- audit events;
-- никакого полного document/task backlog до conversion.
-
-### Access model
-
-- СПН видит созданные им консультации;
-- менеджер видит консультации своей команды;
-- юрист видит очередь и назначенные консультации;
-- owner/admin видят весь контур;
-- broker не получает юридическую очередь;
-- при ипотеке broker scope отражается отдельным фактом, но не даёт ему доступа к юридическому ответу автоматически;
-- viewer не получает доступ.
-
-### Production gates
-
-- SQL только в `supabase/prototypes`;
-- explicit DTO allowlist;
-- synthetic lifecycle fixtures;
-- role/access matrix;
-- authenticated role/mutation E2E;
-- rollback;
-- отдельный deploy PR;
-- только после этого официальный пункт меню.
-
-После consultation entity:
-
-1. отдельный блок корпоративных документов;
-2. bounded task taxonomy и SLA;
-3. controlled pilot;
-4. authenticated mutation E2E после approval среды;
-5. production rollout outcomes/readiness;
-6. security hardening.
+1. исправить все реальные SQL/ACL ошибки;
+2. подготовить frontend RPC adapter repository-only;
+3. authenticated application role/mutation E2E после approval среды;
+4. отдельный deploy PR с минимальными grants;
+5. только после deployment — официальный пункт меню;
+6. отдельный блок корпоративных документов;
+7. bounded task taxonomy и SLA;
+8. controlled pilot;
+9. security hardening.
 
 ## Ручные ограничения
 
@@ -229,7 +217,7 @@ P0/P1 — repository-only серверная модель консультаци
 - Не применять repository-only prototypes к production.
 - Не создавать платную Supabase branch без согласования стоимости issue #282.
 - Не считать skipped authenticated job доказательством ролей.
-- Не менять grants, RLS, Auth или Edge Functions без отдельного review/deploy slice.
+- Не менять production grants, RLS, Auth или Edge Functions без отдельного review/deploy slice.
 - Не хранить сканы документов в Navigator.
 - Не выдавать автоматическую маршрутизацию за юридическое заключение.
 - Не использовать сырые pilot metrics для оценки сотрудников.
@@ -244,7 +232,7 @@ P0/P1 — repository-only серверная модель консультаци
 2. какие 10–15 кейсов и сотрудники входят в пилот;
 3. применяется ли отдельный ПОД/ФТ-контур и кто его владелец;
 4. Яндекс Диск или другой утверждённый источник документов и retention rules;
-5. approval стоимости preview branch для authenticated E2E.
+5. approval стоимости preview branch для authenticated application E2E.
 
 ## Не повторять без новой причины
 
@@ -256,13 +244,11 @@ P0/P1 — repository-only серверная модель консультаци
 - evidence-only duplicate handling;
 - broker scope correction;
 - deal-card-lite/deals-list DTO prototypes;
-- outcome contract;
-- non-mutating outcome preview;
-- outcome readiness prototype;
-- outcome/readiness scenario matrix;
+- outcome contract/preview/readiness/scenarios;
 - раннюю PR #355;
+- fast consultation preview;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после consultation preview. Сначала подготовь repository-only SQL/DTO/RPC prototype consultation entity и очереди юриста. Не применяй SQL к production, не меняй status guards/roles/grants/RLS/Auth и не создавай полный document/task backlog до явного convert_to_preparation.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после consultation entity prototype. Сначала создай executable PostgreSQL 17 CI harness для prototype SQL с synthetic Auth/roles/ACL/lifecycle tests. Не применяй SQL к production и не создавай платную Supabase branch.`
