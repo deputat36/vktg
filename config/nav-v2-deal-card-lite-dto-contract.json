@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "target_rpc": "nav_v2_get_deal_card_lite",
+  "public_signature": "nav_v2_get_deal_card_lite(p_deal_id uuid) returns jsonb",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+  "purpose": "Минимальная аварийная сводка и серверный источник permission facts без полной строки сделки.",
+  "top_level_keys": [
+    "deal",
+    "documents",
+    "tasks",
+    "risks",
+    "comments",
+    "lite",
+    "dto_version"
+  ],
+  "deal_allowed_keys": [
+    "id",
+    "title",
+    "display_title",
+    "status",
+    "risk_level",
+    "object_type",
+    "address",
+    "price_total",
+    "settlements_agreed",
+    "created_at"
+  ],
+  "document_allowed_keys": [
+    "id",
+    "title",
+    "status",
+    "side",
+    "is_required",
+    "responsible_role",
+    "due_date",
+    "can_change_status",
+    "can_mark_received",
+    "can_mark_checked",
+    "can_mark_problem"
+  ],
+  "task_allowed_keys": [
+    "id",
+    "title",
+    "status",
+    "priority",
+    "assigned_role",
+    "due_date",
+    "can_change_status"
+  ],
+  "risk_allowed_keys": [
+    "id",
+    "title",
+    "level",
+    "is_resolved",
+    "blocks_deposit",
+    "blocks_deal"
+  ],
+  "comment_contract": {
+    "mode": "omitted_as_empty_array",
+    "reason": "Lite RPC не должна возвращать исторический свободный текст. Полные комментарии остаются в полной карточке с frontend read-layer masking до отдельного server wrapper."
+  },
+  "forbidden_deal_keys": [
+    "seller_name",
+    "buyer_name",
+    "seller_phone",
+    "buyer_phone",
+    "cadastral_number",
+    "deal_summary",
+    "wizard_snapshot",
+    "next_action",
+    "price_contract",
+    "deposit_amount"
+  ],
+  "forbidden_serialization_patterns": [
+    "to_jsonb(deal_row)",
+    "select_deal_star",
+    "full_child_row",
+    "comments_body"
+  ],
+  "consumer_requirements": {
+    "task_action_guard": ["tasks.id", "tasks.assigned_role", "tasks.can_change_status"],
+    "document_action_guard": [
+      "documents.id",
+      "documents.responsible_role",
+      "documents.can_change_status",
+      "documents.can_mark_received",
+      "documents.can_mark_checked",
+      "documents.can_mark_problem"
+    ],
+    "safe_card": [
+      "deal.title",
+      "deal.display_title",
+      "deal.address",
+      "deal.price_total",
+      "deal.status",
+      "deal.created_at",
+      "documents",
+      "tasks",
+      "risks",
+      "comments"
+    ],
+    "timeout_recovery": [
+      "deal.title",
+      "deal.display_title",
+      "deal.address",
+      "deal.price_total",
+      "deal.status",
+      "documents",
+      "tasks"
+    ],
+    "diagnostic_card": ["deal.title", "documents", "tasks", "lite"]
+  },
+  "compatibility_decisions": {
+    "neutral_titles": true,
+    "unit_level_address_removed": true,
+    "work_item_descriptions_omitted": true,
+    "historical_comments_omitted": true,
+    "permission_facts_added": true,
+    "current_public_grants_unchanged": true,
+    "current_access_helper_reused": true
+  },
+  "production_gate": "authenticated regression or explicit owner approval with evidence and rollback",
+  "rollback": "Restore the previous function body from supabase/migrations/20260625120500_navigator_deal_card_lite_service_role_bypass.sql without changing the public signature."
+}
