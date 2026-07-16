@@ -32,7 +32,7 @@ def main() -> int:
     page = PAGE.read_text(encoding="utf-8")
     require(page, (
         "spn-duplicate-deal-guard-v2.js?v=20260624-0740",
-        "spn-save-idempotency-guard-v2.js?v=20260714-01",
+        "spn-save-idempotency-guard-v2.js?v=20260716-01",
         "spn-smart-v4.js?v=20260627-0345",
     ), PAGE.name, errors)
     duplicate_at = page.find("spn-duplicate-deal-guard-v2.js")
@@ -57,9 +57,17 @@ def main() -> int:
         "stopImmediatePropagation",
         "bypassFingerprint",
         "releaseWizardSaveLease",
+        "matchesCreatedDeal",
+        "created_by_current_user",
+        "preparation_mode",
+        "Новый минимальный DTO",
     ), GUARD.name, errors)
     if guard.count("rpc('nav_v2_get_deals_list'") != 1:
         errors.append("idempotency guard must use exactly one read-only deals-list RPC call site")
+    if "deal?.created_by_current_user === false" not in guard:
+        errors.append("idempotency guard must reject a server-confirmed foreign creator")
+    if "deal?.created_by_current_user !== true && address && responseAddress !== address" not in guard:
+        errors.append("legacy exact-address fallback must remain until the minimized server DTO is deployed")
     for forbidden in (
         "nav_v2_save_wizard_result",
         "nav_v2_update_",
@@ -117,7 +125,7 @@ def main() -> int:
 
     print(
         "Navigator v2 SPN save idempotency passed: deterministic payload fingerprint, cross-tab lock, "
-        "recent receipt, safe module order, one read-only lookup and no direct mutation call"
+        "recent receipt, safe module order, one read-only lookup, minimized-DTO compatibility and no direct mutation call"
     )
     return 0
 
