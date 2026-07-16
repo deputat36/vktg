@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "action_cases": [
+    {"id":"legacy_spn_open","task":"20000000-0000-4000-8000-000000000001","role":"spn","expected":["legacy_start","legacy_done"]},
+    {"id":"legacy_lawyer_denied","task":"20000000-0000-4000-8000-000000000001","role":"lawyer","expected":[]},
+    {"id":"legal_lawyer","task":"20000000-0000-4000-8000-000000000002","role":"lawyer","expected":["start","complete","waiting_external","deferred","propose_not_applicable","propose_replaced","propose_cancelled"]},
+    {"id":"legal_spn_denied","task":"20000000-0000-4000-8000-000000000002","role":"spn","expected":[]},
+    {"id":"broker_financial","task":"20000000-0000-4000-8000-000000000005","role":"broker","expected":["start","complete","waiting_external","deferred","propose_not_applicable","propose_replaced","propose_cancelled"]},
+    {"id":"broker_legal_denied","task":"20000000-0000-4000-8000-000000000002","role":"broker","expected":[]},
+    {"id":"waiting_spn","task":"20000000-0000-4000-8000-000000000003","role":"spn","expected":["start","complete","waiting_external","deferred","propose_not_applicable","propose_replaced","propose_cancelled"]},
+    {"id":"proposal_manager","task":"20000000-0000-4000-8000-000000000004","role":"manager","expected":["decision_confirm","decision_reject"]},
+    {"id":"proposal_spn_waits","task":"20000000-0000-4000-8000-000000000004","role":"spn","expected":[]},
+    {"id":"completed_no_reopen","task":"20000000-0000-4000-8000-000000000006","role":"manager","expected":[]}
+  ],
+  "rpc_cases": [
+    {"id":"legacy_done","task":"20000000-0000-4000-8000-000000000001","action":"legacy_done","input":{},"valid":true,"rpc":"nav_v2_update_task_status"},
+    {"id":"bounded_start","task":"20000000-0000-4000-8000-000000000002","action":"start","input":{"client_request_id":"40000000-0000-4000-8000-000000000001"},"valid":true,"rpc":"nav_v2_start_bounded_task"},
+    {"id":"complete_evidence","task":"20000000-0000-4000-8000-000000000002","action":"complete","input":{"evidence_reference_id":"50000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000002"},"valid":true,"rpc":"nav_v2_complete_bounded_task"},
+    {"id":"complete_missing_evidence","task":"20000000-0000-4000-8000-000000000002","action":"complete","input":{"client_request_id":"40000000-0000-4000-8000-000000000003"},"valid":false},
+    {"id":"waiting","task":"20000000-0000-4000-8000-000000000003","action":"waiting_external","input":{"reason_code":"awaiting_document","review_date":"2026-07-23","client_request_id":"40000000-0000-4000-8000-000000000004"},"valid":true,"rpc":"nav_v2_set_bounded_task_active_outcome"},
+    {"id":"replaced","task":"20000000-0000-4000-8000-000000000003","action":"propose_replaced","input":{"replacement_task_id":"20000000-0000-4000-8000-000000000099","client_request_id":"40000000-0000-4000-8000-000000000005"},"valid":true,"rpc":"nav_v2_propose_bounded_task_terminal_outcome"},
+    {"id":"decision","task":"20000000-0000-4000-8000-000000000004","action":"decision_confirm","input":{"client_request_id":"40000000-0000-4000-8000-000000000006"},"valid":true,"rpc":"nav_v2_decide_bounded_task_terminal_outcome"}
+  ]
+}

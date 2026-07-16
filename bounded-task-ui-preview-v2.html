@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ofewxuqfjhamgerwzull.supabase.co wss://ofewxuqfjhamgerwzull.supabase.co; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <title>Preview действий по задачам — Навигатор v2</title>
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260701-0815">
+  <link rel="stylesheet" href="./assets/css/nav-v2-bounded-task-ui-preview.css?v=20260716-01">
+</head>
+<body class="nav-v2 bounded-task-preview-page">
+  <main class="nav-v2-shell bounded-task-preview-shell">
+    <section class="card bounded-task-preview-hero">
+      <div>
+        <span class="pill blue">Repository-only synthetic preview</span>
+        <h1>Действия по legacy и bounded-задачам</h1>
+        <p>Проверка будущего интерфейса без Supabase, сохранения и изменения задач.</p>
+      </div>
+      <div class="actions">
+        <a class="btn light" href="./deal-card-v2.html">Карточка сделки</a>
+        <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
+      </div>
+    </section>
+
+    <section class="card bounded-task-role-panel">
+      <label for="boundedTaskPreviewRole">Показать интерфейс роли</label>
+      <select id="boundedTaskPreviewRole">
+        <option value="spn">СПН</option>
+        <option value="lawyer" selected>Юрист</option>
+        <option value="broker">Ипотечный брокер</option>
+        <option value="manager">Менеджер</option>
+        <option value="owner">Owner</option>
+      </select>
+      <p>Роль меняет только синтетические permissions. Реальные данные и аккаунты не используются.</p>
+    </section>
+
+    <div class="bounded-task-preview-layout">
+      <section id="boundedTaskPreviewList" class="bounded-task-preview-list" aria-live="polite"></section>
+      <aside id="boundedTaskPreviewInspector" class="card bounded-task-preview-inspector" aria-live="polite">
+        <h2>RPC preview</h2>
+        <p>Выберите доступное действие. Здесь появятся необходимые поля, проверки и будущие аргументы RPC.</p>
+      </aside>
+    </div>
+  </main>
+  <script type="module" src="./assets/js/nav-v2/bounded-task-ui-preview-v2.js?v=20260716-01"></script>
+</body>
+</html>
