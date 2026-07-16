@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Navigator v2 task dual-path fixture</title></head>
+<body>
+  <main>
+    <button id="legacyComplete" type="button">Legacy complete</button>
+    <button id="boundedComplete" type="button">Bounded complete</button>
+    <button id="boundedReopen" type="button">Bounded reopen</button>
+    <button id="boundedWaiting" type="button">Bounded waiting</button>
+    <button id="boundedDecision" type="button">Bounded decision</button>
+    <pre id="routeOutput" role="status" aria-live="polite"></pre>
+  </main>
+  <script type="module">
+    import { taskActionRoutePreview } from '../../assets/js/nav-v2/task-action-router-v2.js';
+    const legacy={id:'20000000-0000-4000-8000-000000000001',task_contract_version:null,can_change_status:true};
+    const bounded={id:'20000000-0000-4000-8000-000000000002',task_contract_version:2,can_complete:true,can_set_active_outcome:true,can_decide_terminal_outcome:true};
+    const output=document.getElementById('routeOutput');
+    window.__dualPathRouteCalls=0;
+    function show(task,action,input={}){window.__dualPathRouteCalls+=1;output.textContent=JSON.stringify(taskActionRoutePreview({task,action,input}));}
+    document.getElementById('legacyComplete').addEventListener('click',()=>show(legacy,'complete'));
+    document.getElementById('boundedComplete').addEventListener('click',()=>show(bounded,'complete',{evidence_reference_id:'40000000-0000-4000-8000-000000000001',client_request_id:'30000000-0000-4000-8000-000000000001'}));
+    document.getElementById('boundedReopen').addEventListener('click',()=>show(bounded,'reopen',{client_request_id:'30000000-0000-4000-8000-000000000002'}));
+    document.getElementById('boundedWaiting').addEventListener('click',()=>show(bounded,'waiting_external',{reason_code:'awaiting_document',review_date:'2026-07-24',client_request_id:'30000000-0000-4000-8000-000000000003'}));
+    document.getElementById('boundedDecision').addEventListener('click',()=>show(bounded,'decision_confirm',{client_request_id:'30000000-0000-4000-8000-000000000004'}));
+  </script>
+</body>
+</html>
