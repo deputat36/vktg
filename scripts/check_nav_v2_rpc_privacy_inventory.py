@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "config/nav-v2-rpc-privacy-inventory.json"
+CORRECTIONS = ROOT / "config/nav-v2-rpc-privacy-inventory-corrections.json"
 REPORT = ROOT / "docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md"
 MIGRATIONS = ROOT / "supabase/migrations"
 
@@ -86,29 +87,43 @@ def detected_sensitive_keys(function_text: str) -> set[str]:
     return {key for key in SENSITIVE_TEXT_KEYS if re.search(rf"\b{re.escape(key)}\b", lowered)}
 
 
-def has_full_deal_row(function_text: str) -> bool:
+def has_full_deal_row_output(function_text: str) -> bool:
     lowered = re.sub(r"\s+", " ", function_text.lower())
-    return any(
-        marker in lowered
-        for marker in (
-            "to_jsonb(d)",
-            "select d.*",
-            "select * into v_deal from public.nav_deals_v2",
+    return "to_jsonb(d)" in lowered
+
+
+def apply_corrections(entries: list[dict], corrections: dict) -> None:
+    by_name = {entry.get("name"): entry for entry in entries}
+    for name, patch in corrections.items():
+        entry = by_name.get(name)
+        if entry is None:
+            continue
+        if "latest_source" in patch:
+            entry["latest_source"] = patch["latest_source"]
+        entry["internal_client_dependency_keys"] = list(
+            patch.get("internal_client_dependency_keys", entry.get("internal_client_dependency_keys", []))
         )
-    )
+        extra_text = patch.get("additional_sensitive_free_text_keys", [])
+        if extra_text:
+            entry["observed_sensitive_free_text_keys"] = sorted(
+                set(entry.get("observed_sensitive_free_text_keys", [])) | set(extra_text)
+            )
 
 
 def main() -> int:
     errors: list[str] = []
-    if not REGISTRY.exists():
-        errors.append(f"missing {REGISTRY.relative_to(ROOT)}")
-    if not REPORT.exists():
-        errors.append(f"missing {REPORT.relative_to(ROOT)}")
+    for path in (REGISTRY, CORRECTIONS, REPORT):
+        if not path.exists():
+            errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
         print("\n".join(errors))
         return 1
 
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    correction_payload = json.loads(CORRECTIONS.read_text(encoding="utf-8"))
+    if correction_payload.get("schema_version") != 1:
+        errors.append("correction overlay schema_version drifted")
+
     if registry.get("project_ref") != "ofewxuqfjhamgerwzull":
         errors.append("registry project_ref drifted")
     if registry.get("production_mutation") is not False:
@@ -126,11 +141,16 @@ def main() -> int:
         errors.append(f"category set drifted: {sorted(categories)}")
 
     entries = registry.get("rpcs") or []
+    apply_corrections(entries, correction_payload.get("corrections") or {})
     names = [entry.get("name") for entry in entries]
     if len(names) != len(set(names)):
         errors.append("duplicate RPC entries in privacy inventory")
     if set(names) != EXPECTED_RPCS:
         errors.append(f"RPC inventory set drifted: {sorted(set(names))}")
+
+    unknown_corrections = set((correction_payload.get("corrections") or {})) - set(names)
+    if unknown_corrections:
+        errors.append(f"corrections reference unknown RPCs: {sorted(unknown_corrections)}")
 
     client_registry_keys = set(registry.get("client_identifier_keys") or [])
     if not CORE_CLIENT_KEYS.issubset(client_registry_keys):
@@ -160,10 +180,12 @@ def main() -> int:
             )
 
         detected_clients = detected_client_keys(function_text)
-        registered_clients = set(entry["observed_client_identifier_keys"])
-        if not detected_clients.issubset(registered_clients):
+        exposed_clients = set(entry.get("observed_client_identifier_keys") or [])
+        internal_clients = set(entry.get("internal_client_dependency_keys") or [])
+        acknowledged_clients = exposed_clients | internal_clients
+        if not detected_clients.issubset(acknowledged_clients):
             errors.append(
-                f"{name}: unregistered client identifier keys {sorted(detected_clients - registered_clients)}"
+                f"{name}: unregistered client-field references {sorted(detected_clients - acknowledged_clients)}"
             )
 
         detected_text = detected_sensitive_keys(function_text)
@@ -173,24 +195,26 @@ def main() -> int:
                 f"{name}: unregistered sensitive free-text keys {sorted(detected_text - registered_text)}"
             )
 
-        full_row = has_full_deal_row(function_text)
+        full_row = has_full_deal_row_output(function_text)
         patterns = set(entry["serialization_patterns"])
         if full_row:
             if entry["risk"] != "critical":
-                errors.append(f"{name}: full deal-row serialization must be critical")
+                errors.append(f"{name}: full deal-row output must be critical")
             if entry["server_contract_status"] != "blocker":
-                errors.append(f"{name}: full deal-row serialization must be a blocker")
-            if not CORE_CLIENT_KEYS.issubset(registered_clients):
-                errors.append(f"{name}: full deal-row exposure must register all core client keys")
+                errors.append(f"{name}: full deal-row output must be a blocker")
+            if not CORE_CLIENT_KEYS.issubset(exposed_clients):
+                errors.append(f"{name}: full deal-row output must register all core client keys")
             if not any("deal_row" in pattern for pattern in patterns):
-                errors.append(f"{name}: full deal-row serialization pattern is not registered")
+                errors.append(f"{name}: full deal-row output pattern is not registered")
 
-        if detected_clients:
+        if exposed_clients:
             if entry["risk"] != "critical":
-                errors.append(f"{name}: direct client identifiers require critical risk")
+                errors.append(f"{name}: exposed client identifiers require critical risk")
             if entry["server_contract_status"] != "blocker":
-                errors.append(f"{name}: direct client identifiers require blocker status")
+                errors.append(f"{name}: exposed client identifiers require blocker status")
 
+        if internal_clients and entry["risk"] == "low":
+            errors.append(f"{name}: client-dependent policy cannot have low risk")
         if detected_text and entry["risk"] == "low":
             errors.append(f"{name}: sensitive free text cannot have low risk")
 
@@ -229,7 +253,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 RPC privacy inventory passed: definitions, identifiers, free text and rollout gates are registered")
+    print("Navigator v2 RPC privacy inventory passed: output exposure, internal dependencies, free text and rollout gates are registered")
     return 0
 
 
