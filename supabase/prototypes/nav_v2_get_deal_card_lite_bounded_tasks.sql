@@ -110,9 +110,9 @@ begin
     'outcome_state', case when t.task_contract_version = 2 then t.outcome_state else null end,
     'outcome_reason_code', case when t.task_contract_version = 2 then t.outcome_reason_code else null end,
     'outcome_review_date', case when t.task_contract_version = 2 then t.outcome_review_date else null end,
-    'is_bounded', t.task_contract_version = 2,
+    'is_bounded', coalesce(t.task_contract_version = 2, false),
     'legacy_status_path', t.task_contract_version is distinct from 2,
-    'requires_evidence_reference', t.task_contract_version = 2,
+    'requires_evidence_reference', coalesce(t.task_contract_version = 2, false),
     'supports_reopen', t.task_contract_version is distinct from 2,
     'can_change_status', case
       when t.task_contract_version = 2 then false
