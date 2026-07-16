@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_outcome_readiness_preview.sql",
+  "depends_on": "supabase/prototypes/nav_v2_work_item_outcomes.sql",
+  "purpose": "Сравнить текущую и целевую готовность документов/рисков после внедрения подтверждаемых outcome-кодов без изменения production status guards.",
+  "document_completion_rules": {
+    "checked": "complete",
+    "received": "active_until_checked",
+    "confirmed_not_applicable": "complete_exception",
+    "confirmed_replaced": "complete_exception",
+    "confirmed_cancelled": "complete_exception",
+    "proposed_terminal": "active_pending_confirmation",
+    "external_wait": "active_waiting_external_party",
+    "deferred": "active_until_due_stage_or_confirmed_gate_change",
+    "problem": "active_blocking",
+    "requested": "active",
+    "needed": "active"
+  },
+  "risk_rules": {
+    "confirmed_resolution": "not_active",
+    "proposed_resolution": "active_and_blocking_if_original_risk_blocks",
+    "rejected_resolution": "active_and_blocking_if_original_risk_blocks",
+    "legacy_is_resolved_true_without_code": "temporarily_not_active_for_compatibility_but_flagged_for_backfill_review",
+    "legacy_is_resolved_false": "active"
+  },
+  "stage_rules": {
+    "deposit": "Учитываются required_for_deposit, blocks_deposit и blocking reviews.",
+    "deal": "Учитываются required_for_deal, blocks_deal и blocking reviews.",
+    "external_wait_and_deferred": "Не считаются выполнением автоматически.",
+    "proposed_terminal_outcome": "Не меняет readiness до подтверждения."
+  },
+  "preview_item_keys": [
+    "deal_id",
+    "card_url",
+    "status",
+    "deposit",
+    "deal",
+    "document_counts",
+    "risk_counts",
+    "review_counts",
+    "legacy_comparison",
+    "main_reason"
+  ],
+  "deposit_keys": [
+    "ready",
+    "blocking_documents",
+    "blocking_risks",
+    "blocking_reviews"
+  ],
+  "deal_keys": [
+    "ready",
+    "blocking_documents",
+    "blocking_risks",
+    "blocking_reviews"
+  ],
+  "document_count_keys": [
+    "checked",
+    "received_not_checked",
+    "confirmed_terminal_outcomes",
+    "proposed_terminal_outcomes",
+    "external_wait",
+    "deferred",
+    "problem",
+    "active_required_for_deposit",
+    "active_required_for_deal"
+  ],
+  "risk_count_keys": [
+    "active_total",
+    "active_blocks_deposit",
+    "active_blocks_deal",
+    "proposed_resolutions",
+    "confirmed_resolutions",
+    "legacy_resolved_without_code"
+  ],
+  "review_count_keys": [
+    "blocks_deposit",
+    "blocks_deal"
+  ],
+  "legacy_comparison_keys": [
+    "legacy_unresolved_deposit_documents",
+    "legacy_unresolved_deal_documents",
+    "target_unresolved_deposit_documents",
+    "target_unresolved_deal_documents",
+    "deposit_delta",
+    "deal_delta"
+  ],
+  "forbidden_behavior": [
+    "update nav_deals_v2",
+    "update nav_deal_documents_v2",
+    "update nav_deal_risks_v2",
+    "change status guard",
+    "change readiness_deposit",
+    "change readiness_deal",
+    "auto-confirm outcomes",
+    "auto-resolve production risks",
+    "return client names or phones",
+    "return wizard_snapshot or deal_summary"
+  ],
+  "production_gate": "Apply the outcome schema first on isolated synthetic data, then run authenticated role/mutation tests and compare legacy versus target counts before changing any production status guard.",
+  "rollback": "Drop only the preview RPC and private helper functions. The preview must not own or mutate outcome columns, statuses, readiness percentages or production records."
+}
