@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_work_item_outcomes.sql",
+  "purpose": "Замкнуть жизненный цикл документов и рисков без обхода юридических и ипотечных gates.",
+  "principles": [
+    "СПН может предложить исключительный исход и приложить объяснение, но не снимает профильный gate самостоятельно.",
+    "Подтверждённый исход всегда имеет код, автора, дату и заметку либо структурированное подтверждение.",
+    "Ожидание внешней стороны и отсрочка не считаются завершением пункта.",
+    "Checked остаётся штатным успешным завершением документа.",
+    "Resolved без resolution_code после rollout не создаётся."
+  ],
+  "document_outcome_codes": {
+    "not_applicable": {
+      "terminal": true,
+      "requires_confirmation": true,
+      "meaning": "Документ обоснованно не требуется для данного сценария."
+    },
+    "replaced": {
+      "terminal": true,
+      "requires_confirmation": true,
+      "meaning": "Требование закрыто другим документом; replacement_document_id обязателен."
+    },
+    "cancelled": {
+      "terminal": true,
+      "requires_confirmation": true,
+      "meaning": "Пункт создан ошибочно или отменён вместе со сценарием."
+    },
+    "external_wait": {
+      "terminal": false,
+      "requires_confirmation": false,
+      "meaning": "Документ ожидается от банка, нотариуса, госоргана, другой стороны или внешней организации."
+    },
+    "deferred": {
+      "terminal": false,
+      "requires_confirmation": false,
+      "meaning": "Документ обоснованно перенесён на следующий этап; deferred_until обязателен."
+    }
+  },
+  "risk_resolution_codes": {
+    "mitigated": {
+      "terminal": true,
+      "meaning": "Причина риска устранена и подтверждена."
+    },
+    "not_applicable": {
+      "terminal": true,
+      "meaning": "Факт, породивший риск, не подтвердился либо правило к сделке не применяется."
+    },
+    "superseded": {
+      "terminal": true,
+      "meaning": "Риск заменён более точным или объединённым риском; superseded_by_risk_id обязателен."
+    },
+    "accepted_by_specialist": {
+      "terminal": true,
+      "meaning": "Профильный специалист подтвердил допустимость движения при зафиксированных условиях; не отменяет отдельные обязательные gates."
+    },
+    "cancelled": {
+      "terminal": true,
+      "meaning": "Риск создан ошибочно либо отменён вместе со сценарием."
+    }
+  },
+  "proposal_states": [
+    "proposed",
+    "confirmed",
+    "rejected"
+  ],
+  "document_role_policy": {
+    "spn": [
+      "propose_terminal_outcome",
+      "set_external_wait",
+      "set_deferred",
+      "add_evidence"
+    ],
+    "lawyer": [
+      "confirm_legal_document_outcome",
+      "reject_proposal",
+      "set_external_wait",
+      "set_deferred"
+    ],
+    "broker": [
+      "confirm_mortgage_document_outcome_only",
+      "reject_proposal",
+      "set_external_wait",
+      "set_deferred"
+    ],
+    "manager": [
+      "confirm_spn_or_corporate_document_outcome",
+      "reject_proposal",
+      "set_external_wait",
+      "set_deferred"
+    ],
+    "owner_admin": [
+      "confirm_any_outcome",
+      "reject_proposal"
+    ]
+  },
+  "risk_role_policy": {
+    "spn": [
+      "propose_resolution",
+      "add_evidence",
+      "reopen_own_proposal"
+    ],
+    "lawyer": [
+      "confirm_legal_risk_resolution",
+      "reject_proposal",
+      "reopen_legal_risk"
+    ],
+    "broker": [
+      "confirm_mortgage_risk_resolution_only",
+      "reject_proposal",
+      "reopen_mortgage_risk"
+    ],
+    "manager": [
+      "confirm_process_risk_resolution",
+      "reject_proposal",
+      "reopen_process_risk"
+    ],
+    "owner_admin": [
+      "confirm_any_resolution",
+      "reject_proposal",
+      "reopen_any_risk"
+    ]
+  },
+  "readiness_rules": {
+    "document_checked": "Завершает документ штатно.",
+    "document_confirmed_terminal_outcome": "Исключает документ из missing count, но сохраняет аудит.",
+    "document_proposed_terminal_outcome": "Не влияет на readiness до подтверждения.",
+    "document_external_wait": "Остаётся активным; срок и внешний источник обязательны.",
+    "document_deferred": "Не блокирует ранний этап только если required_for_deposit=false либо профильная роль явно изменила gate.",
+    "risk_confirmed_resolution": "Снимает соответствующие blocks_deposit/blocks_deal только через подтверждённое профильное решение.",
+    "risk_proposed_resolution": "Не снимает блокировку."
+  },
+  "forbidden_shortcuts": [
+    "SPN confirms lawyer-assigned risk",
+    "SPN confirms broker-assigned mortgage risk",
+    "terminal outcome without note or evidence",
+    "replaced without replacement_document_id",
+    "deferred without deferred_until",
+    "external_wait without external_party",
+    "resolved=true without resolution_code",
+    "bulk auto-resolution of existing production rows"
+  ],
+  "production_gate": "Authenticated role/mutation regression for owner, admin, manager, SPN, lawyer and broker on isolated synthetic data, plus rollback and readiness-count comparison.",
+  "rollback": "Drop prototype RPCs and added outcome columns only after restoring the previous document and risk functions; existing status and is_resolved fields remain compatibility sources throughout rollout."
+}
