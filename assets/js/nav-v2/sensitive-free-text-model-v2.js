@@ -4,6 +4,14 @@ const PASSPORT_RE = /\b\d{4}[\s-]+\d{6}\b/g;
 const SNILS_RE = /\b\d{3}-\d{3}-\d{3}[\s-]+\d{2}\b/g;
 const CARD_CANDIDATE_RE = /(?:^|[^\d])((?:\d[ -]?){13,19})(?!\d)/g;
 
+const REDACTION_LABELS = Object.freeze({
+  email: '[email клиента скрыт]',
+  phone: '[телефон клиента скрыт]',
+  passport: '[паспортные данные скрыты]',
+  snils: '[СНИЛС скрыт]',
+  bank_card: '[номер карты скрыт]'
+});
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -46,6 +54,24 @@ function cardMatches(text) {
     .filter((candidate) => luhnValid(candidate));
 }
 
+function replaceDirect(text, pattern, replacement) {
+  pattern.lastIndex = 0;
+  const result = text.replace(pattern, replacement);
+  pattern.lastIndex = 0;
+  return result;
+}
+
+function replaceCaptured(text, pattern, replacement, predicate = () => true) {
+  pattern.lastIndex = 0;
+  const result = text.replace(pattern, (match, candidate) => {
+    const value = String(candidate || '').trim();
+    if (!value || !predicate(value)) return match;
+    return match.replace(candidate, replacement);
+  });
+  pattern.lastIndex = 0;
+  return result;
+}
+
 export function detectSensitiveFreeText(value) {
   const text = String(value || '');
   if (!text.trim()) return [];
@@ -60,6 +86,17 @@ export function detectSensitiveFreeText(value) {
   add('snils', 'СНИЛС', matches(text, SNILS_RE));
   add('bank_card', 'номер банковской карты', cardMatches(text));
   return findings;
+}
+
+export function redactSensitiveFreeText(value) {
+  let text = String(value ?? '');
+  if (!text.trim()) return text;
+  text = replaceDirect(text, EMAIL_RE, REDACTION_LABELS.email);
+  text = replaceCaptured(text, PHONE_RE, REDACTION_LABELS.phone);
+  text = replaceDirect(text, PASSPORT_RE, REDACTION_LABELS.passport);
+  text = replaceDirect(text, SNILS_RE, REDACTION_LABELS.snils);
+  text = replaceCaptured(text, CARD_CANDIDATE_RE, REDACTION_LABELS.bank_card, luhnValid);
+  return text;
 }
 
 export function sensitiveFreeTextMessage(findings) {
