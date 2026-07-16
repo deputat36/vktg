@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_deployment_gate",
+  "production_changed": false,
+  "deployment_ready": false,
+  "legacy_rpcs": {
+    "nav_v2_add_task": {
+      "active_runtime_consumers": [],
+      "inventory_paths": ["config/nav-v2-rpc-surface.json"],
+      "replacement": "nav_v2_create_bounded_tasks",
+      "migration_action": "Remove from frontend_api after governed create transport is deployed and all server-side creators are separately audited.",
+      "deployment_blocker": false
+    },
+    "nav_v2_update_task_status": {
+      "active_runtime_consumers": [
+        {
+          "path": "assets/js/nav-v2/deal-card-v2.js",
+          "surface": "deal_card_base_handler",
+          "current_actions": ["open", "in_progress", "done"],
+          "migration": "Render contract-aware controls; legacy rows retain old RPC, contract-v2 rows use start/complete/outcome RPC.",
+          "blockers": ["evidence_input_missing", "reopen_semantics_undefined"]
+        },
+        {
+          "path": "assets/js/nav-v2/task-action-guard-v2.js",
+          "surface": "primary_intercepting_handler",
+          "current_actions": ["open", "in_progress", "done"],
+          "migration": "Branch by task_contract_version from lite DTO and call governed adapter/transport for contract-v2 rows.",
+          "blockers": ["lite_dto_contract_fields_missing", "evidence_input_missing", "reopen_semantics_undefined"]
+        },
+        {
+          "path": "supabase/functions/nav-v2-deal-api/index.ts",
+          "surface": "edge_function_action_facade",
+          "current_actions": ["update_task_status"],
+          "migration": "Keep legacy action explicitly legacy-only and add separately validated governed actions after DB deployment.",
+          "blockers": ["edge_deployment_order", "governed_action_validation_missing"]
+        }
+      ],
+      "test_and_contract_consumers": [
+        "tests/e2e/task-action-feedback.spec.js",
+        "scripts/check_nav_v2_task_action_feedback.py",
+        "tests/fixtures/nav-v2-task-action-feedback.html",
+        "config/nav-v2-rpc-surface.json"
+      ],
+      "replacement_rpcs": [
+        "nav_v2_start_bounded_task",
+        "nav_v2_complete_bounded_task",
+        "nav_v2_set_bounded_task_active_outcome",
+        "nav_v2_propose_bounded_task_terminal_outcome",
+        "nav_v2_decide_bounded_task_terminal_outcome"
+      ],
+      "deployment_blocker": true
+    }
+  },
+  "required_lite_task_fields": [
+    "task_contract_version",
+    "task_type",
+    "evidence_kind",
+    "completion_criterion_code",
+    "gate_scope",
+    "outcome_code",
+    "outcome_state",
+    "outcome_review_date",
+    "can_start",
+    "can_complete",
+    "can_set_active_outcome",
+    "can_propose_terminal_outcome",
+    "can_decide_terminal_outcome"
+  ],
+  "current_lite_task_fields": [
+    "id",
+    "title",
+    "status",
+    "priority",
+    "assigned_role",
+    "due_date",
+    "can_change_status"
+  ],
+  "required_ui_decisions": {
+    "completion_evidence": "Define a bounded evidence picker/reference flow before enabling Done for contract-v2 tasks.",
+    "reopen_semantics": "Choose whether a completed contract-v2 task is immutable, replaced by a new task, or reopened by a new audited mutation.",
+    "active_waits": "Replace generic Open with explicit Resume / Waiting external / Deferred actions.",
+    "duplicate_handlers": "Keep one authoritative click handler; base handler must not race the guard.",
+    "legacy_coexistence": "Legacy rows continue using nav_v2_update_task_status until individually reviewed; no mass migration."
+  },
+  "deployment_order": [
+    "extend_lite_dto_repository_prototype",
+    "build_contract_aware_ui_preview",
+    "update_e2e_and_source_contracts",
+    "authenticated_application_e2e",
+    "deploy_database_migrations_and_minimal_grants",
+    "deploy_edge_function_actions",
+    "switch_frontend_transport",
+    "controlled_pilot",
+    "remove_legacy_inventory_only_after_zero_runtime_consumers"
+  ],
+  "separation_guarantees": {
+    "runtime_code_changed": false,
+    "edge_function_deployed": false,
+    "database_changed": false,
+    "legacy_tasks_changed": false,
+    "employee_evaluation_allowed": false
+  }
+}
