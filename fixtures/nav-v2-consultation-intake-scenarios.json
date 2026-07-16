@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "cases": [
+    {
+      "id": "cash_legal_question",
+      "input": {"question":"Можно ли выходить на задаток при наследстве менее трёх лет?","side":"seller","stage":"before_deposit","object_type":"flat","safe_orienter":"Северный микрорайон, кирпичный дом","funding":["cash"],"circumstances":["inheritance"]},
+      "expected": {"ok":true,"broker_needed":false,"lawyer_priority":"high"}
+    },
+    {
+      "id": "matcap_without_mortgage",
+      "input": {"question":"Какие условия нужно согласовать до задатка при использовании материнского капитала?","side":"buyer","stage":"before_deposit","object_type":"house_land","safe_orienter":"частный сектор, дом с земельным участком","funding":["matcap"],"circumstances":["minor_buyer"]},
+      "expected": {"ok":true,"broker_needed":false,"legal_scope_contains":"маткапитал"}
+    },
+    {
+      "id": "certificate_without_mortgage",
+      "input": {"question":"Как зафиксировать расчёт сертификатом после регистрации?","side":"buyer","stage":"preparing_deal","object_type":"flat","safe_orienter":"вторичный рынок, район центра","funding":["certificate"],"circumstances":["after_registration"]},
+      "expected": {"ok":true,"broker_needed":false,"legal_scope_contains":"сертификат"}
+    },
+    {
+      "id": "mortgage_consultation",
+      "input": {"question":"Какую ипотечную программу лучше проверить до согласования задатка?","side":"buyer","stage":"first_question","object_type":"flat","safe_orienter":"новый кирпичный дом, вторичный рынок","funding":["mortgage"],"circumstances":[]},
+      "expected": {"ok":true,"broker_needed":true,"broker_scope_contains":"одобрение"}
+    },
+    {
+      "id": "mortgage_and_matcap",
+      "input": {"question":"Как разделить ипотечную консультацию и юридические условия маткапитала?","side":"buyer","stage":"before_deposit","object_type":"house_land","safe_orienter":"дом с участком в городской черте","funding":["mortgage","matcap"],"circumstances":["minor_buyer"]},
+      "expected": {"ok":true,"broker_needed":true,"legal_scope_contains":"маткапитал","broker_scope_contains":"Ипотечная консультация"}
+    },
+    {
+      "id": "military_mortgage",
+      "input": {"question":"Какие банковские требования нужно проверить по военной ипотеке?","side":"buyer","stage":"first_question","object_type":"flat","safe_orienter":"вторичный рынок, многоквартирный дом","funding":["military_mortgage"],"circumstances":[]},
+      "expected": {"ok":true,"broker_needed":true}
+    },
+    {
+      "id": "urgent_legal_priority",
+      "input": {"question":"Можно ли подписывать задаток сегодня при продаже по доверенности?","side":"seller","stage":"urgent","object_type":"flat","safe_orienter":"район автовокзала, вторичный рынок","funding":["cash"],"circumstances":["power_of_attorney"]},
+      "expected": {"ok":true,"lawyer_priority":"high"}
+    },
+    {
+      "id": "phone_rejected",
+      "input": {"question":"Проверить условия, телефон клиента +7 900 123-45-67","side":"seller","stage":"first_question","object_type":"flat","safe_orienter":"центральный район","funding":["cash"],"circumstances":[]},
+      "expected": {"ok":false,"privacy_type":"phone"}
+    },
+    {
+      "id": "unit_number_rejected",
+      "input": {"question":"Можно ли выходить на задаток после проверки документов?","side":"seller","stage":"before_deposit","object_type":"flat","safe_orienter":"Северный микрорайон, квартира 18","funding":["cash"],"circumstances":[]},
+      "expected": {"ok":false,"privacy_type":"unit_level_address"}
+    },
+    {
+      "id": "cadastral_rejected",
+      "input": {"question":"Нужна проверка порядка сделки по земельному участку","side":"seller","stage":"first_question","object_type":"land","safe_orienter":"участок 36:04:0102030:456","funding":["cash"],"circumstances":[]},
+      "expected": {"ok":false,"privacy_type":"cadastral_number"}
+    },
+    {
+      "id": "possible_full_name_rejected",
+      "input": {"question":"Нужна консультация по наследству Иван Иванов","side":"seller","stage":"first_question","object_type":"flat","safe_orienter":"район центра","funding":["cash"],"circumstances":["inheritance"]},
+      "expected": {"ok":false,"privacy_type":"possible_full_name"}
+    },
+    {
+      "id": "unsafe_document_link",
+      "input": {"question":"Какие документы нужно запросить до встречи?","side":"seller","stage":"first_question","object_type":"flat","safe_orienter":"вторичный рынок, спальный район","funding":["cash"],"circumstances":[],"documents_url":"http://example.test/docs"},
+      "expected": {"ok":false,"error_contains":"https://"}
+    }
+  ],
+  "forbidden_wizard_keys": ["sellerName","sellerPhone","buyerName","buyerPhone","seller_name","seller_phone","buyer_name","buyer_phone","passport","snils","cadastral_number"]
+}
