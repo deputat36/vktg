@@ -10,6 +10,7 @@ DEAL_CARD = ROOT / 'assets/js/nav-v2/deal-card-v2.js'
 GUARD = ROOT / 'assets/js/nav-v2/task-action-guard-v2.js'
 EDGE = ROOT / 'supabase/functions/nav-v2-deal-api/index.ts'
 LITE_BOUNDED = ROOT / 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
+UI_PREVIEW = ROOT / 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
 ROUTER = ROOT / 'assets/js/nav-v2/task-action-router-v2.js'
 EDGE_CONTRACT = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
 DUAL_E2E = ROOT / 'tests/e2e/task-action-dual-path.spec.js'
@@ -39,7 +40,7 @@ def occurrence_paths(needle: str) -> set[str]:
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, ROUTER, EDGE_CONTRACT, DUAL_E2E, LEGACY_E2E, RPC_SURFACE, DOC, WORKFLOW)
+    paths = (MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, UI_PREVIEW, ROUTER, EDGE_CONTRACT, DUAL_E2E, LEGACY_E2E, RPC_SURFACE, DOC, WORKFLOW)
     for path in paths:
         if not path.exists():
             errors.append(f'missing {path.relative_to(ROOT)}')
@@ -52,6 +53,7 @@ def main() -> int:
     guard = GUARD.read_text(encoding='utf-8')
     edge = EDGE.read_text(encoding='utf-8')
     lite = LITE_BOUNDED.read_text(encoding='utf-8')
+    ui_preview = UI_PREVIEW.read_text(encoding='utf-8')
     router = ROUTER.read_text(encoding='utf-8')
     edge_contract = EDGE_CONTRACT.read_text(encoding='utf-8')
     dual_e2e = DUAL_E2E.read_text(encoding='utf-8')
@@ -79,11 +81,13 @@ def main() -> int:
     if expected_active != required_active:
         errors.append(f'active runtime consumer inventory drifted: {sorted(expected_active)}')
 
-    actual_update = occurrence_paths('nav_v2_update_task_status')
-    expected_occurrences = required_active | {
+    detached_preview_paths = {
+        UI_PREVIEW.relative_to(ROOT).as_posix(),
         ROUTER.relative_to(ROOT).as_posix(),
         EDGE_CONTRACT.relative_to(ROOT).as_posix(),
     }
+    actual_update = occurrence_paths('nav_v2_update_task_status')
+    expected_occurrences = required_active | detached_preview_paths
     if actual_update != expected_occurrences:
         errors.append(
             f'update_task_status occurrence drift: actual={sorted(actual_update)}, expected={sorted(expected_occurrences)}'
@@ -118,6 +122,11 @@ def main() -> int:
         if f"'{field}'" not in lite:
             errors.append(f'bounded lite DTO field missing: {field}')
 
+    require(ui_preview, (
+        'nav_v2_update_task_status',
+        'transport_enabled:false',
+        'legacy_status_path:true',
+    ), UI_PREVIEW.name, errors)
     require(router, (
         'taskActionRoutePreview',
         'taskActionControlModel',
@@ -197,6 +206,7 @@ def main() -> int:
         'python3 scripts/check_nav_v2_task_rpc_consumer_matrix.py',
         'python3 -m py_compile scripts/check_nav_v2_task_rpc_consumer_matrix.py',
         'nav-v2-task-rpc-consumer-matrix',
+        'bounded-task-ui-preview-v2.js',
         'task-action-router-v2.js',
         'task-action-contract-v2.js',
         'nav_v2_get_deal_card_lite_bounded_tasks.sql',
@@ -209,7 +219,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v2 passed: DTO/evidence/reopen/validation blockers are closed, active runtime consumers remain explicit, and deployment stays blocked on integration/E2E/deploy/pilot')
+    print('Navigator v2 task RPC consumer matrix v2 passed: DTO/evidence/reopen/validation blockers are closed, active runtime consumers remain explicit, detached previews are accounted for, and deployment stays blocked on integration/E2E/deploy/pilot')
     return 0
 
 
