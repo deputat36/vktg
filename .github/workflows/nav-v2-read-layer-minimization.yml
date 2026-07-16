@@ -1,0 +1,56 @@
+name: Navigator v2 read-layer minimization
+
+on:
+  pull_request:
+    paths:
+      - 'assets/js/nav-v2/read-layer-minimization-model-v2.js'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'scripts/check-nav-v2-read-layer-minimization.mjs'
+      - 'scripts/check_nav_v2_read_layer_minimization.py'
+      - 'tests/fixtures/nav-v2-read-layer-minimization.html'
+      - 'tests/e2e/read-layer-minimization.spec.js'
+      - '.github/workflows/nav-v2-read-layer-minimization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/read-layer-minimization-model-v2.js
+          node --check assets/js/nav-v2/supabase-v2.js
+          node --check tests/e2e/read-layer-minimization.spec.js
+      - name: Semantic model regression
+        run: node scripts/check-nav-v2-read-layer-minimization.mjs
+      - name: Source contract
+        run: python3 scripts/check_nav_v2_read_layer_minimization.py
+
+  public-browser:
+    runs-on: ubuntu-latest
+    needs: semantic-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser regression
+        run: npx playwright test tests/e2e/read-layer-minimization.spec.js
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-read-layer-minimization
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
