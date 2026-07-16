@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "corrections": {
+    "nav_v2_get_deals_list": {
+      "latest_source": "supabase/migrations/20260624074219_nav_v2_deals_list_last_activity.sql"
+    },
+    "nav_v2_get_operational_readiness_preview": {
+      "internal_client_dependency_keys": ["seller_name", "buyer_name"]
+    },
+    "nav_v2_get_lawyer_queue": {
+      "additional_sensitive_free_text_keys": ["body"]
+    },
+    "nav_v2_get_lawyer_review_summary": {
+      "additional_sensitive_free_text_keys": ["body"]
+    },
+    "nav_v2_get_operational_adoption_report": {
+      "latest_source": "supabase/migrations/20260714130000_nav_v2_exact_duplicate_review_pack.sql"
+    },
+    "nav_v2_get_deal_responsibility_snapshot": {
+      "internal_client_dependency_keys": ["seller_name", "buyer_name", "seller_phone", "buyer_phone"]
+    }
+  }
+}

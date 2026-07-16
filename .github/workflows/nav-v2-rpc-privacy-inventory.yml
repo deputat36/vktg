@@ -1,0 +1,42 @@
+name: Navigator v2 RPC privacy inventory
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-rpc-privacy-inventory.json'
+      - 'config/nav-v2-rpc-privacy-inventory-corrections.json'
+      - 'docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md'
+      - 'scripts/check_nav_v2_rpc_privacy_inventory.py'
+      - 'supabase/migrations/**'
+      - '.github/workflows/nav-v2-rpc-privacy-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate registry, latest SQL sources and rollout gates
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/check_nav_v2_rpc_privacy_inventory.py 2>&1 | tee rpc-privacy-inventory-check.txt
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Compile inventory checker
+        if: always()
+        run: python3 -m py_compile scripts/check_nav_v2_rpc_privacy_inventory.py
+      - name: Upload inventory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-rpc-privacy-inventory
+          path: |
+            config/nav-v2-rpc-privacy-inventory.json
+            config/nav-v2-rpc-privacy-inventory-corrections.json
+            docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md
+            rpc-privacy-inventory-check.txt
+          if-no-files-found: error
