@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "base_prototype_path": "supabase/prototypes/nav_v2_corporate_documents.sql",
+  "index_amendment_path": "supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql",
+  "mutation_prototype_path": "supabase/prototypes/nav_v2_corporate_document_mutations.sql",
+  "audit_table": "public.nav_deal_corporate_document_events_v2",
+  "idempotency": {
+    "required": true,
+    "field": "client_request_id",
+    "type": "uuid",
+    "scope": "global_mutation_event",
+    "replay_returns_stored_result": true
+  },
+  "public_rpcs": [
+    "nav_v2_initialize_corporate_documents(uuid,jsonb,uuid)",
+    "nav_v2_update_corporate_document(uuid,jsonb,uuid)",
+    "nav_v2_propose_corporate_document_outcome(uuid,text,text,uuid,uuid)",
+    "nav_v2_decide_corporate_document_outcome(uuid,text,text,uuid)"
+  ],
+  "roles": {
+    "initialize": ["spn", "manager", "owner", "admin"],
+    "update_operational": ["spn", "manager", "owner", "admin"],
+    "propose_exception": ["spn", "manager", "owner", "admin"],
+    "decide_exception": ["manager", "owner", "admin"],
+    "denied": ["lawyer", "broker", "viewer"]
+  },
+  "initialize_item_allowlist": [
+    "party_side", "document_type", "is_required", "required_stage", "responsible_role",
+    "assigned_to", "due_date", "signing_method", "template_code", "template_version"
+  ],
+  "update_patch_allowlist": [
+    "status", "assigned_to", "due_date", "signing_method", "template_code",
+    "template_version", "has_external_signature_reference", "problem_note"
+  ],
+  "status_transitions": {
+    "planned": ["planned", "prepared", "problem"],
+    "prepared": ["prepared", "sent_for_signature", "problem"],
+    "sent_for_signature": ["sent_for_signature", "signed", "problem"],
+    "problem": ["problem", "planned", "prepared", "sent_for_signature"],
+    "signed": ["signed"],
+    "cancelled": ["cancelled"]
+  },
+  "status_evidence": {
+    "prepared": "template_code_and_template_version_required",
+    "sent_for_signature": "prepared_state_and_known_signing_method_required",
+    "signed": "known_signing_method_and_external_signature_reference_required",
+    "problem": "problem_note_required",
+    "cancelled": "direct_status_mutation_forbidden_use_confirmed_outcome"
+  },
+  "outcomes": {
+    "codes": ["not_applicable", "replaced", "cancelled"],
+    "proposal_reason_min_length": 10,
+    "replacement_required_for": "replaced",
+    "decision_values": ["confirmed", "rejected"],
+    "proposal_roles": ["spn", "manager", "owner", "admin"],
+    "decision_roles": ["manager", "owner", "admin"],
+    "signed_document_exception_forbidden": true
+  },
+  "response_guarantees": {
+    "corporate_readiness_only": true,
+    "legal_readiness_changed": false,
+    "deal_status_changed": false,
+    "risk_gate_changed": false,
+    "automatic_rows_created": false,
+    "automatic_task_created": false
+  },
+  "privacy_forbidden_fields": [
+    "client_name", "seller_name", "buyer_name", "phone", "email", "passport", "snils",
+    "signature_image", "scan_url", "document_url", "free_text_snapshot"
+  ],
+  "audit_event_types": [
+    "initialize_selected", "update_operational", "propose_outcome", "decide_outcome"
+  ],
+  "production_acl": {
+    "repository_only_execute": ["service_role"],
+    "authenticated_execute_granted": false,
+    "direct_table_authenticated": false
+  },
+  "production_gate": "Executable PostgreSQL 17 mutation harness, authenticated role/mutation E2E, approved corporate document policy and template registry, Security Advisor review, rollback validation and separate deployment PR.",
+  "assignment_rules": {
+    "spn": "assigned_to must equal seller_spn_id or buyer_spn_id for the selected party_side",
+    "manager": "assigned_to must equal deal.manager_id",
+    "owner_admin": "assigned_to must be an active profile with the matching role",
+    "cross_team_spn_assignment_allowed": false
+  }
+}

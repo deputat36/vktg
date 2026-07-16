@@ -1,0 +1,107 @@
+name: Navigator v2 corporate document mutations
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-corporate-document-mutations-contract.json'
+      - 'fixtures/nav-v2-corporate-document-mutation-scenarios.json'
+      - 'supabase/prototypes/nav_v2_corporate_documents.sql'
+      - 'supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql'
+      - 'supabase/prototypes/nav_v2_corporate_document_mutations.sql'
+      - 'tests/sql/nav_v2_corporate_document_mutation_setup.sql'
+      - 'tests/sql/nav_v2_corporate_document_mutation_assertions.sql'
+      - 'tests/sql/nav_v2_corporate_document_mutation_rollback.sql'
+      - 'scripts/check_nav_v2_corporate_document_mutations.py'
+      - 'docs/NAV_V2_CORPORATE_DOCUMENT_MUTATIONS_2026-07-16.md'
+      - '.github/workflows/nav-v2-corporate-document-mutations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-corporate-mutations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: navigator_corporate_harness
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_corporate_harness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: navigator_corporate_harness
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source and semantic contract
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_corporate_document_mutations.py 2>&1 | tee corporate-mutation-contract-output.txt
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_corporate_document_mutations.py
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" && exit 0
+            sleep 2
+          done
+          exit 1
+      - name: Create synthetic Auth and deal environment
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_corporate_document_mutation_setup.sql 2>&1 | tee corporate-mutation-setup-output.txt
+      - name: Apply base corporate document prototype
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_corporate_documents.sql 2>&1 | tee corporate-base-output.txt
+      - name: Apply corporate document index amendment
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql 2>&1 | tee corporate-index-output.txt
+      - name: Apply corporate document mutation overlay
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_corporate_document_mutations.sql 2>&1 | tee corporate-mutation-sql-output.txt
+      - name: Run mutation lifecycle and separation assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_corporate_document_mutation_assertions.sql 2>&1 | tee corporate-mutation-assertions-output.txt
+      - name: Rehearse mutation rollback
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_corporate_document_mutation_rollback.sql 2>&1 | tee corporate-mutation-rollback-output.txt
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-corporate-document-mutations
+          path: |
+            corporate-*-output.txt
+            config/nav-v2-corporate-document-mutations-contract.json
+            fixtures/nav-v2-corporate-document-mutation-scenarios.json
+            supabase/prototypes/nav_v2_corporate_document_mutations.sql
+            tests/sql/nav_v2_corporate_document_mutation_*.sql
+            docs/NAV_V2_CORPORATE_DOCUMENT_MUTATIONS_2026-07-16.md
+          if-no-files-found: error

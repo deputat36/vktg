@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "role_cases": [
+    {"id":"spn_initialize","role":"spn","action":"initialize","allowed":true},
+    {"id":"manager_initialize","role":"manager","action":"initialize","allowed":true},
+    {"id":"lawyer_initialize_denied","role":"lawyer","action":"initialize","allowed":false},
+    {"id":"broker_update_denied","role":"broker","action":"update_operational","allowed":false},
+    {"id":"viewer_propose_denied","role":"viewer","action":"propose_exception","allowed":false},
+    {"id":"spn_propose","role":"spn","action":"propose_exception","allowed":true},
+    {"id":"spn_decide_denied","role":"spn","action":"decide_exception","allowed":false},
+    {"id":"manager_decide","role":"manager","action":"decide_exception","allowed":true},
+    {"id":"owner_decide","role":"owner","action":"decide_exception","allowed":true},
+    {"id":"admin_decide","role":"admin","action":"decide_exception","allowed":true}
+  ],
+  "transition_cases": [
+    {"id":"planned_prepared","from":"planned","to":"prepared","allowed":true},
+    {"id":"planned_signed_denied","from":"planned","to":"signed","allowed":false},
+    {"id":"prepared_sent","from":"prepared","to":"sent_for_signature","allowed":true},
+    {"id":"prepared_signed_denied","from":"prepared","to":"signed","allowed":false},
+    {"id":"sent_signed","from":"sent_for_signature","to":"signed","allowed":true},
+    {"id":"problem_planned","from":"problem","to":"planned","allowed":true},
+    {"id":"problem_sent","from":"problem","to":"sent_for_signature","allowed":true},
+    {"id":"signed_prepared_denied","from":"signed","to":"prepared","allowed":false},
+    {"id":"planned_cancelled_denied","from":"planned","to":"cancelled","allowed":false},
+    {"id":"cancelled_planned_denied","from":"cancelled","to":"planned","allowed":false}
+  ],
+  "patch_cases": [
+    {"id":"prepared_without_template","status":"prepared","template_code":null,"template_version":null,"signing_method":"unknown","external_ref":false,"problem_note":null,"valid":false},
+    {"id":"prepared_with_template","status":"prepared","template_code":"service_agreement","template_version":"2026-01","signing_method":"unknown","external_ref":false,"problem_note":null,"valid":true},
+    {"id":"sent_unknown_method","status":"sent_for_signature","template_code":"service_agreement","template_version":"2026-01","signing_method":"unknown","external_ref":false,"problem_note":null,"valid":false},
+    {"id":"sent_paper","status":"sent_for_signature","template_code":"service_agreement","template_version":"2026-01","signing_method":"paper","external_ref":false,"problem_note":null,"valid":true},
+    {"id":"signed_without_reference","status":"signed","template_code":"service_agreement","template_version":"2026-01","signing_method":"online","external_ref":false,"problem_note":null,"valid":false},
+    {"id":"signed_with_reference","status":"signed","template_code":"service_agreement","template_version":"2026-01","signing_method":"online","external_ref":true,"problem_note":null,"valid":true},
+    {"id":"problem_without_note","status":"problem","template_code":null,"template_version":null,"signing_method":"unknown","external_ref":false,"problem_note":"","valid":false},
+    {"id":"problem_with_note","status":"problem","template_code":null,"template_version":null,"signing_method":"unknown","external_ref":false,"problem_note":"Клиент пока не подтвердил способ подписания.","valid":true}
+  ],
+  "outcome_cases": [
+    {"id":"not_applicable_valid","code":"not_applicable","reason":"Документ по регламенту не применяется к этому сценарию.","replacement":false,"valid":true},
+    {"id":"cancelled_valid","code":"cancelled","reason":"Корпоративное сопровождение прекращено по подтверждённой причине.","replacement":false,"valid":true},
+    {"id":"replaced_without_id","code":"replaced","reason":"Использован новый документ вместо первоначального.","replacement":false,"valid":false},
+    {"id":"replaced_with_id","code":"replaced","reason":"Использован новый документ вместо первоначального.","replacement":true,"valid":true},
+    {"id":"short_reason","code":"not_applicable","reason":"не надо","replacement":false,"valid":false}
+  ],
+  "idempotency_cases": [
+    {"id":"first_execution","existing_event":false,"returns_replay":false},
+    {"id":"same_request_replay","existing_event":true,"returns_replay":true}
+  ],
+  "separation_cases": [
+    {"id":"no_legal_documents","surface":"nav_deal_documents_v2","mutated":false},
+    {"id":"no_deal_status","surface":"nav_deals_v2.status","mutated":false},
+    {"id":"no_risks","surface":"nav_deal_risks_v2","mutated":false},
+    {"id":"no_tasks","surface":"nav_deal_tasks_v2","mutated":false}
+  ]
+}
