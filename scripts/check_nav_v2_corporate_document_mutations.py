@@ -129,11 +129,12 @@ def main() -> int:
         errors.append("mutation SQL contains duplicate function closing parenthesis")
 
     signatures = tuple(contract.get("public_rpcs") or [])
+    compact_sql = re.sub(r"\s+", "", mutations).lower()
     for signature in signatures:
-        qualified = f"public.{signature}"
-        if f"revoke execute on function {qualified}" not in mutations:
+        qualified = f"public.{signature}".lower()
+        if f"revokeexecuteonfunction{qualified}" not in compact_sql:
             errors.append(f"missing mutation RPC revoke: {qualified}")
-        if f"grant execute on function {qualified}" not in mutations:
+        if f"grantexecuteonfunction{qualified}" not in compact_sql:
             errors.append(f"missing mutation service-role grant: {qualified}")
     if re.search(r"(?im)^\s*grant\s+execute\s+on\s+function[\s\S]{0,180}\bto\s+authenticated\b", mutations):
         errors.append("repository-only mutation SQL grants EXECUTE to authenticated")
