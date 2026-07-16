@@ -1,0 +1,86 @@
+name: Navigator v2 consultation PostgreSQL harness
+
+on:
+  pull_request:
+    paths:
+      - 'tests/sql/nav_v2_consultation_harness_setup.sql'
+      - 'tests/sql/nav_v2_consultation_harness_assertions.sql'
+      - 'tests/sql/nav_v2_consultation_harness_rollback.sql'
+      - 'supabase/prototypes/nav_v2_consultation_lifecycle.sql'
+      - 'supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql'
+      - 'scripts/check_nav_v2_consultation_postgres_harness.py'
+      - 'docs/NAV_V2_CONSULTATION_POSTGRES_HARNESS_2026-07-16.md'
+      - 'docs/NAV_V2_WORK_HANDOFF_LATEST.md'
+      - '.github/workflows/nav-v2-consultation-postgres-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-harness:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: navigator_harness
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_harness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: navigator_harness
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate harness source contract
+        run: python3 scripts/check_nav_v2_consultation_postgres_harness.py
+      - name: Compile harness checker
+        run: python3 -m py_compile scripts/check_nav_v2_consultation_postgres_harness.py
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+      - name: Create synthetic Auth and role environment
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_consultation_harness_setup.sql 2>&1 | tee consultation-harness-setup.txt
+      - name: Apply base consultation prototype
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_consultation_lifecycle.sql 2>&1 | tee consultation-harness-base.txt
+      - name: Apply consultation hardening overlay
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql 2>&1 | tee consultation-harness-hardening.txt
+      - name: Run SQL lifecycle, ACL and no-backlog assertions
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_consultation_harness_assertions.sql 2>&1 | tee consultation-harness-assertions.txt
+      - name: Rehearse rollback
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_consultation_harness_rollback.sql 2>&1 | tee consultation-harness-rollback.txt
+      - name: Upload harness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-consultation-postgres-harness
+          path: |
+            consultation-harness-setup.txt
+            consultation-harness-base.txt
+            consultation-harness-hardening.txt
+            consultation-harness-assertions.txt
+            consultation-harness-rollback.txt
+            tests/sql/nav_v2_consultation_harness_setup.sql
+            tests/sql/nav_v2_consultation_harness_assertions.sql
+            tests/sql/nav_v2_consultation_harness_rollback.sql
+            docs/NAV_V2_CONSULTATION_POSTGRES_HARNESS_2026-07-16.md
+          if-no-files-found: warn
