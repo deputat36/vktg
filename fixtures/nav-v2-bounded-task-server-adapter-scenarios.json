@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "create_cases": [
+    {
+      "id": "valid_two_tasks",
+      "input": {
+        "deal_id": "10000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000001",
+        "items": [
+          {"task_type":"document_request","assigned_role":"spn","assigned_to":"00000000-0000-4000-8000-000000000004","evidence_kind":"document_status","priority":"high","subject_kind":"document","subject_reference_id":"30000000-0000-4000-8000-000000000001"},
+          {"task_type":"legal_decision","assigned_role":"lawyer","assigned_to":"00000000-0000-4000-8000-000000000007","evidence_kind":"review_decision","subject_kind":"deal","subject_reference_id":"10000000-0000-4000-8000-000000000001"}
+        ]
+      },
+      "valid": true,
+      "expected_sla": [2,1]
+    },
+    {"id":"empty_batch","input":{"deal_id":"10000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000002","items":[]},"valid":false},
+    {"id":"unknown_key","input":{"deal_id":"10000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000003","items":[{"task_type":"card_correction","assigned_role":"spn","assigned_to":"00000000-0000-4000-8000-000000000004","evidence_kind":"card_validation","subject_kind":"deal","subject_reference_id":"10000000-0000-4000-8000-000000000001","title":"unsafe"}]},"valid":false},
+    {"id":"wrong_broker_type","input":{"deal_id":"10000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000004","items":[{"task_type":"legal_decision","assigned_role":"broker","assigned_to":"00000000-0000-4000-8000-000000000008","evidence_kind":"review_decision","subject_kind":"deal","subject_reference_id":"10000000-0000-4000-8000-000000000001"}]},"valid":false},
+    {"id":"sla_above_max","input":{"deal_id":"10000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000005","items":[{"task_type":"document_request","assigned_role":"spn","assigned_to":"00000000-0000-4000-8000-000000000004","sla_days":6,"evidence_kind":"document_status","subject_kind":"document","subject_reference_id":"30000000-0000-4000-8000-000000000002"}]},"valid":false},
+    {"id":"deal_subject_mismatch","input":{"deal_id":"10000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000006","items":[{"task_type":"card_correction","assigned_role":"spn","assigned_to":"00000000-0000-4000-8000-000000000004","evidence_kind":"card_validation","subject_kind":"deal","subject_reference_id":"10000000-0000-4000-8000-000000000002"}]},"valid":false}
+  ],
+  "operation_cases": [
+    {"id":"start_valid","kind":"start","input":{"task_id":"20000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000010"},"valid":true,"rpc":"nav_v2_start_bounded_task"},
+    {"id":"complete_missing_evidence","kind":"complete","input":{"task_id":"20000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000011"},"valid":false},
+    {"id":"complete_valid","kind":"complete","input":{"task_id":"20000000-0000-4000-8000-000000000001","evidence_reference_id":"50000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000012"},"valid":true,"rpc":"nav_v2_complete_bounded_task"},
+    {"id":"waiting_valid","kind":"active","input":{"task_id":"20000000-0000-4000-8000-000000000001","outcome_code":"waiting_external","reason_code":"awaiting_document","review_date":"2026-07-23","client_request_id":"40000000-0000-4000-8000-000000000013"},"valid":true,"rpc":"nav_v2_set_bounded_task_active_outcome"},
+    {"id":"waiting_wrong_reason","kind":"active","input":{"task_id":"20000000-0000-4000-8000-000000000001","outcome_code":"waiting_external","reason_code":"route_changed","review_date":"2026-07-23","client_request_id":"40000000-0000-4000-8000-000000000014"},"valid":false},
+    {"id":"replace_valid","kind":"proposal","input":{"task_id":"20000000-0000-4000-8000-000000000001","outcome_code":"replaced","reason_code":"replaced_by_specific_task","replacement_task_id":"20000000-0000-4000-8000-000000000002","client_request_id":"40000000-0000-4000-8000-000000000015"},"valid":true,"rpc":"nav_v2_propose_bounded_task_terminal_outcome"},
+    {"id":"replace_self","kind":"proposal","input":{"task_id":"20000000-0000-4000-8000-000000000001","outcome_code":"replaced","reason_code":"replaced_by_specific_task","replacement_task_id":"20000000-0000-4000-8000-000000000001","client_request_id":"40000000-0000-4000-8000-000000000016"},"valid":false},
+    {"id":"decision_valid","kind":"decision","input":{"task_id":"20000000-0000-4000-8000-000000000001","decision":"confirm","client_request_id":"40000000-0000-4000-8000-000000000017"},"valid":true,"rpc":"nav_v2_decide_bounded_task_terminal_outcome"},
+    {"id":"decision_invalid","kind":"decision","input":{"task_id":"20000000-0000-4000-8000-000000000001","decision":"approve","client_request_id":"40000000-0000-4000-8000-000000000018"},"valid":false}
+  ],
+  "minimize_case": {
+    "input": {"ok":true,"decision":"confirm","idempotent_replay":true,"task":{"id":"20000000-0000-4000-8000-000000000001","task_type":"legal_decision","status":"done","phone":"drop","title":"drop","description":"drop","document_url":"drop"},"internal":"drop"},
+    "forbidden": ["phone","title","description","document_url","internal"]
+  }
+}
