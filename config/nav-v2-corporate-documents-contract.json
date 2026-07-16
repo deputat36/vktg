@@ -3,6 +3,7 @@
   "status": "repository_only_prototype",
   "production_applied": false,
   "prototype_path": "supabase/prototypes/nav_v2_corporate_documents.sql",
+  "amendment_path": "supabase/prototypes/nav_v2_corporate_documents_index_amendment.sql",
   "table": "public.nav_deal_corporate_documents_v2",
   "document_types": {
     "service_agreement": {
