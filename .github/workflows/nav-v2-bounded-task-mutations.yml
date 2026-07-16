@@ -78,7 +78,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_bounded_task_mutations.sql
 
       - name: Run role, lifecycle, evidence and separation assertions
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_assertions.sql
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_assertions.sql 2>&1 | tee bounded-task-assertions.log
 
       - name: Rehearse mutation rollback
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_rollback.sql
@@ -99,4 +102,5 @@ jobs:
             tests/sql/nav_v2_bounded_task_mutation_assertions_part3.sql
             tests/sql/nav_v2_bounded_task_mutation_rollback.sql
             docs/NAV_V2_BOUNDED_TASK_MUTATIONS_2026-07-16.md
+            bounded-task-assertions.log
           if-no-files-found: error
