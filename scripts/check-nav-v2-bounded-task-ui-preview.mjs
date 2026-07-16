@@ -25,6 +25,17 @@ for(const scenario of fixture.rpc_cases){
   else assert.equal(preview.rpc_preview,null);
 }
 
+const complete_missing_evidence=fixture.rpc_cases.find(scenario=>scenario.id==='complete_missing_evidence');
+assert.ok(complete_missing_evidence,'complete_missing_evidence scenario is required');
+assert.equal(
+  boundedTaskUiRpcPreview(
+    BOUNDED_TASK_UI_SAMPLES.find(item=>item.id===complete_missing_evidence.task),
+    complete_missing_evidence.action,
+    complete_missing_evidence.input
+  ).ok,
+  false
+);
+
 assert.equal(boundedTaskUiFields('complete')[0].name,'evidence_reference_id');
 assert.deepEqual(boundedTaskUiFields('waiting_external').map(field=>field.name),['reason_code','review_date']);
 assert.equal(boundedTaskUiModel(BOUNDED_TASK_UI_SAMPLES[5],'manager').notice.includes('Reopen запрещён'),true);
