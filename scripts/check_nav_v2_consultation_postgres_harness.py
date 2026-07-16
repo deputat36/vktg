@@ -107,7 +107,8 @@ def main() -> int:
         "nav-v2-consultation-postgres-harness",
     ), WORKFLOW.name, errors)
 
-    positions = [workflow.find(path) for path in sql_paths]
+    command_markers = [f"-f {path}" for path in sql_paths]
+    positions = [workflow.find(marker) for marker in command_markers]
     if any(position < 0 for position in positions) or positions != sorted(positions):
         errors.append("workflow must run setup, base, hardening, assertions and rollback in order")
     if workflow.count("psql -v ON_ERROR_STOP=1 -f") < len(sql_paths):
