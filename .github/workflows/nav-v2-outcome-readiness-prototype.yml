@@ -20,7 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate outcome-aware readiness contract
-        run: python3 scripts/check_nav_v2_outcome_readiness_prototype.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_outcome_readiness_prototype.py 2>&1 | tee nav-v2-outcome-readiness-check.txt
       - name: Compile checker
         run: python3 -m py_compile scripts/check_nav_v2_outcome_readiness_prototype.py
       - name: Upload evidence
@@ -29,6 +32,7 @@ jobs:
         with:
           name: nav-v2-outcome-readiness-prototype
           path: |
+            nav-v2-outcome-readiness-check.txt
             config/nav-v2-outcome-readiness-contract.json
             supabase/prototypes/nav_v2_outcome_readiness_preview.sql
             docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md
