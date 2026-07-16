@@ -4,10 +4,10 @@
 
 - Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Production `main` перед PR #351: `8d9c4761276e5b406458bfef60147ee6fbad1514` — squash merge PR #350.
+- Production `main` перед PR #353: `fa47b33a4db53625596b9210451db1cb12ea311a` — squash merge PR #352.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Production Supabase в PR #350 и PR #351 не менялся.
+- Production Supabase в PR #350–#353 не менялся.
 - Edge Functions, Auth, RLS и grants в этих волнах не менялись.
 
 Counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
@@ -69,6 +69,7 @@ Navigator не является CRM, файловым архивом или ав
 - `docs/NAV_V2_MORTGAGE_BROKER_SCOPE_2026-07-16.md` — правильная зона ответственности ипотечного брокера.
 - `docs/NAV_V2_DEALS_LIST_DTO_PROTOTYPE_2026-07-16.md` — consumer matrix и минимальный DTO списка.
 - `docs/NAV_V2_WORK_ITEM_OUTCOME_CONTRACT_2026-07-16.md` — исходы документов и рисков.
+- `docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md` — целевая готовность после подтверждаемых outcomes.
 
 ## Live baseline
 
@@ -111,21 +112,41 @@ Read-only срез 16 июля 2026 года:
 - подготовлен explicit allowlist для `nav_v2_get_deals_list`;
 - клиентские ФИО/телефоны, raw `next_action`, `deal_summary`, `wizard_snapshot` и unit-level address исключены из prototype contract;
 - title заменён нейтральной ссылкой;
-- next action становится контролируемой системной подсказкой;
 - save recovery подготовлен к поиску без точного адреса;
 - handoff fallback больше не зависит от клиентских идентификаторов;
-- все проверки зелёные;
 - prototype к production не применялся.
 
 ### PR #351 — outcome-контракт документов и рисков
 
-- проектируются исходы `not_applicable`, `replaced`, `cancelled`, `external_wait`, `deferred`;
+- спроектированы исходы `not_applicable`, `replaced`, `cancelled`, `external_wait`, `deferred`;
 - для рисков: `mitigated`, `not_applicable`, `superseded`, `accepted_by_specialist`, `cancelled`;
 - состояния `proposed`, `confirmed`, `rejected`;
 - СПН предлагает терминальный исход, профильная роль подтверждает;
 - ожидание и отсрочка остаются активными;
-- SQL находится только в `supabase/prototypes`;
-- production rollout запрещён до authenticated role/mutation regression.
+- SQL находится только в `supabase/prototypes`.
+
+### PR #352 — frontend preview исходов
+
+- добавлен role-aware preview документов и рисков в карточке сделки;
+- СПН видит «предложить исход/решение», а не «закрыть»;
+- `external_wait`, `deferred`, `replaced`, `superseded` валидируются;
+- preview объясняет влияние на readiness;
+- встроен в существующий explicit lifecycle и использует уже загруженные cardData/profile;
+- нет повторных RPC, MutationObserver или отдельного HTML entry module;
+- карточка сохранила бюджет 19 модулей;
+- все CI и browser E2E зелёные;
+- ничего не сохраняется, production Supabase не менялся.
+
+### PR #353 — outcome-aware readiness prototype
+
+- проектируется checked-only штатное завершение документа;
+- подтверждённые `not_applicable/replaced/cancelled` закрывают документ как исключение;
+- `received`, proposed outcomes, `external_wait` и `deferred` остаются активными;
+- proposed/rejected risk resolution не снимает блокировку;
+- готовность к задатку и сделке считается раздельно;
+- возвращается legacy/target delta;
+- RPC read-only, без клиентских идентификаторов и без grants;
+- production guards и readiness-поля не меняются.
 
 ## Принцип дальнейшей работы
 
@@ -135,32 +156,47 @@ Read-only срез 16 июля 2026 года:
 
 Автоматический backlog нельзя расширять без completion contract.
 
-## Следующий безопасный slice после PR #351
+## Следующий безопасный slice после PR #353
 
-P0/P1 — repository-only frontend model и preview выбора исхода документа/риска без mutation.
+P0/P1 — repository-only fixtures и scenario matrix для outcomes/readiness.
+
+### Минимальная матрица
+
+1. документ `checked`;
+2. документ `received`, но не проверен;
+3. proposed `not_applicable`;
+4. confirmed `not_applicable`;
+5. confirmed `replaced` с replacement ID;
+6. `external_wait` с внешней стороной;
+7. `deferred` с датой;
+8. problem document;
+9. proposed legal risk resolution;
+10. confirmed legal risk resolution;
+11. proposed mortgage risk resolution;
+12. confirmed mortgage risk resolution;
+13. blocking review к задатку;
+14. blocking review к сделке;
+15. legacy resolved risk без кода.
 
 ### Требования
 
-- показывать обычное действие отдельно от исключительного исхода;
-- для СПН использовать формулировку «предложить исход», а не «закрыть»;
-- `external_wait` требует внешнюю сторону;
-- `deferred` требует дату;
-- `replaced` требует ссылку на заменяющий документ;
-- terminal proposal не меняет readiness до подтверждения;
-- юрист/брокер/менеджер видят очередь ожидающих решений только в своей зоне ответственности;
-- мобильный экран показывает одно ближайшее действие;
-- пока не вызывать новые mutation RPC;
-- добавить fixtures и regression для role copy, validation и readiness semantics.
+- только синтетические fixtures;
+- не вставлять данные в production;
+- expected counts по задатку и сделке;
+- negative role cases СПН/юрист/брокер/менеджер;
+- отдельная проверка, что маткапитал/сертификаты не попадают в broker scope;
+- rollback для fixture schema;
+- после matrix перейти к быстрому consultation intake.
 
-После frontend preview:
+Дальнейшая последовательность:
 
-1. repository-only readiness query prototype;
+1. outcome/readiness fixtures и scenario matrix;
 2. быстрый consultation intake;
 3. отдельный блок корпоративных документов;
 4. bounded task taxonomy и SLA;
 5. controlled pilot;
 6. authenticated mutation E2E после approval среды;
-7. production rollout outcomes;
+7. production rollout outcomes/readiness;
 8. security hardening.
 
 ## Ручные ограничения
@@ -176,6 +212,7 @@ P0/P1 — repository-only frontend model и preview выбора исхода д
 - Не выдавать автоматическую маршрутизацию за юридическое заключение.
 - Не использовать сырые pilot metrics для оценки сотрудников.
 - Не закрывать существующие документы и риски массово или по предположению.
+- Не менять production status guards до scenario matrix и authenticated tests.
 
 ## Decision gates владельца
 
@@ -198,8 +235,10 @@ P0/P1 — repository-only frontend model и preview выбора исхода д
 - broker scope correction;
 - deal-card-lite DTO prototype;
 - deals-list DTO prototype;
+- outcome contract;
+- non-mutating outcome preview;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #351. Сначала подготовь repository-only frontend model и preview выбора исхода документа/риска без mutation. Не применяй prototype SQL к production, не меняй roles/grants/RLS/Auth и не закрывай production-пункты автоматически.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #353. Сначала подготовь repository-only synthetic fixtures и scenario matrix для outcomes/readiness. Не применяй prototype SQL к production, не меняй status guards/roles/grants/RLS/Auth и не закрывай production-пункты автоматически.`
