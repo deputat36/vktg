@@ -4,18 +4,66 @@
 
 - Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Текущий `main`: `434fb6981a4f814ef2ddfa04c46f47071cd33896` — merge PR #345.
+- Текущий production `main` перед documentation PR: `bf64bf4e8e2b8e434e95b0710a1d8c5e6e5c23e8` — squash merge PR #347.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя подтверждённая production migration: `20260715203158_nav_v2_minimize_client_identifiers`.
 - Канонический source: `20260715224500_nav_v2_minimize_client_identifiers.sql`.
-- Последний контрольный baseline: 5 профилей, 0 viewer, 23 сделки, 98 задач, 198 документов, 53 риска.
-- Production trigger `nav_v2_deals_guard_client_identifiers` включён.
 - Edge Functions после privacy-волн не менялись.
-- Открытых PR после merge #345 нет.
+- Production Supabase в PR #347 не изменялся.
 
-Counts могут изменяться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
+Counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
-## Завершённые волны
+## Канонические продуктовые документы
+
+- `docs/NAV_V2_FULL_AUDIT_2026-07-15.md` — технический, продуктовый и compliance-аудит.
+- `docs/NAV_V2_AUTONOMOUS_EXECUTION_PLAN_2026-07-15.md` — автономные волны и ручные gates.
+- `docs/NAV_V2_OFFICE_PROCESS_AUDIT_2026-07-16.md` — фактический процесс офиса, целевая роль продукта и уточнённый roadmap.
+
+## Уточнённая цель продукта
+
+Navigator — единая заявка на подготовку и диспетчер взаимодействия СПН, юриста, брокера и менеджера:
+
+`вопрос/потребность → короткий сбор фактов → маршрутизация → план документов и условий → решение профильной роли → выполнение → подтверждение готовности → задаток/сделка → закрытие`
+
+Navigator не является CRM, файловым архивом или автоматическим юристом.
+
+Ключевой критерий пользы: инструмент должен требовать меньше ручных действий, чем бумажная карточка, устные консультации и разрозненная переписка вместе.
+
+## Live read-only baseline 2026-07-16
+
+- 5 активных профилей: owner, lawyer, 3 SPN.
+- Активного manager и broker нет.
+- 23 сделки:
+  - 15 `draft`;
+  - 3 `need_info`;
+  - 2 `need_lawyer`;
+  - по одной `need_documents`, `need_broker`, `ready_for_deposit`.
+- 98 задач:
+  - 92 `open`;
+  - 6 `cancelled`;
+  - 0 `in_progress`;
+  - 0 `done`;
+  - 90 открытых просрочены;
+  - все 98 имеют `task_type = NULL`.
+- 198 документов:
+  - 182 `needed`;
+  - 12 `received`;
+  - 4 `checked`;
+  - 125 `needed` просрочены.
+- 53 риска:
+  - 14 red;
+  - 39 yellow;
+  - разрешённых нет.
+- 5 комментариев и 3 review-записи: team cycle начал использоваться, но не замкнут.
+- 18 сделок без manager.
+- 16 lawyer-needed без lawyer.
+- 5 broker-needed без broker.
+- 57 документов без назначенного пользователя или роли.
+- За последние 14 дней: 2 события по 2 сделкам.
+
+Вывод: не расширять юридический каталог, пока не доказано ежедневное закрытие пунктов.
+
+## Завершённые последние волны
 
 ### PR #333–#334 — автономный план и task feedback
 
@@ -25,7 +73,7 @@ Counts могут изменяться от реальной работы пол
 
 ### PR #336–#337 — retirement viewer
 
-- новое назначение роли `viewer` заблокировано в UI и на границе базы;
+- новое назначение роли `viewer` заблокировано;
 - активных viewer-профилей нет;
 - legacy enum/workspace сохранены только для совместимости.
 
@@ -40,134 +88,119 @@ Counts могут изменяться от реальной работы пол
 ### PR #341–#342 — frontend read-layer
 
 - RPC-ответы минимизируются до кэширования, поиска и рендера;
-- клиентские structured identifiers удаляются;
-- заголовки заменяются нейтральной ссылкой;
-- номер квартиры/офиса убирается из ориентира;
-- явные чувствительные значения в историческом рабочем тексте маскируются при чтении;
-- рабочие данные сотрудников, суммы, даты и процессные факты сохраняются.
+- клиентские structured identifiers удалены;
+- заголовки заменены нейтральной ссылкой;
+- unit-level address скрывается;
+- исторический рабочий текст маскируется при чтении.
 
-### PR #343 — release correction
+### PR #343–#346 — release baseline и DTO inventory
 
-- repository baseline исправлен по фактической Supabase migration history;
-- live timestamp: `20260715203158`;
-- alias, strict checker, attestation и handoff синхронизированы.
-
-### PR #344 — RPC privacy inventory
-
-- проинвентаризированы 11 ключевых read RPC;
-- добавлены registry, correction overlay, отчёт и CI;
-- различены реальные API-экспозиции и internal-only client dependencies;
-- критическими признаны:
-  - `nav_v2_get_deals_list`;
-  - `nav_v2_get_deal_card`;
-  - `nav_v2_get_deal_card_lite`;
-  - `nav_v2_get_lawyer_queue`;
-- rollout разбит на четыре волны;
-- production schema и данные не менялись.
-
-Основные файлы:
-
-- `config/nav-v2-rpc-privacy-inventory.json`;
-- `config/nav-v2-rpc-privacy-inventory-corrections.json`;
-- `docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md`;
-- `scripts/check_nav_v2_rpc_privacy_inventory.py`.
-
-### PR #345 — deal-card-lite explicit DTO prototype
-
-- подготовлен repository-only SQL prototype вне migrations;
-- public signature сохранена;
-- `to_jsonb(d)` заменён explicit allowlists;
-- добавлены серверные permission facts задач и документов;
-- lite DTO не возвращает комментарии и подробные описания;
-- нейтрализованы названия и unit-level address;
-- добавлены contract JSON, consumer matrix, rollback и CI;
+- baseline синхронизирован с live migration history;
+- проинвентаризированы ключевые read RPC;
+- подготовлен repository-only explicit DTO prototype для `nav_v2_get_deal_card_lite`;
+- handoff обновлён после prototype wave;
 - Supabase не менялся.
 
-Основные файлы:
+### PR #347 — evidence-only duplicate handling
 
-- `supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql`;
-- `config/nav-v2-deal-card-lite-dto-contract.json`;
-- `docs/NAV_V2_DEAL_CARD_LITE_DTO_PROTOTYPE_2026-07-16.md`.
+- frontend больше не строит duplicate key из адреса, заголовка, ФИО, телефонов, свободного текста и суммы;
+- группировка возможна только при явном `exact_duplicate_group_id`;
+- при отсутствии server evidence каждая карточка остаётся самостоятельной;
+- demo filtering и closed-status filtering остаются отдельными;
+- обновлены dashboard/work-mode regressions;
+- добавлена отдельная evidence-only regression и CI;
+- все обязательные проверки зелёные;
+- review threads отсутствовали;
+- Supabase и production-строки не менялись.
 
-## Проверки
+## Принцип следующих работ
 
-Зелёные фактически выполненные проверки последних волн:
+Каждый создаваемый системой пункт обязан иметь полный lifecycle:
 
-- основной static suite;
-- release integrity и migration aliases;
-- общий JavaScript syntax;
-- privacy semantic/source contracts;
-- desktop/mobile browser regressions;
-- RPC privacy inventory contract;
-- deal-card-lite DTO contract;
-- public guest smoke;
-- review threads отсутствовали перед merge.
+`триггер → владелец → срок → действие → evidence → исход → влияние на gate`
 
-`authenticated-smoke` завершался со статусом `skipped`. Это не authenticated evidence и не подтверждение полной ролевой матрицы.
-
-## Обнаруженный продуктовый риск
-
-После frontend privacy minimization `dashboardDuplicateKey()` больше не имеет прежних клиентских полей, а нейтральный `display_title` содержит короткий ID сделки.
-
-Следствие:
-
-- старый heuristic duplicate grouping больше не является надёжным;
-- наличие ID в заголовке делает каждую карточку формально уникальной;
-- попытка убрать ID может, наоборот, скрыть разные сделки одного объекта;
-- список не должен автоматически скрывать сделки без подтверждённого server duplicate evidence.
-
-Это не означает, что строки нужно удалять или объединять. Issue #273 и owner gate остаются обязательными.
+Автоматический backlog нельзя расширять без completion contract.
 
 ## Следующий безопасный slice
 
-P0 — сделать frontend duplicate handling evidence-only.
+P0/P1 — repository-only explicit DTO prototype для `nav_v2_get_deals_list`.
 
-Требования:
-
-1. Не использовать ФИО, телефоны, legacy title или свободный текст для duplicate key.
-2. Группировать только при наличии явного server field, например `exact_duplicate_group_id` или эквивалентного подтверждённого token.
-3. Если server evidence отсутствует — считать сделки отдельными и ничего не скрывать.
-4. Сохранить demo filtering отдельно от duplicate filtering.
-5. Обновить pure model и regression tests.
-6. Не удалять, не архивировать и не объединять production-строки.
-7. Не менять Supabase в этом slice.
-8. После исправления продолжить repository-only explicit DTO prototype для `nav_v2_get_deals_list`.
-
-## Следующий Wave 1 prototype
-
-`nav_v2_get_deals_list` должен сохранить:
+### DTO должен сохранить
 
 - профиль текущего сотрудника;
-- нейтральную ссылку на сделку;
-- статус, риск, object type и безопасный ориентир;
-- readiness, flags, deadlines и activity counters;
-- ФИО ответственных сотрудников;
-- признак наличия следующего шага без передачи исходного свободного текста;
-- server duplicate evidence, если оно будет формально определено.
+- идентификатор и нейтральную ссылку на сделку;
+- безопасный display label без client PII и unit-level address;
+- статус, risk level и object type;
+- readiness для задатка и сделки;
+- counts рисков, задач и документов;
+- deadlines и last activity;
+- признаки lawyer/broker need;
+- ФИО и роли сотрудников;
+- безопасный факт наличия следующего действия без исходного свободного текста;
+- явный server duplicate evidence, если он будет формально определён.
 
-Он не должен возвращать:
+### DTO не должен возвращать
 
 - клиентские ФИО и телефоны;
 - исходный legacy title;
-- полный текст следующего шага;
-- snapshots или full-row serialization.
+- полный свободный текст следующего действия;
+- `wizard_snapshot`;
+- `deal_summary` целиком;
+- full-row serialization;
+- unit-level address;
+- комментарии, reviews и документы целиком.
 
-SQL остаётся в `supabase/prototypes` до authenticated regression или отдельного решения владельца.
+### Порядок
+
+1. Найти все frontend consumers `nav_v2_get_deals_list`.
+2. Составить consumer matrix.
+3. Зафиксировать JSON contract и allowlist.
+4. Подготовить SQL в `supabase/prototypes`, не в migrations.
+5. Сохранить public signature и текущую ролевую семантику.
+6. Добавить checker, fixtures и rollback notes.
+7. Не применять prototype к production.
+8. После prototype вернуться к process closure: terminal document/risk states и task taxonomy.
+
+## Ближайшие продуктовые волны после DTO
+
+1. Быстрый consultation intake без полного мастера.
+2. Terminal/exception states документов и рисков.
+3. Отдельный блок корпоративных документов клиента.
+4. Структурированный цикл решения юриста и повторной передачи СПН.
+5. Bounded task taxonomy, SLA, evidence и deduplication.
+6. Controlled pilot на 10–15 реальных кейсах.
+7. Authenticated role/mutation E2E на платной preview branch после approval.
+8. Security hardening после E2E.
+9. Versioned legal rule registry и отдельный ПОД/ФТ-контур при применимости.
 
 ## Ручные ограничения
 
 - Issue #273: duplicate cleanup запрещён без решения владельца.
-- Не менять `seller_spn_id`, `buyer_spn_id`, `manager_id` без evidence и подтверждения владельца.
+- Не менять `seller_spn_id`, `buyer_spn_id`, `manager_id`, `lawyer_id`, `broker_id` без evidence и подтверждения владельца.
 - Исторические значения физически не очищать автоматически.
-- Operational pilot mutation запрещена без evidence-пакета.
-- Платную Supabase branch не создавать без явного согласования стоимости.
+- Operational pilot mutation запрещена без evidence-пакета и состава пилота.
+- Платную Supabase branch не создавать без явного согласования стоимости issue #282.
 - Не считать skipped authenticated job доказательством ролей.
 - Не применять repository-only prototypes к production.
 - Не менять grants, RLS, Auth или Edge Functions без отдельного review/deploy slice.
+- Не хранить сканы документов в Navigator.
+- Не выдавать автоматическую маршрутизацию за юридическое заключение.
+- Не использовать сырые pilot metrics для оценки сотрудников.
+
+## Decision gates владельца
+
+Отложить до момента, когда они блокируют соответствующую волну:
+
+1. кто является manager в controlled pilot;
+2. какие 10–15 кейсов и сотрудники входят в пилот;
+3. применяется ли отдельный ПОД/ФТ-контур и кто его владелец;
+4. подтверждение Яндекс Диска или другого источника документов и retention rules;
+5. approval стоимости preview branch для authenticated E2E.
 
 ## Не повторять без новой причины
 
-- общий аудит проекта;
+- общий технический аудит;
+- общий аудит фактического процесса офиса;
 - task feedback;
 - retirement viewer;
 - сбор ФИО/телефонов в мастере;
@@ -176,8 +209,9 @@ SQL остаётся в `supabase/prototypes` до authenticated regression ил
 - historical text masking;
 - RPC privacy inventory;
 - deal-card-lite DTO prototype;
+- evidence-only frontend duplicate handling;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #345. Сначала исправь frontend duplicate handling на evidence-only без Supabase mutations, затем продолжи repository-only prototype для nav_v2_get_deals_list. Не удаляй и не объединяй production-строки.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #347. Сначала подготовь repository-only explicit DTO prototype для nav_v2_get_deals_list с consumer matrix, contract, checker и rollback notes. Не применяй prototype к production, не меняй роли и не очищай production-строки.`
