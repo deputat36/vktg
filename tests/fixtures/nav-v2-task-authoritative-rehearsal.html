@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Navigator task authoritative rehearsal</title></head>
+<body>
+  <main id="app">
+    <button id="legacyComplete" data-task-id="20000000-0000-4000-8000-000000000001" data-task-rehearsal-action="complete">Legacy complete</button>
+    <button id="boundedStart" data-task-id="20000000-0000-4000-8000-000000000002" data-task-rehearsal-action="start">Bounded start</button>
+    <button id="boundedComplete" data-task-id="20000000-0000-4000-8000-000000000002" data-task-rehearsal-action="complete">Bounded complete</button>
+    <button id="boundedWaiting" data-task-id="20000000-0000-4000-8000-000000000003" data-task-rehearsal-action="waiting_external">Bounded waiting</button>
+    <button id="boundedDeferred" data-task-id="20000000-0000-4000-8000-000000000003" data-task-rehearsal-action="deferred">Bounded deferred</button>
+    <button id="boundedProposal" data-task-id="20000000-0000-4000-8000-000000000004" data-task-rehearsal-action="propose_not_applicable">Bounded proposal</button>
+    <button id="boundedDecision" data-task-id="20000000-0000-4000-8000-000000000004" data-task-rehearsal-action="decision_confirm">Bounded decision</button>
+    <button id="boundedReopen" data-task-id="20000000-0000-4000-8000-000000000005" data-task-rehearsal-action="reopen">Bounded reopen</button>
+    <pre id="routeOutput" role="status" aria-live="polite"></pre>
+  </main>
+  <script type="module">
+    import { installTaskActionAuthoritativeRehearsal } from '../../assets/js/nav-v2/task-action-authoritative-rehearsal-v2.js';
+    const tasks=new Map([
+      ['20000000-0000-4000-8000-000000000001',{id:'20000000-0000-4000-8000-000000000001',task_contract_version:null,can_change_status:true}],
+      ['20000000-0000-4000-8000-000000000002',{id:'20000000-0000-4000-8000-000000000002',task_contract_version:2,can_start:true,can_complete:true}],
+      ['20000000-0000-4000-8000-000000000003',{id:'20000000-0000-4000-8000-000000000003',task_contract_version:2,can_set_active_outcome:true}],
+      ['20000000-0000-4000-8000-000000000004',{id:'20000000-0000-4000-8000-000000000004',task_contract_version:2,can_propose_terminal_outcome:true,can_decide_terminal_outcome:true}],
+      ['20000000-0000-4000-8000-000000000005',{id:'20000000-0000-4000-8000-000000000005',task_contract_version:2,can_start:true}]
+    ]);
+    const inputs={
+      start:{client_request_id:'30000000-0000-4000-8000-000000000001'},
+      complete:{evidence_reference_id:'40000000-0000-4000-8000-000000000001',client_request_id:'30000000-0000-4000-8000-000000000002'},
+      waiting_external:{reason_code:'awaiting_document',review_date:'2026-07-24',client_request_id:'30000000-0000-4000-8000-000000000003'},
+      deferred:{reason_code:'postponed_by_client',review_date:'2026-07-30',client_request_id:'30000000-0000-4000-8000-000000000004'},
+      propose_not_applicable:{reason_code:'no_longer_required',client_request_id:'30000000-0000-4000-8000-000000000005'},
+      decision_confirm:{client_request_id:'30000000-0000-4000-8000-000000000006'},
+      reopen:{client_request_id:'30000000-0000-4000-8000-000000000007'}
+    };
+    window.__taskRehearsalCounters={authoritative:0,base:0,guard:0};
+    window.__taskRehearsalResults=[];
+    const app=document.getElementById('app');
+    installTaskActionAuthoritativeRehearsal({
+      root:app,
+      resolveTask:(id)=>tasks.get(id),
+      resolveInput:({action})=>inputs[action]||{},
+      onResult:(result)=>{
+        window.__taskRehearsalCounters.authoritative+=1;
+        window.__taskRehearsalResults.push(result);
+        document.getElementById('routeOutput').textContent=JSON.stringify(result);
+      }
+    });
+    app.addEventListener('click',()=>{window.__taskRehearsalCounters.guard+=1;});
+    app.addEventListener('click',()=>{window.__taskRehearsalCounters.base+=1;});
+  </script>
+</body>
+</html>
