@@ -56,6 +56,7 @@ const urgent = deal({
 
 const duplicateOld = deal({
   id: 'duplicate-old',
+  exact_duplicate_group_id: 'confirmed-group-1',
   created_at: '2026-01-01T09:00:00Z',
   display_title: 'Квартира — Дубль 1',
   address: 'Дубль 1',
@@ -68,19 +69,20 @@ const closed = deal({ id: 'closed', status: 'closed', address: 'Закрытая
 const calm = deal({ id: 'calm', address: 'Спокойная 1', display_title: 'Квартира — Спокойная 1', readiness_deposit: 90, missing_documents_count: 0, yellow_risks_count: 0 });
 
 assert.equal(isDashboardDemoDeal(demo), true, 'Demo title must be excluded');
-assert.equal(dashboardDuplicateKey(duplicateOld), dashboardDuplicateKey(duplicateNew), 'Exact duplicate fingerprint must be stable');
+assert.equal(dashboardDuplicateKey(duplicateOld), dashboardDuplicateKey(duplicateNew), 'Server duplicate evidence must be stable');
+assert.equal(dashboardDuplicateKey(calm), '', 'A deal without server evidence must not receive a duplicate key');
 
 const owner = buildDashboardFocus([demo, duplicateNew, urgent, closed, calm, duplicateOld], 'owner', 3);
 assert.equal(owner.hiddenDemoCount, 1, 'One demo card must be hidden');
-assert.equal(owner.hiddenDuplicateCount, 1, 'One exact duplicate must be collapsed');
+assert.equal(owner.hiddenDuplicateCount, 1, 'One server-confirmed duplicate must be collapsed');
 assert.equal(owner.workingDealCount, 3, 'Only three canonical working deals should remain');
 assert.equal(owner.items[0].deal.id, 'urgent', 'Red risks and overdue tasks must lead the priority list');
-assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-old'), true, 'Earliest exact duplicate must be retained');
-assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-new'), false, 'Later exact duplicate must be hidden');
+assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-old'), true, 'Earliest confirmed duplicate must be retained');
+assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-new'), false, 'Later confirmed duplicate must be hidden');
 assert.equal(owner.items[0].reasons.some((item) => item.text.includes('Красных рисков')), true, 'Priority must explain red risks');
 assert.equal(owner.items[0].reasons.some((item) => item.text.includes('Просроченных задач')), true, 'Priority must explain overdue tasks');
 assert.equal(owner.items[0].actionTitle, 'Назначить ответственного', 'Owner must see missing responsibility as the first action');
-assert.equal(owner.totals.redRisks, 2, 'Totals must exclude demo, closed and duplicate rows');
+assert.equal(owner.totals.redRisks, 2, 'Totals must exclude demo, closed and confirmed duplicate rows');
 assert.equal(owner.totals.overdueTasks, 5, 'Overdue totals must use canonical working deals');
 
 const lawyerNeeded = deal({
