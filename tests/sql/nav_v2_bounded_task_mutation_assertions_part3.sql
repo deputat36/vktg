@@ -80,6 +80,7 @@ end;
 $$;
 
 -- Terminal exception requires manager/owner/admin decision.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000004', false);
 select public.nav_v2_propose_bounded_task_terminal_outcome(
   (select id from test_ids where name='appointment'),
   'not_applicable',
