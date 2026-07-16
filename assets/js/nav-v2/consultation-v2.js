@@ -6,9 +6,9 @@ import {
   buildConsultationHandoff,
   consultationRoleAllowed,
   consultationRouting,
-  consultationToWizardDraft,
-  validateConsultationInput
+  consultationToWizardDraft
 } from './consultation-intake-model-v2.js?v=20260716-02';
+import { consultationServerPayloadPreview } from './consultation-server-adapter-v2.js?v=20260716-01';
 
 const app = document.getElementById('app');
 const WIZARD_DRAFT_KEY = 'nav_deal_draft_v2';
@@ -50,6 +50,7 @@ function formTemplate() {
       <div id="consultationOutput" class="consultation-output" tabindex="0">Заполните минимальные факты. Здесь появится структурированный текст для передачи юристу.</div>
       <div class="consultation-actions"><button id="copyConsultation" class="btn primary" type="button" disabled>Скопировать текст</button><button id="transferConsultation" class="btn light" type="button" disabled>Перенести в полный мастер</button></div>
       <div id="consultationStatus" class="consultation-inline-status" role="status" aria-live="polite"></div>
+      <div id="consultationServerReadiness" class="consultation-note" aria-live="polite">Серверный контур пока не развёрнут. Форма проверяет только будущий payload и ничего не отправляет.</div>
       <div class="consultation-note">Ответ юриста в будущем должен иметь один из исходов: <b>ответ</b>, <b>нужны уточнения</b> или <b>преобразовать в подготовку задатка/сделки</b>. Этот preview пока ничего не создаёт в Supabase.</div>
     </aside>
   </div>`;
@@ -74,14 +75,26 @@ function readForm() {
 
 function renderMessages(validation) {
   const target = document.getElementById('consultationMessages');
-  const errors = validation.errors.map((item) => `<div class="consultation-message error">${esc(item)}</div>`).join('');
-  const warnings = validation.warnings.map((item) => `<div class="consultation-message warning">${esc(item)}</div>`).join('');
+  const errors = (validation.errors || []).map((item) => `<div class="consultation-message error">${esc(item)}</div>`).join('');
+  const warnings = [...(validation.warnings || []), ...(validation.adapter_warnings || [])]
+    .map((item) => `<div class="consultation-message warning">${esc(item)}</div>`).join('');
   target.innerHTML = `${errors ? `<div class="consultation-errors">${errors}</div>` : ''}${warnings ? `<div class="consultation-warnings">${warnings}</div>` : ''}`;
 }
 
 function renderRoute(input) {
   const route = consultationRouting(input);
   document.getElementById('consultationRoute').innerHTML = `<div class="consultation-route-item"><b>Основной адресат</b><span>Юрист · ${route.lawyer_priority === 'high' ? 'повышенная срочность' : 'обычная очередь'}</span></div><div class="consultation-route-item"><b>Ипотечный брокер</b><span>${esc(route.broker_scope)}</span></div><div class="consultation-route-item"><b>Граница ответственности</b><span>${esc(route.legal_scope)}</span></div><div class="consultation-route-item"><b>Важно</b><span>${esc(route.disclaimer)}</span></div>`;
+}
+
+function renderServerReadiness(preview) {
+  const target = document.getElementById('consultationServerReadiness');
+  if (!target) return;
+  if (preview.server_ready) {
+    const hasDocs = Boolean(preview.payload?.has_external_documents);
+    target.innerHTML = `<b>Будущий серверный payload готов.</b><br>Будут переданы структурированные факты и безопасный текст вопроса. ${hasDocs ? 'Сохранится только признак наличия документов, не сама ссылка. ' : ''}Сделка, задачи, документы и риски не создаются автоматически.`;
+    return;
+  }
+  target.innerHTML = '<b>Серверный payload ещё не готов.</b><br>Заполните обязательные факты и удалите персональные или точные идентификаторы. Данные никуда не отправляются.';
 }
 
 function setStatus(text, tone = '') {
@@ -92,9 +105,10 @@ function setStatus(text, tone = '') {
 
 function updatePreview(showErrors = false) {
   const input = readForm();
-  const validation = validateConsultationInput(input);
+  const serverPreview = consultationServerPayloadPreview(input);
   renderRoute(input);
-  if (showErrors) renderMessages(validation);
+  renderServerReadiness(serverPreview);
+  if (showErrors) renderMessages(serverPreview);
   const output = document.getElementById('consultationOutput');
   const copyButton = document.getElementById('copyConsultation');
   const transferButton = document.getElementById('transferConsultation');
@@ -109,7 +123,7 @@ function updatePreview(showErrors = false) {
     copyButton.disabled = true;
     transferButton.disabled = true;
   }
-  return validation;
+  return serverPreview;
 }
 
 async function copyHandoff() {
@@ -158,7 +172,7 @@ function bindForm() {
       document.getElementById('consultationMessages')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    setStatus('Передача сформирована. Проверьте текст перед отправкой.', 'success');
+    setStatus('Передача и будущий серверный payload сформированы. Проверьте текст перед отправкой.', 'success');
     document.getElementById('consultationOutput')?.focus();
   });
   form.addEventListener('reset', () => {
