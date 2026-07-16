@@ -1,0 +1,42 @@
+name: Navigator v2 deals-list DTO prototype
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-deals-list-dto-contract.json'
+      - 'supabase/prototypes/nav_v2_get_deals_list_explicit_dto.sql'
+      - 'docs/NAV_V2_DEALS_LIST_DTO_PROTOTYPE_2026-07-16.md'
+      - 'scripts/check_nav_v2_deals_list_dto_prototype.py'
+      - 'assets/js/nav-v2/spn-save-idempotency-guard-v2.js'
+      - 'assets/js/nav-v2/deals-handoff-summary-v2.js'
+      - 'spn-v2.html'
+      - 'deals-v2.html'
+      - '.github/workflows/nav-v2-deals-list-dto-prototype.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prototype-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deals-list DTO contract
+        run: python3 scripts/check_nav_v2_deals_list_dto_prototype.py
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_deals_list_dto_prototype.py
+      - name: Check changed JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/spn-save-idempotency-guard-v2.js
+          node --check assets/js/nav-v2/deals-handoff-summary-v2.js
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-deals-list-dto-prototype
+          path: |
+            config/nav-v2-deals-list-dto-contract.json
+            supabase/prototypes/nav_v2_get_deals_list_explicit_dto.sql
+            docs/NAV_V2_DEALS_LIST_DTO_PROTOTYPE_2026-07-16.md
+          if-no-files-found: error
