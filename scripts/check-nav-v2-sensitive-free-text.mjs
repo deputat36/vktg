@@ -45,11 +45,11 @@ assert.doesNotMatch(sensitiveFreeTextMessage(mixed), /test@example/);
 assert.equal(sensitiveFreeTextMessage([]), '');
 
 const redacted = redactSensitiveFreeText(mixedSource);
-assert.match(redacted, /\[email клиента скрыт\]/);
-assert.match(redacted, /\[телефон клиента скрыт\]/);
-assert.match(redacted, /\[паспортные данные скрыты\]/);
-assert.match(redacted, /\[СНИЛС скрыт\]/);
-assert.match(redacted, /\[номер карты скрыт\]/);
+assert.equal(redacted.includes('[email клиента скрыт]'), true);
+assert.equal(redacted.includes('[телефон клиента скрыт]'), true);
+assert.equal(redacted.includes('[паспортные данные скрыты]'), true);
+assert.equal(redacted.includes('[СНИЛС скрыт]'), true);
+assert.equal(redacted.includes('[номер карты скрыт]'), true);
 assert.doesNotMatch(redacted, /test@example\.ru/);
 assert.doesNotMatch(redacted, /900 111-22-33/);
 assert.doesNotMatch(redacted, /1234 567890/);
