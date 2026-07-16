@@ -1,4 +1,4 @@
-import { rpc, esc } from './supabase-v2.js';
+import { esc } from './supabase-v2.js';
 import {
   DOCUMENT_OUTCOME_OPTIONS,
   RISK_RESOLUTION_OPTIONS,
@@ -9,13 +9,10 @@ import {
   validateRiskResolution
 } from './work-item-outcome-model-v2.js?v=20260716-01';
 
-const dealId = new URLSearchParams(location.search).get('id');
 const DIALOG_ID = 'workItemOutcomePreviewDialog';
 let cardData = null;
 let profile = null;
 let current = null;
-let loading = false;
-let scheduled = false;
 
 function clean(value) {
   return String(value ?? '').trim();
@@ -65,10 +62,6 @@ function ensureDialog() {
 
 function documentById(id) {
   return (Array.isArray(cardData?.documents) ? cardData.documents : []).find((item) => String(item.id) === String(id)) || null;
-}
-
-function riskById(id) {
-  return (Array.isArray(cardData?.risks) ? cardData.risks : []).find((item) => String(item.id) === String(id)) || null;
 }
 
 function otherDocuments(id) {
@@ -204,40 +197,11 @@ function attachRiskButtons() {
   });
 }
 
-function apply() {
+export function applyWorkItemOutcomePreview(data, currentProfile) {
+  cardData = data;
+  profile = currentProfile || data?.profile || null;
   if (!cardData || !profile) return;
+  ensureDialog();
   attachDocumentButtons();
   attachRiskButtons();
 }
-
-function schedule() {
-  if (scheduled) return;
-  scheduled = true;
-  requestAnimationFrame(() => {
-    scheduled = false;
-    apply();
-  });
-}
-
-async function loadPreviewData() {
-  if (loading || !dealId) return;
-  loading = true;
-  try {
-    const [card, profileData] = await Promise.all([
-      rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 20000),
-      rpc('nav_v2_get_my_profile', {}, 12000).catch(() => null)
-    ]);
-    cardData = card;
-    profile = profileData?.profile || card?.profile || null;
-    schedule();
-  } catch (_) {
-    // Основная карточка сама покажет ошибку доступа или сессии. Preview не вмешивается.
-  } finally {
-    loading = false;
-  }
-}
-
-new MutationObserver(schedule).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
-window.addEventListener('hashchange', schedule);
-ensureDialog();
-loadPreviewData();
