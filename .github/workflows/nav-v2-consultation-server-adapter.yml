@@ -3,6 +3,7 @@ name: Navigator v2 consultation server adapter
 on:
   pull_request:
     paths:
+      - 'consultation-v2.html'
       - 'assets/js/nav-v2/consultation-server-adapter-v2.js'
       - 'assets/js/nav-v2/consultation-v2.js'
       - 'fixtures/nav-v2-consultation-server-adapter-scenarios.json'
@@ -10,6 +11,7 @@ on:
       - 'scripts/check_nav_v2_consultation_server_adapter.py'
       - 'config/nav-v2-consultation-lifecycle-contract.json'
       - 'supabase/prototypes/nav_v2_consultation_lifecycle.sql'
+      - 'supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql'
       - 'docs/NAV_V2_CONSULTATION_SERVER_ADAPTER_2026-07-16.md'
       - '.github/workflows/nav-v2-consultation-server-adapter.yml'
   workflow_dispatch:
@@ -41,7 +43,10 @@ jobs:
         with:
           name: nav-v2-consultation-server-adapter
           path: |
+            consultation-v2.html
             assets/js/nav-v2/consultation-server-adapter-v2.js
+            assets/js/nav-v2/consultation-v2.js
             fixtures/nav-v2-consultation-server-adapter-scenarios.json
+            scripts/check-nav-v2-consultation-server-adapter.mjs
             docs/NAV_V2_CONSULTATION_SERVER_ADAPTER_2026-07-16.md
           if-no-files-found: error
