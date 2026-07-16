@@ -28,17 +28,8 @@ export function isDashboardDemoDeal(deal) {
 }
 
 export function dashboardDuplicateKey(deal) {
-  return [
-    normalize(deal?.address),
-    normalize(deal?.display_title || deal?.title),
-    normalize(deal?.object_type),
-    normalize(deal?.buyer_phone),
-    normalize(deal?.seller_phone),
-    normalize(deal?.buyer_name),
-    normalize(deal?.seller_name),
-    normalize(deal?.next_action),
-    number(deal?.price_total)
-  ].join('|');
+  const exactGroupId = text(deal?.exact_duplicate_group_id);
+  return exactGroupId ? `exact:${exactGroupId.toLowerCase()}` : '';
 }
 
 function roleBonus(deal, role) {
@@ -146,8 +137,9 @@ export function buildWorkingDealSet(deals) {
   const real = active.filter((deal) => !isDashboardDemoDeal(deal));
   const groups = new Map();
 
-  for (const deal of real) {
-    const key = dashboardDuplicateKey(deal);
+  for (const [index, deal] of real.entries()) {
+    const duplicateKey = dashboardDuplicateKey(deal);
+    const key = duplicateKey || `independent:${index}`;
     const list = groups.get(key) || [];
     list.push(deal);
     groups.set(key, list);
@@ -155,9 +147,9 @@ export function buildWorkingDealSet(deals) {
 
   const canonicalDeals = [];
   let hiddenDuplicateCount = 0;
-  for (const group of groups.values()) {
+  for (const [key, group] of groups.entries()) {
     canonicalDeals.push(chooseCanonical(group));
-    hiddenDuplicateCount += Math.max(0, group.length - 1);
+    if (key.startsWith('exact:')) hiddenDuplicateCount += Math.max(0, group.length - 1);
   }
 
   return {

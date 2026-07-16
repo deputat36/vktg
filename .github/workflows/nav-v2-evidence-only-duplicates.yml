@@ -1,0 +1,22 @@
+name: Navigator v2 evidence-only duplicates
+
+on:
+  pull_request:
+    paths:
+      - 'assets/js/nav-v2/dashboard-priority-v2.js'
+      - 'tests/unit/dashboard-priority-evidence-only.test.mjs'
+      - '.github/workflows/nav-v2-evidence-only-duplicates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  duplicate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run evidence-only duplicate regression
+        run: node tests/unit/dashboard-priority-evidence-only.test.mjs
+      - name: Check JavaScript syntax
+        run: node --check assets/js/nav-v2/dashboard-priority-v2.js
