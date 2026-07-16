@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "synthetic_only": true,
+  "catalog_cases": [
+    {"type":"document_request","role":"spn","sla":2,"criterion":"document_received","evidence":"document_status","allowed":true},
+    {"type":"document_check","role":"lawyer","sla":1,"criterion":"document_checked","evidence":"review_decision","allowed":true},
+    {"type":"document_check","role":"broker","sla":3,"criterion":"document_checked","evidence":"document_status","allowed":true},
+    {"type":"term_approval","role":"spn","sla":2,"criterion":"terms_confirmed","evidence":"agreement_status","allowed":true},
+    {"type":"legal_decision","role":"lawyer","sla":1,"criterion":"legal_decision_recorded","evidence":"review_decision","allowed":true},
+    {"type":"legal_decision","role":"manager","sla":1,"criterion":"legal_decision_recorded","evidence":"review_decision","allowed":false},
+    {"type":"financial_decision","role":"broker","sla":2,"criterion":"financial_decision_recorded","evidence":"external_confirmation","allowed":true},
+    {"type":"financial_decision","role":"lawyer","sla":2,"criterion":"financial_decision_recorded","evidence":"review_decision","allowed":false},
+    {"type":"corporate_document_signing","role":"spn","sla":3,"criterion":"corporate_document_signed","evidence":"corporate_document_status","allowed":true},
+    {"type":"card_correction","role":"manager","sla":1,"criterion":"card_fields_corrected","evidence":"card_validation","allowed":true},
+    {"type":"contract_preparation","role":"lawyer","sla":5,"criterion":"contract_draft_ready","evidence":"contract_reference","allowed":true},
+    {"type":"appointment_scheduling","role":"spn","sla":2,"criterion":"appointment_confirmed","evidence":"calendar_event","allowed":true},
+    {"type":"post_deal_action","role":"manager","sla":10,"criterion":"post_deal_action_confirmed","evidence":"comment_reference","allowed":true},
+    {"type":"post_deal_action","role":"manager","sla":11,"criterion":"post_deal_action_confirmed","evidence":"comment_reference","allowed":false},
+    {"type":"system_recommendation","role":"spn","sla":2,"criterion":"terms_confirmed","evidence":"comment_reference","allowed":false}
+  ],
+  "source_cases": [
+    {"source":"auto_quality_seller_name","expected":"card_correction","confidence":"high"},
+    {"source":"auto_quality_address","expected":"card_correction","confidence":"high"},
+    {"source":"auto_settlements","expected":"term_approval","confidence":"high"},
+    {"source":"auto_expenses","expected":"term_approval","confidence":"high"},
+    {"source":"auto_lawyer","expected":"legal_decision","confidence":"high"},
+    {"source":"auto_children","expected":"legal_decision","confidence":"high"},
+    {"source":"auto_share_lawyer","expected":"legal_decision","confidence":"high"},
+    {"source":"auto_broker","expected":"financial_decision","confidence":"high"},
+    {"source":"manual_note","expected":null,"confidence":"none"}
+  ],
+  "outcome_cases": [
+    {"id":"done_with_confirmed_evidence","status":"done","completed_by":true,"completed_at":true,"evidence_kind":"review_decision","evidence_confirmed_at":true,"outcome_code":"completed","outcome_state":"confirmed","valid":true,"terminal":true},
+    {"id":"done_without_evidence","status":"done","completed_by":true,"completed_at":true,"evidence_kind":null,"evidence_confirmed_at":false,"outcome_code":"completed","outcome_state":"confirmed","valid":false,"terminal":false},
+    {"id":"proposed_not_applicable","status":"open","outcome_code":"not_applicable","outcome_state":"proposed","valid":true,"terminal":false},
+    {"id":"confirmed_not_applicable","status":"cancelled","outcome_code":"not_applicable","outcome_state":"confirmed","valid":true,"terminal":true},
+    {"id":"replaced_without_id","status":"cancelled","outcome_code":"replaced","outcome_state":"confirmed","replacement":false,"valid":false,"terminal":false},
+    {"id":"replaced_with_id","status":"cancelled","outcome_code":"replaced","outcome_state":"confirmed","replacement":true,"valid":true,"terminal":true},
+    {"id":"waiting_external_with_review","status":"open","outcome_code":"waiting_external","outcome_state":"confirmed","review_date":true,"valid":true,"terminal":false},
+    {"id":"waiting_external_without_review","status":"open","outcome_code":"waiting_external","outcome_state":"confirmed","review_date":false,"valid":false,"terminal":false},
+    {"id":"deferred_with_review","status":"in_progress","outcome_code":"deferred","outcome_state":"confirmed","review_date":true,"valid":true,"terminal":false},
+    {"id":"confirmed_cancelled","status":"cancelled","outcome_code":"cancelled","outcome_state":"confirmed","valid":true,"terminal":true}
+  ],
+  "privacy_cases": [
+    {"forbidden":"title"},
+    {"forbidden":"description"},
+    {"forbidden":"address"},
+    {"forbidden":"seller_name"},
+    {"forbidden":"buyer_name"},
+    {"forbidden":"phone"},
+    {"forbidden":"free_form_evidence"},
+    {"forbidden":"document_url"}
+  ]
+}
