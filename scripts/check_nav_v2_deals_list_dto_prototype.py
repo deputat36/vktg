@@ -184,7 +184,7 @@ def main() -> int:
         "nav_v2_get_deals_list",
         "Consumer matrix",
         "created_by_current_user",
-        "Маткапитал",
+        "маткапитал",
         "authenticated-smoke",
         "Rollback",
         "без production deploy",
