@@ -1,0 +1,31 @@
+name: Navigator v2 mortgage broker scope
+
+on:
+  pull_request:
+    paths:
+      - 'assets/js/nav-v2/broker-v2.js'
+      - 'assets/js/nav-v2/spn-money-adaptive-v2.js'
+      - 'assets/js/nav-v2/broker-scope-correction-v2.js'
+      - 'supabase/migrations/20260716064500_nav_v2_correct_mortgage_broker_scope.sql'
+      - 'docs/NAV_V2_MORTGAGE_BROKER_SCOPE_2026-07-16.md'
+      - 'scripts/check_nav_v2_mortgage_broker_scope.py'
+      - '.github/workflows/nav-v2-mortgage-broker-scope.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  broker-scope-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check mortgage broker scope contract
+        run: python3 scripts/check_nav_v2_mortgage_broker_scope.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/broker-v2.js
+          node --check assets/js/nav-v2/spn-money-adaptive-v2.js
+          node --check assets/js/nav-v2/broker-scope-correction-v2.js
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_mortgage_broker_scope.py

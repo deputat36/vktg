@@ -78,13 +78,15 @@ def main() -> int:
     require(module, (
         "rpc('nav_v2_get_broker_queue_preview'",
         "['owner', 'admin', 'manager', 'broker']",
-        "Предварительная финансовая оценка",
+        "Ипотечная консультация и одобрение",
         "Только просмотр",
         "Ожидает назначения",
         "Нужно уточнить данные",
-        "Готово к проверке",
+        "Готово к консультации",
         "Пока не ведётся",
-        "не банковская CRM",
+        "не является банковской CRM",
+        "Подготовку и оформление сделки ведут СПН и юрист",
+        "Брокер не отвечает за оформление маткапитала или сертификата",
     ), MODULE.name, errors)
     for marker in ("nav_v2_update_", "nav_v2_add_", "nav_v2_save_"):
         if marker in module:
@@ -125,7 +127,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 broker queue passed: read-only triage, role route and honest data contract checked")
+    print("Navigator v2 broker queue passed: read-only mortgage triage, role route and honest responsibility boundary checked")
     return 0
 
 

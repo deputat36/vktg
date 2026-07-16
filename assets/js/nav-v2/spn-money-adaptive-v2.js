@@ -1,3 +1,5 @@
+import './broker-scope-correction-v2.js?v=20260716-01';
+
 const DRAFT_KEY = 'nav_deal_draft_v2';
 let scheduled = false;
 let observerStarted = false;
@@ -50,12 +52,12 @@ function detailsSection(title, note, content, open = false) {
 }
 
 function sourceSection() {
-  return section('1. Источник денег', 'Это влияет на маршрут: нужен ли брокер, юрист, опека, СФР, банк или сертификат.', `<div class="option-grid">
+  return section('1. Источник денег', 'Источник денег определяет, кто нужен дальше: брокер — только по ипотеке; маткапитал, сертификаты и оформление сделки ведут СПН и юрист.', `<div class="option-grid">
     ${option('Собственные средства', 'Деньги покупателя без банка и сертификатов.', 'toggle:payments:cash', hasPayment('cash'))}
-    ${option('Ипотека', 'Банк, одобрение, оценка, страховка, сроки.', 'toggle:payments:mortgage', hasPayment('mortgage'), 'брокер')}
-    ${option('Маткапитал', 'Доли детям, сроки СФР, порядок расчётов.', 'toggle:payments:matcap', hasPayment('matcap'), 'юрист/СФР')}
-    ${option('Сертификат / субсидия', 'Проверить вид сертификата, сроки и условия.', 'toggle:payments:certificate', hasPayment('certificate'), 'проверить')}
-    ${option('Военная ипотека / НИС', 'Особые требования и сроки.', 'toggle:payments:militaryMortgage', hasPayment('militaryMortgage'), 'брокер')}
+    ${option('Ипотека', 'Банк, консультация, подбор программы и одобрение.', 'toggle:payments:mortgage', hasPayment('mortgage'), 'брокер')}
+    ${option('Маткапитал', 'Доли детям, сроки СФР, порядок расчётов.', 'toggle:payments:matcap', hasPayment('matcap'), 'СПН/юрист')}
+    ${option('Сертификат / субсидия', 'Проверить вид сертификата, сроки и условия.', 'toggle:payments:certificate', hasPayment('certificate'), 'СПН/юрист')}
+    ${option('Военная ипотека / НИС', 'Ипотечная программа со специальными требованиями.', 'toggle:payments:militaryMortgage', hasPayment('militaryMortgage'), 'брокер')}
     ${option('Детский номинальный счёт', 'Нужен юрист до движения денег.', 'toggle:payments:nominalChild', hasPayment('nominalChild'), 'стоп-фактор')}
     ${option('Деньги детей / СВО', 'Проверить законность и порядок использования.', 'toggle:payments:svoChildAccount', hasPayment('svoChildAccount'), 'юрист')}
     ${option('Рассрочка / остаток долга', 'Нужно безопасно закрепить условия.', 'toggle:payments:installment', hasPayment('installment'), 'условия')}
@@ -68,12 +70,12 @@ function decisionSection() {
     return `<div class="status warn" style="margin-top:12px">Источник денег пока не выбран. Выберите хотя бы один вариант выше, чтобы открылся нужный набор уточнений.</div>`;
   }
 
-  const needsBroker = selected.some((item) => ['mortgage', 'militaryMortgage', 'matcap', 'certificate'].includes(item));
-  const needsLawyer = selected.some((item) => ['matcap', 'nominalChild', 'svoChildAccount', 'installment'].includes(item));
+  const needsBroker = selected.some((item) => ['mortgage', 'militaryMortgage'].includes(item));
+  const needsLawyer = selected.some((item) => ['matcap', 'certificate', 'nominalChild', 'svoChildAccount', 'installment'].includes(item));
 
   const chips = [];
-  if (needsBroker) chips.push('<span class="pill blue">нужен брокер / банк</span>');
-  if (needsLawyer) chips.push('<span class="pill yellow">нужна юридическая проверка</span>');
+  if (needsBroker) chips.push('<span class="pill blue">брокер: консультация, программа, одобрение</span>');
+  if (needsLawyer) chips.push('<span class="pill yellow">СПН и юрист: условия и оформление сделки</span>');
   if (!needsBroker && !needsLawyer) chips.push('<span class="pill green">обычный денежный сценарий</span>');
 
   return `<div class="status" style="margin-top:12px"><b>Маршрут по деньгам</b><div class="actions" style="justify-content:flex-start;margin-top:8px">${chips.join('')}</div></div>`;
@@ -94,7 +96,7 @@ function conditionalDetails() {
   const blocks = [];
 
   if (hasPayment('mortgage') || hasPayment('militaryMortgage')) {
-    blocks.push(detailsSection('Ипотека / банк', 'Появляется только если выбрана ипотека или НИС.', `<div class="grid">
+    blocks.push(detailsSection('Ипотека / банк', 'Брокер консультирует, подбирает программу, помогает получить одобрение и обучает СПН по ипотеке. Подготовку самой сделки ведут СПН и юрист.', `<div class="grid">
       <div>${field('bankName', 'Банк / программа')}</div>
       <div>${field('mortgageApproved', 'Одобрение есть?', 'text', 'да, нет, в процессе')}</div>
     </div>
@@ -102,11 +104,11 @@ function conditionalDetails() {
       <div>${field('mortgageAmount', 'Сумма кредита', 'number')}</div>
       <div>${field('mortgageDeadline', 'Срок одобрения / сделки')}</div>
     </div>
-    ${textarea('mortgageComment', 'Что важно по ипотеке?', 'Оценка, страховка, первоначальный взнос, созаёмщики, ограничения банка.')}`, true));
+    ${textarea('mortgageComment', 'Что важно по ипотеке?', 'Первоначальный взнос, созаёмщики, ограничения банка, выбранная программа, статус одобрения.')}`, true));
   }
 
   if (hasPayment('matcap')) {
-    blocks.push(detailsSection('Маткапитал', 'Появляется только если выбран маткапитал.', `<div class="grid">
+    blocks.push(detailsSection('Маткапитал', 'Маткапитал ведут СПН и юрист: условия использования, доли детям, СФР и порядок расчётов.', `<div class="grid">
       <div>${field('matcapAmount', 'Сумма маткапитала', 'number')}</div>
       <div>${field('matcapOwner', 'На кого сертификат?')}</div>
     </div>
@@ -114,7 +116,7 @@ function conditionalDetails() {
   }
 
   if (hasPayment('certificate')) {
-    blocks.push(detailsSection('Сертификат / субсидия', 'Появляется только если выбран сертификат или субсидия.', `<div class="grid">
+    blocks.push(detailsSection('Сертификат / субсидия', 'Сертификат ведут СПН и юрист: проверяют условия, сроки, требования к объекту и схему расчётов.', `<div class="grid">
       <div>${field('certificateType', 'Какой сертификат?')}</div>
       <div>${field('certificateAmount', 'Сумма сертификата', 'number')}</div>
     </div>
