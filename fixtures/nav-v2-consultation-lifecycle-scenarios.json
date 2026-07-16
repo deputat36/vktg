@@ -1,36 +1,51 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "synthetic_only": true,
   "transition_cases": [
     {"id":"spn_create","role":"spn","from":null,"action":"create","allowed":true,"to":"new"},
     {"id":"manager_create","role":"manager","from":null,"action":"create","allowed":true,"to":"new"},
     {"id":"lawyer_answer","role":"lawyer","from":"new","action":"answer","allowed":true,"to":"answered"},
     {"id":"lawyer_need_info","role":"lawyer","from":"new","action":"need_info","allowed":true,"to":"need_info"},
-    {"id":"lawyer_convert","role":"lawyer","from":"new","action":"convert_to_preparation","allowed":true,"to":"convert_to_preparation"},
+    {"id":"lawyer_convert_deposit","role":"lawyer","from":"new","action":"convert_to_preparation","conversion_mode":"deposit","allowed":true,"to":"convert_to_preparation"},
+    {"id":"lawyer_convert_deal","role":"lawyer","from":"new","action":"convert_to_preparation","conversion_mode":"deal","allowed":true,"to":"convert_to_preparation"},
+    {"id":"lawyer_convert_without_mode_denied","role":"lawyer","from":"new","action":"convert_to_preparation","conversion_mode":null,"allowed":false,"to":null},
+    {"id":"answer_with_conversion_mode_denied","role":"lawyer","from":"new","action":"answer","conversion_mode":"deal","allowed":false,"to":null},
     {"id":"spn_clarify","role":"spn","from":"need_info","action":"clarify","allowed":true,"to":"new"},
     {"id":"spn_close_answered","role":"spn","from":"answered","action":"close","allowed":true,"to":"closed"},
     {"id":"spn_close_conversion","role":"spn","from":"convert_to_preparation","action":"close","allowed":true,"to":"closed"},
     {"id":"spn_cancel_new","role":"spn","from":"new","action":"cancel","allowed":true,"to":"cancelled"},
     {"id":"spn_cannot_decide","role":"spn","from":"new","action":"answer","allowed":false,"to":null},
-    {"id":"manager_cannot_decide","role":"manager","from":"new","action":"convert_to_preparation","allowed":false,"to":null},
+    {"id":"manager_cannot_decide","role":"manager","from":"new","action":"convert_to_preparation","conversion_mode":"deal","allowed":false,"to":null},
     {"id":"broker_cannot_create","role":"broker","from":null,"action":"create","allowed":false,"to":null},
     {"id":"viewer_cannot_create","role":"viewer","from":null,"action":"create","allowed":false,"to":null},
     {"id":"lawyer_cannot_decide_need_info_without_clarification","role":"lawyer","from":"need_info","action":"answer","allowed":false,"to":null},
     {"id":"closed_is_terminal","role":"owner","from":"closed","action":"answer","allowed":false,"to":null},
-    {"id":"cancelled_is_terminal","role":"admin","from":"cancelled","action":"convert_to_preparation","allowed":false,"to":null}
+    {"id":"cancelled_is_terminal","role":"admin","from":"cancelled","action":"convert_to_preparation","conversion_mode":"deposit","allowed":false,"to":null}
   ],
   "visibility_cases": [
-    {"id":"spn_view_own","role":"spn","relation":"creator","allowed":true},
-    {"id":"spn_view_other","role":"spn","relation":"none","allowed":false},
-    {"id":"manager_view_team","role":"manager","relation":"requester_manager","allowed":true},
-    {"id":"manager_view_other_team","role":"manager","relation":"none","allowed":false},
-    {"id":"lawyer_view_unassigned","role":"lawyer","relation":"unassigned","allowed":true},
-    {"id":"lawyer_view_self_assigned","role":"lawyer","relation":"assigned_self","allowed":true},
-    {"id":"lawyer_view_other_assigned","role":"lawyer","relation":"assigned_other","allowed":false},
-    {"id":"owner_view_all","role":"owner","relation":"none","allowed":true},
-    {"id":"admin_view_all","role":"admin","relation":"none","allowed":true},
-    {"id":"broker_no_legal_view","role":"broker","relation":"none","allowed":false},
-    {"id":"viewer_no_legal_view","role":"viewer","relation":"none","allowed":false}
+    {"id":"spn_view_own","role":"spn","relation":"creator","status":"new","allowed":true},
+    {"id":"spn_view_other","role":"spn","relation":"none","status":"new","allowed":false},
+    {"id":"spn_list_own","role":"spn","relation":"creator","status":"need_info","queue":true,"allowed":true},
+    {"id":"spn_list_other_denied","role":"spn","relation":"none","status":"new","queue":true,"allowed":false},
+    {"id":"manager_view_team","role":"manager","relation":"requester_manager","status":"new","allowed":true},
+    {"id":"manager_view_other_team","role":"manager","relation":"none","status":"new","allowed":false},
+    {"id":"lawyer_view_unassigned_open","role":"lawyer","relation":"unassigned","status":"new","allowed":true},
+    {"id":"lawyer_view_unassigned_need_info","role":"lawyer","relation":"unassigned","status":"need_info","allowed":true},
+    {"id":"lawyer_unassigned_answered_denied","role":"lawyer","relation":"unassigned","status":"answered","allowed":false},
+    {"id":"lawyer_unassigned_closed_denied","role":"lawyer","relation":"unassigned","status":"closed","allowed":false},
+    {"id":"lawyer_view_self_assigned","role":"lawyer","relation":"assigned_self","status":"answered","allowed":true},
+    {"id":"lawyer_view_other_assigned","role":"lawyer","relation":"assigned_other","status":"new","allowed":false},
+    {"id":"owner_view_all","role":"owner","relation":"none","status":"closed","allowed":true},
+    {"id":"admin_view_all","role":"admin","relation":"none","status":"cancelled","allowed":true},
+    {"id":"broker_no_legal_view","role":"broker","relation":"none","status":"new","allowed":false},
+    {"id":"viewer_no_legal_view","role":"viewer","relation":"none","status":"new","allowed":false}
+  ],
+  "create_cases": [
+    {"id":"client_request_id_required","client_request_id":null,"unknown_keys":[],"allowed":false},
+    {"id":"valid_idempotency_key","client_request_id":"11111111-1111-4111-8111-111111111111","unknown_keys":[],"allowed":true},
+    {"id":"same_key_returns_existing","client_request_id":"11111111-1111-4111-8111-111111111111","repeat":true,"idempotent":true,"allowed":true},
+    {"id":"unknown_payload_rejected","client_request_id":"22222222-2222-4222-8222-222222222222","unknown_keys":["client_phone"],"allowed":false},
+    {"id":"known_payload_allowed","client_request_id":"33333333-3333-4333-8333-333333333333","unknown_keys":[],"allowed":true}
   ],
   "funding_cases": [
     {"id":"cash","sources":["cash"],"lawyer":true,"broker_parallel":false},
@@ -51,6 +66,7 @@
     {"id":"cadastral","text":"Кадастровый номер 36:04:0102030:123","blocked":true,"finding":"cadastral_number"},
     {"id":"unit","text":"квартира 57","blocked":true,"finding":"unit_number"},
     {"id":"office_unit","text":"офис №12","blocked":true,"finding":"unit_number"},
+    {"id":"possible_full_name","text":"Проверить документы Иван Иванов","blocked":true,"finding":"possible_full_name"},
     {"id":"long_payment_number","text":"Карта 4276 0000 0000 0000","blocked":true,"finding":"long_payment_number"}
   ],
   "queue_contract_cases": [
@@ -65,6 +81,13 @@
     {"id":"create_no_tasks","created_entity":"tasks","expected":false},
     {"id":"create_no_documents","created_entity":"documents","expected":false},
     {"id":"create_no_risks","created_entity":"risks","expected":false},
-    {"id":"convert_returns_draft_only","created_entity":"conversion_draft","expected":true}
+    {"id":"convert_returns_draft_only","created_entity":"conversion_draft","expected":true},
+    {"id":"conversion_mode_explicit","created_entity":"conversion_mode","expected":true}
+  ],
+  "acl_cases": [
+    {"role":"authenticated","execute":false},
+    {"role":"anon","execute":false},
+    {"role":"public","execute":false},
+    {"role":"service_role","execute":true}
   ]
 }
