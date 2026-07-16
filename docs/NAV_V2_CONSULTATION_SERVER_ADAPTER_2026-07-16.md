@@ -2,88 +2,97 @@
 
 Дата: 16 июля 2026 года.
 
-Статус: repository-only consumer contract. Production RPC не вызываются, SQL prototype не применён.
+Статус: repository-only consumer contract. Production RPC не вызываются, consultation SQL не применён к production Supabase.
 
 ## Задача
 
-Fast consultation preview и серверный consultation lifecycle проектировались раздельно. У них различаются названия некоторых полей и степень детализации кодов.
+Fast consultation preview и серверный consultation lifecycle проектировались раздельно. Adapter связывает их без включения сетевого transport:
 
-Adapter формально связывает эти слои до production deploy:
+`форма СПН → проверенный idempotent create payload → preview nav_v2_create_consultation`
 
-`форма СПН → проверенный create payload → будущий consultation RPC`
-
-`queue response → минимизированная очередь юриста`
+`queue response → минимизированная очередь сотрудника`
 
 `detail response → карточка консультации и сообщения`
 
-`convert_to_preparation → явный draft полного мастера`
+`решение юриста → preview nav_v2_decide_consultation(uuid, text, text, text)`
+
+`convert_to_preparation → безопасный draft полного мастера`
+
+Adapter не вызывает RPC, не обращается к таблицам и не меняет production role menu.
+
+## Идемпотентный create
+
+Hardening SQL требует `client_request_id` типа UUID. Это защищает от повторного создания консультации при двойном клике, повторной отправке или сетевом retry.
+
+Страница:
+
+- создаёт UUID через `crypto.randomUUID()`;
+- хранит его только в `sessionStorage` текущей вкладки;
+- повторно использует тот же UUID для одного заполненного запроса;
+- меняет UUID после явного нажатия «Очистить»;
+- не отправляет UUID или другие данные в сеть.
+
+`consultationClientRequestId` принимает только UUID и приводит буквенные символы к нижнему регистру.
+
+`consultationServerPayloadPreview` возвращает:
+
+- `payload` с обязательным `client_request_id`;
+- `rpc_preview.name = nav_v2_create_consultation`;
+- точные аргументы `{ p_payload: payload }`;
+- `server_ready=false`, если UUID отсутствует или повреждён;
+- `idempotency_key_present=true` для корректного запроса.
+
+Это только описание будущего вызова. Реального RPC-вызова нет.
 
 ## Create payload
 
-Функция `consultationServerPayloadPreview`:
+Allowlist payload:
 
-- повторно использует frontend privacy validation;
-- нормализует сторону сопровождения;
-- выводит `request_type` из стадии;
-- приводит frontend-стадию к серверному коду;
-- передаёт источники средств;
-- сворачивает близкие обстоятельства в серверные категории;
-- сохраняет точную формулировку обстоятельств в тексте вопроса;
-- включает известные факты в текст вопроса;
-- передаёт дату;
-- передаёт только `has_external_documents`.
+- `client_request_id`;
+- `question`;
+- `request_type`;
+- `representation_model`;
+- `object_type`;
+- `safe_reference`;
+- `stage`;
+- `funding_sources`;
+- `circumstances`;
+- `planned_event_date`;
+- `has_external_documents`.
 
-URL не входит в server payload.
+Adapter повторно использует frontend privacy validation, нормализует сторону, стадию и источник средств, включает известные факты и точные формулировки обстоятельств в текст вопроса.
 
-Даже если пользователь добавил ссылку для локальной передачи в eChat, будущий create payload содержит только признак наличия документов. Это сохраняет ограничение до утверждения доменов и retention rules.
+URL не входит в server payload. Даже при локальной ссылке для передачи в eChat сохраняется только `has_external_documents`.
 
-## Известные факты
+ФИО, телефоны, email, паспортные данные, кадастровые номера, точный адрес, номер помещения и произвольные snapshot-поля не передаются.
 
-Текущий server prototype хранит первичный вопрос как сообщение, но не имеет отдельного поля `known_facts`.
+## Известные факты и обстоятельства
 
-Adapter формирует безопасный текст:
+Server prototype не имеет отдельного поля `known_facts`, поэтому adapter формирует один безопасный текст:
 
-- вопрос;
+- конкретный вопрос;
 - известные факты;
 - точные особые обстоятельства;
 - исходная стадия.
 
-Общий серверный лимит 4000 символов проверяется до будущего вызова RPC. Текст не обрезается автоматически.
+Общий лимит — 4000 символов. Текст не обрезается автоматически.
 
-## Укрупнённые обстоятельства
+Для фильтрации используются укрупнённые категории:
 
-Для фильтрации server prototype использует укрупнённую категорию:
-
-- несколько детских сценариев → `children`;
+- детские сценарии → `children`;
 - супруг или супруга → `other`.
 
-Точная формулировка остаётся в тексте вопроса. Пользователь получает предупреждение, что structured code использует укрупнённую категорию.
-
-Таким образом, юридически важный факт не теряется и одновременно не расширяется серверная taxonomy без отдельного review.
+Точная формулировка остаётся в вопросе, поэтому юридически важный факт не теряется.
 
 ## Queue DTO
 
-`minimizeConsultationQueueResponse` использует явный allowlist из server contract.
+`minimizeConsultationQueueResponse` использует explicit allowlist server contract.
 
-В очередь входят:
+Разрешены нейтральная ссылка, статус, тип запроса, стадия, сторона, объект, источники средств, количество обстоятельств, плановая дата, наличие внешних документов, сотрудники, счётчики, возраст, приоритет и ближайшее действие.
 
-- нейтральная ссылка;
-- статус, тип запроса и стадия;
-- сторона и тип объекта;
-- источники средств;
-- количество обстоятельств;
-- плановая дата;
-- наличие внешних документов;
-- сотрудники;
-- счётчики, возраст, приоритет и ближайшее действие.
+Не разрешены вопрос, сообщения, safe reference, URL, клиентские идентификаторы, snapshot и произвольные серверные поля.
 
-В queue DTO не входят:
-
-- вопрос и сообщения;
-- безопасный ориентир;
-- URL документов;
-- клиентские идентификаторы;
-- произвольные серверные поля.
+СПН после hardening получает только собственные консультации. Менеджер — только команду. Юрист — открытую очередь и назначенные ему карточки. Broker и viewer не получают юридическую очередь.
 
 ## Detail DTO
 
@@ -92,83 +101,96 @@ Adapter формирует безопасный текст:
 - профиль текущего сотрудника;
 - метаданные консультации;
 - role-aware permissions;
+- сообщения;
 - conversion draft;
-- сообщения.
+- `conversion_mode`.
 
-Полный текст доступен только после будущей серверной проверки доступа в detail RPC.
+Conversion draft дополнительно содержит только серверные гарантии `creates_deal` и `creates_backlog`. Клиентские идентификаторы отбрасываются.
 
-## Решения юриста
+## Решение юриста
 
-`consultationDecisionPresentation` фиксирует три понятных действия:
+Hardening заменяет старую трёхаргументную функцию на:
 
-- `answer` — дать ответ;
-- `need_info` — запросить конкретное уточнение;
-- `convert_to_preparation` — рекомендовать полную подготовку.
+`nav_v2_decide_consultation(p_consultation_id, p_decision, p_body, p_conversion_mode)`
 
-Последнее действие не создаёт сделку. Оно возвращает draft для явного переноса пользователем.
+`consultationDecisionRpcPreview` проверяет точные будущие аргументы:
 
-## Преобразование в мастер
+- `consultation_id` — UUID;
+- `decision` — `answer`, `need_info` или `convert_to_preparation`;
+- текст — от 10 до 4000 символов;
+- `p_conversion_mode` обязателен только для `convert_to_preparation`;
+- допустимые режимы — `deposit` или `deal`;
+- для обычного ответа и запроса уточнения `p_conversion_mode` должен быть `null`.
 
-`consultationConversionToWizardDraft` переносит только:
+Результат содержит только RPC preview и `transport_enabled=false`.
 
-- режим подготовки;
-- сторону;
-- тип объекта;
-- источники средств;
-- допустимые флаги;
-- безопасный ориентир;
-- плановую дату;
-- признак наличия внешних документов;
-- ID консультации.
+## Преобразование в полный мастер
 
-ФИО, телефоны, URL документов и произвольные данные не добавляются.
+`consultationConversionToWizardDraft` принимает draft только когда:
 
-## Изменение frontend preview
+- `preparation_mode` равен `deposit` или `deal`;
+- `creates_deal=false`;
+- `creates_backlog=false`.
 
-На странице появился блок будущей серверной готовности:
+Если серверный ответ утверждает автоматическое создание сделки или backlog, adapter возвращает `null`.
 
-- показывает, готов ли payload;
-- объясняет, что URL не сохранится;
-- подтверждает отсутствие автоматической сделки и backlog;
-- не вызывает RPC;
-- не обращается к таблицам;
-- не меняет production role menu.
+В мастер переносятся только режим, сторона, тип объекта, источники средств, допустимые флаги, safe reference, плановая дата, признак внешних документов и ID консультации.
+
+ФИО, телефоны и URL документов не добавляются.
+
+## Frontend preview
+
+Страница показывает:
+
+- готовность будущего payload;
+- наличие стабильного локального ключа повтора;
+- что URL не сохранится;
+- что сделка, задачи, документы и риски не создаются;
+- что данные никуда не отправляются.
+
+Кнопка «Очистить» создаёт новый idempotency key. Обычное редактирование и повторное формирование сохраняют прежний ключ.
 
 ## Synthetic scenarios
 
-Проверяются:
+Schema version 2 проверяет:
 
-- обычный юридический вопрос;
-- задаток и партнёрская сделка;
-- ипотека плюс маткапитал;
-- удаление URL из payload;
-- детские сценарии без потери точной формулировки;
-- супруг или супруга;
-- queue allowlist;
-- detail allowlist;
-- три решения юриста;
-- conversion draft.
+- 6 create payload cases;
+- корректный, uppercase, отсутствующий и повреждённый UUID;
+- повторный preview с тем же UUID;
+- queue/detail allowlist;
+- 4 допустимых решения юриста;
+- отсутствие conversion mode;
+- conversion mode у обычного ответа;
+- неверный consultation UUID;
+- слишком короткий текст;
+- безопасный conversion draft;
+- запрет draft с `creates_deal=true`;
+- запрет draft с `creates_backlog=true`;
+- запрет неизвестного режима.
 
 ## Production gate
 
-До подключения реальных RPC обязательны:
+До подключения transport обязательны:
 
-1. deploy consultation SQL в изолированную среду;
-2. authenticated role/mutation E2E;
-3. negative privacy tests на сервере;
-4. подтверждение queue/detail DTO реальными ответами;
-5. решение владельца по document URL и retention rules;
-6. Security Advisor review;
-7. отдельный deploy PR;
-8. только затем официальный role menu.
+1. PostgreSQL 17 harness base → hardening должен оставаться зелёным;
+2. отдельная deploy migration, объединяющая итоговый SQL;
+3. минимальные grants только проверенным ролям;
+4. authenticated role/mutation E2E;
+5. negative privacy tests через реальный Supabase client;
+6. подтверждение queue/detail DTO реальными ответами;
+7. решение владельца по document URL и retention rules;
+8. Security Advisor review;
+9. отдельный deploy PR;
+10. только затем официальный menu и transport.
 
 ## Rollback
 
 До production deploy rollback состоит из удаления:
 
-- `consultation-server-adapter-v2.js`;
-- adapter fixtures и regression;
-- блока серверной готовности из frontend preview;
-- workflow и документации.
+- hardening-функций adapter;
+- локального `client_request_id` из preview;
+- schema v2 fixtures и regression;
+- cache-bust страницы;
+- обновлённого checker и документации.
 
-Удаление adapter не затрагивает существующий локальный handoff preview, сделки или Supabase.
+Rollback не затрагивает сделки, существующий локальный eChat handoff или production Supabase.

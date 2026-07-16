@@ -4,6 +4,8 @@ import {
   validateConsultationInput
 } from './consultation-intake-model-v2.js?v=20260716-02';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const QUEUE_ITEM_KEYS = Object.freeze([
   'id', 'reference', 'status', 'request_type', 'representation_model', 'object_type',
   'stage', 'funding_sources', 'circumstances_count', 'planned_event_date',
@@ -15,7 +17,7 @@ const QUEUE_ITEM_KEYS = Object.freeze([
 const DETAIL_CONSULTATION_KEYS = Object.freeze([
   'id', 'reference', 'status', 'request_type', 'representation_model', 'object_type',
   'safe_reference', 'stage', 'funding_sources', 'circumstances',
-  'planned_event_date', 'has_external_documents', 'response_decision',
+  'planned_event_date', 'has_external_documents', 'response_decision', 'conversion_mode',
   'requester_name', 'requester_role', 'manager_name', 'assigned_lawyer_name',
   'created_at', 'updated_at', 'closed_at'
 ]);
@@ -25,6 +27,12 @@ const MESSAGE_KEYS = Object.freeze([
 ]);
 
 const PERMISSION_KEYS = Object.freeze(['can_decide', 'can_clarify', 'can_close']);
+
+const CONVERSION_KEYS = Object.freeze([
+  'consultation_id', 'preparation_mode', 'representation_model', 'object_type',
+  'safe_reference', 'funding_sources', 'circumstances', 'planned_event_date',
+  'has_external_documents', 'creates_deal', 'creates_backlog'
+]);
 
 const REPRESENTATION_MAP = Object.freeze({
   seller: 'seller',
@@ -36,16 +44,17 @@ const REPRESENTATION_MAP = Object.freeze({
 
 const STAGE_MAP = Object.freeze({
   first_question: 'question',
-  before_deposit: 'deposit_soon',
+  before_deposit: 'question',
   deposit_planned: 'deposit_soon',
   preparing_deal: 'deal_soon',
-  urgent: 'question'
+  urgent: 'deposit_soon'
 });
 
 const REQUEST_TYPE_BY_STAGE = Object.freeze({
   before_deposit: 'deposit_precheck',
   deposit_planned: 'deposit_precheck',
-  preparing_deal: 'deal_precheck'
+  preparing_deal: 'deal_precheck',
+  urgent: 'deposit_precheck'
 });
 
 const CIRCUMSTANCE_MAP = Object.freeze({
@@ -108,22 +117,24 @@ function serverQuestion(value) {
   return lines.join('\n');
 }
 
-export function consultationServerPayloadPreview(input = {}) {
-  const validation = validateConsultationInput(input);
-  if (!validation.ok) {
-    return {
-      ...validation,
-      server_ready: false,
-      payload: null,
-      adapter_warnings: []
-    };
-  }
+export function consultationClientRequestId(value) {
+  const normalized = clean(value).toLowerCase();
+  return UUID_RE.test(normalized) ? normalized : null;
+}
 
-  const value = normalizeConsultationInput(validation.value);
+export function consultationServerPayloadPreview(input = {}, options = {}) {
+  const validation = validateConsultationInput(input);
+  const value = normalizeConsultationInput(validation.value || input);
   const question = serverQuestion(value);
   const adapterErrors = [];
   const adapterWarnings = [];
+  const clientRequestId = consultationClientRequestId(
+    options.client_request_id || options.clientRequestId || input.client_request_id
+  );
 
+  if (!clientRequestId) {
+    adapterErrors.push('Для защиты от повторного создания нужен локальный client_request_id UUID.');
+  }
   if (question.length > 4000) {
     adapterErrors.push('Вопрос и известные факты вместе превышают серверный лимит 4000 символов. Сократите текст без потери существенных условий.');
   }
@@ -134,7 +145,8 @@ export function consultationServerPayloadPreview(input = {}) {
     adapterWarnings.push('Точные обстоятельства сохранены в тексте вопроса; структурированный серверный код использует укрупнённую категорию.');
   }
 
-  const payload = {
+  const payload = validation.ok && adapterErrors.length === 0 ? {
+    client_request_id: clientRequestId,
     question,
     request_type: REQUEST_TYPE_BY_STAGE[value.stage] || 'legal_answer',
     representation_model: REPRESENTATION_MAP[value.side] || 'unknown',
@@ -145,19 +157,26 @@ export function consultationServerPayloadPreview(input = {}) {
     circumstances: mappedCircumstances(value.circumstances),
     planned_event_date: value.planned_date || null,
     has_external_documents: Boolean(value.documents_url)
-  };
+  } : null;
 
+  const serverReady = validation.ok && adapterErrors.length === 0 && Boolean(payload);
   return {
     ...validation,
-    ok: validation.ok && adapterErrors.length === 0,
-    server_ready: validation.ok && adapterErrors.length === 0,
-    errors: [...validation.errors, ...adapterErrors],
+    ok: serverReady,
+    server_ready: serverReady,
+    errors: [...(validation.errors || []), ...adapterErrors],
+    adapter_errors: adapterErrors,
     adapter_warnings: adapterWarnings,
     payload,
+    rpc_preview: payload ? {
+      name: 'nav_v2_create_consultation',
+      args: { p_payload: payload }
+    } : null,
     persistence: {
       document_url_persisted: false,
       document_presence_persisted: Boolean(value.documents_url),
       known_facts_preserved_in_question: Boolean(value.known_facts),
+      idempotency_key_present: Boolean(clientRequestId),
       deal_created: false,
       backlog_created: false
     }
@@ -180,11 +199,7 @@ export function minimizeConsultationQueueResponse(payload = {}) {
 export function minimizeConsultationDetailResponse(payload = {}) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const conversion = source.conversion_draft && typeof source.conversion_draft === 'object'
-    ? pick(source.conversion_draft, [
-      'consultation_id', 'preparation_mode', 'representation_model', 'object_type',
-      'safe_reference', 'funding_sources', 'circumstances', 'planned_event_date',
-      'has_external_documents'
-    ])
+    ? pick(source.conversion_draft, CONVERSION_KEYS)
     : null;
   return {
     profile: pick(source.profile, ['id', 'full_name', 'role']),
@@ -200,23 +215,67 @@ export function consultationDecisionPresentation(decision) {
     answer: {
       label: 'Дать ответ',
       next_status: 'answered',
+      requires_conversion_mode: false,
+      conversion_modes: [],
       help: 'Зафиксировать юридический ответ и передать его инициатору.'
     },
     need_info: {
       label: 'Запросить уточнение',
       next_status: 'need_info',
-      help: 'Указать конкретный недостающий факт без общего возврата «доработать». '
+      requires_conversion_mode: false,
+      conversion_modes: [],
+      help: 'Указать конкретный недостающий факт без общего возврата «доработать».'
     },
     convert_to_preparation: {
       label: 'Нужна полная подготовка',
       next_status: 'convert_to_preparation',
-      help: 'Вернуть безопасный черновик полного мастера. Сделка и backlog автоматически не создаются.'
+      requires_conversion_mode: true,
+      conversion_modes: ['deposit', 'deal'],
+      help: 'Выбрать подготовку задатка или сделки и вернуть безопасный черновик полного мастера. Сделка и backlog автоматически не создаются.'
     }
   })[clean(decision)] || null;
 }
 
+export function consultationDecisionRpcPreview(input = {}) {
+  const consultationId = consultationClientRequestId(input.consultation_id);
+  const decision = clean(input.decision);
+  const body = clean(input.body);
+  const conversionMode = clean(input.conversion_mode) || null;
+  const presentation = consultationDecisionPresentation(decision);
+  const errors = [];
+
+  if (!consultationId) errors.push('consultation_id должен быть UUID.');
+  if (!presentation) errors.push('Выберите допустимое решение юриста.');
+  if (body.length < 10 || body.length > 4000) errors.push('Текст решения должен содержать от 10 до 4000 символов.');
+  if (decision === 'convert_to_preparation' && !['deposit', 'deal'].includes(conversionMode)) {
+    errors.push('Для полной подготовки выберите deposit или deal.');
+  }
+  if (decision !== 'convert_to_preparation' && conversionMode !== null) {
+    errors.push('conversion_mode разрешён только для convert_to_preparation.');
+  }
+
+  const ok = errors.length === 0;
+  return {
+    ok,
+    errors,
+    presentation,
+    rpc_preview: ok ? {
+      name: 'nav_v2_decide_consultation',
+      args: {
+        p_consultation_id: consultationId,
+        p_decision: decision,
+        p_body: body,
+        p_conversion_mode: conversionMode
+      }
+    } : null,
+    transport_enabled: false
+  };
+}
+
 export function consultationConversionToWizardDraft(conversion = {}) {
   const source = conversion && typeof conversion === 'object' ? conversion : {};
+  if (source.creates_deal === true || source.creates_backlog === true) return null;
+  if (!['deposit', 'deal'].includes(source.preparation_mode)) return null;
   const representation = ({
     seller: 'seller',
     buyer: 'buyer',
@@ -234,11 +293,9 @@ export function consultationConversionToWizardDraft(conversion = {}) {
   })[code] || []);
 
   return {
-    preparationMode: source.preparation_mode === 'deposit' ? 'deposit'
-      : source.preparation_mode === 'deal' ? 'deal'
-        : 'consult',
+    preparationMode: source.preparation_mode,
     representation,
-    objectType: source.object_type || 'other',
+    objectType: source.object_type === 'room_share' ? 'share_room' : (source.object_type || 'other'),
     payments,
     flags: [...new Set(flags)],
     consultationId: source.consultation_id || null,

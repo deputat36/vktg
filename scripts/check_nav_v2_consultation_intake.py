@@ -47,7 +47,7 @@ def main() -> int:
         "Быстрая консультация юриста",
         "Repository-only preview",
         "assets/css/nav-v2-consultation.css?v=20260716-02",
-        "assets/js/nav-v2/consultation-v2.js?v=20260716-03",
+        "assets/js/nav-v2/consultation-v2.js?v=20260716-04",
         "Сделка, задачи, документы и риски автоматически не создаются",
     ), PAGE.name, errors)
 
@@ -79,8 +79,12 @@ def main() -> int:
         "Скопировать текст",
         "Перенести в полный мастер",
         "WIZARD_DRAFT_KEY = 'nav_deal_draft_v2'",
+        "CLIENT_REQUEST_KEY = 'nav_consultation_client_request_id_v2'",
+        "currentClientRequestId()",
+        "rotateClientRequestId()",
         "const merged = { ...result.draft, ...existing }",
         "ничего не создаёт в Supabase",
+        "Данные никуда не отправляются",
     ), UI.name, errors)
     for forbidden in ("rpc(", "fetch(", ".from('nav_", '.from("nav_', "nav_v2_add_", "nav_v2_save_", "nav_v2_update_"):
         if forbidden in ui:
@@ -138,7 +142,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Navigator v2 consultation intake passed: privacy, role boundary, broker scope, synthetic scenarios and no server mutation")
+    print("Navigator v2 consultation intake passed: privacy, role boundary, broker scope, stable local idempotency and no server mutation")
     return 0
 
 

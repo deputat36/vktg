@@ -8,12 +8,40 @@ import {
   consultationRouting,
   consultationToWizardDraft
 } from './consultation-intake-model-v2.js?v=20260716-02';
-import { consultationServerPayloadPreview } from './consultation-server-adapter-v2.js?v=20260716-01';
+import { consultationServerPayloadPreview } from './consultation-server-adapter-v2.js?v=20260716-02';
 
 const app = document.getElementById('app');
 const WIZARD_DRAFT_KEY = 'nav_deal_draft_v2';
+const CLIENT_REQUEST_KEY = 'nav_consultation_client_request_id_v2';
 let currentProfile = null;
 let lastHandoff = null;
+let clientRequestId = null;
+
+function randomRequestId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((value) => value.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function currentClientRequestId() {
+  if (clientRequestId) return clientRequestId;
+  try { clientRequestId = sessionStorage.getItem(CLIENT_REQUEST_KEY); } catch (_) { clientRequestId = null; }
+  if (!clientRequestId) {
+    clientRequestId = randomRequestId();
+    try { sessionStorage.setItem(CLIENT_REQUEST_KEY, clientRequestId); } catch (_) {}
+  }
+  return clientRequestId;
+}
+
+function rotateClientRequestId() {
+  clientRequestId = randomRequestId();
+  try { sessionStorage.setItem(CLIENT_REQUEST_KEY, clientRequestId); } catch (_) {}
+  return clientRequestId;
+}
 
 function checkboxGroup(name, options) {
   return options.map((item) => `<label class="consultation-check"><input type="checkbox" name="${esc(name)}" value="${esc(item.code)}"><span>${esc(item.label)}</span></label>`).join('');
@@ -60,6 +88,7 @@ function readForm() {
   const form = document.getElementById('consultationForm');
   const data = new FormData(form);
   return {
+    client_request_id: currentClientRequestId(),
     question: data.get('question'),
     side: data.get('side'),
     stage: data.get('stage'),
@@ -91,7 +120,7 @@ function renderServerReadiness(preview) {
   if (!target) return;
   if (preview.server_ready) {
     const hasDocs = Boolean(preview.payload?.has_external_documents);
-    target.innerHTML = `<b>Будущий серверный payload готов.</b><br>Будут переданы структурированные факты и безопасный текст вопроса. ${hasDocs ? 'Сохранится только признак наличия документов, не сама ссылка. ' : ''}Сделка, задачи, документы и риски не создаются автоматически.`;
+    target.innerHTML = `<b>Будущий серверный payload готов.</b><br>Создан стабильный локальный ключ повтора: при повторной отправке сервер не создаст вторую консультацию. ${hasDocs ? 'Сохранится только признак наличия документов, не сама ссылка. ' : ''}Сделка, задачи, документы и риски не создаются автоматически.`;
     return;
   }
   target.innerHTML = '<b>Серверный payload ещё не готов.</b><br>Заполните обязательные факты и удалите персональные или точные идентификаторы. Данные никуда не отправляются.';
@@ -105,7 +134,7 @@ function setStatus(text, tone = '') {
 
 function updatePreview(showErrors = false) {
   const input = readForm();
-  const serverPreview = consultationServerPayloadPreview(input);
+  const serverPreview = consultationServerPayloadPreview(input, { client_request_id: input.client_request_id });
   renderRoute(input);
   renderServerReadiness(serverPreview);
   if (showErrors) renderMessages(serverPreview);
@@ -172,19 +201,21 @@ function bindForm() {
       document.getElementById('consultationMessages')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    setStatus('Передача и будущий серверный payload сформированы. Проверьте текст перед отправкой.', 'success');
+    setStatus('Передача и будущий серверный payload сформированы. Повторная отправка будет идемпотентной.', 'success');
     document.getElementById('consultationOutput')?.focus();
   });
   form.addEventListener('reset', () => {
     requestAnimationFrame(() => {
+      rotateClientRequestId();
       lastHandoff = null;
       document.getElementById('consultationMessages').innerHTML = '';
-      setStatus('');
+      setStatus('Создан новый локальный ключ консультации.');
       updatePreview(false);
     });
   });
   document.getElementById('copyConsultation').addEventListener('click', copyHandoff);
   document.getElementById('transferConsultation').addEventListener('click', transferToWizard);
+  currentClientRequestId();
   updatePreview(false);
 }
 
