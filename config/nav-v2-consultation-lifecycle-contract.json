@@ -1,9 +1,14 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "repository_only_prototype",
   "production_applied": false,
   "project_id": "ofewxuqfjhamgerwzull",
   "prototype_path": "supabase/prototypes/nav_v2_consultation_lifecycle.sql",
+  "hardening_path": "supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql",
+  "apply_order": [
+    "supabase/prototypes/nav_v2_consultation_lifecycle.sql",
+    "supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql"
+  ],
   "tables": [
     "public.nav_consultations_v2",
     "public.nav_consultation_messages_v2"
@@ -21,13 +26,15 @@
     "need_info": "need_info",
     "convert_to_preparation": "convert_to_preparation"
   },
+  "conversion_modes": ["deposit", "deal"],
   "requester_roles": ["spn", "manager", "lawyer", "owner", "admin"],
   "forbidden_requester_roles": ["broker", "viewer"],
-  "queue_roles": ["lawyer", "manager", "owner", "admin"],
+  "queue_roles": ["spn", "lawyer", "manager", "owner", "admin"],
   "decision_roles": ["lawyer", "owner", "admin"],
   "role_rules": {
     "spn": {
       "create": true,
+      "list_own": true,
       "view_own": true,
       "clarify_own": true,
       "decide": false
@@ -39,8 +46,9 @@
     },
     "lawyer": {
       "create": true,
-      "view_unassigned_or_self_assigned": true,
-      "decide_unassigned_or_self_assigned": true
+      "view_unassigned_open_or_self_assigned": true,
+      "view_unassigned_historical": false,
+      "decide_unassigned_open_or_self_assigned": true
     },
     "owner_admin": {
       "create": true,
@@ -62,7 +70,7 @@
     {"from": null, "action": "create", "to": "new"},
     {"from": "new", "action": "answer", "to": "answered"},
     {"from": "new", "action": "need_info", "to": "need_info"},
-    {"from": "new", "action": "convert_to_preparation", "to": "convert_to_preparation"},
+    {"from": "new", "action": "convert_to_preparation", "to": "convert_to_preparation", "requires_conversion_mode": true},
     {"from": "need_info", "action": "clarify", "to": "new"},
     {"from": "answered", "action": "close", "to": "closed"},
     {"from": "convert_to_preparation", "action": "close", "to": "closed"},
@@ -73,10 +81,28 @@
     "nav_v2_create_consultation(jsonb)",
     "nav_v2_get_consultation_queue(integer)",
     "nav_v2_get_consultation(uuid)",
-    "nav_v2_decide_consultation(uuid,text,text)",
+    "nav_v2_decide_consultation(uuid,text,text,text)",
     "nav_v2_add_consultation_clarification(uuid,text)",
     "nav_v2_close_consultation(uuid,text,text)"
   ],
+  "create_contract": {
+    "client_request_id_required": true,
+    "idempotency_scope": "created_by_client_request_id",
+    "unknown_payload_keys_rejected": true,
+    "payload_allowlist": [
+      "client_request_id",
+      "question",
+      "safe_reference",
+      "request_type",
+      "representation_model",
+      "object_type",
+      "stage",
+      "funding_sources",
+      "circumstances",
+      "planned_event_date",
+      "has_external_documents"
+    ]
+  },
   "queue_item_keys": [
     "id",
     "reference",
@@ -146,6 +172,7 @@
     "snils",
     "cadastral_number",
     "unit_number",
+    "possible_full_name",
     "long_payment_number"
   ],
   "funding_routes": {
@@ -165,7 +192,8 @@
     "tasks_created": false,
     "documents_created": false,
     "risks_created": false,
-    "conversion_is_draft_only": true
+    "conversion_is_draft_only": true,
+    "conversion_mode_explicit": true
   },
   "document_source_policy": {
     "persist_url": false,
@@ -178,9 +206,11 @@
     "direct_authenticated_table_access": false,
     "public_function_execute_revoked": true,
     "anon_function_execute_revoked": true,
-    "authenticated_execute_explicitly_granted": true,
+    "authenticated_execute_explicitly_granted": false,
+    "service_role_execute_granted": true,
     "security_definer_requires_auth_uid_and_active_profile": true,
-    "private_helpers_not_executable_by_authenticated": true
+    "private_helpers_not_executable_by_authenticated": true,
+    "deploy_grants_deferred_to_separate_migration": true
   },
-  "production_gate": "Apply only after isolated authenticated role/mutation E2E for spn, manager, lawyer, broker, viewer, owner/admin; security advisor review; approved document-source retention policy; and explicit rollout review."
+  "production_gate": "Apply base and hardening only after executable PostgreSQL 17 tests, isolated authenticated role/mutation E2E for spn, manager, lawyer, broker, viewer, owner/admin; security advisor review; approved document-source retention policy; and explicit rollout review with minimal grants."
 }

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "config/nav-v2-consultation-lifecycle-contract.json"
 FIXTURES = ROOT / "fixtures/nav-v2-consultation-lifecycle-scenarios.json"
 PROTOTYPE = ROOT / "supabase/prototypes/nav_v2_consultation_lifecycle.sql"
+HARDENING = ROOT / "supabase/prototypes/nav_v2_consultation_lifecycle_hardening.sql"
 DOC = ROOT / "docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-consultation-lifecycle.yml"
 
@@ -31,10 +32,15 @@ def transition_allowed(case: dict, decision_roles: set[str], requester_roles: se
     role = case["role"]
     source = case.get("from")
     action = case["action"]
+    conversion_mode = case.get("conversion_mode")
     if action == "create":
         return role in requester_roles, "new" if role in requester_roles else None
     if action in {"answer", "need_info", "convert_to_preparation"}:
         if source != "new" or role not in decision_roles:
+            return False, None
+        if action == "convert_to_preparation" and conversion_mode not in {"deposit", "deal"}:
+            return False, None
+        if action != "convert_to_preparation" and conversion_mode is not None:
             return False, None
         return True, {
             "answer": "answered",
@@ -58,6 +64,7 @@ def transition_allowed(case: dict, decision_roles: set[str], requester_roles: se
 def visibility_allowed(case: dict) -> bool:
     role = case["role"]
     relation = case["relation"]
+    status = case.get("status")
     if role in {"owner", "admin"}:
         return True
     if role == "spn":
@@ -65,7 +72,9 @@ def visibility_allowed(case: dict) -> bool:
     if role == "manager":
         return relation in {"requester_manager", "manager_id"}
     if role == "lawyer":
-        return relation in {"unassigned", "assigned_self"}
+        if relation == "assigned_self":
+            return True
+        return relation == "unassigned" and status in {"new", "need_info"}
     return False
 
 
@@ -74,8 +83,16 @@ PRIVACY_PATTERNS: dict[str, re.Pattern[str]] = {
     "phone": re.compile(r"(?:\+7|8)[\s()\-]*\d{3}[\s()\-]*\d{3}[\s\-]*\d{2}[\s\-]*\d{2}"),
     "passport": re.compile(r"\b\d{4}[\s-]+\d{6}\b"),
     "snils": re.compile(r"\b\d{3}-\d{3}-\d{3}[\s-]+\d{2}\b"),
-    "cadastral_number": re.compile(r"\b\d{2}:\d{2}:\d{6,7}:\d+\b"),
-    "unit_number": re.compile(r"(?:кв(?:артира)?|комн(?:ата)?|офис|пом(?:ещение)?)[\s]*№?[\s]*\d+", re.I),
+    "cadastral_number": re.compile(r"\b\d{2}:\d{2}:\d{5,9}:\d+\b"),
+    "unit_number": re.compile(
+        r"(?:^|[^\w])(?:кв(?:артира)?|комн(?:ата)?|офис|пом(?:ещение)?|апарт(?:аменты)?)"
+        r"[\s]*[№#-]?[\s]*\d+[а-яa-z]?(?:$|[^\w])",
+        re.I,
+    ),
+    "possible_full_name": re.compile(
+        r"(?:^|[^А-ЯЁа-яёA-Za-z])[А-ЯЁ][а-яё]{2,}\s+[А-ЯЁ][а-яё]{2,}"
+        r"(?:\s+[А-ЯЁ][а-яё]{2,})?(?:$|[^А-ЯЁа-яёA-Za-z])"
+    ),
     "long_payment_number": re.compile(r"(?:\d[ -]?){16,19}"),
 }
 
@@ -86,7 +103,7 @@ def privacy_findings(text: str) -> set[str]:
 
 def main() -> int:
     errors: list[str] = []
-    for path in (CONTRACT, FIXTURES, PROTOTYPE, DOC, WORKFLOW):
+    for path in (CONTRACT, FIXTURES, PROTOTYPE, HARDENING, DOC, WORKFLOW):
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
@@ -96,15 +113,24 @@ def main() -> int:
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
     fixtures = json.loads(FIXTURES.read_text(encoding="utf-8"))
     sql = PROTOTYPE.read_text(encoding="utf-8")
+    hardening = HARDENING.read_text(encoding="utf-8")
+    effective_sql = f"{sql}\n{hardening}"
     doc = DOC.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
+    if contract.get("schema_version") != 2:
+        errors.append("consultation lifecycle contract must use schema_version 2 after hardening")
     if contract.get("status") != "repository_only_prototype":
         errors.append("contract status must remain repository_only_prototype")
     if contract.get("production_applied") is not False:
         errors.append("consultation lifecycle must remain non-production")
     if contract.get("prototype_path") != PROTOTYPE.relative_to(ROOT).as_posix():
         errors.append("prototype path drifted")
+    if contract.get("hardening_path") != HARDENING.relative_to(ROOT).as_posix():
+        errors.append("hardening path drifted")
+    expected_order = [PROTOTYPE.relative_to(ROOT).as_posix(), HARDENING.relative_to(ROOT).as_posix()]
+    if contract.get("apply_order") != expected_order:
+        errors.append("base/hardening apply order drifted")
     if fixtures.get("synthetic_only") is not True:
         errors.append("fixtures must remain synthetic-only")
 
@@ -120,7 +146,6 @@ def main() -> int:
         "create or replace function public.nav_v2_create_consultation",
         "create or replace function public.nav_v2_get_consultation_queue",
         "create or replace function public.nav_v2_get_consultation",
-        "create or replace function public.nav_v2_decide_consultation",
         "create or replace function public.nav_v2_add_consultation_clarification",
         "create or replace function public.nav_v2_close_consultation",
         "'deal_created', false",
@@ -128,32 +153,54 @@ def main() -> int:
         "no document URL is persisted",
     ), PROTOTYPE.name, errors)
 
+    require(hardening, (
+        "-- REPOSITORY-ONLY HARDENING OVERLAY.",
+        "add column if not exists client_request_id uuid",
+        "add column if not exists conversion_mode text",
+        "nav_consultations_creator_request_unique_idx",
+        "'possible_full_name'",
+        "c.status in ('new', 'need_info')",
+        "'preparation_mode', c.conversion_mode",
+        "client_request_id обязателен для защиты от повторного создания",
+        "Payload содержит недопустимые поля",
+        "on conflict (created_by, client_request_id)",
+        "v_role not in ('spn', 'lawyer', 'manager', 'owner', 'admin')",
+        "v_role = 'spn' and c.created_by = v_uid",
+        "drop function if exists public.nav_v2_decide_consultation(uuid, text, text)",
+        "p_conversion_mode text default null",
+        "Для полной подготовки выберите deposit или deal",
+        "authenticated has no EXECUTE",
+    ), HARDENING.name, errors)
+
     for signature in contract.get("public_rpcs") or []:
         function_name = signature.split("(", 1)[0]
-        if f"public.{function_name}" not in sql:
-            errors.append(f"public RPC missing from SQL: {signature}")
+        if f"public.{function_name}" not in effective_sql:
+            errors.append(f"public RPC missing from effective SQL: {signature}")
 
-    for signature in (
+    hardened_signatures = (
         "public.nav_v2_create_consultation(jsonb)",
         "public.nav_v2_get_consultation_queue(integer)",
         "public.nav_v2_get_consultation(uuid)",
-        "public.nav_v2_decide_consultation(uuid, text, text)",
+        "public.nav_v2_decide_consultation(uuid, text, text, text)",
         "public.nav_v2_add_consultation_clarification(uuid, text)",
         "public.nav_v2_close_consultation(uuid, text, text)",
-    ):
-        if f"revoke execute on function {signature} from public, anon, authenticated" not in sql:
-            errors.append(f"missing explicit execute revoke for {signature}")
-        if f"grant execute on function {signature} to authenticated, service_role" not in sql:
-            errors.append(f"missing explicit authenticated grant for {signature}")
+    )
+    for signature in hardened_signatures:
+        if f"revoke execute on function {signature} from public, anon, authenticated" not in hardening:
+            errors.append(f"hardening missing API-role revoke for {signature}")
+        if f"grant execute on function {signature} to service_role" not in hardening:
+            errors.append(f"hardening missing service_role-only grant for {signature}")
+        if f"grant execute on function {signature} to authenticated" in hardening:
+            errors.append(f"hardening must not grant authenticated EXECUTE for {signature}")
 
     for table_name in contract.get("tables") or []:
         if f"revoke all on table {table_name} from public, anon, authenticated" not in sql:
             errors.append(f"direct table access must be revoked for {table_name}")
 
     queue = function_block(
-        sql,
+        hardening,
         "create or replace function public.nav_v2_get_consultation_queue",
-        "create or replace function public.nav_v2_get_consultation(",
+        "-- Replace the three-argument prototype",
     )
     for key in contract.get("queue_item_keys") or []:
         if f"'{key}'" not in queue:
@@ -161,15 +208,26 @@ def main() -> int:
     for key in contract.get("queue_forbidden_keys") or []:
         if f"'{key}'" in queue:
             errors.append(f"queue DTO exposes forbidden key: {key}")
+    if "v_role = 'spn' and c.created_by = v_uid" not in queue:
+        errors.append("SPN queue must be restricted to own consultations")
 
     for forbidden_table in (
         "nav_deals_v2", "nav_deal_tasks_v2", "nav_deal_documents_v2", "nav_deal_risks_v2"
     ):
-        if re.search(rf"(?im)^\s*insert\s+into\s+public\.{forbidden_table}\b", sql):
+        if re.search(rf"(?im)^\s*insert\s+into\s+public\.{forbidden_table}\b", effective_sql):
             errors.append(f"consultation prototype creates forbidden backlog row in {forbidden_table}")
 
-    if "document_source_url" in sql:
+    if "document_source_url" in effective_sql:
         errors.append("document source URL must not be persisted before owner retention decision")
+
+    create_contract = contract.get("create_contract") or {}
+    if create_contract.get("client_request_id_required") is not True:
+        errors.append("client_request_id must be required")
+    if create_contract.get("unknown_payload_keys_rejected") is not True:
+        errors.append("unknown payload keys must be rejected")
+    for key in create_contract.get("payload_allowlist") or []:
+        if f"'{key}'" not in hardening:
+            errors.append(f"create payload allowlist key missing from hardening SQL: {key}")
 
     requester_roles = set(contract.get("requester_roles") or [])
     decision_roles = set(contract.get("decision_roles") or [])
@@ -185,6 +243,13 @@ def main() -> int:
         allowed = visibility_allowed(case)
         if allowed != case["allowed"]:
             errors.append(f"visibility {case['id']} mismatch: got {allowed}, expected {case['allowed']}")
+
+    for case in fixtures.get("create_cases") or []:
+        allowed = bool(case.get("client_request_id")) and not case.get("unknown_keys")
+        if allowed != case["allowed"]:
+            errors.append(f"create case {case['id']} mismatch")
+        if case.get("repeat") and case.get("idempotent") is not True:
+            errors.append(f"repeat create case {case['id']} must be idempotent")
 
     for case in fixtures.get("funding_cases") or []:
         sources = set(case["sources"])
@@ -211,6 +276,7 @@ def main() -> int:
         "documents_created": False,
         "risks_created": False,
         "conversion_is_draft_only": True,
+        "conversion_mode_explicit": True,
     }
     if no_backlog != expected_no_backlog:
         errors.append("no-backlog guarantees drifted")
@@ -219,18 +285,32 @@ def main() -> int:
     if source_policy.get("persist_url") is not False or source_policy.get("persist_presence_flag_only") is not True:
         errors.append("document-source policy must persist only a presence flag")
 
+    security = contract.get("security_contract") or {}
+    if security.get("authenticated_execute_explicitly_granted") is not False:
+        errors.append("repository-only effective prototype must not grant authenticated EXECUTE")
+    if security.get("service_role_execute_granted") is not True:
+        errors.append("service_role execute contract drifted")
+    for case in fixtures.get("acl_cases") or []:
+        expected = case["role"] == "service_role"
+        if case["execute"] is not expected:
+            errors.append(f"ACL case {case['role']} mismatch")
+
     require(doc, (
         "repository-only prototype",
         "new → need_info / answered / convert_to_preparation → closed",
         "не создаёт сделку",
         "маткапитал",
         "сертификат",
-        "ипотечный брокер",
+        "Ипотечный брокер",
         "document URL",
+        "Hardening overlay",
+        "client_request_id",
+        "conversion_mode",
         "Production gate",
         "Rollback",
     ), DOC.name, errors)
     require(workflow, (
+        "nav_v2_consultation_lifecycle_hardening.sql",
         "python3 scripts/check_nav_v2_consultation_lifecycle.py",
         "python3 -m py_compile scripts/check_nav_v2_consultation_lifecycle.py",
         "nav-v2-consultation-lifecycle",
@@ -238,6 +318,8 @@ def main() -> int:
 
     if "authenticated role/mutation" not in str(contract.get("production_gate", "")).lower():
         errors.append("production gate must require authenticated role/mutation E2E")
+    if "postgresql 17" not in str(contract.get("production_gate", "")).lower():
+        errors.append("production gate must require executable PostgreSQL 17 tests")
 
     if errors:
         print("Navigator v2 consultation lifecycle errors:")
@@ -246,8 +328,8 @@ def main() -> int:
         return 1
 
     print(
-        "Navigator v2 consultation lifecycle passed: lightweight queue, role transitions, "
-        "privacy guard, draft-only conversion and no deal backlog"
+        "Navigator v2 consultation lifecycle passed: SPN own list, idempotent create, strict payload, "
+        "open-only unassigned lawyer access, explicit conversion mode and deferred authenticated grants"
     )
     return 0
 

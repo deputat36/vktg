@@ -4,11 +4,11 @@
 
 - Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Production `main` перед текущим PR: `c218eec001f91f96b00f7d604b9adf4ccd31142f` — squash merge PR #354.
+- Production `main` перед текущим hardening PR: `6fa1e59c991739178c1dc7948ff4758ac40676bd`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последняя production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Production Supabase в PR #350–#354 и текущем consultation-preview не менялся.
-- Edge Functions, Auth, RLS и grants в этих волнах не менялись.
+- Consultation preview, lifecycle prototype и hardening не применялись к production Supabase.
+- Edge Functions, Auth, production RLS, status guards и назначения сотрудников не менялись.
 
 Counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
@@ -25,18 +25,17 @@ Navigator не является CRM, файловым архивом или ав
 ### СПН
 
 - фиксирует факты, условия и договорённости;
-- собирает документы и evidence;
-- выполняет ближайшее действие;
-- предлагает исключительный исход документа или риска;
-- не подтверждает юридический или ипотечный gate самостоятельно.
+- создаёт короткий юридический запрос;
+- видит свои консультации;
+- отвечает на запрос уточнения;
+- не принимает юридическое или ипотечное решение самостоятельно.
 
 ### Юрист
 
 - принимает юридические решения;
+- отвечает, запрашивает уточнение или рекомендует полную подготовку;
 - определяет stop-факторы;
-- подтверждает юридические документы и риски;
-- готовит договорные документы;
-- подтверждает готовность к задатку и сделке.
+- готовит договорные документы и подтверждает готовность к задатку/сделке.
 
 ### Ипотечный брокер
 
@@ -50,14 +49,15 @@ Navigator не является CRM, файловым архивом или ав
 ### Менеджер
 
 - помогает новичкам;
-- контролирует зависшие сделки и нарушения процесса;
-- подтверждает процессные, СПН- и корпоративные пункты;
+- видит consultation-запросы своей команды;
+- контролирует зависшие процессы;
 - не заменяет юриста или брокера.
 
 ### Owner/admin
 
-- видит системные задержки, принятие продукта и нагрузку;
-- может принимать исключительные решения с обязательным аудитом.
+- видит весь контур;
+- принимает исключительные решения с аудитом;
+- утверждает deployment, document-source policy и pilot.
 
 ## Канонические документы
 
@@ -65,92 +65,91 @@ Navigator не является CRM, файловым архивом или ав
 - `docs/NAV_V2_AUTONOMOUS_EXECUTION_PLAN_2026-07-15.md` — автономные волны и gates.
 - `docs/NAV_V2_OFFICE_PROCESS_AUDIT_2026-07-16.md` — фактический процесс офиса.
 - `docs/NAV_V2_MORTGAGE_BROKER_SCOPE_2026-07-16.md` — зона ответственности ипотечного брокера.
-- `docs/NAV_V2_DEALS_LIST_DTO_PROTOTYPE_2026-07-16.md` — минимальный DTO списка.
 - `docs/NAV_V2_WORK_ITEM_OUTCOME_CONTRACT_2026-07-16.md` — исходы документов и рисков.
 - `docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md` — outcome-aware readiness.
-- `docs/NAV_V2_OUTCOME_READINESS_SCENARIOS_2026-07-16.md` — синтетическая scenario matrix.
-- `docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md` — быстрый consultation intake preview.
+- `docs/NAV_V2_OUTCOME_READINESS_SCENARIOS_2026-07-16.md` — synthetic matrix readiness.
+- `docs/NAV_V2_FAST_CONSULTATION_INTAKE_2026-07-16.md` — быстрый frontend preview.
+- `docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md` — lightweight server lifecycle и hardening overlay.
 
 ## Live baseline 16 июля 2026 года
 
-- 5 активных профилей: owner, lawyer, 3 SPN;
+- 5 активных профилей: owner, lawyer, 3 СПН;
 - активного manager и broker нет;
 - 23 сделки;
 - 98 задач, большинство открыты и просрочены, `task_type` не заполнен;
 - 198 документов: 182 `needed`, 12 `received`, 4 `checked`;
-- 53 риска: после PR #349 — 49 открыты и 4 закрыты;
-- командный цикл начал использоваться, но lifecycle ещё не замкнут.
+- 53 риска: после PR #349 — 49 открыты и 4 закрыты.
 
 Не использовать сырые показатели для оценки сотрудников: в данных могут быть тестовые, учебные и исторические записи.
 
 ## Завершённые волны
 
-### PR #349 — корректная роль ипотечного брокера
+### PR #349 — правильная роль брокера
 
-- `broker_needed` создаётся только для ипотеки/военной ипотеки;
-- маткапитал и сертификаты не направляют карточку брокеру;
-- 4 автоматически ошибочно направленные карточки исправлены ограниченной production migration;
-- ручные назначения и ипотечные сделки не менялись.
+- broker route только для ипотеки/военной ипотеки;
+- маткапитал и сертификаты не направляются брокеру без ипотеки;
+- ошибочные автоматические маршруты исправлены ограниченной production migration.
 
-### PR #350 — DTO списка сделок
+### PR #350–#354 — privacy, outcomes и readiness
 
-- explicit allowlist для `nav_v2_get_deals_list`;
-- клиентские ФИО/телефоны, raw `next_action`, `deal_summary`, `wizard_snapshot` и unit-level address исключены из prototype contract;
-- save recovery и handoff подготовлены к минимальному DTO;
+- минимальные DTO;
+- evidence-only duplicate handling;
+- двухэтапные исходы документов/рисков;
+- outcome-aware readiness;
+- role, funding и readiness fixtures;
 - production не менялся.
-
-### PR #351 — outcome-контракт
-
-- документы: `not_applicable`, `replaced`, `cancelled`, `external_wait`, `deferred`;
-- риски: `mitigated`, `not_applicable`, `superseded`, `accepted_by_specialist`, `cancelled`;
-- состояния `proposed`, `confirmed`, `rejected`;
-- СПН предлагает, профильная роль подтверждает;
-- SQL только в `supabase/prototypes`.
-
-### PR #352 — frontend preview outcomes
-
-- role-aware preview встроен в существующий lifecycle карточки;
-- СПН видит «предложить исход/решение», а не «закрыть»;
-- нет новых mutation RPC, повторных read RPC или отдельного HTML entry module;
-- production не менялся.
-
-### PR #353 — outcome-aware readiness prototype
-
-- `checked` — штатное завершение документа;
-- только confirmed `not_applicable/replaced/cancelled` закрывают документ как исключение;
-- `received`, proposed outcomes, `external_wait` и `deferred` остаются активными;
-- proposed/rejected risk resolution не снимает блокировку;
-- готовность к задатку и сделке считается раздельно;
-- RPC read-only, без grants и клиентских идентификаторов.
-
-### PR #354 — synthetic outcome/readiness scenario matrix
-
-- 15 сценариев готовности документов, рисков и review;
-- 14 positive/negative role cases;
-- 7 funding route cases;
-- маткапитал и сертификаты без ипотеки не относятся к брокеру;
-- fixtures не вставляются в Supabase.
 
 ### PR #355 — закрыт без merge
 
-- ранняя версия consultation preview преждевременно меняла официальный role menu;
-- закрыта как superseded;
-- не считать её частью `main`.
+Ранняя consultation-версия преждевременно меняла production role menu.
 
-## Текущий consultation preview
-
-Текущая ветка добавляет repository-only экран `consultation-v2.html`:
+### PR #356 — safe fast consultation preview
 
 - один экран минимальных фактов;
-- готовый структурированный текст для eChat;
-- предварительная маршрутизация без выдачи за юридическое заключение;
-- ипотечный брокер подключается только при ипотеке/военной ипотеке;
-- маткапитал и сертификаты без ипотеки остаются у СПН и юриста;
-- privacy guard блокирует клиентские контакты, паспортные данные, кадастровые номера и номера помещений;
-- безопасные факты можно явно перенести в локальный draft полного мастера;
-- консультация не сохраняется в Supabase;
-- официальный role menu не меняется;
-- сделка, документы, риски и задачи не создаются.
+- структурированная передача юристу;
+- privacy guard;
+- безопасный локальный draft полного мастера;
+- broker только при ипотеке;
+- официальный menu и Supabase не менялись;
+- merge commit `c8427ef3fa1cd50e8700dcd25cda314686a0793b`.
+
+### Commit `6fa1e59…` — lightweight consultation lifecycle prototype
+
+В `main` добавлены repository-only:
+
+- `nav_consultations_v2`;
+- `nav_consultation_messages_v2`;
+- create/list/detail/decision/clarification/close RPC;
+- privacy guard;
+- role matrix;
+- conversion draft без сделки/backlog;
+- fixtures, CI, docs и rollback.
+
+Production Supabase не менялся.
+
+## Текущая волна — consultation lifecycle hardening
+
+Hardening overlay применяется после базового prototype только в будущих изолированных тестах.
+
+### Исправления
+
+1. `client_request_id` обязателен; create становится идемпотентным.
+2. Unknown payload keys отклоняются explicit allowlist.
+3. СПН получает role-scoped список только собственных активных консультаций.
+4. Неназначенный юрист видит только открытые `new/need_info`, а не исторические `answered/closed/cancelled` карточки по UUID.
+5. `convert_to_preparation` требует явный `conversion_mode=deposit|deal`.
+6. Conversion draft не угадывает режим и не возвращает `unknown`.
+7. Server privacy guard дополнительно блокирует возможные ФИО и расширенный unit-level pattern.
+8. Effective ACL после base + overlay отзывает EXECUTE у authenticated; доступ остаётся только service_role для будущего isolated harness.
+9. Production grants откладываются до отдельной deploy migration.
+
+### Сохраняемые гарантии
+
+- брокер не получает юридическую очередь;
+- маткапитал/сертификат без ипотеки не включают broker route;
+- document URL не хранится до решения владельца;
+- сделка, задачи, документы и риски не создаются;
+- полный мастер запускается только явным действием пользователя.
 
 ## Принцип дальнейшей работы
 
@@ -160,66 +159,39 @@ Navigator не является CRM, файловым архивом или ав
 
 Автоматический backlog нельзя расширять без completion contract.
 
-## Следующий безопасный slice после consultation preview
+## Следующий безопасный slice после hardening
 
-P0/P1 — repository-only серверная модель консультации и очередь юриста.
+P0/P1 — executable PostgreSQL 17 harness в GitHub Actions без Supabase branch.
 
-### Consultation entity
+### Harness должен
 
-Минимальные поля:
+- запустить ephemeral PostgreSQL 17;
+- создать stub `auth.uid()`, JWT role и минимальные `auth.users`;
+- создать synthetic `nav_user_profiles` и тип `nav_v2_user_role`;
+- применить base SQL, затем hardening overlay;
+- проверить DDL, constraints, indexes, RLS и итоговые ACL;
+- проверить create/idempotency и unknown-key rejection;
+- проверить список СПН, менеджера, юриста и owner/admin;
+- проверить broker/viewer denial;
+- проверить прямой UUID-доступ неназначенного юриста к исторической карточке;
+- проверить `need_info → clarification → new`;
+- проверить answer и convert с обязательным `deposit/deal`;
+- проверить отсутствие insert в deals/tasks/documents/risks;
+- проверить privacy rejections;
+- проверить broker routing по funding;
+- уничтожить service container после CI.
 
-- `id`;
-- `created_by`;
-- `created_at`, `updated_at`;
-- `status`: `new`, `need_info`, `answered`, `converted`, `closed`;
-- безопасный structured intake без клиентских идентификаторов;
-- `lawyer_id` или состояние ожидания назначения;
-- `priority`;
-- `planned_date`;
-- безопасная ссылка на утверждённый внешний источник;
-- `answer_text` или отдельная response entity;
-- `converted_deal_id` после явного преобразования.
+### После harness
 
-### RPC prototype
-
-- create consultation;
-- get visible consultation list;
-- get consultation card;
-- lawyer decision: `answer`, `need_info`, `convert_to_preparation`;
-- SPN response to `need_info`;
-- explicit conversion to deposit/deal preparation;
-- audit events;
-- никакого полного document/task backlog до conversion.
-
-### Access model
-
-- СПН видит созданные им консультации;
-- менеджер видит консультации своей команды;
-- юрист видит очередь и назначенные консультации;
-- owner/admin видят весь контур;
-- broker не получает юридическую очередь;
-- при ипотеке broker scope отражается отдельным фактом, но не даёт ему доступа к юридическому ответу автоматически;
-- viewer не получает доступ.
-
-### Production gates
-
-- SQL только в `supabase/prototypes`;
-- explicit DTO allowlist;
-- synthetic lifecycle fixtures;
-- role/access matrix;
-- authenticated role/mutation E2E;
-- rollback;
-- отдельный deploy PR;
-- только после этого официальный пункт меню.
-
-После consultation entity:
-
-1. отдельный блок корпоративных документов;
-2. bounded task taxonomy и SLA;
-3. controlled pilot;
-4. authenticated mutation E2E после approval среды;
-5. production rollout outcomes/readiness;
-6. security hardening.
+1. исправить реальные SQL/ACL ошибки;
+2. подготовить repository-only frontend RPC adapter;
+3. authenticated application E2E после approval среды;
+4. отдельный deploy PR с объединённой migration и минимальными grants;
+5. после deployment добавить официальный menu;
+6. отдельный блок корпоративных документов;
+7. bounded task taxonomy и SLA;
+8. controlled pilot;
+9. security hardening.
 
 ## Ручные ограничения
 
@@ -229,11 +201,10 @@ P0/P1 — repository-only серверная модель консультаци
 - Не применять repository-only prototypes к production.
 - Не создавать платную Supabase branch без согласования стоимости issue #282.
 - Не считать skipped authenticated job доказательством ролей.
-- Не менять grants, RLS, Auth или Edge Functions без отдельного review/deploy slice.
+- Не менять production grants, RLS, Auth или Edge Functions без отдельного deploy slice.
 - Не хранить сканы документов в Navigator.
 - Не выдавать автоматическую маршрутизацию за юридическое заключение.
 - Не использовать сырые pilot metrics для оценки сотрудников.
-- Не закрывать существующие документы и риски массово или по предположению.
 - Не менять production status guards до authenticated tests.
 
 ## Decision gates владельца
@@ -243,26 +214,21 @@ P0/P1 — repository-only серверная модель консультаци
 1. кто является manager controlled pilot;
 2. какие 10–15 кейсов и сотрудники входят в пилот;
 3. применяется ли отдельный ПОД/ФТ-контур и кто его владелец;
-4. Яндекс Диск или другой утверждённый источник документов и retention rules;
-5. approval стоимости preview branch для authenticated E2E.
+4. утверждённые document source domains и retention rules;
+5. approval стоимости Supabase preview branch для authenticated application E2E.
 
 ## Не повторять без новой причины
 
 - общий технический аудит;
-- аудит фактического процесса офиса;
-- retirement viewer;
-- сбор клиентских ФИО/телефонов в мастере;
-- frontend read-layer masking;
-- evidence-only duplicate handling;
+- аудит фактического процесса;
 - broker scope correction;
-- deal-card-lite/deals-list DTO prototypes;
-- outcome contract;
-- non-mutating outcome preview;
-- outcome readiness prototype;
-- outcome/readiness scenario matrix;
-- раннюю PR #355;
+- DTO/privacy masking;
+- outcome/readiness prototypes;
+- early PR #355;
+- fast consultation preview;
+- lightweight consultation lifecycle base;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после consultation preview. Сначала подготовь repository-only SQL/DTO/RPC prototype consultation entity и очереди юриста. Не применяй SQL к production, не меняй status guards/roles/grants/RLS/Auth и не создавай полный document/task backlog до явного convert_to_preparation.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после consultation lifecycle hardening. Сначала создай executable PostgreSQL 17 CI harness, который применяет base SQL и hardening overlay по порядку и выполняет synthetic Auth/roles/ACL/lifecycle tests. Не применяй SQL к production и не создавай платную Supabase branch.`
