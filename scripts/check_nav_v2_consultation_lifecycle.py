@@ -301,7 +301,7 @@ def main() -> int:
         "не создаёт сделку",
         "маткапитал",
         "сертификат",
-        "ипотечный брокер",
+        "Ипотечный брокер",
         "document URL",
         "Hardening overlay",
         "client_request_id",
