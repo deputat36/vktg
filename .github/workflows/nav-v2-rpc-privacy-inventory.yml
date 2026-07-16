@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'config/nav-v2-rpc-privacy-inventory.json'
+      - 'config/nav-v2-rpc-privacy-inventory-corrections.json'
       - 'docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md'
       - 'scripts/check_nav_v2_rpc_privacy_inventory.py'
       - 'supabase/migrations/**'
@@ -35,6 +36,7 @@ jobs:
           name: nav-v2-rpc-privacy-inventory
           path: |
             config/nav-v2-rpc-privacy-inventory.json
+            config/nav-v2-rpc-privacy-inventory-corrections.json
             docs/NAV_V2_RPC_PRIVACY_INVENTORY_2026-07-16.md
             rpc-privacy-inventory-check.txt
           if-no-files-found: error
