@@ -2,195 +2,164 @@
 
 ## Точка продолжения
 
-- Дата: 2026-07-15.
+- Дата: 2026-07-16.
 - Репозиторий: `deputat36/vktg`.
-- Текущий `main`: `4a9c404ee14c19fb8f5e67a9ab632f894fc2f7eb` — merge PR #331.
+- Текущий `main`: `0a4d15189be6522e6542a754f0643f4b6c37cda2` — merge PR #342.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Последний подтверждённый статус проекта: `ACTIVE_HEALTHY`.
-- Последняя подтверждённая production migration: `20260714125054_nav_v2_exact_duplicate_review_pack`.
-- PR #329 и #331 не меняли schema, grants, RPC definitions, Auth, Edge Functions или рабочие строки.
-- Открытых PR после merge #331 не было на момент подготовки handoff.
+- Последняя подтверждённая production migration: `20260715203158_nav_v2_minimize_client_identifiers`.
+- Канонический fresh-install source: `20260715224500_nav_v2_minimize_client_identifiers.sql`.
+- Edge Functions в последних privacy-волнах не менялись.
+- Открытых PR после merge #342 не было до подготовки этого handoff.
 
-## Что уже завершено
+## Что завершено после полного аудита
 
-### PR #288–#302 — action-first основа
+### PR #333 — автономный план исполнения
 
-- role-aware dashboard и список сделок;
-- одно главное действие в карточке;
-- manager remediation routes;
-- цикл доработки СПН;
-- документный цикл юриста;
-- server-confirmed completion evidence;
-- manager confirmed results;
-- mobile operational first screen.
+- зафиксированы волны развития, допустимая автономия и ручные gates;
+- основной процесс сформулирован как `факт → требование → действие → ответственный → результат → подтверждение → переход сделки`;
+- production cleanup, роли, платные ресурсы и юридические решения оставлены за владельцем.
 
-### PR #306–#323 — privacy и accessibility foundation
+### PR #334 — task permission/action feedback
 
-- privacy-safe enum-only UX contract без collector/storage;
-- keyboard/focus continuity;
-- accessible busy/success/error feedback;
-- named main/regions/groups и heading hierarchy;
-- form labels, help/error association;
-- choice-group semantics.
+- первый клик ожидает permission snapshot и автоматически продолжает действие;
+- отказ объясняет ответственную роль;
+- task mutation использует существующий RPC и точный payload;
+- busy/success/error отображаются через shared live feedback;
+- completion и reopen проверены на desktop/mobile.
 
-### PR #325 — controlled dialog риска
+### PR #336–#337 — retirement роли viewer
 
-- один dialog вместо confirm + prompt;
-- действие, риск, последствия и demo warning в одном окне;
-- Escape/Cancel без mutation;
-- focus return;
-- необязательный комментарий хранится только в памяти;
-- draft сохраняется после cancel/server error и очищается после успеха;
-- существующий risk RPC и payload не менялись.
+- `viewer` убран из новых назначений в UI;
+- активное назначение блокируется на границе таблицы и административных RPC;
+- enum и legacy workspace сохранены только для совместимости;
+- production migration: `20260715195732_nav_v2_retire_viewer_assignment`;
+- активных viewer-профилей в production нет.
 
-### PR #327 — обязательная причина проблемы документа
+### PR #338–#339 — минимизация новых сделок
 
-- shared dialog показывает документ и новое состояние;
-- причина обязательна;
-- inline error связан через `aria-invalid` и `aria-errormessage`;
-- Escape/Cancel без mutation;
-- focus return;
-- memory-only draft recovery;
-- существующий document RPC и payload не менялись.
+- мастер перестал собирать клиентские ФИО и телефоны;
+- browser draft и wizard payload очищаются;
+- публичный save wrapper минимизирует данные до legacy implementation;
+- private legacy implementation недоступна authenticated;
+- table trigger защищает INSERT и точечно изменяемые identity/JSON-поля;
+- исторические строки не очищались;
+- production migration: `20260715203158_nav_v2_minimize_client_identifiers`.
 
-### PR #329 — review передачи юристу
+### PR #340 — защита свободного ввода
 
-Dialog открывается только при непустом списке препятствий.
+- локально распознаются явные email, российские телефоны, паспорт, СНИЛС и Luhn-valid номера карт;
+- сохранение блокируется до исправления текста;
+- суммы, даты, кадастровые ориентиры и рабочие числа не блокируются;
+- ввод не передаётся внешним сервисам и не записывается в telemetry/storage.
 
-- показывается весь список из блока «Перед передачей юристу»;
-- показываются последствия и demo warning;
-- Escape/Cancel без mutation и с focus return;
-- server error повторно разрешает кнопку;
-- при состоянии «можно передавать» базовый прямой handler остаётся нетронутым;
-- используется существующий status RPC с состоянием `need_lawyer`.
+### PR #341 — централизованная read-layer minimization
 
-Финальный head: `58ad1ebcc522822cd8fd34168a2ca03c0f82970e`.
+- каждый RPC-ответ минимизируется до кэширования, поиска и рендера;
+- structured client identifiers удаляются рекурсивно;
+- названия сделок заменяются нейтральной ссылкой: тип объекта, ориентир без квартиры/офиса и короткий код;
+- вложенные `deal_title` / `dealTitle` нейтрализуются;
+- ФИО и телефоны сотрудников, task/document/risk titles и рабочие факты сохраняются;
+- префикс `ДЕМО:` сохраняется.
 
-PASS:
+### PR #342 — historical free-text redaction
 
-- 17/17 workflows;
-- 10 dedicated desktop/mobile scenarios;
-- exact status payload;
-- ready-state direct action;
-- предыдущие risk/document/form/async/focus contracts;
-- review threads: 0.
+- явные чувствительные значения в существующих комментариях, заметках, описаниях, рекомендациях, следующих шагах и handoff маскируются при чтении;
+- оригинальные строки в Supabase не обновляются и не удаляются;
+- рабочие данные сотрудников, суммы, даты и объектные ориентиры сохраняются;
+- произвольные ФИО в свободном тексте эвристически не маскируются, чтобы не скрывать имена сотрудников и не создавать ложные срабатывания.
 
-Первый browser run упал только из-за неоднозначного тестового locator: исходная кнопка и confirm-кнопка имели одинаковый текст. Product runtime был корректен; финальный spec ограничивает поиск открытым dialog.
+## Последний production baseline
 
-### PR #330 — полный аудит
-
-Добавлены:
-
-- `docs/NAV_V2_FULL_AUDIT_2026-07-15.md`;
-- `docs/NAV_V2_TECHNICAL_AUDIT_2026-07-15.md`;
-- `docs/NAV_V2_LEGAL_COMPLIANCE_AUDIT_2026-07-15.md`.
-
-Аудит является обзором и планом. Он не отменяет ручные ограничения и не разрешает production mutations.
-
-### PR #331 — live feedback трёх dialog-flow
-
-Cross-flow recovery audit выявил общий пробел: после закрытия dialog текст mutation выводился в `#pageStatus`, но busy/error не имели гарантированной live-region семантики.
-
-Добавлен `assets/js/nav-v2/page-action-feedback-v2.js`.
-
-Контракт:
-
-- busy: polite status, atomic, busy=true;
-- success: polite status, busy=false;
-- error: assertive alert, busy=false;
-- один существующий `#pageStatus`;
-- без focus jump;
-- без дополнительных live regions.
-
-Интегрированы:
-
-1. risk resolution;
-2. document problem;
-3. lawyer handoff.
-
-Существующие RPC и payload не менялись. Helper не содержит RPC, storage, collector, transport или observer. HTML entry-module budget не увеличен. Active hook release: `20260715-22`.
-
-Финальный head: `c50ad80f06c5b190864ba03e7d4e9bcc3e239796`.
-
-PASS:
-
-- 18/18 workflows;
-- full static suite;
-- desktop/mobile live-region regression;
-- busy/success/error/idle transitions;
-- один status node после повторных переходов;
-- dialog, form, focus, screen structure и mobile regressions;
-- public desktop/mobile smoke;
-- review threads: 0.
-
-Authenticated browser workflow завершился успешно на public job, но authenticated job был пропущен. Это не authenticated evidence.
-
-## Post-merge source smoke
-
-`main` подтверждает:
-
-- один shared helper управляет live semantics `#pageStatus`;
-- три dialog-модуля импортируют helper;
-- active module versions — `v02`;
-- hook release — `20260715-22`;
-- каждый flow сохраняет прежний RPC и payload;
-- helper не меняет focus и не создаёт новые status nodes;
-- backend и рабочие данные не менялись.
-
-## Последний read-only baseline
-
+- Profiles: 5;
+- Viewer profiles: 0;
 - Deals: 23;
 - Tasks: 98;
-- Risks: 53;
 - Documents: 198;
-- Events: 118.
+- Risks: 53;
+- production trigger `nav_v2_deals_guard_client_identifiers`: включён.
 
 Counts могут изменяться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
 
+## Проверки последних privacy-волн
+
+Зелёные фактически выполненные проверки:
+
+- основной static suite;
+- общий JavaScript syntax;
+- task action feedback;
+- client data minimization semantic/source;
+- sensitive free-text semantic/source;
+- read-layer minimization semantic/source;
+- desktop/mobile browser regressions;
+- input guard regressions;
+- public guest smoke;
+- review threads: 0 перед merge.
+
+`authenticated-smoke` завершался со статусом `skipped`. Это не authenticated evidence и не подтверждение полной ролевой матрицы.
+
 ## Ручные ограничения
 
-- По issue #273 нет решения владельца: duplicate cleanup запрещён.
-- Для operational pilot не предоставлен полный evidence-пакет: pilot mutation запрещена.
-- Для responsibility correction нет evidence: не менять ответственных в рабочих строках.
-- Production-readonly workflow с запретом drift не запускался вручную.
-- Для isolated authenticated E2E требуется отдельное явное решение; до него среду не создавать.
+- Issue #273: duplicate cleanup запрещён без решения владельца.
+- Operational pilot mutation запрещена без полного evidence-пакета.
+- Не менять `seller_spn_id`, `buyer_spn_id`, `manager_id` в рабочих строках без подтверждённого evidence и решения владельца.
+- Исторические ФИО, телефоны и свободные тексты физически не очищать автоматически.
+- Изолированную Supabase branch для authenticated E2E не создавать без отдельного явного согласования стоимости.
+- Не считать пропущенный authenticated job доказательством безопасности ролей.
+- Не менять production grants/RPC/Auth/Edge Functions в рамках следующего slice.
+- Legacy decommission и удаление enum/экранов выполнять только отдельным решением.
 
 ## Следующий безопасный продуктовый slice
 
-P1 UX — task permission/action feedback и завершение task-flow.
+P1 privacy architecture — read-only инвентаризация серверных RPC-ответов и repository-only контракт server-side minimization.
 
 Цель:
 
-`нажать действие задачи → понять права → получить доступное состояние проверки/сохранения → увидеть результат или понятную ошибку`
+`RPC source → фактически возвращаемые поля → классификация данных → риск экспозиции → безопасный wrapper contract → порядок rollout`
 
 Требования:
 
-1. Проверить `task-action-guard-v2.js`, task buttons и completion evidence.
-2. Не дублировать permission/RPC логику.
-3. Переиспользовать `page-action-feedback-v2.js` для permission check и task mutation busy/success/error.
-4. Сохранить текущие роли, status taxonomy и payload.
-5. Проверить завершение и повторное открытие задачи; новый status не вводить без backend contract.
-6. Permission error должен объяснять ответственного и не скрывать задачу.
-7. Не создавать focus jump для pointer.
-8. Новый observer не добавлять; существующий observer заменить explicit lifecycle только при доказанной эквивалентности.
-9. Добавить source contract и desktop/mobile regression.
-10. Без новых RPC, storage, collector, telemetry, backend или Supabase branch.
+1. Проинвентаризировать высокочастотные read RPC:
+   - `nav_v2_get_deals_list`;
+   - `nav_v2_get_dashboard`;
+   - `nav_v2_get_deal_card`;
+   - `nav_v2_get_deal_card_lite`;
+   - manager operational readiness;
+   - lawyer queue/review summary;
+   - broker queue;
+   - operational reports и responsibility snapshots.
+2. Для каждого JSON-поля указать одну категорию:
+   - рабочий факт;
+   - идентификатор сотрудника;
+   - структурированный клиентский идентификатор;
+   - чувствительный свободный текст;
+   - технический идентификатор/permission metadata.
+3. Не читать и не публиковать сами production-значения; использовать определения функций и агрегаты.
+4. Подготовить машинно-читаемый registry и source-backed отчёт.
+5. Добавить static/semantic проверку, которая запрещает нерегистрируемую выдачу клиентских identifier keys в ключевых read RPC.
+6. Подготовить repository-only SQL/wrapper design без production deploy.
+7. Не менять публичные RPC signatures, роли, grants и RLS в этом slice.
+8. Предложить rollout order по уровню риска и зависимости экранов.
+9. Production deploy возможен только после authenticated regression или отдельного решения владельца.
 
-После этого выполнить read-only сверку task closure с техническим аудитом PR #330.
+## После RPC-инвентаризации
+
+- определить срок хранения browser draft и migration path для старых локальных drafts;
+- подготовить агрегированный preview возможной исторической очистки без вывода значений;
+- вернуться к authenticated role matrix при появлении одобренной изолированной среды;
+- продолжить operational task lifecycle и pilot только в рамках существующих gates.
 
 ## Не повторять без новой причины
 
-- общий аудит;
-- action-first dashboard/list/card/manager;
-- SPN rework и lawyer document lifecycle;
-- mobile first screen;
-- privacy/focus/async/landmark/form/choice foundation;
-- risk dialog PR #325;
-- document problem dialog PR #327;
-- lawyer handoff dialog PR #329;
-- dialog live feedback PR #331;
-- production mutations без требуемых решений и evidence.
+- общий аудит проекта;
+- task permission/action feedback;
+- retirement viewer assignment;
+- сбор ФИО/телефонов в мастере;
+- client input guard;
+- frontend structured read-layer masking;
+- historical free-text read masking;
+- production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #331. Начни task permission/action feedback slice: не дублируй permission или task RPC, переиспользуй page-action-feedback, проверь completion/reopen и сохрани роли, status taxonomy и payload. Без новых RPC, storage, collector, telemetry и backend.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #342. Начни read-only инвентаризацию серверных RPC-ответов и repository-only contract server-side minimization. Не выводи production-значения, не меняй signatures, roles, grants, RLS, Auth, Edge Functions или рабочие строки.`
