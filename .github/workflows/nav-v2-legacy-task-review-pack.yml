@@ -1,0 +1,101 @@
+name: Navigator v2 legacy task review pack
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-legacy-task-review-contract.json'
+      - 'fixtures/nav-v2-legacy-task-review-scenarios.json'
+      - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
+      - 'supabase/prototypes/nav_v2_legacy_task_review_pack.sql'
+      - 'tests/sql/nav_v2_bounded_task_mutation_setup.sql'
+      - 'tests/sql/nav_v2_legacy_task_review_assertions.sql'
+      - 'tests/sql/nav_v2_legacy_task_review_rollback.sql'
+      - 'scripts/check_nav_v2_legacy_task_review_pack.py'
+      - 'docs/NAV_V2_LEGACY_TASK_REVIEW_PACK_2026-07-16.md'
+      - '.github/workflows/nav-v2-legacy-task-review-pack.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-legacy-task-review:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_legacy_task_review
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_legacy_task_review"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_legacy_task_review
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate source and semantic contract
+        run: python3 scripts/check_nav_v2_legacy_task_review_pack.py
+
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_legacy_task_review_pack.py
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Create synthetic Auth, roles, deals and legacy task
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_setup.sql
+
+      - name: Apply bounded task base contract
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_bounded_task_contract.sql
+
+      - name: Apply read-only legacy review pack
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_legacy_task_review_pack.sql
+
+      - name: Run role, mapping, privacy and no-write assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_legacy_task_review_assertions.sql 2>&1 | tee legacy-task-review-assertions.log
+
+      - name: Rehearse review rollback
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_legacy_task_review_rollback.sql
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-legacy-task-review-pack
+          path: |
+            config/nav-v2-legacy-task-review-contract.json
+            fixtures/nav-v2-legacy-task-review-scenarios.json
+            supabase/prototypes/nav_v2_legacy_task_review_pack.sql
+            tests/sql/nav_v2_legacy_task_review_assertions.sql
+            tests/sql/nav_v2_legacy_task_review_rollback.sql
+            docs/NAV_V2_LEGACY_TASK_REVIEW_PACK_2026-07-16.md
+            legacy-task-review-assertions.log
+          if-no-files-found: error

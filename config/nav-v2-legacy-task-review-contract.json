@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_legacy_task_review_pack.sql",
+  "public_rpc": "nav_v2_get_legacy_task_review_pack(integer)",
+  "allowed_roles": ["owner", "admin", "manager"],
+  "review_decisions": [
+    "leave_legacy",
+    "candidate_for_recreate",
+    "manual_review",
+    "retire_after_evidence"
+  ],
+  "automatic_recommendations": {
+    "active_high_confidence": "candidate_for_recreate",
+    "unknown_or_role_mismatch": "manual_review",
+    "done_or_cancelled": "leave_legacy",
+    "retire_after_evidence": "never_automatic"
+  },
+  "high_confidence_source_mapping": {
+    "auto_quality_*": "card_correction",
+    "auto_settlements": "term_approval",
+    "auto_expenses": "term_approval",
+    "auto_lawyer": "legal_decision",
+    "auto_children": "legal_decision",
+    "auto_share_lawyer": "legal_decision",
+    "auto_broker_with_broker_role": "financial_decision"
+  },
+  "manual_review_sources": [
+    "auto_matcap",
+    "auto_certificate",
+    "auto_subsidy",
+    "unknown_source",
+    "null_source"
+  ],
+  "item_allowlist": [
+    "task_id",
+    "task_reference",
+    "deal_id",
+    "deal_reference",
+    "status",
+    "priority",
+    "source",
+    "assigned_role",
+    "assigned_to",
+    "assignee_name",
+    "due_date",
+    "created_at",
+    "age_days",
+    "overdue_days",
+    "suggested_task_type",
+    "suggestion_confidence",
+    "role_compatible",
+    "recommended_decision",
+    "allowed_decisions",
+    "default_sla_days",
+    "max_sla_days",
+    "completion_criterion_code",
+    "allowed_owner_roles",
+    "allowed_evidence_kinds",
+    "default_gate_scope"
+  ],
+  "forbidden_fields": [
+    "title",
+    "description",
+    "address",
+    "seller_name",
+    "buyer_name",
+    "client_name",
+    "phone",
+    "email",
+    "passport",
+    "document_url",
+    "free_form_evidence"
+  ],
+  "separation_guarantees": {
+    "task_rows_updated": false,
+    "new_tasks_created": false,
+    "tasks_completed_or_cancelled": false,
+    "deal_readiness_changed": false,
+    "risk_gate_changed": false,
+    "deal_status_changed": false,
+    "employee_evaluation_allowed": false
+  },
+  "production_gate": "No deployment before owner selection of a controlled 10–15 task pilot, authenticated E2E, Security Advisor review and a separate deployment PR."
+}
