@@ -1,0 +1,102 @@
+name: Navigator v2 bounded task mutations
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-bounded-task-mutations-contract.json'
+      - 'fixtures/nav-v2-bounded-task-mutation-scenarios.json'
+      - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'tests/sql/nav_v2_bounded_task_mutation_setup.sql'
+      - 'tests/sql/nav_v2_bounded_task_mutation_assertions.sql'
+      - 'tests/sql/nav_v2_bounded_task_mutation_assertions_part*.sql'
+      - 'tests/sql/nav_v2_bounded_task_mutation_rollback.sql'
+      - 'scripts/check_nav_v2_bounded_task_mutations.py'
+      - 'docs/NAV_V2_BOUNDED_TASK_MUTATIONS_2026-07-16.md'
+      - '.github/workflows/nav-v2-bounded-task-mutations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-bounded-task-mutations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_bounded_task_harness
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_bounded_task_harness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_bounded_task_harness
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate source and semantic contract
+        run: python3 scripts/check_nav_v2_bounded_task_mutations.py
+
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_bounded_task_mutations.py
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Create synthetic Auth, roles, deals and legacy task
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_setup.sql
+
+      - name: Apply bounded task base contract
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_bounded_task_contract.sql
+
+      - name: Apply bounded task mutation overlay
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_bounded_task_mutations.sql
+
+      - name: Run role, lifecycle, evidence and separation assertions
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_assertions.sql
+
+      - name: Rehearse mutation rollback
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_rollback.sql
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-task-mutations
+          path: |
+            config/nav-v2-bounded-task-mutations-contract.json
+            fixtures/nav-v2-bounded-task-mutation-scenarios.json
+            supabase/prototypes/nav_v2_bounded_task_mutations.sql
+            tests/sql/nav_v2_bounded_task_mutation_setup.sql
+            tests/sql/nav_v2_bounded_task_mutation_assertions.sql
+            tests/sql/nav_v2_bounded_task_mutation_assertions_part1.sql
+            tests/sql/nav_v2_bounded_task_mutation_assertions_part2.sql
+            tests/sql/nav_v2_bounded_task_mutation_assertions_part3.sql
+            tests/sql/nav_v2_bounded_task_mutation_rollback.sql
+            docs/NAV_V2_BOUNDED_TASK_MUTATIONS_2026-07-16.md
+          if-no-files-found: error
