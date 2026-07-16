@@ -6,15 +6,32 @@ do $$
 declare
   v_payload jsonb := public.nav_v2_get_deal_card_lite('10000000-0000-4000-8000-000000000001');
   v_task jsonb;
+  v_bounded_task_id uuid;
 begin
   if (v_payload->>'dto_version')::int <> 1
      or v_payload ? 'task_contract_aware' then
     raise exception 'base lite DTO was not restored';
   end if;
 
+  select t.id into v_bounded_task_id
+  from public.nav_deal_tasks_v2 t
+  where t.deal_id='10000000-0000-4000-8000-000000000001'
+    and t.task_contract_version=2
+    and t.task_type='legal_decision'
+  order by t.created_at desc
+  limit 1;
+
+  if v_bounded_task_id is null then
+    raise exception 'synthetic bounded task was not found during rollback';
+  end if;
+
   select item into v_task
   from jsonb_array_elements(v_payload->'tasks') item
-  where item->>'id'=(select id::text from lite_ids where name='legal_task');
+  where item->>'id'=v_bounded_task_id::text;
+
+  if v_task is null then
+    raise exception 'bounded task is missing from restored lite DTO';
+  end if;
 
   if v_task ? 'task_contract_version'
      or v_task ? 'can_start'
