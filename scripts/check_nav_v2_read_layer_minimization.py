@@ -59,18 +59,20 @@ def main() -> int:
             errors.append(f"{MODEL.name}: pure model contains forbidden side effect {marker!r}")
 
     client = CLIENT.read_text(encoding="utf-8")
+    minimize_call = "let data = minimizeNavigatorReadPayload(await parse(response));"
+    recovery_call = "if (name === 'nav_v2_get_deals_list') data = recoverNewDealsOnly(data);"
     require(
         client,
         (
             "import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';",
-            "let data = minimizeNavigatorReadPayload(await parse(response));",
+            minimize_call,
             "if (name === 'nav_v2_get_my_profile') saveCachedProfile",
-            "if (name === 'nav_v2_get_deals_list') data = recoverNewDealsOnly(data);",
+            recovery_call,
         ),
         CLIENT.name,
         errors,
     )
-    if client.index("minimizeNavigatorReadPayload(await parse(response))") > client.index("recoverNewDealsOnly(data)"):
+    if minimize_call in client and recovery_call in client and client.index(minimize_call) > client.index(recovery_call):
         errors.append("supabase-v2.js: minimization must happen before deal-list recovery and caching")
 
     semantic = SEMANTIC.read_text(encoding="utf-8")
