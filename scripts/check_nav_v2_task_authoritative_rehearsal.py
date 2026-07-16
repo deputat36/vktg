@@ -89,7 +89,7 @@ def main()->int:
         'competing handlers',
         'Legacy actions',
         'Bounded actions',
-        'bounded reopen',
+        'Bounded reopen',
         'Production gate',
         'Rollback',
     ),DOC.name,errors)
