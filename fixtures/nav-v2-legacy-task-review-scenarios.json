@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "mapping_cases": [
+    {"id":"quality_seller","source":"auto_quality_seller_name","assigned_role":"spn","status":"open","suggested":"card_correction","decision":"candidate_for_recreate"},
+    {"id":"quality_manager","source":"auto_quality_responsible_spn","assigned_role":"manager","status":"open","suggested":"card_correction","decision":"candidate_for_recreate"},
+    {"id":"expenses","source":"auto_expenses","assigned_role":"spn","status":"open","suggested":"term_approval","decision":"candidate_for_recreate"},
+    {"id":"settlements","source":"auto_settlements","assigned_role":"spn","status":"open","suggested":"term_approval","decision":"candidate_for_recreate"},
+    {"id":"lawyer","source":"auto_lawyer","assigned_role":"lawyer","status":"open","suggested":"legal_decision","decision":"candidate_for_recreate"},
+    {"id":"children","source":"auto_children","assigned_role":"lawyer","status":"open","suggested":"legal_decision","decision":"candidate_for_recreate"},
+    {"id":"share_lawyer","source":"auto_share_lawyer","assigned_role":"lawyer","status":"open","suggested":"legal_decision","decision":"candidate_for_recreate"},
+    {"id":"broker_open","source":"auto_broker","assigned_role":"broker","status":"open","suggested":"financial_decision","decision":"candidate_for_recreate"},
+    {"id":"broker_cancelled","source":"auto_broker","assigned_role":"broker","status":"cancelled","suggested":"financial_decision","decision":"leave_legacy"},
+    {"id":"broker_role_mismatch","source":"auto_broker","assigned_role":"spn","status":"open","suggested":null,"decision":"manual_review"},
+    {"id":"matcap_not_broker","source":"auto_matcap","assigned_role":"broker","status":"open","suggested":null,"decision":"manual_review"},
+    {"id":"certificate_not_broker","source":"auto_certificate","assigned_role":"broker","status":"open","suggested":null,"decision":"manual_review"},
+    {"id":"unknown","source":"manual_unknown","assigned_role":"spn","status":"open","suggested":null,"decision":"manual_review"}
+  ],
+  "role_cases": [
+    {"role":"owner","allowed":true},
+    {"role":"admin","allowed":true},
+    {"role":"manager","allowed":true},
+    {"role":"spn","allowed":false},
+    {"role":"lawyer","allowed":false},
+    {"role":"broker","allowed":false},
+    {"role":"viewer","allowed":false}
+  ],
+  "decision_rules": {
+    "retire_after_evidence_never_automatic": true,
+    "done_or_cancelled_leave_legacy": true,
+    "unknown_source_manual_review": true,
+    "high_confidence_active_candidate": true
+  }
+}
