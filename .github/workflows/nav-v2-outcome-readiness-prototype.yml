@@ -1,0 +1,35 @@
+name: Navigator v2 outcome readiness prototype
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-outcome-readiness-contract.json'
+      - 'supabase/prototypes/nav_v2_outcome_readiness_preview.sql'
+      - 'supabase/prototypes/nav_v2_work_item_outcomes.sql'
+      - 'docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md'
+      - 'scripts/check_nav_v2_outcome_readiness_prototype.py'
+      - '.github/workflows/nav-v2-outcome-readiness-prototype.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate outcome-aware readiness contract
+        run: python3 scripts/check_nav_v2_outcome_readiness_prototype.py
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_outcome_readiness_prototype.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-outcome-readiness-prototype
+          path: |
+            config/nav-v2-outcome-readiness-contract.json
+            supabase/prototypes/nav_v2_outcome_readiness_preview.sql
+            docs/NAV_V2_OUTCOME_READINESS_PROTOTYPE_2026-07-16.md
+          if-no-files-found: error
