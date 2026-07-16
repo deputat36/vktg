@@ -68,6 +68,7 @@ const ready = deal({
 });
 const duplicateOld = deal({
   id: 'duplicate-old',
+  exact_duplicate_group_id: 'confirmed-group-1',
   address: 'Дубль 1',
   display_title: 'Квартира — Дубль 1',
   created_at: '2026-01-01T09:00:00Z',
@@ -87,10 +88,10 @@ assert.equal(dealMatchesWorkMode(unassigned, 'unassigned'), true);
 
 const owner = buildDealsWorkspace([demo, duplicateNew, ready, overdue, unassigned, duplicateOld], 'owner');
 assert.equal(owner.hiddenDemoCount, 1, 'Demo rows must be hidden from working modes');
-assert.equal(owner.hiddenDuplicateCount, 1, 'Exact duplicates must collapse in working modes');
+assert.equal(owner.hiddenDuplicateCount, 1, 'Server-confirmed duplicates must collapse in working modes');
 assert.equal(owner.workingDealCount, 4, 'Four canonical work deals must remain');
-assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-old'), true, 'Earliest duplicate must remain');
-assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-new'), false, 'Later exact duplicate must be hidden');
+assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-old'), true, 'Earliest confirmed duplicate must remain');
+assert.equal(owner.canonicalDeals.some((item) => item.id === 'duplicate-new'), false, 'Later confirmed duplicate must be hidden');
 assert.deepEqual(owner.quickModes.map((item) => item.key), ['work', 'attention', 'overdue', 'unassigned', 'deposit']);
 assert.equal(owner.counts.overdue, 1);
 assert.equal(owner.counts.unassigned, 1);
