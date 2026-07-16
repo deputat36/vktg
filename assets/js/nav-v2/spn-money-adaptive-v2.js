@@ -1,3 +1,5 @@
+import './broker-scope-correction-v2.js?v=20260716-01';
+
 const DRAFT_KEY = 'nav_deal_draft_v2';
 let scheduled = false;
 let observerStarted = false;
