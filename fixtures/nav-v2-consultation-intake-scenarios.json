@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "status": "synthetic_only",
+  "production_applied": false,
+  "scenarios": [
+    {
+      "id": "cash_basic_question",
+      "input": {
+        "question": "Можно ли согласовать задаток на этих условиях и что обязательно указать?",
+        "desiredResult": "Условия допустимости задатка",
+        "representation": "seller",
+        "stage": "terms_discussed",
+        "objectType": "flat_mkd",
+        "safeObjectReference": "Северный микрорайон",
+        "payments": ["cash"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Цена обсуждена, порядок расчётов пока не согласован.",
+        "conversionTarget": "deposit"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": false,
+        "legalFunding": false,
+        "stopBeforeDeposit": false,
+        "conversionMode": "deposit"
+      }
+    },
+    {
+      "id": "urgent_share_deposit",
+      "input": {
+        "question": "Можно ли принимать задаток до получения отказов сособственников?",
+        "representation": "seller",
+        "stage": "urgent_deposit",
+        "objectType": "share",
+        "safeObjectReference": "район Центр",
+        "payments": ["cash"],
+        "flags": ["shares", "urgentTerms"],
+        "knownFacts": "Продажа доли, отказы ещё не получены, стороны хотят внести задаток завтра.",
+        "conversionTarget": "deposit"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": false,
+        "legalFunding": false,
+        "stopBeforeDeposit": true,
+        "urgent": true
+      }
+    },
+    {
+      "id": "mortgage_consultation",
+      "input": {
+        "question": "Какие юридические условия нужно согласовать до задатка при покупке в ипотеку?",
+        "representation": "buyer",
+        "stage": "object_chosen",
+        "objectType": "house_land",
+        "safeObjectReference": "Борисоглебск, северная часть города",
+        "payments": ["mortgage"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Объект выбран, ипотечная программа ещё не подобрана.",
+        "conversionTarget": "check_docs"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": true,
+        "legalFunding": false,
+        "stopBeforeDeposit": false
+      }
+    },
+    {
+      "id": "matcap_without_mortgage",
+      "input": {
+        "question": "Можно ли использовать маткапитал в этой сделке и какие условия нужно предусмотреть?",
+        "representation": "buyer",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "safeObjectReference": "Юго-восточный район",
+        "payments": ["matcap"],
+        "flags": ["minorBuyer"],
+        "knownFacts": "Ипотеки нет, часть цены планируется оплатить маткапиталом.",
+        "conversionTarget": "deal"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": false,
+        "legalFunding": true,
+        "stopBeforeDeposit": true
+      }
+    },
+    {
+      "id": "certificate_without_mortgage",
+      "input": {
+        "question": "Какие ограничения сертификата нужно проверить до согласования условий сделки?",
+        "representation": "buyer",
+        "stage": "terms_discussed",
+        "objectType": "house_land",
+        "safeObjectReference": "Грибановский район",
+        "payments": ["certificate"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Оплата частично сертификатом, ипотека не используется.",
+        "conversionTarget": "check_docs"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": false,
+        "legalFunding": true,
+        "stopBeforeDeposit": false
+      }
+    },
+    {
+      "id": "mortgage_with_matcap",
+      "input": {
+        "question": "Как разделить ипотечный и юридический маршрут при использовании маткапитала?",
+        "representation": "buyer",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "safeObjectReference": "район Аэродромный",
+        "payments": ["mortgage", "matcap"],
+        "flags": ["minorBuyer"],
+        "knownFacts": "Нужны ипотечное одобрение и проверка условий использования маткапитала.",
+        "conversionTarget": "deal"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": true,
+        "legalFunding": true,
+        "stopBeforeDeposit": true
+      }
+    },
+    {
+      "id": "phone_rejected",
+      "input": {
+        "question": "Можно ли провести сделку с клиентом по телефону +7 900 123-45-67?",
+        "representation": "seller",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "payments": ["cash"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Объект выбран."
+      },
+      "expected": {
+        "valid": false,
+        "errorContains": "Удалите телефоны"
+      }
+    },
+    {
+      "id": "email_rejected",
+      "input": {
+        "question": "Можно ли согласовать условия с продавцом через client@example.com?",
+        "representation": "seller",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "payments": ["cash"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Условия обсуждаются."
+      },
+      "expected": {
+        "valid": false,
+        "errorContains": "Удалите телефоны"
+      }
+    },
+    {
+      "id": "unit_address_rejected",
+      "input": {
+        "question": "Какие документы нужно проверить до задатка по выбранному объекту?",
+        "representation": "buyer",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "safeObjectReference": "ул. Советская, кв. 15",
+        "payments": ["cash"],
+        "flags": ["noneKnown"],
+        "knownFacts": "Объект выбран."
+      },
+      "expected": {
+        "valid": false,
+        "errorContains": "без номера квартиры"
+      }
+    },
+    {
+      "id": "short_question_rejected",
+      "input": {
+        "question": "Можно?",
+        "representation": "seller",
+        "stage": "lead_only",
+        "objectType": "unknown",
+        "payments": ["unknown"],
+        "flags": ["noneKnown"]
+      },
+      "expected": {
+        "valid": false,
+        "errorContains": "Сформулируйте конкретный вопрос"
+      }
+    },
+    {
+      "id": "conflicting_flags_rejected",
+      "input": {
+        "question": "Какие обстоятельства нужно проверить до подготовки задатка?",
+        "representation": "seller",
+        "stage": "object_chosen",
+        "objectType": "flat_mkd",
+        "payments": ["cash"],
+        "flags": ["noneKnown", "powerOfAttorney"],
+        "knownFacts": "Продавец действует по доверенности."
+      },
+      "expected": {
+        "valid": false,
+        "errorContains": "Нельзя одновременно выбрать"
+      }
+    },
+    {
+      "id": "safe_wizard_transfer",
+      "input": {
+        "question": "Какие условия нужно выполнить перед проверкой документов и подготовкой сделки?",
+        "desiredResult": "Получить маршрут проверки",
+        "representation": "one_spn_both",
+        "stage": "main_deal",
+        "objectType": "house_land",
+        "safeObjectReference": "Поворино, центральная часть",
+        "payments": ["mortgage", "certificate"],
+        "flags": ["spouse"],
+        "knownFacts": "Стороны согласовали цену, расчёты требуют уточнения.",
+        "plannedDate": "2026-08-05",
+        "documentFolderStatus": "Документы собираются",
+        "conversionTarget": "deal"
+      },
+      "expected": {
+        "valid": true,
+        "brokerNeeded": true,
+        "legalFunding": true,
+        "conversionMode": "deal",
+        "draftHasClientIdentifiers": false
+      }
+    }
+  ]
+}
