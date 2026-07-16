@@ -17,6 +17,7 @@ import { applyMobileFirstScreenDisclosure } from './mobile-first-screen-v2.js?v=
 import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-01';
 import { applyFormAssociations } from './form-association-v2.js?v=20260715-02';
 import { installSensitiveFreeTextGuard } from './sensitive-free-text-guard-v2.js?v=20260715-01';
+import { applyWorkItemOutcomePreview } from './work-item-outcome-preview-v2.js?v=20260716-01';
 
 // Previous release source markers:
 // import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';
@@ -41,6 +42,7 @@ function applyCardEnhancements() {
   applyDealCardExpenseLabels();
   applyDealCardReadableValues();
   applyDealCardRiskResolution(cardData, profileData);
+  applyWorkItemOutcomePreview(cardData, profileData);
   applyDealResponsibilitySnapshot(cardData);
   void applySpnSaveConfirmation(cardData);
   void applyDealCardBazaHints(cardData, profileData);
