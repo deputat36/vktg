@@ -47,7 +47,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run synthetic dual-path browser test
-        run: npx playwright test tests/e2e/task-action-dual-path.spec.js --project=chromium
+        run: npx playwright test tests/e2e/task-action-dual-path.spec.js --project=chromium-desktop
 
       - name: Upload evidence
         if: always()
