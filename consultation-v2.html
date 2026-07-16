@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ofewxuqfjhamgerwzull.supabase.co wss://ofewxuqfjhamgerwzull.supabase.co; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <title>Быстрая консультация — Навигатор v2</title>
+  <link rel="stylesheet" href="./assets/css/nav-v2.css?v=20260701-0815">
+  <link rel="stylesheet" href="./assets/css/nav-click-fix-v2.css?v=20260623-1515">
+  <link rel="stylesheet" href="./assets/css/nav-v2-consultation.css?v=20260716-02">
+</head>
+<body class="nav-v2 consultation-page">
+  <main class="nav-v2-shell consultation-shell">
+    <section class="card consultation-top">
+      <div>
+        <span class="pill blue">Repository-only preview</span>
+        <h1>Быстрая консультация юриста</h1>
+        <p>Один экран для вопроса, минимальных фактов и готовой передачи. Сделка, задачи, документы и риски автоматически не создаются.</p>
+      </div>
+      <div class="actions">
+        <a class="btn light" href="./dashboard-v2.html">Рабочий стол</a>
+        <a class="btn light" href="./deals-v2.html">Сделки</a>
+      </div>
+    </section>
+    <div id="app"><section class="card"><div class="status" role="status" aria-live="polite">Проверяю доступ...</div></section></div>
+  </main>
+  <script type="importmap">
+    {
+      "scopes": {
+        "./assets/js/nav-v2/": {
+          "./supabase-v2.js": "./assets/js/nav-v2/supabase-v2.js?v=20260711-01",
+          "./supabase-v2.js?v=20260625-1230": "./assets/js/nav-v2/supabase-v2.js?v=20260711-01",
+          "./supabase-v2.js?v=20260625-1320": "./assets/js/nav-v2/supabase-v2.js?v=20260711-01"
+        }
+      }
+    }
+  </script>
+  <script type="module" src="./assets/js/nav-v2/consultation-v2.js?v=20260716-02"></script>
+</body>
+</html>
