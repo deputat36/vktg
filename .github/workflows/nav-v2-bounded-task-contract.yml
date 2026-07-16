@@ -1,0 +1,40 @@
+name: Navigator v2 bounded task contract
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-bounded-task-contract.json'
+      - 'fixtures/nav-v2-bounded-task-contract-scenarios.json'
+      - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
+      - 'scripts/check_nav_v2_bounded_task_contract.py'
+      - 'docs/NAV_V2_BOUNDED_TASK_CONTRACT_2026-07-16.md'
+      - '.github/workflows/nav-v2-bounded-task-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-task-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bounded task contract
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_bounded_task_contract.py 2>&1 | tee bounded-task-contract-output.txt
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_bounded_task_contract.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-task-contract
+          path: |
+            bounded-task-contract-output.txt
+            config/nav-v2-bounded-task-contract.json
+            fixtures/nav-v2-bounded-task-contract-scenarios.json
+            supabase/prototypes/nav_v2_bounded_task_contract.sql
+            docs/NAV_V2_BOUNDED_TASK_CONTRACT_2026-07-16.md
+          if-no-files-found: error
