@@ -27,9 +27,9 @@ export const CONSULTATION_CIRCUMSTANCE_OPTIONS = Object.freeze([
   { code: 'other', label: 'Другое существенное обстоятельство' }
 ]);
 
-const UNIT_LEVEL_RE = /\b(?:кв(?:артира)?|комн(?:ата)?|офис|помещ(?:ение)?|апарт(?:аменты)?)\s*[№#-]?\s*\d+[а-яa-z]?\b/iu;
+const UNIT_LEVEL_RE = /(?:^|[^\p{L}\p{N}])(?:кв(?:артира)?|комн(?:ата)?|офис|помещ(?:ение)?|апарт(?:аменты)?)\s*[№#-]?\s*\d+[а-яa-z]?(?=$|[^\p{L}\p{N}])/iu;
 const CADASTRAL_RE = /\b\d{2}:\d{2}:\d{5,9}:\d+\b/u;
-const FULL_NAME_HINT_RE = /\b[А-ЯЁ][а-яё]{2,}\s+[А-ЯЁ][а-яё]{2,}(?:\s+[А-ЯЁ][а-яё]{2,})?\b/u;
+const FULL_NAME_HINT_RE = /(?:^|[^\p{L}])[А-ЯЁ][а-яё]{2,}\s+[А-ЯЁ][а-яё]{2,}(?:\s+[А-ЯЁ][а-яё]{2,})?(?=$|[^\p{L}])/u;
 
 const LABELS = Object.freeze({
   side: {
