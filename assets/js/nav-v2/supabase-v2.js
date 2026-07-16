@@ -1,4 +1,5 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
+import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';
 
 export const NAV_V2_BUILD_ID = '20260711-01';
 if (typeof document !== 'undefined') {
@@ -260,7 +261,7 @@ async function executeRpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) 
         method: 'POST', headers: headers(), body: JSON.stringify(payload)
       }, timeout);
     }
-    let data = await parse(response);
+    let data = minimizeNavigatorReadPayload(await parse(response));
     if (name === 'nav_v2_get_my_profile') saveCachedProfile(data?.profile || null);
     if (name === 'nav_v2_get_deals_list') data = recoverNewDealsOnly(data);
     if (name === 'nav_v2_save_wizard_result') wizardSaveRecovery = null;
