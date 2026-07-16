@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "role_cases": [
+    {"id":"spn_create","role":"spn","action":"create","allowed":true},
+    {"id":"manager_create","role":"manager","action":"create","allowed":true},
+    {"id":"lawyer_create_denied","role":"lawyer","action":"create","allowed":false},
+    {"id":"broker_create_denied","role":"broker","action":"create","allowed":false},
+    {"id":"viewer_create_denied","role":"viewer","action":"create","allowed":false},
+    {"id":"assigned_lawyer_operate","role":"lawyer","action":"operate_assigned","allowed":true},
+    {"id":"assigned_broker_operate","role":"broker","action":"operate_assigned","allowed":true},
+    {"id":"spn_decide_denied","role":"spn","action":"decide_terminal","allowed":false},
+    {"id":"manager_decide","role":"manager","action":"decide_terminal","allowed":true},
+    {"id":"owner_decide","role":"owner","action":"decide_terminal","allowed":true}
+  ],
+  "batch_cases": [
+    {"id":"one_item","count":1,"valid":true},
+    {"id":"five_items","count":5,"valid":true},
+    {"id":"empty","count":0,"valid":false},
+    {"id":"six_items","count":6,"valid":false}
+  ],
+  "transition_cases": [
+    {"id":"open_start","from":"open","action":"start","allowed":true},
+    {"id":"progress_resume","from":"in_progress","action":"start","allowed":true},
+    {"id":"done_start_denied","from":"done","action":"start","allowed":false},
+    {"id":"cancelled_start_denied","from":"cancelled","action":"start","allowed":false},
+    {"id":"open_complete","from":"open","action":"complete","allowed":true},
+    {"id":"progress_complete","from":"in_progress","action":"complete","allowed":true},
+    {"id":"done_complete_denied","from":"done","action":"complete","allowed":false}
+  ],
+  "sla_cases": [
+    {"id":"default_document_request","requested":null,"default":2,"max":5,"expected":2},
+    {"id":"custom_document_request","requested":4,"default":2,"max":5,"expected":4},
+    {"id":"above_max","requested":6,"default":2,"max":5,"expected":null},
+    {"id":"below_min","requested":0,"default":2,"max":5,"expected":null}
+  ],
+  "active_outcome_cases": [
+    {"id":"waiting_document","code":"waiting_external","reason":"awaiting_document","review_days":7,"valid":true},
+    {"id":"waiting_wrong_reason","code":"waiting_external","reason":"postponed_by_client","review_days":7,"valid":false},
+    {"id":"deferred_client","code":"deferred","reason":"postponed_by_client","review_days":14,"valid":true},
+    {"id":"missing_review","code":"deferred","reason":"route_changed","review_days":null,"valid":false}
+  ],
+  "terminal_outcome_cases": [
+    {"id":"not_applicable","code":"not_applicable","reason":"no_longer_required","replacement":false,"valid":true},
+    {"id":"replaced","code":"replaced","reason":"replaced_by_specific_task","replacement":true,"valid":true},
+    {"id":"replaced_missing_task","code":"replaced","reason":"replaced_by_specific_task","replacement":false,"valid":false},
+    {"id":"cancelled","code":"cancelled","reason":"process_cancelled","replacement":false,"valid":true},
+    {"id":"wrong_terminal_reason","code":"cancelled","reason":"awaiting_bank","replacement":false,"valid":false}
+  ],
+  "separation_cases": [
+    {"surface":"nav_deal_documents_v2","mutated":false},
+    {"surface":"nav_deal_risks_v2","mutated":false},
+    {"surface":"nav_deals_v2","mutated":false},
+    {"surface":"legacy_tasks","mutated":false}
+  ]
+}
