@@ -1,4 +1,5 @@
 import { clientDirectIdentifierKeys } from './client-data-minimization-model-v2.js?v=20260715-01';
+import { redactSensitiveFreeText } from './sensitive-free-text-model-v2.js?v=20260716-01';
 
 const EXTRA_DIRECT_IDENTIFIER_KEYS = Object.freeze([
   'seller_full_name',
@@ -28,6 +29,33 @@ const LEGACY_HANDOFF_PREFIXES = Object.freeze([
   'ФИО покупателя:',
   'Телефон продавца:',
   'Телефон покупателя:'
+]);
+
+const FREE_TEXT_CONTEXT_KEYS = new Set([
+  'body',
+  'title',
+  'description',
+  'comment',
+  'problem_note',
+  'status_note',
+  'note',
+  'recommendation',
+  'next_action',
+  'nextAction',
+  'clientNextStep',
+  'spnFinalComment',
+  'riskComment',
+  'handoff_text',
+  'source_hint',
+  'main_action',
+  'attention_reason',
+  'manager_exception_reason',
+  'cannot_advance_reason',
+  'cannot_advance_deposit_reason',
+  'cannot_advance_deal_reason',
+  'result_criteria',
+  'resultCriteria',
+  'event_title'
 ]);
 
 const WORK_ITEM_CONTEXTS = new Set(['tasks', 'documents', 'risks', 'comments', 'reviews', 'events', 'expenses']);
@@ -111,6 +139,12 @@ function stripLegacyHandoffLines(value) {
     .trim();
 }
 
+function sanitizeTextValue(value, contextKey) {
+  const prepared = contextKey === 'handoff_text' ? stripLegacyHandoffLines(value) : value;
+  if (typeof prepared !== 'string' || !FREE_TEXT_CONTEXT_KEYS.has(contextKey)) return prepared;
+  return redactSensitiveFreeText(prepared);
+}
+
 function looksLikeDealRecord(value, contextKey = '') {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   if (contextKey === 'deal') return true;
@@ -144,9 +178,7 @@ function looksLikeDealRecord(value, contextKey = '') {
 
 function sanitizeValue(value, contextKey = '') {
   if (Array.isArray(value)) return value.map((item) => sanitizeValue(item, contextKey));
-  if (!value || typeof value !== 'object') {
-    return contextKey === 'handoff_text' ? stripLegacyHandoffLines(value) : value;
-  }
+  if (!value || typeof value !== 'object') return sanitizeTextValue(value, contextKey);
 
   const output = {};
   Object.entries(value).forEach(([key, child]) => {
