@@ -23,7 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate deals-list DTO contract
-        run: python3 scripts/check_nav_v2_deals_list_dto_prototype.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_deals_list_dto_prototype.py 2>&1 | tee nav-v2-deals-list-dto-check.txt
       - name: Compile checker
         run: python3 -m py_compile scripts/check_nav_v2_deals_list_dto_prototype.py
       - name: Check changed JavaScript syntax
@@ -36,6 +39,7 @@ jobs:
         with:
           name: nav-v2-deals-list-dto-prototype
           path: |
+            nav-v2-deals-list-dto-check.txt
             config/nav-v2-deals-list-dto-contract.json
             supabase/prototypes/nav_v2_get_deals_list_explicit_dto.sql
             docs/NAV_V2_DEALS_LIST_DTO_PROTOTYPE_2026-07-16.md
