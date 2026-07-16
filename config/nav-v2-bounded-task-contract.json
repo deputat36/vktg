@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "prototype_path": "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+  "existing_rows_backfilled": false,
+  "task_types": {
+    "document_request": {"default_sla_days":2,"max_sla_days":5,"owner_roles":["spn","manager"],"criterion":"document_received","evidence":["document_status","external_confirmation","comment_reference"],"gate":"deposit"},
+    "document_check": {"default_sla_days":1,"max_sla_days":3,"owner_roles":["spn","lawyer","broker","manager"],"criterion":"document_checked","evidence":["document_status","review_decision"],"gate":"deal"},
+    "term_approval": {"default_sla_days":2,"max_sla_days":5,"owner_roles":["spn","manager"],"criterion":"terms_confirmed","evidence":["agreement_status","comment_reference"],"gate":"deposit"},
+    "legal_decision": {"default_sla_days":1,"max_sla_days":3,"owner_roles":["lawyer"],"criterion":"legal_decision_recorded","evidence":["review_decision"],"gate":"deposit"},
+    "financial_decision": {"default_sla_days":2,"max_sla_days":5,"owner_roles":["broker"],"criterion":"financial_decision_recorded","evidence":["review_decision","external_confirmation"],"gate":"deal"},
+    "corporate_document_signing": {"default_sla_days":3,"max_sla_days":7,"owner_roles":["spn","manager"],"criterion":"corporate_document_signed","evidence":["corporate_document_status"],"gate":"corporate"},
+    "card_correction": {"default_sla_days":1,"max_sla_days":3,"owner_roles":["spn","manager"],"criterion":"card_fields_corrected","evidence":["card_validation"],"gate":"none"},
+    "contract_preparation": {"default_sla_days":2,"max_sla_days":5,"owner_roles":["lawyer"],"criterion":"contract_draft_ready","evidence":["contract_reference","review_decision"],"gate":"deal"},
+    "appointment_scheduling": {"default_sla_days":2,"max_sla_days":5,"owner_roles":["spn","manager"],"criterion":"appointment_confirmed","evidence":["calendar_event","external_confirmation"],"gate":"none"},
+    "post_deal_action": {"default_sla_days":3,"max_sla_days":10,"owner_roles":["spn","manager"],"criterion":"post_deal_action_confirmed","evidence":["external_confirmation","comment_reference","corporate_document_status"],"gate":"post_deal"}
+  },
+  "forbidden_v2_types": ["operational_task","quality_warning","system_recommendation","legal_blocker","broker_task","management_escalation"],
+  "outcomes": {
+    "completed": "terminal_requires_confirmed_evidence_and_done_status",
+    "not_applicable": "terminal_requires_confirmation",
+    "replaced": "terminal_requires_confirmation_and_replacement_task_id",
+    "cancelled": "terminal_requires_confirmation",
+    "waiting_external": "active_requires_review_date",
+    "deferred": "active_requires_review_date"
+  },
+  "required_contract_fields": ["task_type","sla_days","assigned_role","completion_criterion_code","evidence_kind","gate_scope"],
+  "source_suggestions": {
+    "auto_quality_*": "card_correction",
+    "auto_settlements": "term_approval",
+    "auto_expenses": "term_approval",
+    "auto_lawyer": "legal_decision",
+    "auto_children": "legal_decision",
+    "auto_share_lawyer": "legal_decision",
+    "auto_broker": "financial_decision"
+  },
+  "suggestion_policy": {
+    "writes_rows": false,
+    "requires_confirmation": true,
+    "unknown_sources": "manual_review",
+    "existing_98_rows": "no_backfill"
+  },
+  "preview_forbidden_keys": ["title","description","address","seller_name","buyer_name","seller_phone","buyer_phone","client_name","free_form_evidence","document_url"],
+  "separation_guarantees": {
+    "deal_readiness_changed": false,
+    "risk_gate_changed": false,
+    "deal_status_changed": false,
+    "existing_tasks_changed": false
+  },
+  "production_gate": "Apply only after authenticated role/mutation E2E, explicit completion and outcome mutation contract, controlled legacy review, security advisor review and separate deployment PR."
+}
