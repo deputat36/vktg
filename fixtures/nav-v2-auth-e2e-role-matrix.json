@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "mandatory_roles": ["admin", "manager", "spn", "lawyer", "broker", "viewer"],
+  "optional_roles": ["owner"],
+  "scenarios": [
+    {
+      "id": "admin_terminal_decision",
+      "role": "admin",
+      "account_required": true,
+      "deal_scope": "any_synthetic_deal",
+      "action": "bounded_task_terminal_decision",
+      "expected": "allowed",
+      "identity_chain_required": true,
+      "audit_event": "decide_terminal_outcome",
+      "negative_check": "client_actor_spoof_rejected"
+    },
+    {
+      "id": "manager_team_terminal_decision",
+      "role": "manager",
+      "account_required": true,
+      "deal_scope": "managed_team_deal",
+      "action": "bounded_task_terminal_decision",
+      "expected": "allowed",
+      "identity_chain_required": true,
+      "audit_event": "decide_terminal_outcome",
+      "negative_check": "unrelated_team_deal_denied"
+    },
+    {
+      "id": "spn_create_selected_tasks",
+      "role": "spn",
+      "account_required": true,
+      "deal_scope": "assigned_allowed_deal",
+      "action": "create_bounded_tasks",
+      "expected": "allowed",
+      "identity_chain_required": true,
+      "audit_event": "create_selected",
+      "negative_check": "forbidden_deal_denied"
+    },
+    {
+      "id": "spn_complete_document_task",
+      "role": "spn",
+      "account_required": true,
+      "deal_scope": "assigned_allowed_deal",
+      "action": "bounded_task_complete",
+      "expected": "allowed_with_evidence",
+      "identity_chain_required": true,
+      "audit_event": "complete_task",
+      "negative_check": "completion_without_evidence_denied"
+    },
+    {
+      "id": "lawyer_propose_legal_outcome",
+      "role": "lawyer",
+      "account_required": true,
+      "deal_scope": "assigned_legal_deal",
+      "action": "bounded_task_terminal_proposal",
+      "expected": "allowed",
+      "identity_chain_required": true,
+      "audit_event": "propose_terminal_outcome",
+      "negative_check": "manager_only_terminal_decision_denied"
+    },
+    {
+      "id": "broker_operate_mortgage_task",
+      "role": "broker",
+      "account_required": true,
+      "deal_scope": "assigned_mortgage_deal",
+      "action": "bounded_task_complete",
+      "expected": "allowed_with_evidence",
+      "identity_chain_required": true,
+      "audit_event": "complete_task",
+      "negative_check": "matcap_without_mortgage_not_routed_to_broker"
+    },
+    {
+      "id": "viewer_read_only",
+      "role": "viewer",
+      "account_required": true,
+      "deal_scope": "visible_synthetic_deal",
+      "action": "read_deal_card",
+      "expected": "allowed_read_only",
+      "identity_chain_required": false,
+      "audit_event": null,
+      "negative_check": "all_task_mutations_denied"
+    },
+    {
+      "id": "spn_forbidden_deal",
+      "role": "spn",
+      "account_required": false,
+      "reuse_account_from": "spn_create_selected_tasks",
+      "deal_scope": "forbidden_deal",
+      "action": "read_and_mutate",
+      "expected": "denied",
+      "identity_chain_required": false,
+      "audit_event": null,
+      "negative_check": "no_data_or_event_created"
+    },
+    {
+      "id": "cross_actor_replay",
+      "role": "manager",
+      "account_required": false,
+      "reuse_account_from": "manager_team_terminal_decision",
+      "deal_scope": "managed_team_deal",
+      "action": "reuse_spn_client_request_id",
+      "expected": "denied",
+      "identity_chain_required": true,
+      "audit_event": null,
+      "negative_check": "client_request_owned_by_other_actor"
+    }
+  ],
+  "identity_assertions_for_successful_mutation": [
+    "authenticated_user_id_equals_verified_actor_id",
+    "client_payload_contains_no_actor_field",
+    "rpc_p_actor_id_equals_verified_actor_id",
+    "task_actor_field_equals_verified_actor_id_when_applicable",
+    "audit_actor_id_equals_verified_actor_id",
+    "audit_actor_role_equals_profile_role",
+    "one_client_request_id_has_one_audit_event",
+    "edge_response_contains_no_service_secret"
+  ],
+  "required_synthetic_entities": {
+    "users": 6,
+    "profiles": 6,
+    "minimum_deals": 2,
+    "allowed_deal": true,
+    "forbidden_deal": true,
+    "legacy_task": true,
+    "document_request_task": true,
+    "legal_decision_task": true,
+    "mortgage_financial_task": true,
+    "appointment_task": true,
+    "evidence_source_entity": true,
+    "terminal_proposal_task": true
+  }
+}
