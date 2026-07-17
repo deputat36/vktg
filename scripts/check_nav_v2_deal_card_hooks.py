@@ -15,6 +15,8 @@ SPN_REWORK_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-rework-v2.js"
 SPN_REWORK_MODEL = ROOT / "assets/js/nav-v2/deal-card-spn-rework-model-v2.js"
 LAWYER_DOCUMENT_MODULE = ROOT / "assets/js/nav-v2/deal-card-lawyer-document-cycle-v2.js"
 LAWYER_DOCUMENT_MODEL = ROOT / "assets/js/nav-v2/deal-card-lawyer-document-cycle-model-v2.js"
+LEGAL_PASSPORT_MODULE = ROOT / "assets/js/nav-v2/deal-card-legal-passport-v1.js"
+LEGAL_PASSPORT_MODEL = ROOT / "assets/js/nav-v2/deal-card-legal-passport-model-v1.js"
 BAZA_MODULE = ROOT / "assets/js/nav-v2/deal-card-baza-hints-v2.js"
 SPN_HANDOFF_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-handoff-v2.js"
 SPN_SAVE_CONFIRMATION_MODULE = ROOT / "assets/js/nav-v2/deal-card-spn-save-confirmation-v2.js"
@@ -41,6 +43,8 @@ def main() -> int:
         SPN_REWORK_MODEL,
         LAWYER_DOCUMENT_MODULE,
         LAWYER_DOCUMENT_MODEL,
+        LEGAL_PASSPORT_MODULE,
+        LEGAL_PASSPORT_MODEL,
         BAZA_MODULE,
         SPN_HANDOFF_MODULE,
         SPN_SAVE_CONFIRMATION_MODULE,
@@ -68,6 +72,8 @@ def main() -> int:
         spn_rework_model = SPN_REWORK_MODEL.read_text(encoding="utf-8")
         lawyer_document = LAWYER_DOCUMENT_MODULE.read_text(encoding="utf-8")
         lawyer_document_model = LAWYER_DOCUMENT_MODEL.read_text(encoding="utf-8")
+        legal_passport = LEGAL_PASSPORT_MODULE.read_text(encoding="utf-8")
+        legal_passport_model = LEGAL_PASSPORT_MODEL.read_text(encoding="utf-8")
         baza = BAZA_MODULE.read_text(encoding="utf-8")
         spn_handoff = SPN_HANDOFF_MODULE.read_text(encoding="utf-8")
         spn_save_confirmation = SPN_SAVE_CONFIRMATION_MODULE.read_text(encoding="utf-8")
@@ -97,6 +103,7 @@ def main() -> int:
             "import { applyLawyerDocumentCycle } from './deal-card-lawyer-document-cycle-v2.js?v=20260715-01';",
             "import { applyDealCardActionFocus } from './deal-card-action-focus-v2.js?v=20260715-01';",
             "import { applyDealCardCompletionEvidence } from './deal-card-completion-evidence-v2.js?v=20260715-02';",
+            "import { applyDealCardLegalPassport } from './deal-card-legal-passport-v1.js?v=20260717-01';",
             "import { applyDealCardBazaHints } from './deal-card-baza-hints-v2.js?v=20260711-03';",
             "import { applyDealCardSpnHandoff } from './deal-card-spn-handoff-v2.js?v=20260711-04';",
             "import { applyDealResponsibilitySnapshot } from './deal-responsibility-snapshot-v2.js?v=20260711-05';",
@@ -109,6 +116,7 @@ def main() -> int:
             "applyLawyerDocumentCycle(cardData, profileData);",
             "applyDealCardActionFocus(cardData, profileData);",
             "applyDealCardCompletionEvidence(cardData, profileData);",
+            "applyDealCardLegalPassport(cardData, profileData);",
             "applyDealCardSpnHandoff(cardData);",
             "applyDealCardDocumentWorkflow(cardData);",
             "applyDealCardTaskDueDate(cardData);",
@@ -128,6 +136,20 @@ def main() -> int:
             errors.append("deal-card action focus must run after the lawyer document cycle")
         if recheck.find("applyDealCardCompletionEvidence(cardData, profileData);") < recheck.find("applyDealCardActionFocus(cardData, profileData);"):
             errors.append("deal-card completion evidence must reuse the next action selected by action focus")
+        if recheck.find("applyDealCardLegalPassport(cardData, profileData);") < recheck.find("applyLawyerDocumentCycle(cardData, profileData);"):
+            errors.append("deal-card legal passport must run after the lawyer document cycle")
+
+        for marker in ("export function applyDealCardLegalPassport(data, profile)", 'id="${BLOCK_ID}"', "data-legal-passport-action", "buildLegalPassportCardModel(data)"):
+            if marker not in legal_passport:
+                errors.append(f"deal-card legal passport view missing marker: {marker}")
+        for marker in ("rpc(", "fetch(", "localStorage", "sessionStorage", "new MutationObserver"):
+            if marker in legal_passport:
+                errors.append(f"deal-card legal passport view must remain read-only and payload-only: {marker}")
+        if "export function buildLegalPassportCardModel(data = {})" not in legal_passport_model:
+            errors.append("deal-card legal passport model must export buildLegalPassportCardModel")
+        for marker in ("document.", "window.", "rpc(", "fetch(", "localStorage", "sessionStorage"):
+            if marker in legal_passport_model:
+                errors.append(f"deal-card legal passport model must remain pure: {marker}")
 
         forbidden_recheck_markers = (
             "rpc('nav_v2_get_deal_card'",
