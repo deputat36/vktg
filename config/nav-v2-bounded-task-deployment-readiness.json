@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_deployment_readiness_dry_run",
+  "production_applied": false,
+  "supabase_branch_created": false,
+  "production_migration_created": false,
+  "edge_deployed": false,
+  "authenticated_e2e_proven": false,
+  "deployment_ready": false,
+  "cost_gate_issue": 282,
+  "postgres_version": 17,
+  "apply_order": [
+    "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+    "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+    "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+    "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+  ],
+  "grant_policy": {
+    "governed_rpc_execute_roles": ["service_role"],
+    "forbidden_governed_rpc_roles": ["public", "anon", "authenticated"],
+    "legacy_rpc_during_prototype": "service_role_only",
+    "authenticated_execute_deferred": true,
+    "edge_transport_required_before_frontend_bounded_transport": true
+  },
+  "dry_run_jobs": {
+    "mutation_lifecycle": {
+      "setup": "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+      "apply": [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql"
+      ],
+      "assertions": "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
+      "rollback": [
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+      ]
+    },
+    "dto_lifecycle": {
+      "setup": [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+        "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql",
+        "tests/sql/nav_v2_bounded_task_deployment_snapshot.sql"
+      ],
+      "apply": [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+      ],
+      "assertions": [
+        "tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql",
+        "tests/sql/nav_v2_bounded_task_deployment_readiness_assertions.sql"
+      ],
+      "rollback": [
+        "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_deployment_final_assertions.sql"
+      ]
+    }
+  },
+  "required_apply_assertions": {
+    "legacy_rows_not_backfilled": true,
+    "legacy_task_core_fields_unchanged": true,
+    "deal_status_and_readiness_unchanged": true,
+    "documents_unchanged": true,
+    "risks_unchanged": true,
+    "no_automatic_task_trigger": true,
+    "mutation_event_table_rls_enabled": true,
+    "governed_rpc_service_role_only": true,
+    "lite_dto_version_2": true,
+    "bounded_contract_fields_visible": true,
+    "client_free_form_fields_absent": true,
+    "constraints_added_not_valid": true
+  },
+  "required_rollback_assertions": {
+    "lite_dto_version_1_restored": true,
+    "governed_rpc_removed": true,
+    "mutation_event_table_removed": true,
+    "bounded_columns_removed": true,
+    "bounded_catalog_removed": true,
+    "legacy_task_type_constraint_restored": true,
+    "legacy_add_and_status_rpc_restored": true,
+    "legacy_authenticated_grants_restored_in_synthetic_baseline": true,
+    "legacy_task_row_preserved": true,
+    "test_snapshot_removed": true
+  },
+  "remaining_blockers": [
+    "explicit_cost_approval_missing",
+    "authenticated_application_e2e_missing",
+    "production_migration_not_reviewed",
+    "production_grants_not_approved",
+    "edge_actions_not_integrated",
+    "frontend_bounded_transport_disabled",
+    "controlled_pilot_not_approved"
+  ],
+  "separation_guarantees": {
+    "production_sql_executed": false,
+    "supabase_management_write_called": false,
+    "production_auth_changed": false,
+    "production_rls_or_grants_changed": false,
+    "production_edge_changed": false,
+    "production_task_rows_changed": false,
+    "mass_backfill_allowed": false,
+    "employee_evaluation_allowed": false
+  }
+}
