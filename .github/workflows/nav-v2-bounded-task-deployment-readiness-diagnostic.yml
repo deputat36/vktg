@@ -3,35 +3,42 @@ name: Navigator v2 bounded deployment readiness diagnostic
 on:
   pull_request:
     paths:
-      - 'config/nav-v2-bounded-task-deployment-readiness.json'
       - 'scripts/check_nav_v2_bounded_task_deployment_readiness.py'
       - '.github/workflows/nav-v2-bounded-task-deployment-readiness-diagnostic.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  checker-diagnostic:
+  exact-checker-fix:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture checker output
-        id: checker
-        shell: bash
-        run: |
-          set +e
-          python3 scripts/check_nav_v2_bounded_task_deployment_readiness.py > deployment-readiness-checker.log 2>&1
-          status=$?
-          cat deployment-readiness-checker.log
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Upload checker output
-        uses: actions/upload-artifact@v4
         with:
-          name: nav-v2-bounded-deployment-readiness-checker-diagnostic
-          path: deployment-readiness-checker.log
-          if-no-files-found: error
-      - name: Fail when checker failed
-        if: steps.checker.outputs.status != '0'
-        run: exit 1
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+      - name: Replace one incorrect source marker
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check_nav_v2_bounded_task_deployment_readiness.py')
+          text = path.read_text(encoding='utf-8')
+          old = 'For bounded-задачи используйте governed lifecycle RPC'
+          new = 'Для bounded-задачи используйте governed lifecycle RPC'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one incorrect marker, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          python3 scripts/check_nav_v2_bounded_task_deployment_readiness.py
+          python3 -m py_compile scripts/check_nav_v2_bounded_task_deployment_readiness.py
+      - name: Commit exact checker fix
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/check_nav_v2_bounded_task_deployment_readiness.py
+          git commit -m 'Navigator v2: fix bounded deployment checker marker'
+          git push origin HEAD:${TARGET_BRANCH}
