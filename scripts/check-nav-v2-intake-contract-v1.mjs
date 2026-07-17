@@ -40,6 +40,7 @@ const baseDraft = {
   depositAmountKnown: false,
   depositConditionsKnown: false,
   documentsReviewed: true,
+  lawyerRequestConfirmed: true,
   documents: [
     { type: 'title_basis', title: 'Основание права', side: 'seller', status: 'requested' }
   ],
@@ -136,6 +137,18 @@ const missingUrgency = buildIntakeAssessment(mergeDraft(baseDraft, {
   facts: { minor_seller: { value: 'yes', source: 'client' } }
 }), catalog);
 assert.equal(missingUrgency.gates.handoff_lawyer.missing.some((item) => item.id === 'urgency'), true);
+
+const unconfirmedRequest = buildIntakeAssessment(mergeDraft(baseDraft, {
+  lawyerRequestConfirmed: false,
+  facts: { minor_seller: { value: 'yes', source: 'client' } }
+}), catalog);
+assert.equal(unconfirmedRequest.gates.handoff_lawyer.missing.some((item) => item.id === 'lawyer_request_confirmation'), true);
+
+const missingRequiredDocuments = buildIntakeAssessment(mergeDraft(baseDraft, {
+  documents: [],
+  facts: { power_of_attorney: { value: 'yes', source: 'client' } }
+}), catalog);
+assert.equal(missingRequiredDocuments.gates.handoff_lawyer.missing.some((item) => item.id === 'documents'), true);
 
 const serialized = JSON.stringify(legacyAssessment.passport);
 for (const forbiddenKey of ['seller_phone', 'buyer_phone', 'passport_number', 'bank_card', 'snils']) {
