@@ -40,7 +40,21 @@ def occurrence_paths(needle: str) -> set[str]:
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, UI_PREVIEW, ROUTER, EDGE_CONTRACT, DUAL_E2E, RUNTIME_E2E, RPC_SURFACE, DOC, WORKFLOW)
+    paths = (
+        MATRIX,
+        DEAL_CARD,
+        GUARD,
+        EDGE,
+        LITE_BOUNDED,
+        UI_PREVIEW,
+        ROUTER,
+        EDGE_CONTRACT,
+        DUAL_E2E,
+        RUNTIME_E2E,
+        RPC_SURFACE,
+        DOC,
+        WORKFLOW,
+    )
     for path in paths:
         if not path.exists():
             errors.append(f'missing {path.relative_to(ROOT)}')
@@ -62,12 +76,12 @@ def main() -> int:
     doc = DOC.read_text(encoding='utf-8')
     workflow = WORKFLOW.read_text(encoding='utf-8')
 
-    if matrix.get('schema_version') != 3:
-        errors.append('consumer matrix must use schema version 3')
-    if matrix.get('status') != 'frontend_authoritative_integrated_transport_disabled':
+    if matrix.get('schema_version') != 4:
+        errors.append('consumer matrix must use schema version 4')
+    if matrix.get('status') != 'frontend_authoritative_single_source_transport_disabled':
         errors.append('consumer matrix status drifted')
     if matrix.get('frontend_runtime_changed') is not True:
-        errors.append('frontend runtime integration must be explicit')
+        errors.append('frontend runtime integration must remain explicit')
     if matrix.get('production_database_changed') is not False or matrix.get('deployment_ready') is not False:
         errors.append('database must remain unchanged and deployment must remain blocked')
 
@@ -82,22 +96,24 @@ def main() -> int:
     if expected_active != required_active:
         errors.append(f'active runtime consumer inventory drifted: {sorted(expected_active)}')
 
-    dormant = {item['path'] for item in update.get('dormant_source_handlers') or []}
-    required_dormant = {DEAL_CARD.relative_to(ROOT).as_posix()}
-    if dormant != required_dormant:
-        errors.append(f'dormant source inventory drifted: {sorted(dormant)}')
+    if update.get('dormant_source_handlers') != []:
+        errors.append('dormant source handler inventory must be empty after cleanup')
+    cleanup = update.get('source_cleanup') or {}
+    if cleanup.get('path') != DEAL_CARD.relative_to(ROOT).as_posix() or cleanup.get('removed') is not True:
+        errors.append('deal-card source cleanup evidence drifted')
+    if cleanup.get('task_rendering_preserved') is not True or cleanup.get('legacy_button_attributes_preserved') is not True:
+        errors.append('task rendering preservation must remain explicit')
 
-    literal_occurrences = {
-        DEAL_CARD.relative_to(ROOT).as_posix(),
+    expected_literal_occurrences = {
         EDGE.relative_to(ROOT).as_posix(),
         UI_PREVIEW.relative_to(ROOT).as_posix(),
         ROUTER.relative_to(ROOT).as_posix(),
         EDGE_CONTRACT.relative_to(ROOT).as_posix(),
     }
     actual_update = occurrence_paths('nav_v2_update_task_status')
-    if actual_update != literal_occurrences:
+    if actual_update != expected_literal_occurrences:
         errors.append(
-            f'update_task_status occurrence drift: actual={sorted(actual_update)}, expected={sorted(literal_occurrences)}'
+            f'update_task_status occurrence drift: actual={sorted(actual_update)}, expected={sorted(expected_literal_occurrences)}'
         )
 
     if occurrence_paths('nav_v2_add_task'):
@@ -105,14 +121,23 @@ def main() -> int:
     if add.get('active_runtime_consumers') != [] or add.get('deployment_blocker') is not False:
         errors.append('legacy add-task inventory drifted')
     if update.get('deployment_blocker') is not True:
-        errors.append('legacy update-task-status remains a deployment blocker')
+        errors.append('legacy update-task-status remains a deployment blocker until bounded deployment/pilot is complete')
 
     require(deal_card, (
-        "rpc('nav_v2_update_task_status'",
+        'function taskActions(task)',
         'data-task-status="in_progress"',
         'data-task-status="done"',
         'data-task-status="open"',
+        '${taskActions(task)}',
     ), DEAL_CARD.name, errors)
+    for forbidden in (
+        "rpc('nav_v2_update_task_status'",
+        "document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick",
+        "setPageStatus('Обновляю задачу...')",
+    ):
+        if forbidden in deal_card:
+            errors.append(f'{DEAL_CARD.name}: dormant task mutation source remains: {forbidden!r}')
+
     require(guard, (
         "import { taskActionControlModel, taskActionRoutePreview } from './task-action-router-v2.js?v=20260716-01';",
         "rpc('nav_v2_get_deal_card_lite'",
@@ -156,7 +181,7 @@ def main() -> int:
     ), EDGE_CONTRACT.name, errors)
 
     if 'task-action-router-v2.js' in deal_card or 'task-action-contract-v2.js' in deal_card:
-        errors.append('deal-card base must not become an additional authoritative router consumer')
+        errors.append('deal-card renderer must not become an authoritative router consumer')
     if 'task-action-contract-v2.js' in guard or 'task-action-router-v2.js' in edge:
         errors.append('Edge contract must stay detached until database deployment')
 
@@ -183,13 +208,13 @@ def main() -> int:
         'dual_path_browser_contract_missing',
         'authoritative_handler_not_integrated',
         'duplicate_handler_execution_risk',
+        'dormant_base_handler_source_not_removed',
     ):
         if blocker not in closed:
             errors.append(f'closed blocker missing: {blocker}')
 
     remaining = set(matrix.get('remaining_blockers') or [])
     for blocker in (
-        'dormant_base_handler_source_not_removed',
         'edge_actions_not_integrated',
         'database_migrations_not_deployed',
         'minimal_grants_not_deployed',
@@ -199,6 +224,8 @@ def main() -> int:
     ):
         if blocker not in remaining:
             errors.append(f'remaining deployment blocker missing: {blocker}')
+    if 'dormant_base_handler_source_not_removed' in remaining:
+        errors.append('source cleanup blocker must not remain open')
 
     require(rpc_surface, ('"nav_v2_add_task"', '"nav_v2_update_task_status"'), RPC_SURFACE.name, errors)
     guarantees = matrix.get('separation_guarantees') or {}
@@ -206,10 +233,10 @@ def main() -> int:
         errors.append('all separation guarantees must remain false')
 
     require(doc, (
-        'frontend authoritative integration gate v3',
-        'PR #377',
-        'Authoritative runtime handler',
-        'Dormant base source',
+        'frontend authoritative single-source gate v4',
+        'PR #378',
+        'Source cleanup',
+        'Dormant source отсутствует',
         'Bounded transport выключен',
         'Закрытые blockers',
         'Оставшиеся blockers',
@@ -234,7 +261,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v3 passed: capture handler owns runtime task clicks, legacy mutation stays compatible, bounded transport is disabled, dormant base source is explicit and database deployment remains blocked')
+    print('Navigator v2 task RPC consumer matrix v4 passed: deal-card only renders task controls, the authoritative guard is the single frontend action source, bounded transport remains disabled and production deployment stays blocked')
     return 0
 
 
