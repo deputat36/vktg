@@ -11,6 +11,8 @@
   "cost_gate_issue": 282,
   "owner_migration_approval": false,
   "authenticated_e2e_proven": false,
+  "identity_propagation_proven": false,
+  "actor_aware_sql_contract_ready": false,
   "phases": [
     {
       "id": "preflight",
@@ -42,7 +44,9 @@
       "adds_private_helpers": true,
       "adds_governed_rpcs": true,
       "governed_grants": ["service_role"],
-      "backfill": false
+      "backfill": false,
+      "current_auth_uid_service_role_conflict": true,
+      "requires_actor_aware_sql_contract": true
     },
     {
       "id": "legacy_rpc_transition",
@@ -52,6 +56,7 @@
       "target_prototype_execute": ["service_role"],
       "requires_authenticated_e2e": true,
       "requires_edge_cutover_plan": true,
+      "requires_verified_actor_propagation": true,
       "stop_if_unapproved": true
     },
     {
@@ -73,6 +78,7 @@
       "checks": [
         "objects and signatures",
         "RLS and grants",
+        "verified actor propagation",
         "no legacy backfill",
         "no deal/document/risk mutation",
         "no automatic task trigger",
@@ -85,6 +91,7 @@
       "order": 7,
       "deferred": true,
       "requires_database_green": true,
+      "requires_verified_actor_propagation": true,
       "requires_separate_deploy": true
     },
     {
@@ -103,6 +110,9 @@
     "any governed RPC exists before migration",
     "legacy RPC signature or grant differs from attestation",
     "PR #384 deployment-readiness dry-run is not green",
+    "PR #387 identity propagation gate is not green",
+    "governed RPC actor propagation architecture is not approved",
+    "actor-aware SQL contract and PostgreSQL 17 regression are not green",
     "owner has not approved a production migration PR",
     "Issue #282 cost approval and authenticated E2E are absent",
     "final grant policy is not approved",
@@ -118,6 +128,8 @@
     "all bounded columns exist and legacy rows remain null",
     "mutation event table exists with RLS",
     "governed RPC signatures and fixed search_path exist",
+    "verified actor comes from authenticated Edge context and cannot be supplied by client payload",
+    "governed SQL resolves an active actor deterministically without relying on service-role auth.uid",
     "public/anon/authenticated lack governed EXECUTE",
     "service_role has governed EXECUTE",
     "legacy add/status policy matches approved cutover",
@@ -158,6 +170,7 @@
   "remaining_owner_decisions": [
     "explicit cost approval for preview environment",
     "permission to create production migration PR",
+    "final actor propagation architecture",
     "final legacy and governed grant policy",
     "rollback owner and maintenance window",
     "controlled pilot manager and cases"
