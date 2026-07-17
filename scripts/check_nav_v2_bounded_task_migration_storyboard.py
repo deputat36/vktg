@@ -106,13 +106,13 @@ def main() -> int:
     if not all('PR #384' in str(rollback[i].get('proof')) for i in (0,2,3)):
         errors.append('canonical rollback phases must reference PR #384')
 
-    if attestation.get('schema_version') != 1 or attestation.get('source') != 'read_only_production_query' or attestation.get('project_ref') != 'ofewxuqfjhamgerwzull':
-        errors.append('production attestation metadata drifted')
+    if attestation.get('schema_version') != 2 or attestation.get('source') != 'read_only_production_query' or attestation.get('project_ref') != 'ofewxuqfjhamgerwzull':
+        errors.append('production attestation v2 metadata drifted')
     structural = attestation.get('structural_baseline') or {}
     expected_columns = ['id','deal_id','title','description','assigned_to','assigned_role','status','priority','due_date','source','completed_by','completed_at','created_by','created_at','updated_at','task_type','sla_days']
     if structural.get('task_columns') != expected_columns: errors.append('attested legacy columns drifted')
     if any(value is not True for value in (structural.get('bounded_objects_absent') or {}).values()):
-        errors.append('production bounded objects must remain absent')
+        errors.append('production bounded and actor-aware objects must remain absent')
     if (attestation.get('interpretation') or {}).get('production_write_performed') is not False:
         errors.append('production attestation must remain read-only')
 
@@ -171,11 +171,11 @@ def main() -> int:
     if forbidden: errors.append(f'read-only preflight contains forbidden keyword: {forbidden.group(1)}')
     for statement in [part.strip() for part in normalized.split(';') if part.strip()]:
         if not re.match(r'(?is)^(select|with)\b', statement): errors.append('preflight contains non-select statement')
-    need(preflight, ('assert_postgres_major_17','assert_exact_legacy_task_columns','assert_no_partial_bounded_deployment','Navigator v2 bounded migration read-only preflight passed'), 'preflight', errors)
+    need(preflight, ('assert_postgres_major_17','assert_exact_legacy_task_columns','assert_no_partial_bounded_deployment','nav_v2_require_verified_actor(uuid)','Navigator v2 bounded migration read-only preflight passed'), 'preflight', errors)
 
     need(doc, ('repository-only storyboard, not a migration','Production attestation','Object diff','Migration phases','STOP conditions','Staged rollback','Issue #282'), 'storyboard doc', errors)
     need(addendum, ('PR #389','actor-aware SQL','Production boundary','Issue #282','Rollback'), 'identity addendum', errors)
-    need(workflow, ('git diff --name-only','supabase/migrations/','check_nav_v2_bounded_task_migration_storyboard.py','postgres:17','TRANSACTION READ ONLY','nav-v2-bounded-task-migration-storyboard'), 'workflow', errors)
+    need(workflow, ('git diff --name-only','supabase/migrations/','check_nav_v2_bounded_task_migration_storyboard.py','nav_v2_bounded_task_actor_aware_mutations.sql','postgres:17','TRANSACTION READ ONLY','nav-v2-bounded-task-migration-storyboard'), 'workflow', errors)
 
     if errors:
         print('Navigator v2 bounded migration storyboard errors:')
