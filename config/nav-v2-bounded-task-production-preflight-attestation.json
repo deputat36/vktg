@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "captured_at": "2026-07-17",
   "source": "read_only_production_query",
   "project_ref": "ofewxuqfjhamgerwzull",
@@ -49,7 +49,16 @@
       "mutation_event_table": true,
       "create_bounded_rpc": true,
       "start_bounded_rpc": true,
-      "complete_bounded_rpc": true
+      "complete_bounded_rpc": true,
+      "actor_create_overload": true,
+      "actor_start_overload": true,
+      "actor_complete_overload": true,
+      "actor_active_outcome_overload": true,
+      "actor_terminal_proposal_overload": true,
+      "actor_terminal_decision_overload": true,
+      "actor_profile_helper": true,
+      "actor_replay_helper": true,
+      "actor_claim_helper": true
     }
   },
   "informational_counts": {
