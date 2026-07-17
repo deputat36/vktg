@@ -76,10 +76,14 @@ def main() -> int:
     if len(signatures) != 6: errors.append('six actor-aware overloads required')
     compact = re.sub(r'\s+', '', overlay.lower())
     for signature in signatures:
+        function_name = signature.split('(', 1)[0]
         full = f'public.{signature}'.lower().replace(' ', '')
-        if f'createorreplacefunction{full}' not in compact: errors.append(f'missing overload {signature}')
-        if f'revokeexecuteonfunction{full}frompublic,anon,authenticated' not in compact: errors.append(f'missing revoke {signature}')
-        if f'grantexecuteonfunction{full}toservice_role' not in compact: errors.append(f'missing service grant {signature}')
+        if overlay.lower().count(f'create or replace function public.{function_name.lower()}(') != 1:
+            errors.append(f'missing actor-aware definition {signature}')
+        if f'revokeexecuteonfunction{full}frompublic,anon,authenticated' not in compact:
+            errors.append(f'missing revoke {signature}')
+        if f'grantexecuteonfunction{full}toservice_role' not in compact:
+            errors.append(f'missing service grant {signature}')
 
     need(text['canonical'], ('v_uid uuid := auth.uid();','nav_v2_bounded_task_replay','to service_role'), 'canonical', errors)
     need(text['edge'], ('const rpcArgs = { ...baseArgs, p_actor_id: actorId };','target_sql_signature_ready: false','runtime_integrated: false'), 'edge', errors)
