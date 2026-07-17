@@ -1,0 +1,37 @@
+name: Navigator v2 bounded deployment readiness diagnostic
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-bounded-task-deployment-readiness.json'
+      - 'scripts/check_nav_v2_bounded_task_deployment_readiness.py'
+      - '.github/workflows/nav-v2-bounded-task-deployment-readiness-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checker-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture checker output
+        id: checker
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/check_nav_v2_bounded_task_deployment_readiness.py > deployment-readiness-checker.log 2>&1
+          status=$?
+          cat deployment-readiness-checker.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload checker output
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-deployment-readiness-checker-diagnostic
+          path: deployment-readiness-checker.log
+          if-no-files-found: error
+      - name: Fail when checker failed
+        if: steps.checker.outputs.status != '0'
+        run: exit 1
