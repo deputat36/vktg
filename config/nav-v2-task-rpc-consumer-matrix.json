@@ -1,10 +1,10 @@
 {
-  "schema_version": 3,
-  "status": "frontend_authoritative_integrated_transport_disabled",
+  "schema_version": 4,
+  "status": "frontend_authoritative_single_source_transport_disabled",
   "frontend_runtime_changed": true,
   "production_database_changed": false,
   "deployment_ready": false,
-  "latest_main": "36095c55d6e8294264ebe133f91766f1b8dd8588",
+  "latest_main": "76910f85ebfdef67da5c7b4f74fb8e4b079a2b99",
   "legacy_rpcs": {
     "nav_v2_add_task": {
       "active_runtime_consumers": [],
@@ -26,19 +26,22 @@
           "path": "supabase/functions/nav-v2-deal-api/index.ts",
           "surface": "edge_function_legacy_action_facade",
           "current_actions": ["update_task_status"],
-          "migration": "Keep the legacy action legacy-only and integrate validated governed actions after database deployment.",
+          "migration": "Keep the legacy action legacy-only and integrate validated governed actions only after database deployment.",
           "remaining_blockers": ["edge_actions_not_integrated", "database_deployment_order"]
         }
       ],
-      "dormant_source_handlers": [
-        {
-          "path": "assets/js/nav-v2/deal-card-v2.js",
-          "surface": "legacy_base_onclick_source",
-          "can_execute": false,
-          "suppressed_by": "capture-phase task-action-guard-v2.js calls preventDefault and stopImmediatePropagation, then clears button.onclick after permission load",
-          "cleanup": "Delete the dormant source listener in a separate source-cleanup PR."
-        }
-      ],
+      "dormant_source_handlers": [],
+      "source_cleanup": {
+        "path": "assets/js/nav-v2/deal-card-v2.js",
+        "removed": true,
+        "removed_elements": [
+          "base data-task-id onclick assignment",
+          "direct nav_v2_update_task_status call",
+          "base task success/error feedback path"
+        ],
+        "task_rendering_preserved": true,
+        "legacy_button_attributes_preserved": true
+      },
       "test_and_contract_consumers": [
         "tests/e2e/task-action-feedback.spec.js",
         "scripts/check_nav_v2_task_action_feedback.py",
@@ -89,10 +92,10 @@
     "governed_action_validation_missing",
     "dual_path_browser_contract_missing",
     "authoritative_handler_not_integrated",
-    "duplicate_handler_execution_risk"
+    "duplicate_handler_execution_risk",
+    "dormant_base_handler_source_not_removed"
   ],
   "remaining_blockers": [
-    "dormant_base_handler_source_not_removed",
     "edge_actions_not_integrated",
     "database_migrations_not_deployed",
     "minimal_grants_not_deployed",
@@ -111,7 +114,6 @@
     "runtime_e2e": "tests/e2e/task-action-feedback.spec.js"
   },
   "deployment_order": [
-    "remove_dormant_base_handler_source",
     "authenticated_application_e2e",
     "deploy_database_migrations_and_minimal_grants",
     "integrate_and_deploy_edge_actions",
