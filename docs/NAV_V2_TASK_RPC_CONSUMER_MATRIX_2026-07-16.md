@@ -1,84 +1,118 @@
-# Navigator v2 — task RPC consumer matrix v2
+# Navigator v2 — task RPC consumer matrix v3
 
-Дата: 16 июля 2026 года.
+Дата: 17 июля 2026 года.
 
-Статус: repository-only deployment gate v2. Runtime-код и production Supabase не меняются.
+Статус: frontend authoritative integration gate v3. Рабочий frontend-handler интегрирован, bounded transport выключен, production Supabase не меняется.
 
 ## Итог
 
-После PR #371–#375 закрыты основные проектные пробелы bounded-task интерфейса, но deployment всё ещё запрещён.
-
-Готовы:
+После PR #371–#377 подготовлены и проверены:
 
 - controlled legacy review pack;
-- точная inventory старых RPC consumers;
-- contract-aware lite DTO;
-- direct-link bounded task UI preview;
-- evidence input preview;
-- explicit waiting/deferred controls;
-- immutable bounded completion semantics;
+- bounded task taxonomy, mutations и PostgreSQL 17 harness;
+- contract-aware lite DTO prototype;
+- direct-link bounded UI preview;
 - pure dual-path router;
 - validated Edge action contract;
-- synthetic dual-path browser regression.
+- dual-path browser contract;
+- capture-phase authoritative handler rehearsal;
+- отсутствие competing handler execution и сетевых bounded RPC в synthetic tests.
 
-Не готовы:
+Текущий slice интегрирует dual-path router в рабочий `task-action-guard-v2.js`.
 
-- интеграция одного authoritative handler в рабочую карточку;
-- удаление конкурирующего base listener;
-- интеграция Edge actions;
-- database deployment и minimal grants;
-- authenticated application E2E;
-- включение frontend transport;
-- controlled pilot.
+## Authoritative runtime handler
 
-## PR #371 — controlled legacy review
+`assets/js/nav-v2/task-action-guard-v2.js` теперь:
 
-Read-only review pack показывает нейтральные ссылки, source/status/role/assignee/due date/age и высокоуверенные suggestions.
+- владеет task click в capture phase;
+- вызывает `preventDefault()` и `stopImmediatePropagation()`;
+- загружает role-scoped lite DTO;
+- нормализует legacy и bounded permissions;
+- преобразует старые `data-task-status` в действия `start`, `complete`, `reopen`;
+- использует `taskActionRoutePreview()` как единственный route selector;
+- вызывает сеть только для legacy route;
+- очищает `button.onclick` после permission load;
+- сохраняет cold-first-click без повторного нажатия;
+- не создаёт дополнительный MutationObserver;
+- не использует storage, telemetry или свободные данные клиента.
 
-Он не меняет строки, не создаёт bounded tasks, не завершает задачи и не используется для оценки сотрудников.
+Legacy payload не меняется:
 
-## PR #372 — consumer inventory
+```text
+nav_v2_update_task_status({ p_task_id, p_status })
+```
 
-Зафиксированы три активных consumer path старого `nav_v2_update_task_status`:
+## Bounded transport выключен
 
-1. `assets/js/nav-v2/deal-card-v2.js` — base listener;
-2. `assets/js/nav-v2/task-action-guard-v2.js` — основной перехватывающий handler;
-3. `supabase/functions/nav-v2-deal-api/index.ts` — Edge action facade.
+Для contract-v2 задачи handler может:
+
+- распознать task action;
+- проверить permission;
+- проверить evidence/client-request UUID через router/adapter;
+- отклонить bounded reopen;
+- показать понятное сообщение о deployment gate.
+
+Handler не вызывает:
+
+- `nav_v2_start_bounded_task`;
+- `nav_v2_complete_bounded_task`;
+- active outcome RPC;
+- terminal proposal/decision RPC.
+
+`BOUNDED_TRANSPORT_ENABLED = false` остаётся жёстким source gate.
+
+## Dormant base source
+
+`assets/js/nav-v2/deal-card-v2.js` пока содержит старый `onclick` и literal `nav_v2_update_task_status`.
+
+Он не может выполнить mutation, потому что authoritative capture-handler:
+
+1. получает click раньше target `onclick`;
+2. останавливает propagation;
+3. после permission load очищает `button.onclick`;
+4. выполняет ровно один route.
+
+Source физически ещё не удалён. Это отдельный оставшийся cleanup blocker, а не скрытый runtime consumer.
+
+## Runtime consumers
+
+### Активные
+
+1. `task-action-guard-v2.js` — frontend authoritative capture-handler;
+2. `nav-v2-deal-api/index.ts` — legacy Edge action facade.
+
+### Dormant source
+
+- `deal-card-v2.js` — старый base `onclick`, выполнение подавлено и покрыто browser counters.
+
+### Detached contracts/previews
+
+- `task-action-router-v2.js`;
+- `bounded-task-ui-preview-v2.js`;
+- `task-action-contract-v2.js`.
 
 Активных runtime consumers `nav_v2_add_task` нет.
 
-## PR #373 — lite DTO v2
+## Browser regression
 
-Repository overlay `nav_v2_get_deal_card_lite_bounded_tasks.sql` добавляет:
+Desktop и mobile fixture проверяют:
 
-- contract version и task type;
-- evidence kind и completion criterion;
-- gate scope и outcomes;
-- `legacy_status_path`;
-- `requires_evidence_reference`;
-- `supports_reopen`;
-- отдельные permissions start/complete/active outcome/proposal/decision.
+- cold first click;
+- permission denial;
+- permission read failure;
+- legacy mutation error;
+- legacy complete/reopen;
+- `baseTaskHandlerCalls = 0`;
+- bounded completion route;
+- отсутствие bounded network mutation;
+- disabled bounded reopen.
 
-Production DTO не менялся.
+Synthetic rehearsal PR #377 отдельно доказал:
 
-## PR #374 — UI preview
-
-Direct-link synthetic preview показывает coexistence legacy и bounded tasks, evidence UUID, waiting/deferred, terminal proposal/decision и exact RPC preview.
-
-Страница не входит в role menu и не вызывает Supabase.
-
-## PR #375 — dual-path contract
-
-Pure router `task-action-router-v2.js` выбирает ровно один route preview:
-
-- legacy row → старый status RPC;
-- bounded row → governed start/complete/outcome RPC.
-
-Bounded reopen запрещён. Завершённая bounded-задача неизменяема; новая работа создаётся отдельной audited-задачей.
-
-Edge action contract проверяет UUID, enum/date, replacement и unknown fields, но не импортирован в deployed `index.ts`.
-
-Synthetic Playwright regression подтверждает legacy/bounded выбор маршрута и отсутствие сетевых RPC вызовов.
+- authoritative calls: 8;
+- base listener calls: 0;
+- guard competitor calls: 0;
+- network RPC calls: 0.
 
 ## Закрытые blockers
 
@@ -86,53 +120,48 @@ Synthetic Playwright regression подтверждает legacy/bounded выбо
 - `evidence_input_missing`;
 - `reopen_semantics_undefined`;
 - `governed_action_validation_missing`;
-- `dual_path_browser_contract_missing`.
+- `dual_path_browser_contract_missing`;
+- `authoritative_handler_not_integrated`;
+- `duplicate_handler_execution_risk`.
 
 ## Оставшиеся blockers
 
-### Authoritative handler
-
-`task-action-guard-v2.js` должен стать единственным владельцем task action flow и использовать dual-path router.
-
-Base listener в `deal-card-v2.js` необходимо удалить или полностью отключить, чтобы один клик не мог вызвать два mutation path.
-
-### Edge integration
-
-`task-action-contract-v2.js` должен быть подключён к `nav-v2-deal-api/index.ts` только после database deployment.
-
-Legacy action остаётся legacy-only и обязана отклонять contract-v2 row.
-
-### Database и access
-
-Bounded schema, audit table и RPC отсутствуют в production. Нужен отдельный migration/deploy PR с minimal grants и security advisor review.
-
-### Authenticated application E2E
-
-Skipped authenticated job не считается доказательством. Нужны реальные роли СПН, lawyer, broker, manager, owner/admin и coexistence legacy/bounded rows.
-
-### Transport и pilot
-
-Frontend transport остаётся выключенным до полного deployment order и controlled pilot.
-
-## Следующий safe slice
-
-Repository-only integration rehearsal:
-
-1. создать отключённый authoritative handler candidate поверх synthetic fixture;
-2. доказать отсутствие duplicate listener;
-3. проверить DTO → router → Edge payload mapping;
-4. не импортировать candidate в production карточку;
-5. не вызывать сеть;
-6. обновить source/browser contracts.
-
-После rehearsal можно подготовить реальную runtime-интеграцию отдельным PR, всё ещё с transport disabled.
+- `dormant_base_handler_source_not_removed`;
+- `edge_actions_not_integrated`;
+- `database_migrations_not_deployed`;
+- `minimal_grants_not_deployed`;
+- `authenticated_application_e2e_missing`;
+- `frontend_bounded_transport_disabled`;
+- `controlled_pilot_not_approved`.
 
 ## Production gate
 
-Deployment запрещён, пока `deployment_ready=false` и остаётся хотя бы один integration/E2E/deploy/pilot blocker.
+Production Supabase не получает:
 
-98 legacy tasks продолжают существовать без массового backfill. Review pack и pilot metrics не используются для оценки сотрудников.
+- bounded columns;
+- mutation event table;
+- governed RPC;
+- новые grants/RLS;
+- Edge Function deployment;
+- изменения task rows.
+
+Deployment bounded transport запрещён, пока `deployment_ready=false`.
+
+98 legacy tasks продолжают работать через старый RPC без массового backfill. Review и pilot metrics нельзя использовать для оценки сотрудников.
+
+## Следующий safe slice
+
+1. удалить dormant task mutation source из `deal-card-v2.js` отдельным точным source-cleanup;
+2. провести authenticated application E2E после approval среды;
+3. подготовить отдельный database deploy PR с объединёнными migrations и minimal grants;
+4. интегрировать Edge actions только после database deployment;
+5. включить bounded transport только для controlled pilot.
 
 ## Rollback
 
-Этот slice меняет только matrix, checker, workflow, handoff и документацию. Rollback — вернуть предыдущие repository artifacts. Runtime и database state не затрагиваются.
+Frontend rollback:
+
+- вернуть предыдущий `task-action-guard-v2.js`;
+- вернуть старые fixture/source contracts.
+
+Database rollback не требуется: production Supabase в этом slice не меняется.
