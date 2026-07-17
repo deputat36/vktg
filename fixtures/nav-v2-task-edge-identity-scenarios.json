@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "verified_actor_id": "00000000-0000-4000-8000-000000000004",
+  "accepted": [
+    {
+      "id": "bounded_start",
+      "action": "bounded_task_start",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000001",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_start_bounded_task",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_client_request_id": "40000000-0000-4000-8000-000000000001",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "id": "bounded_complete",
+      "action": "bounded_task_complete",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "evidence_reference_id": "30000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000002",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_complete_bounded_task",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_evidence_reference_id": "30000000-0000-4000-8000-000000000001",
+        "p_client_request_id": "40000000-0000-4000-8000-000000000002",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "id": "active_waiting_external",
+      "action": "bounded_task_active_outcome",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "outcome_code": "waiting_external",
+        "reason_code": "awaiting_document",
+        "review_date": "2026-07-20",
+        "client_request_id": "40000000-0000-4000-8000-000000000003",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_set_bounded_task_active_outcome",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_outcome_code": "waiting_external",
+        "p_reason_code": "awaiting_document",
+        "p_review_date": "2026-07-20",
+        "p_client_request_id": "40000000-0000-4000-8000-000000000003",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "id": "terminal_not_applicable",
+      "action": "bounded_task_terminal_proposal",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "outcome_code": "not_applicable",
+        "reason_code": "no_longer_required",
+        "client_request_id": "40000000-0000-4000-8000-000000000004",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_propose_bounded_task_terminal_outcome",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_outcome_code": "not_applicable",
+        "p_reason_code": "no_longer_required",
+        "p_replacement_task_id": null,
+        "p_client_request_id": "40000000-0000-4000-8000-000000000004",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "id": "terminal_replaced",
+      "action": "bounded_task_terminal_proposal",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "outcome_code": "replaced",
+        "reason_code": "replaced_by_specific_task",
+        "replacement_task_id": "20000000-0000-4000-8000-000000000002",
+        "client_request_id": "40000000-0000-4000-8000-000000000005",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_propose_bounded_task_terminal_outcome",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_outcome_code": "replaced",
+        "p_reason_code": "replaced_by_specific_task",
+        "p_replacement_task_id": "20000000-0000-4000-8000-000000000002",
+        "p_client_request_id": "40000000-0000-4000-8000-000000000005",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "id": "terminal_decision",
+      "action": "bounded_task_terminal_decision",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "decision": "confirm",
+        "client_request_id": "40000000-0000-4000-8000-000000000006",
+        "task_contract_version": 2
+      },
+      "rpc": "nav_v2_decide_bounded_task_terminal_outcome",
+      "args": {
+        "p_task_id": "20000000-0000-4000-8000-000000000001",
+        "p_decision": "confirm",
+        "p_client_request_id": "40000000-0000-4000-8000-000000000006",
+        "p_actor_id": "00000000-0000-4000-8000-000000000004"
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "id": "legacy_action_rejected",
+      "action": "legacy_update_task_status",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "status": "done"
+      },
+      "expected_stage": "action_scope"
+    },
+    {
+      "id": "client_actor_id_rejected",
+      "action": "bounded_task_start",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000011",
+        "task_contract_version": 2,
+        "actor_id": "00000000-0000-4000-8000-000000000009"
+      },
+      "expected_stage": "actor_trust_boundary"
+    },
+    {
+      "id": "invalid_verified_actor",
+      "action": "bounded_task_start",
+      "verified_actor_id": "not-a-uuid",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000012",
+        "task_contract_version": 2
+      },
+      "expected_stage": "verified_identity"
+    },
+    {
+      "id": "unknown_top_level",
+      "action": "bounded_task_start",
+      "extra_top_level": {"actor_id": "00000000-0000-4000-8000-000000000009"},
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000013",
+        "task_contract_version": 2
+      },
+      "expected_stage": "request_shape"
+    },
+    {
+      "id": "wrong_contract_version",
+      "action": "bounded_task_start",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "client_request_id": "40000000-0000-4000-8000-000000000014",
+        "task_contract_version": 1
+      },
+      "expected_stage": "payload_validation"
+    },
+    {
+      "id": "invalid_reason",
+      "action": "bounded_task_active_outcome",
+      "payload": {
+        "task_id": "20000000-0000-4000-8000-000000000001",
+        "outcome_code": "waiting_external",
+        "reason_code": "route_changed",
+        "review_date": "2026-07-20",
+        "client_request_id": "40000000-0000-4000-8000-000000000015",
+        "task_contract_version": 2
+      },
+      "expected_stage": "payload_validation"
+    }
+  ]
+}
