@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "status": "cost_free_transport_free_pipeline_rehearsal",
+  "production_changed": false,
+  "cloud_branch_created": false,
+  "runtime_integrated": false,
+  "edge_deployed": false,
+  "transport_enabled": false,
+  "real_auth_proven": false,
+  "real_rls_proven": false,
+  "real_grants_proven": false,
+  "stages": [
+    "frontend_router",
+    "edge_mapping",
+    "edge_validation",
+    "rpc_mapping",
+    "rpc_parity",
+    "validated_rpc_preview"
+  ],
+  "rpc_action_mapping": {
+    "nav_v2_update_task_status": "legacy_update_task_status",
+    "nav_v2_start_bounded_task": "bounded_task_start",
+    "nav_v2_complete_bounded_task": "bounded_task_complete",
+    "nav_v2_set_bounded_task_active_outcome": "bounded_task_active_outcome",
+    "nav_v2_propose_bounded_task_terminal_outcome": "bounded_task_terminal_proposal",
+    "nav_v2_decide_bounded_task_terminal_outcome": "bounded_task_terminal_decision"
+  },
+  "required_guards": {
+    "one_action_one_validated_rpc_preview": true,
+    "frontend_edge_rpc_name_parity": true,
+    "frontend_edge_rpc_args_parity": true,
+    "legacy_action_rejected_for_contract_v2": true,
+    "governed_action_rejected_for_legacy": true,
+    "unknown_fields_rejected": true,
+    "uuid_validation": true,
+    "reason_enum_validation": true,
+    "calendar_date_validation": true,
+    "replacement_validation": true,
+    "bounded_reopen_rejected": true,
+    "network_calls": 0
+  },
+  "artifacts": {
+    "frontend_router": "assets/js/nav-v2/task-action-router-v2.js",
+    "edge_validator": "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+    "pipeline": "assets/js/nav-v2/task-action-edge-pipeline-v2.js",
+    "scenarios": "fixtures/nav-v2-task-action-pipeline-scenarios.json",
+    "node_runner": "scripts/check-nav-v2-task-action-pipeline.mjs",
+    "browser_fixture": "tests/fixtures/nav-v2-task-action-pipeline-rehearsal.html",
+    "browser_spec": "tests/e2e/task-action-pipeline-rehearsal.spec.js"
+  },
+  "separation_guarantees": {
+    "production_sql_applied": false,
+    "production_edge_function_changed": false,
+    "production_auth_changed": false,
+    "production_rls_or_grants_changed": false,
+    "production_task_rows_changed": false,
+    "bounded_network_mutation_enabled": false,
+    "deployment_evidence_claimed": false,
+    "employee_evaluation_allowed": false
+  }
+}
