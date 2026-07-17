@@ -68,6 +68,7 @@ on:
       - 'scripts/check_nav_v2_spn_save_handoff.py'
       - 'scripts/check_nav_v2_intake_contract_v1.py'
       - 'scripts/check-nav-v2-intake-contract-v1.mjs'
+      - 'scripts/check_nav_v2_intake_prototype_v1.py'
       - 'scripts/check_nav_v2_owner_admin_ia.py'
       - 'scripts/check_nav_v2_release_drift.py'
       - 'scripts/check_nav_v2_release_drift_workflow.py'
@@ -97,6 +98,7 @@ on:
       - '.github/workflows/nav-v2-spn-save-idempotency.yml'
       - '.github/workflows/nav-v2-exact-wizard-save-guard.yml'
       - '.github/workflows/nav-v2-intake-contract-v1.yml'
+      - '.github/workflows/nav-v2-intake-prototype-v1.yml'
   push:
     branches:
       - main
@@ -262,6 +264,8 @@ jobs:
         run: |
           python3 scripts/check_nav_v2_intake_contract_v1.py
           node scripts/check-nav-v2-intake-contract-v1.mjs
+      - name: Check detached SPN intake prototype v1
+        run: python3 scripts/check_nav_v2_intake_prototype_v1.py
       - name: Check manager assignment proposal
         run: python3 scripts/check_nav_v2_manager_assignment_proposal.py
       - name: Check manager source remediation, evidence and confirmation draft
