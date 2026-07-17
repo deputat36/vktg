@@ -4,6 +4,7 @@ import { taskActionControlModel, taskActionRoutePreview } from './task-action-ro
 
 const dealId = new URLSearchParams(location.search).get('id');
 const BOUNDED_TRANSPORT_ENABLED = false;
+const LEGACY_ACTION_BY_STATUS = Object.freeze({ in_progress: 'start', done: 'complete', open: 'reopen' });
 let permissions = new Map();
 let loaded = false;
 let loading = null;
@@ -38,9 +39,19 @@ function roleLabel(role) {
   })[role] || 'ответственный специалист';
 }
 
+function taskButtonSelector() {
+  return 'button[data-task-id][data-task-action],button[data-task-id][data-task-status]';
+}
+
+function actionFromButton(button) {
+  const explicit = String(button.dataset.taskAction || '').trim();
+  if (explicit) return explicit;
+  return LEGACY_ACTION_BY_STATUS[String(button.dataset.taskStatus || '').trim()] || '';
+}
+
 function taskButtons(taskId) {
   const escaped = globalThis.CSS?.escape ? CSS.escape(String(taskId || '')) : String(taskId || '').replace(/["\\]/g, '\\$&');
-  return [...document.querySelectorAll(`button[data-task-id="${escaped}"][data-task-action]`)];
+  return [...document.querySelectorAll(`button[data-task-id="${escaped}"][data-task-action],button[data-task-id="${escaped}"][data-task-status]`)];
 }
 
 function isDemoCard() {
@@ -101,7 +112,7 @@ function actionAllowed(task, action) {
 
 async function executeTaskAction(button) {
   const taskId = String(button.dataset.taskId || '');
-  const action = String(button.dataset.taskAction || '');
+  const action = actionFromButton(button);
   const task = permissions.get(taskId);
 
   if (!task || !actionAllowed(task, action)) {
@@ -146,7 +157,7 @@ async function executeTaskAction(button) {
 }
 
 function installTaskHandler(button, task) {
-  const action = String(button.dataset.taskAction || '');
+  const action = actionFromButton(button);
   const allowed = actionAllowed(task, action);
   button.disabled = !allowed;
   button.setAttribute('aria-disabled', allowed ? 'false' : 'true');
@@ -173,7 +184,7 @@ function installTaskHandler(button, task) {
 
 function applyTaskPermissions() {
   if (!loaded) return;
-  document.querySelectorAll('button[data-task-id][data-task-action]').forEach((button) => {
+  document.querySelectorAll(taskButtonSelector()).forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
     const task = permissions.get(String(button.dataset.taskId || ''));
     if (!task) {
@@ -218,7 +229,7 @@ async function loadPermissions(force = false) {
 }
 
 async function handleTaskAction(event) {
-  const button = event.target.closest('button[data-task-id][data-task-action]');
+  const button = event.target.closest(taskButtonSelector());
   if (!(button instanceof HTMLButtonElement)) return;
 
   event.preventDefault();
