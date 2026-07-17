@@ -10,7 +10,7 @@ select 1 / case
 end as assert_postgres_major_17;
 
 with actual as (
-  select array_agg(column_name order by ordinal_position) as names
+  select array_agg(column_name::text order by ordinal_position) as names
   from information_schema.columns
   where table_schema = 'public'
     and table_name = 'nav_deal_tasks_v2'
@@ -26,7 +26,7 @@ end as assert_exact_legacy_task_columns
 from actual;
 
 with actual as (
-  select array_agg(conname order by conname) as names
+  select array_agg(conname::text order by conname) as names
   from pg_constraint
   where conrelid = 'public.nav_deal_tasks_v2'::regclass
 )
