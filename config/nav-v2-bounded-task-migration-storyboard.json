@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_storyboard_not_a_migration",
+  "future_migration_placeholder": "YYYYMMDDHHMMSS_nav_v2_bounded_task_contract_and_runtime.sql",
+  "migration_file_created": false,
+  "production_applied": false,
+  "supabase_branch_created": false,
+  "edge_deployed": false,
+  "bounded_transport_enabled": false,
+  "deployment_ready": false,
+  "cost_gate_issue": 282,
+  "owner_migration_approval": false,
+  "authenticated_e2e_proven": false,
+  "phases": [
+    {
+      "id": "preflight",
+      "order": 0,
+      "mode": "read_only",
+      "requires": [
+        "PostgreSQL major version 17",
+        "exact legacy task column baseline",
+        "exact legacy task constraint baseline",
+        "legacy add/status/lite RPC signatures exist",
+        "bounded columns/table/RPC are completely absent",
+        "current legacy grants are attested"
+      ],
+      "writes": false
+    },
+    {
+      "id": "additive_schema",
+      "order": 1,
+      "prototype": "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+      "adds_nullable_columns": true,
+      "adds_not_valid_constraints": true,
+      "backfill": false
+    },
+    {
+      "id": "governed_mutations",
+      "order": 2,
+      "prototype": "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+      "adds_event_table": true,
+      "adds_private_helpers": true,
+      "adds_governed_rpcs": true,
+      "governed_grants": ["service_role"],
+      "backfill": false
+    },
+    {
+      "id": "legacy_rpc_transition",
+      "order": 3,
+      "replaces": ["nav_v2_add_task", "nav_v2_update_task_status"],
+      "current_authenticated_execute": true,
+      "target_prototype_execute": ["service_role"],
+      "requires_authenticated_e2e": true,
+      "requires_edge_cutover_plan": true,
+      "stop_if_unapproved": true
+    },
+    {
+      "id": "dto_baseline",
+      "order": 4,
+      "prototype": "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+      "dto_version": 1
+    },
+    {
+      "id": "dto_bounded_overlay",
+      "order": 5,
+      "prototype": "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
+      "dto_version": 2,
+      "privacy_minimized": true
+    },
+    {
+      "id": "database_verification",
+      "order": 6,
+      "checks": [
+        "objects and signatures",
+        "RLS and grants",
+        "no legacy backfill",
+        "no deal/document/risk mutation",
+        "no automatic task trigger",
+        "DTO v2 privacy and permissions",
+        "security and performance advisors"
+      ]
+    },
+    {
+      "id": "edge_integration",
+      "order": 7,
+      "deferred": true,
+      "requires_database_green": true,
+      "requires_separate_deploy": true
+    },
+    {
+      "id": "frontend_transport",
+      "order": 8,
+      "deferred": true,
+      "requires_edge_green": true,
+      "requires_controlled_pilot": true
+    }
+  ],
+  "stop_conditions": [
+    "PostgreSQL major version is not 17",
+    "legacy task columns differ from attestation",
+    "legacy task constraints differ from attestation",
+    "any bounded object exists partially",
+    "any governed RPC exists before migration",
+    "legacy RPC signature or grant differs from attestation",
+    "PR #384 deployment-readiness dry-run is not green",
+    "owner has not approved a production migration PR",
+    "Issue #282 cost approval and authenticated E2E are absent",
+    "final grant policy is not approved",
+    "rollback owner or maintenance window is absent",
+    "database backup or recovery readiness is not confirmed"
+  ],
+  "go_conditions": {
+    "repository_storyboard_only": true,
+    "production_migration": false,
+    "requires_all_stop_conditions_cleared_for_future_deploy": true
+  },
+  "post_apply_verification": [
+    "all bounded columns exist and legacy rows remain null",
+    "mutation event table exists with RLS",
+    "governed RPC signatures and fixed search_path exist",
+    "public/anon/authenticated lack governed EXECUTE",
+    "service_role has governed EXECUTE",
+    "legacy add/status policy matches approved cutover",
+    "DTO version 2 is contract-aware and privacy-minimized",
+    "deal/document/risk row snapshots are unchanged",
+    "task trigger count is unchanged",
+    "security advisor reviewed",
+    "performance advisor reviewed",
+    "Edge remains undeployed until separate approval"
+  ],
+  "rollback_order": [
+    {
+      "order": 1,
+      "action": "restore explicit lite DTO v1",
+      "proof": "PR #384 DTO rollback"
+    },
+    {
+      "order": 2,
+      "action": "remove governed mutation overlay and restore legacy RPC/grants",
+      "proof": "PR #384 mutation rollback"
+    },
+    {
+      "order": 3,
+      "action": "remove bounded base columns/catalog/constraints",
+      "proof": "PR #384 base rollback"
+    }
+  ],
+  "forbidden_actions": [
+    "create file under supabase/migrations",
+    "apply production SQL",
+    "create Supabase branch",
+    "change Auth/RLS/grants in production",
+    "deploy Edge Function",
+    "enable bounded transport",
+    "mass backfill legacy tasks",
+    "claim deployment readiness"
+  ],
+  "remaining_owner_decisions": [
+    "explicit cost approval for preview environment",
+    "permission to create production migration PR",
+    "final legacy and governed grant policy",
+    "rollback owner and maintenance window",
+    "controlled pilot manager and cases"
+  ]
+}
