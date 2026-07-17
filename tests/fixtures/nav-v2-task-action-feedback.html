@@ -11,7 +11,7 @@
     <section class="hero"><h1><span id="demoBadge" class="pill blue" hidden>ДЕМО</span> Карточка сделки</h1></section>
     <div id="pageStatus" class="status">Выберите действие по задаче.</div>
     <section class="card">
-      <h2>Задачи</h2>
+      <h2>Legacy-задача</h2>
       <div class="list">
         <div class="list-item" id="taskItem">
           <div><span class="pill yellow">важно</span> <span class="pill">открыта</span> <span class="pill blue">СПН</span></div>
@@ -21,6 +21,19 @@
             <button id="taskProgress" class="btn light" data-task-status="in_progress" data-task-id="task-1" type="button">В работе</button>
             <button id="taskDone" class="btn green" data-task-status="done" data-task-id="task-1" type="button">Готово</button>
             <button id="taskOpen" class="btn light" data-task-status="open" data-task-id="task-1" type="button">Открыта</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Bounded-задача</h2>
+      <div class="list">
+        <div class="list-item" id="boundedTaskItem">
+          <b>Юридическое решение</b>
+          <p class="muted">Synthetic contract-v2 task. Transport должен остаться выключенным.</p>
+          <div class="actions">
+            <button id="boundedDone" class="btn green" data-task-action="complete" data-task-id="20000000-0000-4000-8000-000000000002" data-client-request-id="30000000-0000-4000-8000-000000000001" data-evidence-reference-id="40000000-0000-4000-8000-000000000001" type="button">Завершить с evidence</button>
+            <button id="boundedReopen" class="btn light" data-task-action="reopen" data-task-id="20000000-0000-4000-8000-000000000002" data-client-request-id="30000000-0000-4000-8000-000000000002" type="button">Открыть снова</button>
           </div>
         </div>
       </div>
@@ -42,6 +55,6 @@
       document.getElementById('demoBadge').hidden = false;
     }
   </script>
-  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260715-01"></script>
+  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260717-01"></script>
 </body>
 </html>
