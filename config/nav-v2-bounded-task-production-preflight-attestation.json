@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-17",
+  "source": "read_only_production_query",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "project_status": "ACTIVE_HEALTHY",
+  "postgres_version": "17.6",
+  "structural_baseline": {
+    "task_table": "public.nav_deal_tasks_v2",
+    "task_columns": [
+      "id",
+      "deal_id",
+      "title",
+      "description",
+      "assigned_to",
+      "assigned_role",
+      "status",
+      "priority",
+      "due_date",
+      "source",
+      "completed_by",
+      "completed_at",
+      "created_by",
+      "created_at",
+      "updated_at",
+      "task_type",
+      "sla_days"
+    ],
+    "task_constraints": [
+      "nav_deal_tasks_v2_assigned_to_fkey",
+      "nav_deal_tasks_v2_completed_by_fkey",
+      "nav_deal_tasks_v2_created_by_fkey",
+      "nav_deal_tasks_v2_deal_id_fkey",
+      "nav_deal_tasks_v2_pkey",
+      "nav_deal_tasks_v2_sla_days_check",
+      "nav_deal_tasks_v2_task_type_check"
+    ],
+    "legacy_rpc_signatures": [
+      "public.nav_v2_add_task(uuid,text,text,public.nav_v2_user_role,public.nav_v2_task_priority,text)",
+      "public.nav_v2_update_task_status(uuid,public.nav_v2_task_status)",
+      "public.nav_v2_get_deal_card_lite(uuid)"
+    ],
+    "authenticated_legacy_execute": {
+      "nav_v2_add_task": true,
+      "nav_v2_update_task_status": true
+    },
+    "bounded_objects_absent": {
+      "task_contract_version_column": true,
+      "mutation_event_table": true,
+      "create_bounded_rpc": true,
+      "start_bounded_rpc": true,
+      "complete_bounded_rpc": true
+    }
+  },
+  "informational_counts": {
+    "task_count": 98,
+    "deal_count": 23,
+    "strict_gate": false
+  },
+  "interpretation": {
+    "structural_drift_is_stop": true,
+    "count_drift_is_informational": true,
+    "partial_bounded_deployment_is_stop": true,
+    "production_write_performed": false
+  }
+}
