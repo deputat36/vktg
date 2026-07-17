@@ -202,6 +202,13 @@ function documentCount(passport) {
   return Object.values(passport?.documents || {}).reduce((total, rows) => total + (Array.isArray(rows) ? rows.length : 0), 0);
 }
 
+function missingRequiredDocuments(passport) {
+  const required = unique((passport?.risk_flags || []).flatMap((risk) => risk.required_documents || []));
+  if (!required.length) return [];
+  const recorded = new Set(Object.values(passport?.documents || {}).flat().map((document) => document.type));
+  return required.filter((type) => !recorded.has(type));
+}
+
 export function evaluateIntakeGates(draft, passport) {
   const draftMissing = [];
   if (!text(draft?.requestType)) draftMissing.push(missingItem('request_type', 'Что сейчас нужно'));
@@ -217,13 +224,19 @@ export function evaluateIntakeGates(draft, passport) {
   const handoffMissing = [];
   if (!text(passport?.request_type)) handoffMissing.push(missingItem('lawyer_request_type', 'Конкретный тип запроса юристу', true));
   if (!text(passport?.requested_decision)) handoffMissing.push(missingItem('requested_decision', 'Какое решение ожидается от юриста', true));
+  if (draft?.lawyerRequestConfirmed !== true) handoffMissing.push(missingItem('lawyer_request_confirmation', 'Подтверждение запроса и ожидаемого решения', true));
   if (!text(passport?.urgency) && !passport?.target_date) handoffMissing.push(missingItem('urgency', 'Срочность или срок'));
   if (!hasObjectOrReason(draft)) handoffMissing.push(missingItem('object', 'Объект или причина его отсутствия', true));
   if (!text(passport?.representation_model)) handoffMissing.push(missingItem('representation', 'Модель сопровождения', true));
   if (!(passport?.confirmed_facts?.length || passport?.client_reported_facts?.length)) handoffMissing.push(missingItem('known_facts', 'Хотя бы один известный факт'));
   if (!Array.isArray(passport?.unknown_facts)) handoffMissing.push(missingItem('unknown_facts', 'Список неизвестных фактов'));
   if (!Array.isArray(passport?.risk_flags)) handoffMissing.push(missingItem('risk_flags', 'Список найденных рисков'));
-  if (!draft?.documentsReviewed && documentCount(passport) === 0) handoffMissing.push(missingItem('documents', 'Статус ключевых документов'));
+  const requiredDocumentsMissing = missingRequiredDocuments(passport);
+  if (requiredDocumentsMissing.length) {
+    handoffMissing.push(missingItem('documents', `Статус обязательных документов: ${requiredDocumentsMissing.join(', ')}`));
+  } else if (!draft?.documentsReviewed && documentCount(passport) === 0) {
+    handoffMissing.push(missingItem('documents', 'Статус ключевых документов'));
+  }
   if (!text(passport?.spn_next_action)) handoffMissing.push(missingItem('next_action', 'Следующий шаг СПН', true));
 
   const urgent = ['urgent', 'critical'].includes(text(passport?.urgency));
