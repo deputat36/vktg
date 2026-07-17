@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "status": "cost_free_mocked_role_matrix_rehearsal",
+  "production_changed": false,
+  "cloud_branch_created": false,
+  "real_auth_proven": false,
+  "real_rls_proven": false,
+  "real_rpc_grants_proven": false,
+  "bounded_transport_enabled": false,
+  "source_issue": 282,
+  "fixture": "tests/fixtures/nav-v2-task-role-matrix-rehearsal.html",
+  "browser_spec": "tests/e2e/task-action-role-matrix-rehearsal.spec.js",
+  "authoritative_handler": "assets/js/nav-v2/task-action-guard-v2.js",
+  "roles": [
+    {
+      "scenario": "owner",
+      "role": "owner",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": true
+    },
+    {
+      "scenario": "admin",
+      "role": "admin",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": true
+    },
+    {
+      "scenario": "manager",
+      "role": "manager",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": true
+    },
+    {
+      "scenario": "spn_assigned",
+      "role": "spn",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": false
+    },
+    {
+      "scenario": "lawyer_assigned",
+      "role": "lawyer",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": false
+    },
+    {
+      "scenario": "broker_assigned",
+      "role": "broker",
+      "legacy_allowed": true,
+      "bounded_complete_allowed": true,
+      "terminal_decision_allowed": false
+    },
+    {
+      "scenario": "viewer",
+      "role": "viewer",
+      "legacy_allowed": false,
+      "bounded_complete_allowed": false,
+      "terminal_decision_allowed": false
+    },
+    {
+      "scenario": "spn_unassigned",
+      "role": "spn",
+      "legacy_allowed": false,
+      "bounded_complete_allowed": false,
+      "terminal_decision_allowed": false
+    }
+  ],
+  "required_assertions": {
+    "authoritative_handler_only": true,
+    "synthetic_base_onclick_calls": 0,
+    "legacy_rpc_exact_payload": true,
+    "bounded_network_rpc_calls": 0,
+    "bounded_reopen_disabled": true,
+    "desktop_and_mobile": true,
+    "real_auth_claim_forbidden": true
+  },
+  "separation_guarantees": {
+    "supabase_branch_created": false,
+    "production_credentials_used": false,
+    "real_employee_accounts_used": false,
+    "production_rows_changed": false,
+    "deployment_evidence_claimed": false,
+    "employee_evaluation_allowed": false
+  }
+}
