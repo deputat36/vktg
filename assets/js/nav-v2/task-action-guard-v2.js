@@ -1,16 +1,30 @@
 import { rpc } from './supabase-v2.js?v=20260625-1320';
 import { applyPageActionFeedback } from './page-action-feedback-v2.js?v=20260715-01';
+import { taskActionControlModel, taskActionRoutePreview } from './task-action-router-v2.js?v=20260716-01';
 
 const dealId = new URLSearchParams(location.search).get('id');
+const BOUNDED_TRANSPORT_ENABLED = false;
+const LEGACY_ACTION_BY_STATUS = Object.freeze({ in_progress: 'start', done: 'complete', open: 'reopen' });
 let permissions = new Map();
 let loaded = false;
 let loading = null;
 let applyQueued = false;
-let replayTaskId = '';
 const mutations = new Set();
 
 function boolValue(value) {
   return value === true || value === 'true';
+}
+
+function normalizedTask(task = {}) {
+  return {
+    ...task,
+    can_change_status: boolValue(task.can_change_status),
+    can_start: boolValue(task.can_start),
+    can_complete: boolValue(task.can_complete),
+    can_set_active_outcome: boolValue(task.can_set_active_outcome),
+    can_propose_terminal_outcome: boolValue(task.can_propose_terminal_outcome),
+    can_decide_terminal_outcome: boolValue(task.can_decide_terminal_outcome)
+  };
 }
 
 function roleLabel(role) {
@@ -25,13 +39,19 @@ function roleLabel(role) {
   })[role] || 'ответственный специалист';
 }
 
-function canChangeTask(task) {
-  return boolValue(task?.can_change_status);
+function taskButtonSelector() {
+  return 'button[data-task-id][data-task-action],button[data-task-id][data-task-status]';
+}
+
+function actionFromButton(button) {
+  const explicit = String(button.dataset.taskAction || '').trim();
+  if (explicit) return explicit;
+  return LEGACY_ACTION_BY_STATUS[String(button.dataset.taskStatus || '').trim()] || '';
 }
 
 function taskButtons(taskId) {
   const escaped = globalThis.CSS?.escape ? CSS.escape(String(taskId || '')) : String(taskId || '').replace(/["\\]/g, '\\$&');
-  return [...document.querySelectorAll(`button[data-task-id="${escaped}"][data-task-status]`)];
+  return [...document.querySelectorAll(`button[data-task-id="${escaped}"][data-task-action],button[data-task-id="${escaped}"][data-task-status]`)];
 }
 
 function isDemoCard() {
@@ -46,6 +66,10 @@ function confirmDemoTaskAction() {
 
 function permissionText(task) {
   return `Статус этой задачи меняет ${roleLabel(task?.assigned_role)}. Вы видите задачу для контроля, но действие доступно ответственному специалисту.`;
+}
+
+function boundedTransportText() {
+  return 'Действие bounded-задачи распознано, но сохранение ещё не включено. Дождитесь отдельного deployment database RPC и Edge actions.';
 }
 
 function ensureHint(container, task) {
@@ -71,28 +95,55 @@ function setTaskBusy(taskId, busy) {
   });
 }
 
-async function saveTaskStatus(button) {
+function taskActionInput(button) {
+  return {
+    client_request_id: button.dataset.clientRequestId || '',
+    evidence_reference_id: button.dataset.evidenceReferenceId || '',
+    reason_code: button.dataset.reasonCode || '',
+    review_date: button.dataset.reviewDate || '',
+    replacement_task_id: button.dataset.replacementTaskId || ''
+  };
+}
+
+function actionAllowed(task, action) {
+  if (!task || !action) return false;
+  return taskActionControlModel(task).actions.includes(action);
+}
+
+async function executeTaskAction(button) {
   const taskId = String(button.dataset.taskId || '');
-  const taskStatus = String(button.dataset.taskStatus || '');
+  const action = actionFromButton(button);
   const task = permissions.get(taskId);
 
-  if (!task || !canChangeTask(task)) {
+  if (!task || !actionAllowed(task, action)) {
     applyTaskPermissions();
     applyPageActionFeedback(permissionText(task), 'error');
     return;
   }
-  if (!taskStatus || mutations.has(taskId)) return;
-  if (!confirmDemoTaskAction()) return;
+  if (mutations.has(taskId)) return;
 
+  const route = taskActionRoutePreview({ task, action, input: taskActionInput(button) });
+  if (!route.ok || !route.rpc_preview) {
+    applyPageActionFeedback(route.errors?.[0] || 'Действие по задаче недоступно.', 'error');
+    return;
+  }
+
+  if (route.mode === 'bounded') {
+    if (!BOUNDED_TRANSPORT_ENABLED) {
+      applyPageActionFeedback(boundedTransportText(), 'idle');
+      return;
+    }
+    applyPageActionFeedback('Bounded transport ещё не разрешён deployment gate.', 'error');
+    return;
+  }
+
+  if (!confirmDemoTaskAction()) return;
   mutations.add(taskId);
   setTaskBusy(taskId, true);
   applyPageActionFeedback('Обновляю статус задачи...', 'busy');
   let succeeded = false;
   try {
-    await rpc('nav_v2_update_task_status', {
-      p_task_id: taskId,
-      p_status: taskStatus
-    });
+    await rpc(route.rpc_preview.name, route.rpc_preview.args);
     succeeded = true;
     applyPageActionFeedback('Статус задачи сохранён. Обновляю карточку...', 'success');
     setTimeout(() => location.reload(), 250);
@@ -106,11 +157,13 @@ async function saveTaskStatus(button) {
 }
 
 function installTaskHandler(button, task) {
-  const allowed = canChangeTask(task);
+  const action = actionFromButton(button);
+  const allowed = actionAllowed(task, action);
   button.disabled = !allowed;
   button.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+  button.onclick = null;
+
   if (!allowed) {
-    button.onclick = null;
     button.classList.add('disabled');
     button.style.opacity = '.45';
     button.style.cursor = 'not-allowed';
@@ -122,17 +175,18 @@ function installTaskHandler(button, task) {
   button.classList.remove('disabled');
   button.style.opacity = '';
   button.style.cursor = '';
-  button.removeAttribute('title');
+  button.title = Number(task.task_contract_version) === 2 && !BOUNDED_TRANSPORT_ENABLED
+    ? 'Bounded-действие подготовлено, но сохранение пока выключено'
+    : '';
   clearHint(button.closest('.list-item'));
   button.dataset.taskActionGuard = 'ready';
-  button.onclick = () => void saveTaskStatus(button);
 }
 
 function applyTaskPermissions() {
   if (!loaded) return;
-  document.querySelectorAll('button[data-task-id][data-task-status]').forEach((button) => {
+  document.querySelectorAll(taskButtonSelector()).forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
-    const task = permissions.get(button.dataset.taskId);
+    const task = permissions.get(String(button.dataset.taskId || ''));
     if (!task) {
       button.disabled = true;
       button.setAttribute('aria-disabled', 'true');
@@ -158,7 +212,10 @@ async function loadPermissions(force = false) {
   if (loading) return loading;
   loading = rpc('nav_v2_get_deal_card_lite', { p_deal_id: dealId }, 12000)
     .then((card) => {
-      permissions = new Map((card.tasks || []).map((task) => [String(task.id), task]));
+      permissions = new Map((card.tasks || []).map((task) => {
+        const normalized = normalizedTask(task);
+        return [String(normalized.id), normalized];
+      }));
       loaded = true;
       applyTaskPermissions();
       return true;
@@ -171,42 +228,30 @@ async function loadPermissions(force = false) {
   return loading;
 }
 
-async function ensureLoadedBeforeAction(event) {
-  const button = event.target.closest('button[data-task-id][data-task-status]');
+async function handleTaskAction(event) {
+  const button = event.target.closest(taskButtonSelector());
   if (!(button instanceof HTMLButtonElement)) return;
-
-  const taskId = String(button.dataset.taskId || '');
-  if (replayTaskId === taskId) {
-    replayTaskId = '';
-    return;
-  }
-  if (loaded) return;
 
   event.preventDefault();
   event.stopImmediatePropagation();
-  applyPageActionFeedback('Проверяю права на изменение задачи...', 'busy');
-  const ok = await loadPermissions();
-  if (!ok) {
-    applyPageActionFeedback('Не удалось проверить права по задаче. Обновите карточку и повторите действие.', 'error');
-    return;
+
+  if (!loaded) {
+    applyPageActionFeedback('Проверяю права на изменение задачи...', 'busy');
+    const ok = await loadPermissions();
+    if (!ok) {
+      applyPageActionFeedback('Не удалось проверить права по задаче. Обновите карточку и повторите действие.', 'error');
+      return;
+    }
   }
 
-  const task = permissions.get(taskId);
   applyTaskPermissions();
-  if (!task || !canChangeTask(task)) {
-    applyPageActionFeedback(permissionText(task), 'error');
-    return;
-  }
-
-  applyPageActionFeedback('Права проверены. Выполняю действие по задаче...', 'success');
-  replayTaskId = taskId;
-  button.click();
+  await executeTaskAction(button);
 }
 
 const app = document.getElementById('app');
 if (app) {
   new MutationObserver(queueApply).observe(app, { childList: true, subtree: true });
-  app.addEventListener('click', ensureLoadedBeforeAction, true);
+  app.addEventListener('click', handleTaskAction, true);
   void loadPermissions();
 }
 
