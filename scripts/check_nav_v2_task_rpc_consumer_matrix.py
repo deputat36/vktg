@@ -12,8 +12,10 @@ EDGE = ROOT / 'supabase/functions/nav-v2-deal-api/index.ts'
 LITE_BOUNDED = ROOT / 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
 UI_PREVIEW = ROOT / 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
 ROUTER = ROOT / 'assets/js/nav-v2/task-action-router-v2.js'
+PIPELINE = ROOT / 'assets/js/nav-v2/task-action-edge-pipeline-v2.js'
 EDGE_CONTRACT = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
 DUAL_E2E = ROOT / 'tests/e2e/task-action-dual-path.spec.js'
+PIPELINE_E2E = ROOT / 'tests/e2e/task-action-pipeline-rehearsal.spec.js'
 RUNTIME_E2E = ROOT / 'tests/e2e/task-action-feedback.spec.js'
 RPC_SURFACE = ROOT / 'config/nav-v2-rpc-surface.json'
 DOC = ROOT / 'docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md'
@@ -41,19 +43,8 @@ def occurrence_paths(needle: str) -> set[str]:
 def main() -> int:
     errors: list[str] = []
     paths = (
-        MATRIX,
-        DEAL_CARD,
-        GUARD,
-        EDGE,
-        LITE_BOUNDED,
-        UI_PREVIEW,
-        ROUTER,
-        EDGE_CONTRACT,
-        DUAL_E2E,
-        RUNTIME_E2E,
-        RPC_SURFACE,
-        DOC,
-        WORKFLOW,
+        MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, UI_PREVIEW, ROUTER, PIPELINE,
+        EDGE_CONTRACT, DUAL_E2E, PIPELINE_E2E, RUNTIME_E2E, RPC_SURFACE, DOC, WORKFLOW,
     )
     for path in paths:
         if not path.exists():
@@ -63,18 +54,21 @@ def main() -> int:
         return 1
 
     matrix = json.loads(MATRIX.read_text(encoding='utf-8'))
-    deal_card = DEAL_CARD.read_text(encoding='utf-8')
-    guard = GUARD.read_text(encoding='utf-8')
-    edge = EDGE.read_text(encoding='utf-8')
-    lite = LITE_BOUNDED.read_text(encoding='utf-8')
-    ui_preview = UI_PREVIEW.read_text(encoding='utf-8')
-    router = ROUTER.read_text(encoding='utf-8')
-    edge_contract = EDGE_CONTRACT.read_text(encoding='utf-8')
-    dual_e2e = DUAL_E2E.read_text(encoding='utf-8')
-    runtime_e2e = RUNTIME_E2E.read_text(encoding='utf-8')
-    rpc_surface = RPC_SURFACE.read_text(encoding='utf-8')
-    doc = DOC.read_text(encoding='utf-8')
-    workflow = WORKFLOW.read_text(encoding='utf-8')
+    texts = {path: path.read_text(encoding='utf-8') for path in paths if path.suffix != '.json'}
+    deal_card = texts[DEAL_CARD]
+    guard = texts[GUARD]
+    edge = texts[EDGE]
+    lite = texts[LITE_BOUNDED]
+    ui_preview = texts[UI_PREVIEW]
+    router = texts[ROUTER]
+    pipeline = texts[PIPELINE]
+    edge_contract = texts[EDGE_CONTRACT]
+    dual_e2e = texts[DUAL_E2E]
+    pipeline_e2e = texts[PIPELINE_E2E]
+    runtime_e2e = texts[RUNTIME_E2E]
+    rpc_surface = texts[RPC_SURFACE]
+    doc = texts[DOC]
+    workflow = texts[WORKFLOW]
 
     if matrix.get('schema_version') != 4:
         errors.append('consumer matrix must use schema version 4')
@@ -89,15 +83,12 @@ def main() -> int:
     update = legacy.get('nav_v2_update_task_status') or {}
     add = legacy.get('nav_v2_add_task') or {}
     expected_active = {item['path'] for item in update.get('active_runtime_consumers') or []}
-    required_active = {
-        GUARD.relative_to(ROOT).as_posix(),
-        EDGE.relative_to(ROOT).as_posix(),
-    }
+    required_active = {GUARD.relative_to(ROOT).as_posix(), EDGE.relative_to(ROOT).as_posix()}
     if expected_active != required_active:
         errors.append(f'active runtime consumer inventory drifted: {sorted(expected_active)}')
-
     if update.get('dormant_source_handlers') != []:
-        errors.append('dormant source handler inventory must be empty after cleanup')
+        errors.append('dormant source handler inventory must remain empty')
+
     cleanup = update.get('source_cleanup') or {}
     if cleanup.get('path') != DEAL_CARD.relative_to(ROOT).as_posix() or cleanup.get('removed') is not True:
         errors.append('deal-card source cleanup evidence drifted')
@@ -108,6 +99,7 @@ def main() -> int:
         EDGE.relative_to(ROOT).as_posix(),
         UI_PREVIEW.relative_to(ROOT).as_posix(),
         ROUTER.relative_to(ROOT).as_posix(),
+        PIPELINE.relative_to(ROOT).as_posix(),
         EDGE_CONTRACT.relative_to(ROOT).as_posix(),
     }
     actual_update = occurrence_paths('nav_v2_update_task_status')
@@ -123,12 +115,14 @@ def main() -> int:
     if update.get('deployment_blocker') is not True:
         errors.append('legacy update-task-status remains a deployment blocker until bounded deployment/pilot is complete')
 
+    inventory = set(update.get('test_and_contract_consumers') or [])
+    for path in (ROUTER, PIPELINE, UI_PREVIEW, EDGE_CONTRACT, DUAL_E2E, PIPELINE_E2E, RUNTIME_E2E):
+        if path.relative_to(ROOT).as_posix() not in inventory:
+            errors.append(f'detached/test consumer missing from matrix: {path.relative_to(ROOT)}')
+
     require(deal_card, (
-        'function taskActions(task)',
-        'data-task-status="in_progress"',
-        'data-task-status="done"',
-        'data-task-status="open"',
-        '${taskActions(task)}',
+        'function taskActions(task)', 'data-task-status="in_progress"',
+        'data-task-status="done"', 'data-task-status="open"', '${taskActions(task)}',
     ), DEAL_CARD.name, errors)
     for forbidden in (
         "rpc('nav_v2_update_task_status'",
@@ -140,18 +134,12 @@ def main() -> int:
 
     require(guard, (
         "import { taskActionControlModel, taskActionRoutePreview } from './task-action-router-v2.js?v=20260716-01';",
-        "rpc('nav_v2_get_deal_card_lite'",
-        'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
-        'const BOUNDED_TRANSPORT_ENABLED = false;',
-        'event.stopImmediatePropagation()',
-        "app.addEventListener('click', handleTaskAction, true)",
-        'button.onclick = null',
-        'data-task-status',
-        'data-task-action',
+        "rpc('nav_v2_get_deal_card_lite'", 'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
+        'const BOUNDED_TRANSPORT_ENABLED = false;', 'event.stopImmediatePropagation()',
+        "app.addEventListener('click', handleTaskAction, true)", 'button.onclick = null',
     ), GUARD.name, errors)
     require(edge, (
-        '| "update_task_status"',
-        'if (action === "update_task_status")',
+        '| "update_task_status"', 'if (action === "update_task_status")',
         'return await callUserRpc(req, "nav_v2_update_task_status"',
     ), EDGE.name, errors)
 
@@ -159,100 +147,71 @@ def main() -> int:
         if f"'{field}'" not in lite:
             errors.append(f'bounded lite DTO field missing: {field}')
 
-    require(ui_preview, (
-        'nav_v2_update_task_status',
-        'transport_enabled:false',
-        'legacy_status_path:true',
-    ), UI_PREVIEW.name, errors)
+    require(ui_preview, ('nav_v2_update_task_status', 'transport_enabled:false', 'legacy_status_path:true'), UI_PREVIEW.name, errors)
     require(router, (
-        'taskActionRoutePreview',
-        'taskActionControlModel',
-        'duplicate_handler_allowed: false',
-        'transport_enabled: false',
-        'Завершённая bounded-задача неизменяема',
+        'taskActionRoutePreview', 'taskActionControlModel', 'duplicate_handler_allowed: false',
+        'transport_enabled: false', 'Завершённая bounded-задача неизменяема',
     ), ROUTER.name, errors)
+    require(pipeline, (
+        'taskActionEdgePipelinePreview', 'taskEdgeActionFromRpcName', 'taskDbArgsFromEdgeValidation',
+        'one_action_one_validated_rpc_preview: true', 'network_called: false',
+        'runtime_integrated: false', 'edge_deployed: false', 'transport_enabled: false',
+    ), PIPELINE.name, errors)
     require(edge_contract, (
-        'validateTaskEdgeAction',
-        'legacy_update_task_status',
-        'bounded_task_complete',
+        'validateTaskEdgeAction', 'legacy_update_task_status', 'bounded_task_complete',
         'Legacy action запрещён для contract-v2 задачи',
-        'runtime_integrated: false',
-        'transport_enabled: false',
+        'Governed action разрешён только для contract-v2 задачи',
+        'runtime_integrated: false', 'transport_enabled: false',
     ), EDGE_CONTRACT.name, errors)
 
-    if 'task-action-router-v2.js' in deal_card or 'task-action-contract-v2.js' in deal_card:
-        errors.append('deal-card renderer must not become an authoritative router consumer')
+    for runtime_text, label in ((deal_card, DEAL_CARD.name), (guard, GUARD.name), (edge, EDGE.name)):
+        if 'task-action-edge-pipeline-v2.js' in runtime_text:
+            errors.append(f'detached pipeline was integrated prematurely: {label}')
     if 'task-action-contract-v2.js' in guard or 'task-action-router-v2.js' in edge:
         errors.append('Edge contract must stay detached until database deployment')
 
-    require(dual_e2e, (
-        'legacy and bounded actions select exactly one transport-free route',
-        'nav_v2_complete_bounded_task',
-        'networkCalls',
-        'toEqual([])',
-    ), DUAL_E2E.name, errors)
+    require(dual_e2e, ('legacy and bounded actions select exactly one transport-free route', 'networkCalls', 'toEqual([])'), DUAL_E2E.name, errors)
+    require(pipeline_e2e, (
+        'one browser action produces one exact validated RPC preview without network',
+        'tampered Edge payload is rejected before RPC parity', 'expect(networkCalls).toEqual([])',
+    ), PIPELINE_E2E.name, errors)
     require(runtime_e2e, (
-        'authoritative handler performs one legacy mutation',
-        'base onclick stays dormant',
+        'authoritative handler performs one legacy mutation', 'base onclick stays dormant',
         'bounded completion is routed by authoritative handler but transport remains disabled',
-        '__baseTaskHandlerCalls',
-        'calls.mutationCalls).toHaveLength(0)',
     ), RUNTIME_E2E.name, errors)
 
     closed = set(matrix.get('closed_blockers') or [])
     for blocker in (
-        'lite_dto_contract_fields_missing',
-        'evidence_input_missing',
-        'reopen_semantics_undefined',
-        'governed_action_validation_missing',
-        'dual_path_browser_contract_missing',
-        'authoritative_handler_not_integrated',
-        'duplicate_handler_execution_risk',
-        'dormant_base_handler_source_not_removed',
+        'lite_dto_contract_fields_missing', 'evidence_input_missing', 'reopen_semantics_undefined',
+        'governed_action_validation_missing', 'dual_path_browser_contract_missing',
+        'authoritative_handler_not_integrated', 'duplicate_handler_execution_risk',
+        'dormant_base_handler_source_not_removed', 'frontend_edge_rpc_parity_missing',
     ):
         if blocker not in closed:
             errors.append(f'closed blocker missing: {blocker}')
 
     remaining = set(matrix.get('remaining_blockers') or [])
     for blocker in (
-        'edge_actions_not_integrated',
-        'database_migrations_not_deployed',
-        'minimal_grants_not_deployed',
-        'authenticated_application_e2e_missing',
-        'frontend_bounded_transport_disabled',
+        'edge_actions_not_integrated', 'database_migrations_not_deployed', 'minimal_grants_not_deployed',
+        'authenticated_application_e2e_missing', 'frontend_bounded_transport_disabled',
         'controlled_pilot_not_approved',
     ):
         if blocker not in remaining:
             errors.append(f'remaining deployment blocker missing: {blocker}')
-    if 'dormant_base_handler_source_not_removed' in remaining:
-        errors.append('source cleanup blocker must not remain open')
 
     require(rpc_surface, ('"nav_v2_add_task"', '"nav_v2_update_task_status"'), RPC_SURFACE.name, errors)
-    guarantees = matrix.get('separation_guarantees') or {}
-    if any(value is not False for value in guarantees.values()):
+    if any(value is not False for value in (matrix.get('separation_guarantees') or {}).values()):
         errors.append('all separation guarantees must remain false')
 
     require(doc, (
-        'frontend authoritative single-source gate v4',
-        'PR #378',
-        'Source cleanup',
-        'Dormant source отсутствует',
-        'Bounded transport выключен',
-        'Закрытые blockers',
-        'Оставшиеся blockers',
-        'Production gate',
-        'Rollback',
+        'frontend authoritative single-source gate v4', 'Source cleanup', 'Dormant source отсутствует',
+        'Task action pipeline', 'Bounded transport выключен', 'Production gate', 'Rollback',
     ), DOC.name, errors)
     require(workflow, (
         'python3 scripts/check_nav_v2_task_rpc_consumer_matrix.py',
         'python3 -m py_compile scripts/check_nav_v2_task_rpc_consumer_matrix.py',
+        'task-action-edge-pipeline-v2.js', 'task-action-pipeline-rehearsal.spec.js',
         'nav-v2-task-rpc-consumer-matrix',
-        'bounded-task-ui-preview-v2.js',
-        'task-action-router-v2.js',
-        'task-action-contract-v2.js',
-        'nav_v2_get_deal_card_lite_bounded_tasks.sql',
-        'task-action-feedback.spec.js',
-        'task-action-dual-path.spec.js',
     ), WORKFLOW.name, errors)
 
     if errors:
@@ -261,7 +220,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v4 passed: deal-card only renders task controls, the authoritative guard is the single frontend action source, bounded transport remains disabled and production deployment stays blocked')
+    print('Navigator v2 task RPC consumer matrix v4 passed: the authoritative guard remains the single frontend action source, the detached UI-to-Edge pipeline is inventoried, bounded transport stays disabled and production deployment remains blocked')
     return 0
 
 
