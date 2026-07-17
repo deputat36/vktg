@@ -12,6 +12,7 @@ on:
       - 'config/nav-v2-rpc-surface.json'
       - 'config/nav-v2-advisor-scope.json'
       - 'config/nav-v2-release-baseline.json'
+      - 'config/nav-v2-intake-contract-v1.json'
       - 'package.json'
       - 'package-lock.json'
       - 'playwright.config.mjs'
@@ -65,6 +66,8 @@ on:
       - 'scripts/check_nav_v2_viewer_workspace.py'
       - 'scripts/check_nav_v2_lawyer_focus.py'
       - 'scripts/check_nav_v2_spn_save_handoff.py'
+      - 'scripts/check_nav_v2_intake_contract_v1.py'
+      - 'scripts/check-nav-v2-intake-contract-v1.mjs'
       - 'scripts/check_nav_v2_owner_admin_ia.py'
       - 'scripts/check_nav_v2_release_drift.py'
       - 'scripts/check_nav_v2_release_drift_workflow.py'
@@ -93,6 +96,7 @@ on:
       - '.github/workflows/nav-v2-operational-duplicate-review.yml'
       - '.github/workflows/nav-v2-spn-save-idempotency.yml'
       - '.github/workflows/nav-v2-exact-wizard-save-guard.yml'
+      - '.github/workflows/nav-v2-intake-contract-v1.yml'
   push:
     branches:
       - main
@@ -254,6 +258,10 @@ jobs:
           node scripts/check-nav-v2-spn-save-idempotency.mjs
       - name: Check exact wizard save guard migration
         run: python3 scripts/check_nav_v2_exact_wizard_save_guard.py
+      - name: Check SPN intake contract v1
+        run: |
+          python3 scripts/check_nav_v2_intake_contract_v1.py
+          node scripts/check-nav-v2-intake-contract-v1.mjs
       - name: Check manager assignment proposal
         run: python3 scripts/check_nav_v2_manager_assignment_proposal.py
       - name: Check manager source remediation, evidence and confirmation draft

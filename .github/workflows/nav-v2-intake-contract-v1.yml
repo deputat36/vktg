@@ -1,0 +1,30 @@
+name: Navigator v2 intake contract v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'assets/js/nav-v2/spn-intake-contract-v1.js'
+      - 'tests/fixtures/nav-v2-intake-contract-v1.json'
+      - 'scripts/check_nav_v2_intake_contract_v1.py'
+      - 'scripts/check-nav-v2-intake-contract-v1.mjs'
+      - 'docs/NAV_V2_SPN_INTAKE_*.md'
+      - '.github/workflows/nav-v2-intake-contract-v1.yml'
+      - '.github/workflows/nav-v2-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  intake-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check intake contract sources
+        run: python3 scripts/check_nav_v2_intake_contract_v1.py
+      - name: Check intake contract semantics
+        run: node scripts/check-nav-v2-intake-contract-v1.mjs
+      - name: Check JavaScript syntax
+        run: node --check assets/js/nav-v2/spn-intake-contract-v1.js
+      - name: Compile Python regression
+        run: python3 -m py_compile scripts/check_nav_v2_intake_contract_v1.py

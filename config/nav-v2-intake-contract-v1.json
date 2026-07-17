@@ -1,0 +1,524 @@
+{
+  "contract_version": 1,
+  "catalog_version": "2026-07-17.1",
+  "storage_target": "wizard_snapshot.deal.legal_passport",
+  "tri_state_values": ["yes", "no", "unknown", "not_applicable"],
+  "evidence_sources": ["document", "client", "unchecked"],
+  "document_statuses": ["available", "requested", "missing", "problem"],
+  "steps": [
+    { "id": "situation", "title": "Что происходит" },
+    { "id": "facts", "title": "Что важно проверить" },
+    { "id": "review", "title": "Проверить и сохранить" }
+  ],
+  "request_types": [
+    { "id": "capture_situation", "title": "Сохранить клиента и ситуацию" },
+    { "id": "check_documents", "title": "Проверить документы" },
+    { "id": "prepare_deposit", "title": "Подготовить задаток" },
+    { "id": "prepare_deal", "title": "Подготовить основную сделку" },
+    { "id": "rework_deal", "title": "Доработать ранее созданную сделку" }
+  ],
+  "representations": [
+    { "id": "seller", "title": "Продавца" },
+    { "id": "buyer", "title": "Покупателя" },
+    { "id": "one_spn_both", "title": "Обе стороны ведёт один СПН" },
+    { "id": "both", "title": "Обе стороны ведут разные СПН" },
+    { "id": "partner_agency", "title": "Партнёрская сделка" },
+    { "id": "unknown", "title": "Пока неизвестно" }
+  ],
+  "stages": [
+    { "id": "lead_only", "title": "Есть только клиент" },
+    { "id": "object_chosen", "title": "Объект выбран" },
+    { "id": "terms_discussed", "title": "Условия обсуждаются" },
+    { "id": "urgent_deposit", "title": "Срочно нужен задаток" },
+    { "id": "deposit_exists", "title": "Задаток уже подписан" },
+    { "id": "main_deal", "title": "Готовится основная сделка" },
+    { "id": "legal_problem", "title": "Есть нестандартная ситуация" }
+  ],
+  "object_types": [
+    { "id": "flat_mkd", "title": "Квартира в МКД" },
+    { "id": "flat_ground", "title": "Квартира на земле" },
+    { "id": "room", "title": "Комната" },
+    { "id": "share", "title": "Доля" },
+    { "id": "house_land", "title": "Дом с участком" },
+    { "id": "land", "title": "Земельный участок" },
+    { "id": "new_building", "title": "Новостройка / ДДУ / уступка" },
+    { "id": "commercial", "title": "Коммерческая недвижимость" },
+    { "id": "not_selected", "title": "Объект ещё не выбран" }
+  ],
+  "lawyer_request_types": [
+    { "id": "check_deposit_possible", "title": "Проверить, можно ли готовить задаток" },
+    { "id": "check_title_basis", "title": "Проверить основание права" },
+    { "id": "check_power_of_attorney", "title": "Проверить доверенность" },
+    { "id": "check_children_guardianship", "title": "Проверить детей и опеку" },
+    { "id": "check_child_money", "title": "Проверить использование детских денег" },
+    { "id": "check_share_sale", "title": "Проверить продажу доли" },
+    { "id": "check_coowner_notices", "title": "Проверить уведомления сособственников" },
+    { "id": "determine_notary", "title": "Определить необходимость нотариуса" },
+    { "id": "check_encumbrance", "title": "Проверить обременение или арест" },
+    { "id": "check_inheritance", "title": "Проверить наследство" },
+    { "id": "check_privatisation", "title": "Проверить приватизацию" },
+    { "id": "check_redevelopment", "title": "Проверить перепланировку" },
+    { "id": "check_bankruptcy", "title": "Проверить банкротный риск" },
+    { "id": "check_post_registration_payment", "title": "Проверить расчёты после регистрации" },
+    { "id": "check_partner_deal", "title": "Проверить партнёрскую сделку" },
+    { "id": "check_document_package", "title": "Проверить пакет документов" },
+    { "id": "design_safe_structure", "title": "Определить безопасную конструкцию сделки" },
+    { "id": "assess_urgent_case", "title": "Срочно оценить нестандартную ситуацию" }
+  ],
+  "fact_questions": [
+    {
+      "id": "minor_seller",
+      "group": "seller",
+      "title": "Среди собственников есть несовершеннолетний?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "shares",
+      "group": "seller",
+      "title": "Продаётся доля или собственность оформлена в долях?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "spouse",
+      "group": "seller",
+      "title": "Может потребоваться согласие супруга?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes"]
+    },
+    {
+      "id": "power_of_attorney",
+      "group": "seller",
+      "title": "Кто-то действует по доверенности?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "seller_absent",
+      "group": "seller",
+      "title": "Продавец не сможет лично участвовать?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes"]
+    },
+    {
+      "id": "encumbrance",
+      "group": "seller",
+      "title": "Известно об обременении, аресте или запрете?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "inheritance",
+      "group": "seller",
+      "title": "Право получено по наследству?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "privatisation",
+      "group": "seller",
+      "title": "Право возникло в результате приватизации?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "court_basis",
+      "group": "seller",
+      "title": "Право оформлялось через суд?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "bankruptcy_risk",
+      "group": "seller",
+      "title": "Есть известные признаки банкротства или крупных долгов продавца?",
+      "show_when": { "representation": ["seller", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes"]
+    },
+    {
+      "id": "minor_buyer",
+      "group": "buyer",
+      "title": "Среди покупателей будет несовершеннолетний?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "buyer_chain",
+      "group": "buyer",
+      "title": "Покупка зависит от продажи другого объекта?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes"]
+    },
+    {
+      "id": "minor_registered",
+      "group": "object",
+      "title": "В объекте зарегистрированы несовершеннолетние?",
+      "show_when": { "object_type": ["flat_mkd", "flat_ground", "room", "house_land"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "redevelopment",
+      "group": "object",
+      "title": "Есть перепланировка или расхождение с документами?",
+      "show_when": { "object_type": ["flat_mkd", "flat_ground", "room", "commercial"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "mortgage",
+      "group": "money",
+      "title": "Покупка будет с обычной ипотекой?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "military_mortgage",
+      "group": "money",
+      "title": "Используется военная ипотека / НИС?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "matcap",
+      "group": "money",
+      "title": "Используется материнский капитал?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "certificate",
+      "group": "money",
+      "title": "Используется сертификат или субсидия?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "child_money",
+      "group": "money",
+      "title": "Используются деньги ребёнка или номинальный счёт?",
+      "show_when": { "representation": ["buyer", "one_spn_both", "both", "partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "installment",
+      "group": "money",
+      "title": "Есть рассрочка или остаток оплаты после сделки?",
+      "show_when": { "request_type": ["prepare_deposit", "prepare_deal"] },
+      "source_required_when": ["yes"]
+    },
+    {
+      "id": "settlements_agreed",
+      "group": "terms",
+      "title": "Порядок расчётов согласован сторонами?",
+      "show_when": { "request_type": ["prepare_deposit", "prepare_deal"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "expenses_agreed",
+      "group": "terms",
+      "title": "Расходы сторон согласованы?",
+      "show_when": { "request_type": ["prepare_deposit", "prepare_deal"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "after_registration",
+      "group": "terms",
+      "title": "Часть денег продавец получает после регистрации?",
+      "show_when": { "request_type": ["prepare_deposit", "prepare_deal"] },
+      "source_required_when": ["yes", "no"]
+    },
+    {
+      "id": "partner_responsibility_clear",
+      "group": "special",
+      "title": "Понятно, кто за что отвечает в партнёрской сделке?",
+      "show_when": { "representation": ["partner_agency"] },
+      "source_required_when": ["yes", "no"]
+    }
+  ],
+  "rules": [
+    {
+      "id": "minor_seller",
+      "priority": 100,
+      "trigger": { "kind": "fact", "key": "minor_seller", "values": ["yes"] },
+      "risk_level": "red",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_children_guardianship",
+      "expected_decision": "Определить, можно ли готовить задаток и какие действия по опеке обязательны.",
+      "documents": ["guardianship_permission", "child_ownership_status"]
+    },
+    {
+      "id": "minor_buyer",
+      "priority": 95,
+      "trigger": { "kind": "fact", "key": "minor_buyer", "values": ["yes"] },
+      "risk_level": "red",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_children_guardianship",
+      "expected_decision": "Определить безопасный порядок приобретения и оформления доли ребёнка.",
+      "documents": ["child_purchase_basis", "guardianship_permission"]
+    },
+    {
+      "id": "child_money",
+      "priority": 98,
+      "trigger": { "kind": "fact", "key": "child_money", "values": ["yes"] },
+      "risk_level": "red",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_child_money",
+      "expected_decision": "Подтвердить допустимость использования детских денег и безопасную схему расчётов.",
+      "documents": ["child_money_basis", "guardianship_permission"]
+    },
+    {
+      "id": "power_of_attorney",
+      "priority": 90,
+      "trigger": { "kind": "fact", "key": "power_of_attorney", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_power_of_attorney",
+      "expected_decision": "Подтвердить полномочия на подписание и получение денег.",
+      "documents": ["power_of_attorney"]
+    },
+    {
+      "id": "spouse",
+      "priority": 74,
+      "trigger": { "kind": "fact", "key": "spouse", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "determine_notary",
+      "expected_decision": "Определить, требуется ли согласие супруга и в какой форме.",
+      "documents": ["spouse_consent_status"]
+    },
+    {
+      "id": "seller_absent",
+      "priority": 89,
+      "trigger": { "kind": "fact", "key": "seller_absent", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_power_of_attorney",
+      "expected_decision": "Определить допустимый способ участия продавца и необходимые полномочия представителя.",
+      "documents": ["participation_plan", "power_of_attorney"]
+    },
+    {
+      "id": "shares",
+      "priority": 88,
+      "trigger": { "kind": "fact", "key": "shares", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_share_sale",
+      "expected_decision": "Определить нотариальный сценарий и требования к уведомлениям сособственников.",
+      "documents": ["share_extract", "coowner_notices"]
+    },
+    {
+      "id": "encumbrance",
+      "priority": 92,
+      "trigger": { "kind": "fact", "key": "encumbrance", "values": ["yes"] },
+      "risk_level": "red",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_encumbrance",
+      "expected_decision": "Определить, можно ли продолжать сделку и как снять или учесть ограничение.",
+      "documents": ["encumbrance_extract", "release_terms"]
+    },
+    {
+      "id": "inheritance",
+      "priority": 82,
+      "trigger": { "kind": "fact", "key": "inheritance", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_inheritance",
+      "expected_decision": "Оценить основание права, наследников и возможность безопасного задатка.",
+      "documents": ["inheritance_certificate"]
+    },
+    {
+      "id": "minor_registered",
+      "priority": 73,
+      "trigger": { "kind": "fact", "key": "minor_registered", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_children_guardianship",
+      "expected_decision": "Определить, влияет ли регистрация ребёнка на освобождение объекта и пакет документов.",
+      "documents": ["registered_persons_status", "minor_discharge_plan"]
+    },
+    {
+      "id": "privatisation",
+      "priority": 80,
+      "trigger": { "kind": "fact", "key": "privatisation", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_privatisation",
+      "expected_decision": "Проверить отказников и сохраняющиеся права пользования.",
+      "documents": ["privatisation_basis", "registered_persons_status"]
+    },
+    {
+      "id": "court_basis",
+      "priority": 84,
+      "trigger": { "kind": "fact", "key": "court_basis", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_title_basis",
+      "expected_decision": "Проверить вступление решения в силу и устойчивость основания права.",
+      "documents": ["court_decision"]
+    },
+    {
+      "id": "bankruptcy_risk",
+      "priority": 86,
+      "trigger": { "kind": "fact", "key": "bankruptcy_risk", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_bankruptcy",
+      "expected_decision": "Оценить банкротный риск и допустимую конструкцию сделки.",
+      "documents": ["bankruptcy_check"]
+    },
+    {
+      "id": "redevelopment",
+      "priority": 66,
+      "trigger": { "kind": "fact", "key": "redevelopment", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_redevelopment",
+      "expected_decision": "Определить влияние перепланировки на сделку и ипотеку.",
+      "documents": ["technical_plan", "redevelopment_approval"]
+    },
+    {
+      "id": "after_registration",
+      "priority": 78,
+      "trigger": { "kind": "fact", "key": "after_registration", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_post_registration_payment",
+      "expected_decision": "Подтвердить безопасные условия перечисления денег после регистрации.",
+      "documents": ["settlement_scheme"]
+    },
+    {
+      "id": "partner_agency",
+      "priority": 72,
+      "trigger": { "kind": "representation", "values": ["partner_agency"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_partner_deal",
+      "expected_decision": "Подтвердить границы ответственности и комплект документов сторон.",
+      "documents": ["partner_responsibility_note"]
+    },
+    {
+      "id": "flat_ground",
+      "priority": 70,
+      "trigger": { "kind": "object_type", "values": ["flat_ground"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "design_safe_structure",
+      "expected_decision": "Проверить связь помещения с землёй, входом и коммуникациями.",
+      "documents": ["land_status", "object_title_basis"]
+    },
+    {
+      "id": "house_land",
+      "priority": 64,
+      "trigger": { "kind": "object_type", "values": ["house_land"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_document_package",
+      "expected_decision": "Подтвердить комплект и согласованность документов на дом и участок.",
+      "documents": ["house_title_basis", "land_title_basis", "boundary_status"]
+    },
+    {
+      "id": "matcap",
+      "priority": 76,
+      "trigger": { "kind": "fact", "key": "matcap", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "check_child_money",
+      "expected_decision": "Определить условия использования маткапитала, выделения долей и расчётов.",
+      "documents": ["matcap_status", "share_allocation_plan"]
+    },
+    {
+      "id": "certificate",
+      "priority": 62,
+      "trigger": { "kind": "fact", "key": "certificate", "values": ["yes"] },
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "lawyer",
+      "lawyer_request_type": "design_safe_structure",
+      "expected_decision": "Проверить условия сертификата и безопасный порядок расчётов.",
+      "documents": ["certificate_terms"]
+    },
+    {
+      "id": "mortgage",
+      "priority": 60,
+      "trigger": { "kind": "fact", "key": "mortgage", "values": ["yes"] },
+      "risk_level": "info",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "broker",
+      "broker_action": "Проконсультировать по ипотеке, программе и одобрению.",
+      "documents": ["mortgage_approval_status"]
+    },
+    {
+      "id": "military_mortgage",
+      "priority": 68,
+      "trigger": { "kind": "fact", "key": "military_mortgage", "values": ["yes"] },
+      "risk_level": "info",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "owner": "broker",
+      "broker_action": "Проверить требования НИС и статус ипотечного одобрения.",
+      "documents": ["military_mortgage_status"]
+    },
+    {
+      "id": "settlements_not_agreed",
+      "priority": 58,
+      "trigger": { "kind": "fact", "key": "settlements_agreed", "values": ["no", "unknown"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "spn",
+      "spn_action": "Согласовать способ, сроки и условия расчётов.",
+      "documents": []
+    },
+    {
+      "id": "expenses_not_agreed",
+      "priority": 56,
+      "trigger": { "kind": "fact", "key": "expenses_agreed", "values": ["no", "unknown"] },
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "owner": "spn",
+      "spn_action": "Согласовать расходы покупателя и продавца.",
+      "documents": []
+    }
+  ]
+}
