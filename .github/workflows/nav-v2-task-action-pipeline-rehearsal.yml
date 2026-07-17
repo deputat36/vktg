@@ -1,0 +1,95 @@
+name: Navigator v2 task action pipeline rehearsal
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-task-action-pipeline-contract.json'
+      - 'assets/js/nav-v2/task-action-edge-pipeline-v2.js'
+      - 'assets/js/nav-v2/task-action-router-v2.js'
+      - 'assets/js/nav-v2/bounded-task-server-adapter-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
+      - 'fixtures/nav-v2-task-action-pipeline-scenarios.json'
+      - 'fixtures/nav-v2-task-dual-path-scenarios.json'
+      - 'scripts/check-nav-v2-task-action-pipeline.mjs'
+      - 'scripts/check-nav-v2-task-dual-path.mjs'
+      - 'scripts/check_nav_v2_task_action_pipeline.py'
+      - 'tests/fixtures/nav-v2-task-action-pipeline-rehearsal.html'
+      - 'tests/e2e/task-action-pipeline-rehearsal.spec.js'
+      - 'docs/NAV_V2_TASK_ACTION_PIPELINE_REHEARSAL_2026-07-17.md'
+      - '.github/workflows/nav-v2-task-action-pipeline-rehearsal.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-task-action-pipeline-contract.json'
+      - 'assets/js/nav-v2/task-action-edge-pipeline-v2.js'
+      - 'assets/js/nav-v2/task-action-router-v2.js'
+      - 'assets/js/nav-v2/bounded-task-server-adapter-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
+      - 'fixtures/nav-v2-task-action-pipeline-scenarios.json'
+      - 'fixtures/nav-v2-task-dual-path-scenarios.json'
+      - 'scripts/check-nav-v2-task-action-pipeline.mjs'
+      - 'scripts/check-nav-v2-task-dual-path.mjs'
+      - 'scripts/check_nav_v2_task_action_pipeline.py'
+      - 'tests/fixtures/nav-v2-task-action-pipeline-rehearsal.html'
+      - 'tests/e2e/task-action-pipeline-rehearsal.spec.js'
+      - 'docs/NAV_V2_TASK_ACTION_PIPELINE_REHEARSAL_2026-07-17.md'
+      - '.github/workflows/nav-v2-task-action-pipeline-rehearsal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate pipeline source contract
+        run: python3 scripts/check_nav_v2_task_action_pipeline.py
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_task_action_pipeline.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/task-action-edge-pipeline-v2.js
+          node --check supabase/functions/nav-v2-deal-api/task-action-contract-v2.js
+          node --check scripts/check-nav-v2-task-action-pipeline.mjs
+          node --check tests/e2e/task-action-pipeline-rehearsal.spec.js
+      - name: Run task action pipeline semantic matrix
+        run: node scripts/check-nav-v2-task-action-pipeline.mjs
+      - name: Preserve dual-path compatibility
+        run: node scripts/check-nav-v2-task-dual-path.mjs
+
+  browser-rehearsal:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run desktop and mobile pipeline rehearsal
+        run: npx playwright test tests/e2e/task-action-pipeline-rehearsal.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload pipeline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-task-action-pipeline-rehearsal
+          path: |
+            playwright-report/
+            test-results/
+            config/nav-v2-task-action-pipeline-contract.json
+            fixtures/nav-v2-task-action-pipeline-scenarios.json
+            docs/NAV_V2_TASK_ACTION_PIPELINE_REHEARSAL_2026-07-17.md
+          if-no-files-found: error
+          retention-days: 14
