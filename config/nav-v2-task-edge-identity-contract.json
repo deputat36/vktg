@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_identity_propagation_gate",
+  "production_applied": false,
+  "runtime_integrated": false,
+  "edge_deployed": false,
+  "bounded_transport_enabled": false,
+  "deployment_ready": false,
+  "current_conflict": {
+    "governed_rpc_execute_roles": ["service_role"],
+    "sql_actor_source": "auth.uid()",
+    "user_jwt_database_role": "authenticated",
+    "user_jwt_has_actor_identity": true,
+    "user_jwt_has_governed_execute": false,
+    "service_role_has_governed_execute": true,
+    "service_role_user_sub_guaranteed": false,
+    "current_contract_directly_executable": false
+  },
+  "selected_rehearsal_candidate": {
+    "name": "verified_actor_id_injected_by_edge",
+    "verified_actor_source": "successful auth user lookup from bearer token",
+    "client_actor_fields_forbidden": ["actor_id", "p_actor_id", "user_id", "p_user_id"],
+    "database_actor_argument": "p_actor_id",
+    "governed_rpc_only": true,
+    "legacy_path_unchanged": true,
+    "mock_rpc_only": true,
+    "production_sql_signatures_changed": false,
+    "requires_future_sql_signature_refactor": true
+  },
+  "security_invariants": {
+    "actor_never_trusted_from_request_body": true,
+    "verified_actor_uuid_required": true,
+    "payload_validated_before_actor_injection": true,
+    "exactly_one_mock_rpc_call": true,
+    "no_network": true,
+    "no_service_key_in_browser": true,
+    "no_direct_authenticated_governed_rpc": true,
+    "no_production_edge_import": true
+  },
+  "remaining_blockers": [
+    "final_actor_propagation_architecture_not_approved",
+    "governed_rpc_actor_signatures_not_refactored",
+    "authenticated_application_e2e_missing",
+    "production_database_migration_not_approved",
+    "edge_action_handler_not_integrated",
+    "edge_function_not_deployed",
+    "frontend_bounded_transport_disabled",
+    "controlled_pilot_not_approved"
+  ]
+}
