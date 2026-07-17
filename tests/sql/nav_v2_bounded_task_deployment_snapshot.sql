@@ -22,32 +22,6 @@ select
   updated_at,
   task_type,
   sla_days
-from public.nav_deal_tasks_v2
-where task_contract_version is null or id = '20000000-0000-4000-8000-000000000001';
-
--- task_contract_version does not exist before the prototype is applied, so rebuild the
--- legacy snapshot with the baseline schema when the previous query is parsed.
--- psql executes this file before bounded columns exist; use a stable explicit row instead.
-drop table nav_v2_deployment_test.legacy_task_snapshot;
-create table nav_v2_deployment_test.legacy_task_snapshot as
-select
-  id,
-  deal_id,
-  title,
-  description,
-  assigned_to,
-  assigned_role,
-  status,
-  priority,
-  due_date,
-  source,
-  completed_by,
-  completed_at,
-  created_by,
-  created_at,
-  updated_at,
-  task_type,
-  sla_days
 from public.nav_deal_tasks_v2;
 
 create table nav_v2_deployment_test.deal_snapshot as
