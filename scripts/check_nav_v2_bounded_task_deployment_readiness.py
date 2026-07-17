@@ -123,7 +123,7 @@ def main() -> int:
         'REPOSITORY-ONLY PROTOTYPE',
         'Existing legacy tasks remain unchanged and are never backfilled',
         'Generic task creation disabled',
-        'For bounded-задачи используйте governed lifecycle RPC',
+        'Для bounded-задачи используйте governed lifecycle RPC',
         'from public, anon, authenticated',
         'to service_role',
         'no mass update/backfill',
