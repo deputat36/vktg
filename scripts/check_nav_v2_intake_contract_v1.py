@@ -45,6 +45,7 @@ def main() -> int:
         errors.append("catalog must contain the minimum cross-scenario question set")
 
     request_ids = {item.get("id") for item in catalog.get("lawyer_request_types", [])}
+    document_types = {item.get("id"): item for item in catalog.get("document_types", [])}
     rule_ids: set[str] = set()
     for rule in catalog.get("rules", []):
         rule_id = rule.get("id")
@@ -56,6 +57,12 @@ def main() -> int:
         request_type = rule.get("lawyer_request_type")
         if request_type and request_type not in request_ids:
             errors.append(f"rule {rule_id} uses unknown lawyer request type {request_type}")
+        for document_type in rule.get("documents", []):
+            if document_type not in document_types:
+                errors.append(f"rule {rule_id} uses unknown document type {document_type}")
+    for document_type, item in document_types.items():
+        if item.get("side") not in {"seller", "buyer", "object", "deal"}:
+            errors.append(f"document type {document_type} has invalid side {item.get('side')}")
 
     model = MODEL.read_text(encoding="utf-8")
     require(model, (
