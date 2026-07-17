@@ -71,4 +71,4 @@ for (const scenario of scenarios.rejected) {
   assert.equal(result.actor_aware_sql_deployed, false);
 }
 
-console.log(`Navigator v2 task Edge identity semantic matrix passed: ${scenarios.accepted.length} accepted actor-injected previews/mock calls and ${scenarios.rejected.length} rejected trust-boundary cases; repository SQL signatures are ready, production transport remains disabled`);
+console.log(`Navigator v2 task Edge identity semantic matrix passed: ${scenarios.accepted.length} accepted actor-injected previews/mock calls and ${scenarios.rejected.length} rejected trust-boundary cases; repository SQL signatures are ready, no production transport`);
