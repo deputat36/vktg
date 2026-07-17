@@ -62,7 +62,7 @@ test('three-stage intake restores a legal handoff without network mutations', as
   expect(assessment.passport.specialists.broker).toBe(false);
   expect(assessment.work_plan.accompanied_sides).toEqual(['seller']);
   expect(assessment.work_plan.document_candidates.map((item) => item.type).sort()).toEqual(['child_ownership_status', 'guardianship_permission']);
-  expect(assessment.work_plan.task_candidates.map((item) => item.rule_id)).toEqual(['minor_seller']);
+  expect(assessment.work_plan.task_candidates.map((item) => item.rule_id).sort()).toEqual(['expenses_not_agreed', 'minor_seller', 'settlements_not_agreed']);
   expect(assessment.work_plan.ready_tasks).toEqual([]);
   expect(assessment.gates.handoff_lawyer.state).toBe('ready');
 
