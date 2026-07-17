@@ -1,0 +1,183 @@
+{
+  "scenarios": [
+    {
+      "id": "cash_sale",
+      "patch": {
+        "requestType": "prepare_deal",
+        "representation": "seller",
+        "facts": {
+          "encumbrance": { "value": "no", "source": "document" },
+          "settlements_agreed": { "value": "yes", "source": "client" },
+          "expenses_agreed": { "value": "yes", "source": "client" }
+        }
+      },
+      "expect": { "lawyer": false, "broker": false, "save_draft": true, "form_card": true }
+    },
+    {
+      "id": "mortgage",
+      "patch": {
+        "representation": "buyer",
+        "facts": { "mortgage": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": false, "broker": true, "rules": ["mortgage"] }
+    },
+    {
+      "id": "mortgage_and_matcap",
+      "patch": {
+        "representation": "buyer",
+        "facts": {
+          "mortgage": { "value": "yes", "source": "client" },
+          "matcap": { "value": "yes", "source": "document" }
+        }
+      },
+      "expect": { "lawyer": true, "broker": true, "rules": ["matcap", "mortgage"] }
+    },
+    {
+      "id": "matcap_without_mortgage",
+      "patch": {
+        "representation": "buyer",
+        "facts": {
+          "mortgage": { "value": "no", "source": "client" },
+          "matcap": { "value": "yes", "source": "document" }
+        }
+      },
+      "expect": { "lawyer": true, "broker": false, "rules": ["matcap"] }
+    },
+    {
+      "id": "minor_seller",
+      "patch": {
+        "facts": { "minor_seller": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "broker": false, "rules": ["minor_seller"], "handoff": "ready" }
+    },
+    {
+      "id": "minor_buyer",
+      "patch": {
+        "representation": "buyer",
+        "facts": { "minor_buyer": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["minor_buyer"] }
+    },
+    {
+      "id": "power_of_attorney",
+      "patch": {
+        "facts": { "power_of_attorney": { "value": "yes", "source": "document" } }
+      },
+      "expect": { "lawyer": true, "rules": ["power_of_attorney"] }
+    },
+    {
+      "id": "spouse_consent",
+      "patch": {
+        "facts": { "spouse": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["spouse"] }
+    },
+    {
+      "id": "seller_absent",
+      "patch": {
+        "facts": { "seller_absent": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["seller_absent"] }
+    },
+    {
+      "id": "share_sale",
+      "patch": {
+        "objectType": "share",
+        "facts": { "shares": { "value": "yes", "source": "document" } }
+      },
+      "expect": { "lawyer": true, "rules": ["shares"] }
+    },
+    {
+      "id": "inheritance",
+      "patch": {
+        "facts": { "inheritance": { "value": "yes", "source": "document" } }
+      },
+      "expect": { "lawyer": true, "rules": ["inheritance"] }
+    },
+    {
+      "id": "minor_registered",
+      "patch": {
+        "facts": { "minor_registered": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["minor_registered"] }
+    },
+    {
+      "id": "flat_ground",
+      "patch": { "objectType": "flat_ground" },
+      "expect": { "lawyer": true, "rules": ["flat_ground"] }
+    },
+    {
+      "id": "house_with_land",
+      "patch": { "objectType": "house_land" },
+      "expect": { "lawyer": true, "rules": ["house_land"] }
+    },
+    {
+      "id": "encumbrance",
+      "patch": {
+        "facts": { "encumbrance": { "value": "yes", "source": "document" } }
+      },
+      "expect": { "lawyer": true, "rules": ["encumbrance"] }
+    },
+    {
+      "id": "payment_after_registration",
+      "patch": {
+        "facts": { "after_registration": { "value": "yes", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["after_registration"] }
+    },
+    {
+      "id": "partner_deal",
+      "patch": {
+        "representation": "partner_agency",
+        "facts": { "partner_responsibility_clear": { "value": "no", "source": "client" } }
+      },
+      "expect": { "lawyer": true, "rules": ["partner_agency"] }
+    },
+    {
+      "id": "two_spn",
+      "patch": {
+        "representation": "both",
+        "leadSpnConfirmed": false,
+        "sellerSpnId": "spn-seller",
+        "buyerSpnId": "spn-buyer"
+      },
+      "expect": { "save_draft": true, "form_card": true }
+    },
+    {
+      "id": "object_not_selected",
+      "patch": {
+        "requestType": "capture_situation",
+        "stage": "lead_only",
+        "objectType": "not_selected",
+        "objectAddress": "",
+        "objectNotSelectedReason": "Клиент ещё выбирает объект",
+        "dateUnknown": true,
+        "targetDate": ""
+      },
+      "expect": { "save_draft": true, "form_card": true, "lawyer": false, "broker": false }
+    },
+    {
+      "id": "urgent_incomplete_lawyer_handoff",
+      "patch": {
+        "urgency": "urgent",
+        "lawyerRequestType": "assess_urgent_case",
+        "requestedDecision": "Сказать, можно ли сегодня подписывать задаток.",
+        "facts": {},
+        "documents": [],
+        "documentsReviewed": false
+      },
+      "expect": { "handoff": "urgent_incomplete", "handoff_allowed": true }
+    },
+    {
+      "id": "draft_without_handoff",
+      "patch": {
+        "requestType": "capture_situation",
+        "lawyerRequestType": "",
+        "requestedDecision": "",
+        "facts": {},
+        "documentsReviewed": false
+      },
+      "expect": { "save_draft": true, "handoff": "blocked", "handoff_allowed": false }
+    }
+  ]
+}
