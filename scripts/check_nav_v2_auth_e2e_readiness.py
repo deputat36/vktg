@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -111,9 +110,8 @@ def main() -> int:
     proofs = contract.get('repository_proofs') or {}
     if set(proofs.values()) != {'PR #384','PR #387','PR #389','PR #390','PR #391'}:
         errors.append('repository proof inventory drifted')
-    if identity.get('status') != 'repository_only_identity_sql_parity_gate' or identity.get('authenticated_e2e_proven') is not None:
-        # identity contract intentionally has no misleading authenticated-E2E flag
-        pass
+    if identity.get('status') != 'repository_only_identity_sql_parity_gate':
+        errors.append('identity parity proof missing')
     if identity.get('production_applied') is not False or identity.get('edge_deployed') is not False:
         errors.append('identity contract must remain undeployed')
     if actor.get('status') != 'repository_only_actor_aware_sql_prototype' or actor.get('production_applied') is not False:
@@ -153,7 +151,7 @@ def main() -> int:
         'A generic instruction to continue project work is not cost approval.',
         'do not create a persistent branch',
         'service-role key',
-        'delete the branch immediately',
+        'Delete the branch immediately',
         'Authenticated role matrix: blocked',
     ), 'target runbook', errors)
     need(role_rehearsal, (
