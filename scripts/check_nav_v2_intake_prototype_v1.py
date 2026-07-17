@@ -90,6 +90,10 @@ def main() -> int:
         "page.reload()",
         "scrollWidth",
         "guardianship_permission",
+        "Документы по сопровождаемой стороне",
+        "Конкретные задачи",
+        "assessment.work_plan.accompanied_sides",
+        "assessment.work_plan.ready_tasks",
         "handoff_lawyer.state",
         "prototype-restored",
     ), E2E.name, errors)
@@ -97,6 +101,9 @@ def main() -> int:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     require(workflow, (
         "python3 scripts/check_nav_v2_intake_prototype_v1.py",
+        "python3 scripts/check_nav_v2_intake_work_plan_v1.py",
+        "node scripts/check-nav-v2-intake-work-plan-v1.mjs",
+        "node --check assets/js/nav-v2/spn-intake-work-plan-v1.js",
         "node --check assets/js/nav-v2/spn-intake-prototype-v1.js",
         "tests/e2e/intake-prototype.spec.js",
         "--project=chromium-desktop --project=chromium-mobile",

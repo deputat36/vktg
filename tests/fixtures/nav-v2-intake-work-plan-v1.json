@@ -1,0 +1,104 @@
+{
+  "scenarios": [
+    {
+      "id": "seller_minor_side_only",
+      "patch": {
+        "representation": "seller",
+        "owners": { "seller_spn": "spn-seller", "lawyer": "lawyer-1" },
+        "facts": { "minor_seller": { "value": "yes", "source": "client" } },
+        "documents": [
+          { "type": "guardianship_permission", "status": "requested", "allowed_link": "https://files.example.test/folder", "allowed_link_approved": true },
+          { "type": "child_ownership_status", "status": "available", "allowed_link": "https://files.example.test/folder?token=secret", "allowed_link_approved": true }
+        ]
+      },
+      "expect": {
+        "documents": ["guardianship_permission", "child_ownership_status"],
+        "excluded_documents": ["child_purchase_basis"],
+        "ready_tasks": ["minor_seller"]
+      }
+    },
+    {
+      "id": "buyer_mortgage",
+      "patch": {
+        "representation": "buyer",
+        "owners": { "buyer_spn": "spn-buyer", "broker": "broker-1" },
+        "facts": { "mortgage": { "value": "yes", "source": "client" } }
+      },
+      "expect": {
+        "documents": ["mortgage_approval_status"],
+        "ready_tasks": ["mortgage"],
+        "broker_tasks": ["mortgage"]
+      }
+    },
+    {
+      "id": "mortgage_and_matcap_split",
+      "patch": {
+        "representation": "buyer",
+        "owners": { "buyer_spn": "spn-buyer", "broker": "broker-1", "lawyer": "lawyer-1" },
+        "facts": {
+          "mortgage": { "value": "yes", "source": "client" },
+          "matcap": { "value": "yes", "source": "document" }
+        }
+      },
+      "expect": {
+        "documents": ["mortgage_approval_status", "matcap_status", "share_allocation_plan"],
+        "ready_tasks": ["mortgage", "matcap"],
+        "broker_tasks": ["mortgage"],
+        "lawyer_tasks": ["matcap"]
+      }
+    },
+    {
+      "id": "matcap_without_mortgage",
+      "patch": {
+        "representation": "buyer",
+        "owners": { "buyer_spn": "spn-buyer", "lawyer": "lawyer-1" },
+        "facts": {
+          "mortgage": { "value": "no", "source": "client" },
+          "matcap": { "value": "yes", "source": "document" }
+        }
+      },
+      "expect": {
+        "ready_tasks": ["matcap"],
+        "broker_tasks": [],
+        "lawyer_tasks": ["matcap"]
+      }
+    },
+    {
+      "id": "partner_side_not_assumed",
+      "patch": {
+        "representation": "partner_agency",
+        "owners": { "lead_spn": "spn-lead", "lawyer": "lawyer-1" },
+        "facts": { "power_of_attorney": { "value": "yes", "source": "client" } }
+      },
+      "expect": {
+        "documents": ["partner_responsibility_note"],
+        "skipped_documents": ["power_of_attorney"],
+        "ready_tasks": ["power_of_attorney", "partner_agency"]
+      }
+    },
+    {
+      "id": "object_documents_cross_side",
+      "patch": {
+        "representation": "buyer",
+        "objectType": "house_land",
+        "owners": { "lead_spn": "spn-lead", "lawyer": "lawyer-1" }
+      },
+      "expect": {
+        "documents": ["house_title_basis", "land_title_basis", "boundary_status"],
+        "ready_tasks": ["house_land"]
+      }
+    },
+    {
+      "id": "missing_owner_never_ready",
+      "patch": {
+        "representation": "buyer",
+        "facts": { "mortgage": { "value": "yes", "source": "client" } }
+      },
+      "expect": {
+        "task_candidates": ["mortgage"],
+        "ready_tasks": [],
+        "needs_owner": ["mortgage"]
+      }
+    }
+  ]
+}
