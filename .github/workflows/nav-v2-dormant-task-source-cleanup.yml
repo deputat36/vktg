@@ -1,9 +1,12 @@
 name: Navigator v2 dormant task source cleanup
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/nav-v2-remove-dormant-task-handler
+      - main
+    types:
+      - opened
+      - synchronize
     paths:
       - '.github/workflows/nav-v2-dormant-task-source-cleanup.yml'
       - 'assets/js/nav-v2/deal-card-v2.js'
@@ -20,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -53,9 +56,11 @@ jobs:
           test "$(git diff --numstat -- assets/js/nav-v2/deal-card-v2.js | awk '{print $1}')" = "0"
           test "$(git diff --numstat -- assets/js/nav-v2/deal-card-v2.js | awk '{print $2}')" = "5"
       - name: Commit exact cleanup
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add assets/js/nav-v2/deal-card-v2.js
           git commit -m 'Navigator v2: remove dormant base task mutation handler'
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin HEAD:${TARGET_BRANCH}
