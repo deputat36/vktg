@@ -5,6 +5,7 @@ on:
     paths:
       - 'deal-card-v2.html'
       - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'assets/js/nav-v2/task-action-router-v2.js'
       - 'assets/js/nav-v2/page-action-feedback-v2.js'
       - 'assets/js/nav-v2/deal-card-v2.js'
       - 'scripts/check_nav_v2_task_action_feedback.py'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'deal-card-v2.html'
       - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'assets/js/nav-v2/task-action-router-v2.js'
       - 'assets/js/nav-v2/page-action-feedback-v2.js'
       - 'assets/js/nav-v2/deal-card-v2.js'
       - 'scripts/check_nav_v2_task_action_feedback.py'
@@ -40,6 +42,7 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check assets/js/nav-v2/task-action-guard-v2.js
+          node --check assets/js/nav-v2/task-action-router-v2.js
           node --check assets/js/nav-v2/page-action-feedback-v2.js
           node --check tests/e2e/task-action-feedback.spec.js
       - name: Task action feedback source contract
