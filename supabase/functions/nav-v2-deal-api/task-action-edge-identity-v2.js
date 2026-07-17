@@ -26,7 +26,9 @@ function failed(stage, errors, extra = {}) {
     runtime_integrated: false,
     edge_deployed: false,
     transport_enabled: false,
-    target_sql_signature_ready: false,
+    target_sql_signature_ready: true,
+    actor_aware_sql_prototype_ready: true,
+    actor_aware_sql_deployed: false,
     ...extra
   };
 }
@@ -138,8 +140,10 @@ export async function rehearseTaskEdgeIdentityAction({
     runtime_integrated: false,
     edge_deployed: false,
     transport_enabled: false,
-    target_sql_signature_ready: false,
-    canonical_sql_refactor_required: true
+    target_sql_signature_ready: true,
+    actor_aware_sql_prototype_ready: true,
+    actor_aware_sql_deployed: false,
+    canonical_sql_refactor_required: false
   };
 
   if (mode !== 'mock_execute') return preview;
@@ -171,5 +175,7 @@ export const TASK_EDGE_IDENTITY_REHEARSAL_CONTRACT = Object.freeze({
   runtime_integrated: false,
   edge_deployed: false,
   transport_enabled: false,
-  target_sql_signature_ready: false
+  target_sql_signature_ready: true,
+  actor_aware_sql_prototype_ready: true,
+  actor_aware_sql_deployed: false
 });

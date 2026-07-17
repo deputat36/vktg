@@ -86,7 +86,7 @@ def main() -> int:
             errors.append(f'missing service grant {signature}')
 
     need(text['canonical'], ('v_uid uuid := auth.uid();','nav_v2_bounded_task_replay','to service_role'), 'canonical', errors)
-    need(text['edge'], ('const rpcArgs = { ...baseArgs, p_actor_id: actorId };','target_sql_signature_ready: false','runtime_integrated: false'), 'edge', errors)
+    need(text['edge'], ('const rpcArgs = { ...baseArgs, p_actor_id: actorId };','target_sql_signature_ready: true','actor_aware_sql_prototype_ready: true','actor_aware_sql_deployed: false','runtime_integrated: false'), 'edge', errors)
     if 'task-action-edge-identity-v2.js' in text['edge_index']: errors.append('Edge identity module imported prematurely')
 
     need(text['assertions'], ('same-actor replay contract mismatch','принадлежит другому verified actor','created_by did not preserve verified actor','actor-aware completion state mismatch','actor-aware active outcome state mismatch','actor-aware terminal decision state mismatch','PostgreSQL actor-aware bounded task lifecycle assertions passed'), 'assertions', errors)

@@ -24,8 +24,10 @@ for (const scenario of scenarios.accepted) {
   assert.equal(preview.runtime_integrated, false);
   assert.equal(preview.edge_deployed, false);
   assert.equal(preview.transport_enabled, false);
-  assert.equal(preview.target_sql_signature_ready, false);
-  assert.equal(preview.canonical_sql_refactor_required, true);
+  assert.equal(preview.target_sql_signature_ready, true);
+  assert.equal(preview.actor_aware_sql_prototype_ready, true);
+  assert.equal(preview.actor_aware_sql_deployed, false);
+  assert.equal(preview.canonical_sql_refactor_required, false);
 
   const calls = [];
   const execution = await rehearseTaskEdgeIdentityAction({
@@ -64,6 +66,9 @@ for (const scenario of scenarios.rejected) {
   assert.equal(result.mock_rpc_called, false);
   assert.equal(result.mock_rpc_call_count, 0);
   assert.equal(result.network_called, false);
+  assert.equal(result.target_sql_signature_ready, true);
+  assert.equal(result.actor_aware_sql_prototype_ready, true);
+  assert.equal(result.actor_aware_sql_deployed, false);
 }
 
-console.log(`Navigator v2 task Edge identity semantic matrix passed: ${scenarios.accepted.length} accepted actor-injected previews/mock calls and ${scenarios.rejected.length} rejected trust-boundary cases; no production transport`);
+console.log(`Navigator v2 task Edge identity semantic matrix passed: ${scenarios.accepted.length} accepted actor-injected previews/mock calls and ${scenarios.rejected.length} rejected trust-boundary cases; repository SQL signatures are ready, no production transport`);

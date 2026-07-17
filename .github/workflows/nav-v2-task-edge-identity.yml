@@ -4,32 +4,40 @@ on:
   pull_request:
     paths:
       - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-bounded-task-actor-aware-contract.json'
       - 'supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js'
       - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
       - 'supabase/functions/nav-v2-deal-api/index.ts'
       - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql'
       - 'fixtures/nav-v2-task-edge-identity-scenarios.json'
       - 'scripts/check-nav-v2-task-edge-identity.mjs'
+      - 'scripts/check-nav-v2-task-edge-sql-parity.mjs'
       - 'scripts/check_nav_v2_task_edge_identity.py'
       - 'tests/sql/nav_v2_task_edge_identity_setup.sql'
       - 'tests/sql/nav_v2_task_edge_identity_assertions.sql'
       - 'docs/NAV_V2_TASK_EDGE_IDENTITY_GATE_2026-07-17.md'
+      - 'docs/NAV_V2_BOUNDED_TASK_ACTOR_AWARE_SQL_2026-07-17.md'
       - '.github/workflows/nav-v2-task-edge-identity.yml'
   push:
     branches:
       - main
     paths:
       - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-bounded-task-actor-aware-contract.json'
       - 'supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js'
       - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
       - 'supabase/functions/nav-v2-deal-api/index.ts'
       - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql'
       - 'fixtures/nav-v2-task-edge-identity-scenarios.json'
       - 'scripts/check-nav-v2-task-edge-identity.mjs'
+      - 'scripts/check-nav-v2-task-edge-sql-parity.mjs'
       - 'scripts/check_nav_v2_task_edge_identity.py'
       - 'tests/sql/nav_v2_task_edge_identity_setup.sql'
       - 'tests/sql/nav_v2_task_edge_identity_assertions.sql'
       - 'docs/NAV_V2_TASK_EDGE_IDENTITY_GATE_2026-07-17.md'
+      - 'docs/NAV_V2_BOUNDED_TASK_ACTOR_AWARE_SQL_2026-07-17.md'
       - '.github/workflows/nav-v2-task-edge-identity.yml'
   workflow_dispatch:
 
@@ -45,7 +53,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate identity source contract
+      - name: Validate identity and SQL parity contract
         run: python3 scripts/check_nav_v2_task_edge_identity.py
       - name: Compile identity checker
         run: python3 -m py_compile scripts/check_nav_v2_task_edge_identity.py
@@ -53,8 +61,11 @@ jobs:
         run: |
           node --check supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js
           node --check scripts/check-nav-v2-task-edge-identity.mjs
+          node --check scripts/check-nav-v2-task-edge-sql-parity.mjs
       - name: Run actor-injection semantic matrix
         run: node scripts/check-nav-v2-task-edge-identity.mjs
+      - name: Prove exact Edge-to-SQL parameter parity
+        run: node scripts/check-nav-v2-task-edge-sql-parity.mjs
 
   postgres-17-identity-proof:
     needs: identity-static
@@ -95,23 +106,27 @@ jobs:
           exit 1
       - name: Create synthetic identity environment
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_task_edge_identity_setup.sql
-      - name: Prove current conflict and explicit actor candidate
+      - name: Prove canonical conflict and explicit actor candidate
         shell: bash
         run: |
           set -o pipefail
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_task_edge_identity_assertions.sql 2>&1 | tee task-edge-identity-postgres.log
-      - name: Upload identity evidence
+      - name: Upload identity and SQL parity evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nav-v2-task-edge-identity
           path: |
             config/nav-v2-task-edge-identity-contract.json
+            config/nav-v2-bounded-task-actor-aware-contract.json
             fixtures/nav-v2-task-edge-identity-scenarios.json
             supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js
+            supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql
+            scripts/check-nav-v2-task-edge-sql-parity.mjs
             tests/sql/nav_v2_task_edge_identity_setup.sql
             tests/sql/nav_v2_task_edge_identity_assertions.sql
             docs/NAV_V2_TASK_EDGE_IDENTITY_GATE_2026-07-17.md
+            docs/NAV_V2_BOUNDED_TASK_ACTOR_AWARE_SQL_2026-07-17.md
             task-edge-identity-postgres.log
           if-no-files-found: error
           retention-days: 14
