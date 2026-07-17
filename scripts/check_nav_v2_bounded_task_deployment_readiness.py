@@ -169,7 +169,7 @@ def main() -> int:
     ), BASE_ROLLBACK.name, errors)
     require(base_rollback_assertions, (
         'bounded column % remains after base rollback',
-        'legacy task was not preserved by complete rollback',
+        'intentional status exercise was not preserved by complete rollback',
         'legacy task type constraint was not restored',
         'legacy authenticated grants were not restored',
     ), BASE_ROLLBACK_ASSERTIONS.name, errors)
