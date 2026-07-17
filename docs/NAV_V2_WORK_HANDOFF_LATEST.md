@@ -2,17 +2,17 @@
 
 ## Точка продолжения
 
-- Дата: 2026-07-16.
+- Дата: 17 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `1a0fcc008b7e52a16cbd201a9139a35b7223c33c` — squash merge PR #375.
+- Production `main`: `dbf8c7b83c701e48d3f78e69cda7b7a4aea56182` — squash merge PR #378.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
 - Последняя общая production migration: `20260716133531_leader_calculation_revisions`; она не относится к Navigator.
-- Consultation, corporate-document, bounded-task и legacy-review SQL находятся только в `supabase/prototypes`.
+- Consultation, corporate-document, bounded-task и legacy-review SQL остаются только в `supabase/prototypes`.
 - Production consultation/corporate-document сущностей нет.
-- Production bounded-task contract columns, mutation events и governed RPC отсутствуют.
+- Production bounded-task contract columns, mutation event table и governed RPC отсутствуют.
 - Production Auth, Edge Functions, Navigator RLS/grants, status guards и назначения сотрудников после PR #349 не менялись.
 
 Live counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
@@ -78,18 +78,19 @@ Navigator не является CRM, файловым архивом, банко
 - `docs/NAV_V2_WORK_ITEM_OUTCOME_CONTRACT_2026-07-16.md` — исходы документов и рисков.
 - `docs/NAV_V2_CONSULTATION_LIFECYCLE_PROTOTYPE_2026-07-16.md` — consultation lifecycle.
 - `docs/NAV_V2_CONSULTATION_POSTGRES_HARNESS_2026-07-16.md` — executable consultation SQL regression.
-- `docs/NAV_V2_CORPORATE_DOCUMENTS_CONTRACT_2026-07-16.md` — отдельный корпоративный цикл.
+- `docs/NAV_V2_CORPORATE_DOCUMENTS_CONTRACT_2026-07-16.md` — отдельный корпоративный lifecycle.
 - `docs/NAV_V2_CORPORATE_DOCUMENT_MUTATIONS_2026-07-16.md` — governed corporate mutations.
 - `docs/NAV_V2_BOUNDED_TASK_CONTRACT_2026-07-16.md` — bounded taxonomy, SLA и evidence.
 - `docs/NAV_V2_BOUNDED_TASK_MUTATIONS_2026-07-16.md` — governed bounded-task mutations.
 - `docs/NAV_V2_BOUNDED_TASK_SERVER_ADAPTER_2026-07-16.md` — transport-free task adapter.
 - `docs/NAV_V2_LEGACY_TASK_REVIEW_PACK_2026-07-16.md` — controlled read-only review legacy tasks.
-- `docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md` — runtime consumer/deployment gate.
+- `docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md` — runtime consumer/deployment gate v3.
 - `docs/NAV_V2_DEAL_CARD_LITE_BOUNDED_DTO_2026-07-16.md` — contract-aware lite DTO.
 - `docs/NAV_V2_BOUNDED_TASK_UI_PREVIEW_2026-07-16.md` — direct-link synthetic UI.
 - `docs/NAV_V2_TASK_DUAL_PATH_CONTRACT_2026-07-16.md` — pure legacy/bounded action router.
+- `docs/NAV_V2_TASK_AUTHORITATIVE_HANDLER_REHEARSAL_2026-07-16.md` — capture-handler rehearsal.
 
-## Live baseline 16 июля 2026 года
+## Live baseline 17 июля 2026 года
 
 Read-only production-срез:
 
@@ -97,7 +98,7 @@ Read-only production-срез:
 - активного manager и broker нет;
 - 23 сделки;
 - 98 production-задач;
-- все 98 задач имеют `task_type = null` и `sla_days = null`;
+- все 98 задач являются legacy rows без `task_contract_version`;
 - `task_contract_version` и остальные bounded columns отсутствуют;
 - `nav_deal_task_mutation_events_v2` отсутствует;
 - governed bounded-task RPC отсутствуют;
@@ -170,55 +171,58 @@ PR #369 добавил pure transport-free adapter и exact RPC previews.
 - bounded mutations: `9bb68e7fc52e17944900db755faae9fa9f422883`;
 - bounded adapter: `9e8f08617bb3f7735acc4e56370f7fda5077d485`.
 
-### PR #371 — controlled legacy task review pack
+### PR #371–#374 — legacy coexistence и UI
 
-- read-only metadata и нейтральные task/deal references;
-- high-confidence source mapping;
-- `leave_legacy`, `candidate_for_recreate`, `manual_review`, `retire_after_evidence`;
-- owner/admin/manager scope;
-- маткапитал и сертификаты не маршрутизируются к брокеру;
-- no-write/no-backfill PostgreSQL regression.
+- controlled read-only legacy task review pack;
+- точная inventory старых task RPC consumers;
+- contract-aware lite DTO prototype;
+- direct-link bounded task UI preview;
+- без mass backfill, production mutations и оценки сотрудников.
 
-Merge: `fe05f5b6cccfe4a5fb134ea1103bc5d66fcdd8fb`.
+### PR #375 — dual-path action contract
 
-### PR #372 — legacy RPC consumer matrix
-
-- зафиксированы три runtime consumer path старого status RPC;
-- подтверждено отсутствие runtime consumer старого add-task RPC;
-- deployment blockers закреплены CI.
-
-Merge: `1a48d67408cd9dde7ce54b5d9c9010325830fdff`.
-
-### PR #373 — deal-card-lite bounded DTO
-
-- DTO v2 возвращает bounded contract/outcome fields;
-- separate permissions start/complete/active outcome/proposal/decision;
-- legacy coexistence без mass backfill;
-- PostgreSQL 17 privacy/role/no-write regression.
-
-Merge: `054c6855d91245ee6c99062ec98b18c931644e52`.
-
-### PR #374 — bounded task UI preview
-
-- direct-link synthetic coexistence UI;
-- evidence UUID, waiting/deferred и terminal outcomes;
-- exact transport-free RPC previews;
-- не входит в role menu и не обращается к Supabase.
-
-Merge: `1ec650be29b10be01ace0be63b4e545504edd349`.
-
-### PR #375 — task dual-path action contract
-
-- pure authoritative router candidate;
+- pure router legacy/bounded действий;
 - legacy row → старый status RPC preview;
 - contract-v2 row → governed RPC preview;
 - bounded completion требует evidence;
-- bounded reopen запрещён и заменён новой audited-задачей;
-- transport-free Edge action validation contract;
-- 10 semantic routes и synthetic Playwright regression;
-- один клик → один route preview, сетевых RPC вызовов нет.
+- bounded reopen запрещён;
+- Edge action validation contract;
+- synthetic no-network Playwright regression.
 
 Merge: `1a0fcc008b7e52a16cbd201a9139a35b7223c33c`.
+
+### PR #377 — authoritative handler rehearsal
+
+Synthetic capture-phase rehearsal доказал:
+
+- authoritative handler calls: 8;
+- base listener calls: 0;
+- competing guard calls: 0;
+- network RPC calls: 0;
+- bounded reopen отклоняется;
+- production runtime не менялся.
+
+Merge: `36095c55d6e8294264ebe133f91766f1b8dd8588`.
+
+### PR #378 — authoritative frontend integration
+
+`task-action-guard-v2.js` стал рабочим authoritative capture-handler:
+
+- импортирует dual-path router;
+- владеет task click в capture phase;
+- сохраняет legacy `nav_v2_update_task_status` payload;
+- cold first click выполняется без повторного нажатия;
+- target `onclick` подавляется через `stopImmediatePropagation()`;
+- после permission load `button.onclick` очищается;
+- bounded action распознаётся, но network transport выключен;
+- bounded completion проверяет evidence/client-request UUID;
+- bounded reopen отключён;
+- desktop/mobile browser regression зелёный;
+- base handler execution counter остаётся нулевым.
+
+Consumer matrix обновлён до v3.
+
+Merge: `dbf8c7b83c701e48d3f78e69cda7b7a4aea56182`.
 
 ## Принцип дальнейшей работы
 
@@ -230,31 +234,29 @@ Merge: `1a0fcc008b7e52a16cbd201a9139a35b7223c33c`.
 
 ## Следующий безопасный slice
 
-P0/P1 — repository-only authoritative handler integration rehearsal.
+P0/P1 — удалить dormant task mutation source из `assets/js/nav-v2/deal-card-v2.js`.
 
-### Rehearsal должен
+### Source cleanup должен
 
-- работать только на synthetic fixture;
-- использовать `task-action-router-v2.js` как единственный handler;
-- доказать отсутствие competing base listener;
-- проверить DTO → router → Edge payload contract;
-- покрыть legacy start/complete/reopen;
-- покрыть bounded start/complete/wait/defer/proposal/decision;
-- отклонять bounded reopen;
-- не импортироваться в production `deal-card-v2.js`, `task-action-guard-v2.js` или Edge `index.ts`;
-- не вызывать сеть;
-- не менять Supabase, routes или role menu.
+- удалить base `document.querySelectorAll('[data-task-id]')` mutation listener;
+- удалить literal вызов `nav_v2_update_task_status` из `deal-card-v2.js`;
+- не менять task rendering и legacy button attributes в том же slice;
+- оставить `task-action-guard-v2.js` единственным frontend владельцем task click;
+- сохранить legacy start/complete/reopen payload;
+- сохранить cold first click;
+- сохранить bounded transport disabled;
+- обновить consumer matrix: frontend active consumer только guard, dormant source отсутствует;
+- обновить source/browser regression;
+- не менять Supabase, Edge Function, Auth, RLS/grants и task rows.
 
-После rehearsal:
+После source cleanup:
 
-1. реальная frontend integration с transport disabled;
-2. удаление конкурирующего base listener;
-3. authenticated application E2E после approval среды;
-4. отдельный database deploy PR с объединёнными migrations и minimal grants;
-5. Edge action integration/deployment;
-6. controlled transport switch;
-7. controlled pilot;
-8. security hardening.
+1. authenticated application E2E после approval среды;
+2. отдельный database deploy PR с объединёнными migrations и minimal grants;
+3. Edge action integration/deployment после database deployment;
+4. controlled frontend bounded transport switch;
+5. controlled pilot;
+6. security hardening.
 
 ## Ручные ограничения
 
@@ -270,7 +272,7 @@ P0/P1 — repository-only authoritative handler integration rehearsal.
 - Не использовать review/pilot metrics для оценки сотрудников.
 - Не менять production status guards до authenticated tests.
 - Не выполнять массовый task backfill.
-- Не включать bounded-task transport до deployment.
+- Не включать bounded-task transport до database/Edge deployment.
 
 ## Decision gates владельца
 
@@ -298,8 +300,10 @@ P0/P1 — repository-only authoritative handler integration rehearsal.
 - legacy task review pack;
 - task consumer inventory;
 - bounded lite DTO/UI/dual-path contract;
+- authoritative handler rehearsal;
+- authoritative runtime integration;
 - production cleanup без решения владельца.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #375. Создай repository-only authoritative handler integration rehearsal на synthetic fixture. Не интегрируй его в production runtime, не вызывай сеть, не применяй prototypes к production, не создавай платную Supabase branch и не меняй production grants/RLS/Auth.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #378. Удали dormant task mutation source из deal-card-v2.js, оставь task-action-guard-v2.js единственным frontend handler, сохрани legacy payload и bounded transport disabled. Не применяй prototypes к production, не создавай платную Supabase branch и не меняй production grants/RLS/Auth/Edge Functions.`
