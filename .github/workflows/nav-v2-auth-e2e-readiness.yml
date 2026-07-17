@@ -1,0 +1,61 @@
+name: Navigator v2 authenticated E2E readiness
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-auth-e2e-readiness.json'
+      - 'fixtures/nav-v2-auth-e2e-role-matrix.json'
+      - 'config/nav-v2-e2e-target-plan.json'
+      - 'docs/NAV_V2_AUTH_E2E_TARGET_RUNBOOK.md'
+      - 'docs/NAV_V2_TASK_ROLE_MATRIX_REHEARSAL_2026-07-17.md'
+      - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-bounded-task-actor-aware-contract.json'
+      - 'config/nav-v2-bounded-task-migration-storyboard.json'
+      - 'scripts/check-nav-v2-auth-e2e-readiness.mjs'
+      - 'scripts/check_nav_v2_auth_e2e_readiness.py'
+      - 'docs/NAV_V2_AUTH_E2E_READINESS_2026-07-17.md'
+      - '.github/workflows/nav-v2-auth-e2e-readiness.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-auth-e2e-readiness.json'
+      - 'fixtures/nav-v2-auth-e2e-role-matrix.json'
+      - 'scripts/check-nav-v2-auth-e2e-readiness.mjs'
+      - 'scripts/check_nav_v2_auth_e2e_readiness.py'
+      - 'docs/NAV_V2_AUTH_E2E_READINESS_2026-07-17.md'
+      - '.github/workflows/nav-v2-auth-e2e-readiness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate authenticated E2E readiness source contract
+        run: python3 scripts/check_nav_v2_auth_e2e_readiness.py
+      - name: Compile readiness checker
+        run: python3 -m py_compile scripts/check_nav_v2_auth_e2e_readiness.py
+      - name: Check semantic runner syntax
+        run: node --check scripts/check-nav-v2-auth-e2e-readiness.mjs
+      - name: Run cost-free role and environment semantic matrix
+        run: node scripts/check-nav-v2-auth-e2e-readiness.mjs
+      - name: Upload repository-only readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-auth-e2e-readiness
+          path: |
+            config/nav-v2-auth-e2e-readiness.json
+            fixtures/nav-v2-auth-e2e-role-matrix.json
+            docs/NAV_V2_AUTH_E2E_READINESS_2026-07-17.md
+            docs/NAV_V2_AUTH_E2E_TARGET_RUNBOOK.md
+            config/nav-v2-e2e-target-plan.json
+          if-no-files-found: error
+          retention-days: 14
