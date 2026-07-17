@@ -1,6 +1,6 @@
 import { validateTaskEdgeAction } from './task-action-contract-v2.js';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FORBIDDEN_CLIENT_ACTOR_FIELDS = new Set(['actor_id', 'p_actor_id', 'user_id', 'p_user_id']);
 const TOP_LEVEL_FIELDS = new Set(['action', 'payload']);
 
