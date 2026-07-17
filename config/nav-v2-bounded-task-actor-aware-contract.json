@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_actor_aware_sql_prototype",
+  "production_applied": false,
+  "migration_file_created": false,
+  "runtime_integrated": false,
+  "edge_deployed": false,
+  "transport_enabled": false,
+  "deployment_ready": false,
+  "apply_order": [
+    "nav_v2_bounded_task_contract.sql",
+    "nav_v2_bounded_task_mutations.sql",
+    "nav_v2_bounded_task_actor_aware_mutations.sql"
+  ],
+  "actor_argument": "p_actor_id",
+  "actor_verified_outside_client_payload": true,
+  "active_profile_required": true,
+  "service_role_auth_uid_assumed": false,
+  "actor_aware_overloads": [
+    "nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)",
+    "nav_v2_start_bounded_task(uuid,uuid,uuid)",
+    "nav_v2_complete_bounded_task(uuid,uuid,uuid,uuid)",
+    "nav_v2_set_bounded_task_active_outcome(uuid,text,text,date,uuid,uuid)",
+    "nav_v2_propose_bounded_task_terminal_outcome(uuid,text,text,uuid,uuid,uuid)",
+    "nav_v2_decide_bounded_task_terminal_outcome(uuid,text,uuid,uuid)"
+  ],
+  "execute_roles": ["service_role"],
+  "forbidden_execute_roles": ["public", "anon", "authenticated"],
+  "same_actor_replay": true,
+  "cross_actor_replay_rejected": true,
+  "claim_restored_on_success": true,
+  "claim_restored_on_error": true,
+  "audit_actor_preserved": true,
+  "canonical_signatures_preserved": true,
+  "edge_rpc_names_unchanged": true,
+  "edge_appends_actor_argument": true,
+  "canonical_regression_required": true,
+  "overlay_rollback_required": true,
+  "production_database_changed": false,
+  "remaining_blockers": [
+    "owner_actor_architecture_approval_missing",
+    "authenticated_application_e2e_missing",
+    "production_migration_not_approved",
+    "edge_handler_not_integrated",
+    "edge_function_not_deployed",
+    "frontend_transport_disabled",
+    "controlled_pilot_not_approved"
+  ]
+}
