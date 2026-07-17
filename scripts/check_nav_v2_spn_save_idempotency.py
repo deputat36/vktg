@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "spn-v2.html"
 GUARD = ROOT / "assets/js/nav-v2/spn-save-idempotency-guard-v2.js"
 MODEL = ROOT / "assets/js/nav-v2/spn-save-idempotency-model-v2.js"
+WIZARD = ROOT / "assets/js/nav-v2/spn-smart-v4.js"
 SEMANTIC = ROOT / "scripts/check-nav-v2-spn-save-idempotency.mjs"
 BUDGET = ROOT / "config/nav-v2-module-budget.json"
 STATIC_WORKFLOW = ROOT / ".github/workflows/nav-v2-static.yml"
@@ -22,7 +23,7 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    for path in (PAGE, GUARD, MODEL, SEMANTIC, BUDGET, STATIC_WORKFLOW, DEDICATED_WORKFLOW):
+    for path in (PAGE, GUARD, MODEL, WIZARD, SEMANTIC, BUDGET, STATIC_WORKFLOW, DEDICATED_WORKFLOW):
         if not path.exists():
             errors.append(f"missing {path.relative_to(ROOT)}")
     if errors:
@@ -78,6 +79,25 @@ def main() -> int:
         if forbidden in guard:
             errors.append(f"idempotency guard must not call mutation surface directly: {forbidden}")
 
+    wizard = WIZARD.read_text(encoding="utf-8")
+    require(wizard, (
+        "function matchesRecentlyCreatedDeal(deal, startedAt)",
+        "deal?.created_by_current_user === false",
+        "deal?.created_by_current_user === true",
+        "responseAddress === address",
+        "createdAt < Number(startedAt) - 10_000",
+        "findRecentlyCreatedDeal(saveStartedAt, 4)",
+        "Совпадения только",
+        "по типу объекта недостаточно",
+    ), WIZARD.name, errors)
+    for forbidden in (
+        "const byType =",
+        "if (byType",
+        "items.find((deal) => normalizeText(deal.object_type) === objectType)",
+    ):
+        if forbidden in wizard:
+            errors.append(f"wizard recovery must never identify a saved deal only by object type: {forbidden}")
+
     model = MODEL.read_text(encoding="utf-8")
     require(model, (
         "export function wizardSubmissionFingerprint",
@@ -125,7 +145,8 @@ def main() -> int:
 
     print(
         "Navigator v2 SPN save idempotency passed: deterministic payload fingerprint, cross-tab lock, "
-        "recent receipt, safe module order, one read-only lookup, minimized-DTO compatibility and no direct mutation call"
+        "recent receipt, safe module order, one read-only lookup, safe recovery without object-type-only matching, "
+        "minimized-DTO compatibility and no direct mutation call"
     )
     return 0
 
