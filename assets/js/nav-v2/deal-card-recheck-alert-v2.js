@@ -18,6 +18,7 @@ import { applyAccessibleAsyncFeedback } from './async-feedback-v2.js?v=20260715-
 import { applyFormAssociations } from './form-association-v2.js?v=20260715-02';
 import { installSensitiveFreeTextGuard } from './sensitive-free-text-guard-v2.js?v=20260715-01';
 import { applyWorkItemOutcomePreview } from './work-item-outcome-preview-v2.js?v=20260716-01';
+import { applyDealCardLegalPassport } from './deal-card-legal-passport-v1.js?v=20260717-01';
 
 // Previous release source markers:
 // import { applyDealCardDocumentProblemDialog } from './deal-card-document-problem-dialog-v2.js?v=20260715-01';
@@ -34,6 +35,7 @@ function applyCardEnhancements() {
   applyLawyerDocumentCycle(cardData, profileData);
   applyDealCardActionFocus(cardData, profileData);
   applyDealCardCompletionEvidence(cardData, profileData);
+  applyDealCardLegalPassport(cardData, profileData);
   applyDealCardSpnHandoff(cardData);
   applyDealCardDocumentWorkflow(cardData);
   applyDealCardDocumentProblemDialog(cardData);
