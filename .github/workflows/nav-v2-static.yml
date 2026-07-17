@@ -68,6 +68,8 @@ on:
       - 'scripts/check_nav_v2_spn_save_handoff.py'
       - 'scripts/check_nav_v2_intake_contract_v1.py'
       - 'scripts/check-nav-v2-intake-contract-v1.mjs'
+      - 'scripts/check_nav_v2_intake_work_plan_v1.py'
+      - 'scripts/check-nav-v2-intake-work-plan-v1.mjs'
       - 'scripts/check_nav_v2_intake_prototype_v1.py'
       - 'scripts/check_nav_v2_legal_passport_preview.py'
       - 'scripts/check-nav-v2-legal-passport-preview.mjs'
@@ -268,7 +270,10 @@ jobs:
           python3 scripts/check_nav_v2_intake_contract_v1.py
           node scripts/check-nav-v2-intake-contract-v1.mjs
       - name: Check detached SPN intake prototype v1
-        run: python3 scripts/check_nav_v2_intake_prototype_v1.py
+        run: |
+          python3 scripts/check_nav_v2_intake_work_plan_v1.py
+          node scripts/check-nav-v2-intake-work-plan-v1.mjs
+          python3 scripts/check_nav_v2_intake_prototype_v1.py
       - name: Check legal passport first screen
         run: |
           python3 scripts/check_nav_v2_legal_passport_preview.py

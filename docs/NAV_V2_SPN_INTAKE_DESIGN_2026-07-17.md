@@ -133,6 +133,8 @@ Broker scope жёстко ограничен `mortgage` и `military_mortgage`. 
 
 ## 8. Side-aware документы
 
+Repository-only реализация: `assets/js/nav-v2/spn-intake-work-plan-v1.js`. Модель получает уже matched rules, возвращает `document_candidates` и отдельно `skipped_documents`; это не mutation DTO и не создаёт строк в production.
+
 Будущий генератор формирует не файлы, а безопасные рабочие записи: `type`, `side`, `status`, `owner`, `deadline`, `allowed_link`, `reason`, `gate_impact`.
 
 | Scope | Правило |
@@ -146,6 +148,8 @@ Broker scope жёстко ограничен `mortgage` и `military_mortgage`. 
 Navigator хранит статус и разрешённую ссылку. Загрузка файла или скана в Navigator не является частью контракта.
 
 ## 9. Конкретные задачи
+
+Repository-only реализация возвращает `task_candidates` и `ready_tasks`. Кандидат без owner id остаётся `needs_owner`; будущая интеграция не должна создавать его до назначения ответственного.
 
 Автоматическая задача допустима только при полном completion contract:
 
@@ -213,4 +217,3 @@ owner + action + deadline rule + evidence + expected result + gate impact
 ## 14. Rollback
 
 На текущем этапе rollback — удалить новые repository-only файлы и workflow: они не импортированы production страницами и не меняют runtime. На будущей интеграции rollout должен быть feature-flagged; отключение флага возвращает существующий мастер и карточку без изменения сохранённых legacy данных.
-

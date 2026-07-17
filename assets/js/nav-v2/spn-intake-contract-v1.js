@@ -1,3 +1,5 @@
+import { buildIntakeWorkPlan } from './spn-intake-work-plan-v1.js?v=20260717-01';
+
 export const NAV_V2_INTAKE_CONTRACT_VERSION = 1;
 
 const RISK_WEIGHT = { red: 4, yellow: 3, info: 2, green: 1 };
@@ -90,14 +92,14 @@ function groupFacts(draft, catalog) {
   return grouped;
 }
 
-function groupDocuments(draft) {
+function groupDocuments(workPlan) {
   const grouped = { available: [], requested: [], missing: [], problem: [] };
-  for (const document of Array.isArray(draft?.documents) ? draft.documents : []) {
+  for (const document of Array.isArray(workPlan?.document_candidates) ? workPlan.document_candidates : []) {
     if (!ALLOWED_DOCUMENT_STATUSES.has(document?.status)) continue;
     grouped[document.status].push({
       type: text(document.type),
       title: text(document.title || document.type),
-      side: text(document.side || 'company')
+      side: text(document.side || 'deal')
     });
   }
   return grouped;
@@ -122,13 +124,14 @@ function targetDate(draft) {
   return draft?.dateUnknown ? null : text(draft?.targetDate) || null;
 }
 
-export function buildLegalPassport(draft, catalog) {
+export function buildLegalPassport(draft, catalog, matchedRules = null, workPlan = null) {
   if (Number(catalog?.contract_version) !== NAV_V2_INTAKE_CONTRACT_VERSION) {
     throw new Error(`Unsupported Navigator intake contract: ${catalog?.contract_version ?? 'missing'}`);
   }
-  const rules = matchedIntakeRules(draft, catalog);
+  const rules = Array.isArray(matchedRules) ? matchedRules : matchedIntakeRules(draft, catalog);
+  const plan = workPlan || buildIntakeWorkPlan(draft, catalog, rules);
   const facts = groupFacts(draft, catalog);
-  const documents = groupDocuments(draft);
+  const documents = groupDocuments(plan);
   const primary = primaryLawyerRule(rules);
   const selectedRequest = text(draft?.lawyerRequestType);
   const selectedDecision = text(draft?.requestedDecision);
@@ -202,14 +205,17 @@ function documentCount(passport) {
   return Object.values(passport?.documents || {}).reduce((total, rows) => total + (Array.isArray(rows) ? rows.length : 0), 0);
 }
 
-function missingRequiredDocuments(passport) {
+function missingRequiredDocuments(passport, workPlan = null) {
+  if (Array.isArray(workPlan?.document_candidates)) {
+    return workPlan.document_candidates.filter((document) => !ALLOWED_DOCUMENT_STATUSES.has(document?.status)).map((document) => document.type);
+  }
   const required = unique((passport?.risk_flags || []).flatMap((risk) => risk.required_documents || []));
   if (!required.length) return [];
   const recorded = new Set(Object.values(passport?.documents || {}).flat().map((document) => document.type));
   return required.filter((type) => !recorded.has(type));
 }
 
-export function evaluateIntakeGates(draft, passport) {
+export function evaluateIntakeGates(draft, passport, workPlan = null) {
   const draftMissing = [];
   if (!text(draft?.requestType)) draftMissing.push(missingItem('request_type', 'Что сейчас нужно'));
   if (!text(draft?.stage)) draftMissing.push(missingItem('stage', 'Текущая стадия'));
@@ -231,7 +237,7 @@ export function evaluateIntakeGates(draft, passport) {
   if (!(passport?.confirmed_facts?.length || passport?.client_reported_facts?.length)) handoffMissing.push(missingItem('known_facts', 'Хотя бы один известный факт'));
   if (!Array.isArray(passport?.unknown_facts)) handoffMissing.push(missingItem('unknown_facts', 'Список неизвестных фактов'));
   if (!Array.isArray(passport?.risk_flags)) handoffMissing.push(missingItem('risk_flags', 'Список найденных рисков'));
-  const requiredDocumentsMissing = missingRequiredDocuments(passport);
+  const requiredDocumentsMissing = missingRequiredDocuments(passport, workPlan);
   if (requiredDocumentsMissing.length) {
     handoffMissing.push(missingItem('documents', `Статус обязательных документов: ${requiredDocumentsMissing.join(', ')}`));
   } else if (!draft?.documentsReviewed && documentCount(passport) === 0) {
@@ -259,8 +265,10 @@ export function evaluateIntakeGates(draft, passport) {
 }
 
 export function buildIntakeAssessment(draft, catalog) {
-  const passport = buildLegalPassport(draft, catalog);
-  const gates = evaluateIntakeGates(draft, passport);
+  const rules = matchedIntakeRules(draft, catalog);
+  const workPlan = buildIntakeWorkPlan(draft, catalog, rules);
+  const passport = buildLegalPassport(draft, catalog, rules, workPlan);
+  const gates = evaluateIntakeGates(draft, passport, workPlan);
   passport.handoff_completeness = {
     state: gates.handoff_lawyer.state,
     missing: gates.handoff_lawyer.missing.map((item) => item.id)
@@ -269,6 +277,7 @@ export function buildIntakeAssessment(draft, catalog) {
     route: ['situation', 'facts', 'review'],
     active_questions: activeFactQuestions(draft, catalog).map((question) => question.id),
     passport,
+    work_plan: workPlan,
     gates
   };
 }
@@ -337,6 +346,9 @@ export function validateIntakeCatalog(catalog) {
     ruleIds.add(rule.id);
     if (rule.trigger?.kind === 'fact' && !questions.has(rule.trigger.key)) errors.push(`unknown fact in rule ${rule.id}: ${rule.trigger.key}`);
     if (rule.owner === 'broker' && !['mortgage', 'military_mortgage'].includes(rule.id)) errors.push(`broker scope violation: ${rule.id}`);
+    if (rule.owner === 'lawyer' && (!rule.lawyer_request_type || !text(rule.expected_decision))) errors.push(`incomplete lawyer task contract: ${rule.id}`);
+    if (rule.owner === 'broker' && !text(rule.broker_action)) errors.push(`incomplete broker task contract: ${rule.id}`);
+    if (rule.owner === 'spn' && !text(rule.spn_action)) errors.push(`incomplete spn task contract: ${rule.id}`);
   }
   return { valid: errors.length === 0, errors };
 }

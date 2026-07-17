@@ -2,7 +2,7 @@ import {
   activeFactQuestions,
   buildIntakeAssessment,
   matchedIntakeRules
-} from './spn-intake-contract-v1.js';
+} from './spn-intake-contract-v1.js?v=20260717-02';
 
 const CATALOG_URL = './config/nav-v2-intake-contract-v1.json';
 const DRAFT_KEY = 'nav_v2_intake_prototype_v1';
@@ -42,6 +42,8 @@ const GROUP_TITLES = {
   special: 'Специальные обстоятельства'
 };
 const SIDE_TITLES = { seller: 'продавец', buyer: 'покупатель', object: 'объект', deal: 'сделка' };
+const OWNER_TITLES = { lawyer: 'Юрист', broker: 'Ипотечный брокер', spn: 'Ведущий СПН', seller_spn: 'СПН продавца', buyer_spn: 'СПН покупателя', lead_spn: 'Ведущий СПН' };
+const DOCUMENT_STATUS_TITLES = { available: 'получен', requested: 'запрошен', missing: 'отсутствует', problem: 'есть проблема' };
 
 let catalog = null;
 let state = loadState();
@@ -176,9 +178,7 @@ function renderFact(question) {
 }
 
 function requiredDocuments(assessment) {
-  const ids = [...new Set(assessment.passport.risk_flags.flatMap((risk) => risk.required_documents || []))];
-  const types = new Map(catalog.document_types.map((item) => [item.id, item]));
-  return ids.map((id) => types.get(id) || { id, title: id, side: 'deal' });
+  return assessment.work_plan.document_candidates.map((item) => ({ id: item.type, title: item.title, side: item.side }));
 }
 
 function renderDocuments(assessment) {
@@ -213,6 +213,23 @@ function documentList(passport) {
   return rows.map(([status, items]) => `<p><b>${labels[status]}:</b> ${items.map((item) => esc(item.title)).join(', ')}</p>`).join('');
 }
 
+function workPlanDocuments(workPlan) {
+  if (!workPlan.document_candidates.length) return '<p class="muted">По активным правилам документы не требуются.</p>';
+  return `<ul class="review-list">${workPlan.document_candidates.map((item) => {
+    const status = DOCUMENT_STATUS_TITLES[item.status] || 'статус не отмечен';
+    const owner = OWNER_TITLES[item.owner.role] || item.owner.role;
+    return `<li><b>${esc(item.title)}</b> · ${esc(SIDE_TITLES[item.side] || item.side)} · ${esc(status)}<div class="small">Ответственный: ${esc(owner)}${item.assignment_state === 'needs_assignment' ? ' · назначается при сохранении' : ''}; срок: ${esc(item.deadline || item.deadline_rule)}</div></li>`;
+  }).join('')}</ul>`;
+}
+
+function workPlanTasks(workPlan) {
+  if (!workPlan.task_candidates.length) return '<p class="muted">Автоматические задачи не нужны.</p>';
+  return `<ul class="review-list">${workPlan.task_candidates.map((task) => {
+    const owner = OWNER_TITLES[task.owner.role] || task.owner.role;
+    return `<li><b>${esc(task.action)}</b><div class="small">Ответственный: ${esc(owner)}${task.creation_state === 'needs_owner' ? ' · назначается при сохранении' : ''}; срок: ${esc(task.deadline || task.deadline_rule)}</div><div class="small">Evidence: ${esc(task.evidence)} Ожидаемый результат: ${esc(task.expected_result)}</div></li>`;
+  }).join('')}</ul><p class="small">Готовы к созданию только назначенные задачи: ${workPlan.ready_tasks.length} из ${workPlan.task_candidates.length}.</p>`;
+}
+
 function lawyerControls(assessment) {
   if (!assessment.passport.specialists.lawyer) return '<div class="status ok">По отмеченным фактам автоматическая передача юристу не требуется.</div>';
   const rules = matchedIntakeRules(state.draft, catalog).filter((rule) => rule.owner === 'lawyer');
@@ -238,10 +255,12 @@ function renderReview() {
     <div class="review-card"><h3>Известно со слов клиента</h3>${factList(p.client_reported_facts, 'Сообщённых фактов пока нет.')}</div>
     <div class="review-card"><h3>Пока неизвестно</h3>${factList(p.unknown_facts, 'Неизвестных активных фактов нет.')}</div>
     <div class="review-card"><h3>Риски и стоп-факторы</h3>${riskItems.length ? `<ul class="review-list">${riskItems.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` : '<p class="muted">Автоматические риски не найдены.</p>'}</div>
-    <div class="review-card review-wide"><h3>Документы</h3>${documentList(p)}</div>
+    <div class="review-card review-wide"><h3>Документы по сопровождаемой стороне</h3>${workPlanDocuments(assessment.work_plan)}</div>
+    <div class="review-card review-wide"><h3>Конкретные задачи</h3>${workPlanTasks(assessment.work_plan)}</div>
+    <details class="review-card review-wide"><summary><b>Отмеченные статусы документов</b></summary>${documentList(p)}</details>
     ${lawyerControls(assessment)}
     <div class="review-card review-wide"><h3>Gates</h3><div class="gate-list">${gateRow('Сохранить черновик', assessment.gates.save_draft)}${gateRow('Сформировать карточку', assessment.gates.form_card)}${gateRow(`Передать юристу · ${assessment.gates.handoff_lawyer.state}`, assessment.gates.handoff_lawyer)}</div></div>
-    <details class="review-card review-wide"><summary><b>Технический preview юридического паспорта</b></summary><pre class="intake-json">${esc(JSON.stringify(p, null, 2))}</pre></details>
+    <details class="review-card review-wide"><summary><b>Технический preview юридического паспорта и work plan</b></summary><pre class="intake-json">${esc(JSON.stringify({ passport: p, work_plan: assessment.work_plan }, null, 2))}</pre></details>
   </div>`;
 }
 
@@ -314,7 +333,7 @@ function applyFinalAction(action) {
     render();
     return;
   }
-  state.outcome = { action, at: new Date().toISOString(), passport: assessment.passport };
+  state.outcome = { action, at: new Date().toISOString(), passport: assessment.passport, work_plan: assessment.work_plan };
   saveState();
   setStatus('', 'info');
   render();

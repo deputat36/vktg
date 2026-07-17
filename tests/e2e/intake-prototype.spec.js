@@ -45,6 +45,14 @@ test('three-stage intake restores a legal handoff without network mutations', as
   await expect(page.locator('.intake-step.active')).toContainText('Проверить');
   await expect(page.getByRole('heading', { name: 'Известно со слов клиента' })).toBeVisible();
   await expect(page.locator('.review-card').filter({ hasText: 'Риски и стоп-факторы' })).toContainText('minor_seller');
+  const sideAwareDocuments = page.locator('.review-card').filter({ hasText: 'Документы по сопровождаемой стороне' });
+  await expect(sideAwareDocuments).toContainText('Разрешение или позиция органа опеки');
+  await expect(sideAwareDocuments).not.toContainText('Условия приобретения на ребёнка');
+  const concreteTasks = page.locator('.review-card').filter({ hasText: 'Конкретные задачи' });
+  await expect(concreteTasks).toContainText('Проверить детей и опеку');
+  await expect(concreteTasks).toContainText('Ответственный: Юрист · назначается при сохранении');
+  await expect(concreteTasks).toContainText('Evidence:');
+  await expect(concreteTasks).toContainText('Ожидаемый результат:');
   await page.locator('[data-confirm-lawyer]').check();
   await expect(page.locator('[data-primary-action="lawyer"]')).toContainText('Сохранить и передать юристу');
 
@@ -52,6 +60,10 @@ test('three-stage intake restores a legal handoff without network mutations', as
   expect(assessment.route).toEqual(['situation', 'facts', 'review']);
   expect(assessment.passport.specialists.lawyer).toBe(true);
   expect(assessment.passport.specialists.broker).toBe(false);
+  expect(assessment.work_plan.accompanied_sides).toEqual(['seller']);
+  expect(assessment.work_plan.document_candidates.map((item) => item.type).sort()).toEqual(['child_ownership_status', 'guardianship_permission']);
+  expect(assessment.work_plan.task_candidates.map((item) => item.rule_id)).toEqual(['minor_seller']);
+  expect(assessment.work_plan.ready_tasks).toEqual([]);
   expect(assessment.gates.handoff_lawyer.state).toBe('ready');
 
   await page.locator('[data-primary-action="lawyer"]').click();
