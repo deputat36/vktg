@@ -61,6 +61,8 @@ def main() -> int:
         "method: 'GET'",
         "localStorage.setItem",
         "localStorage.getItem",
+        "function deferredRender",
+        "blur-driven change event",
     ), JS.name, errors)
     for forbidden in (
         "createClient(", "rpc(", ".from(", "method: 'POST'", "method: 'PATCH'",
