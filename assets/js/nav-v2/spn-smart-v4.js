@@ -289,17 +289,39 @@ function copyHandoff() {
   navigator.clipboard?.writeText(text).then(() => setStatus('Текст передачи скопирован.', 'ok'), () => { if (field) { field.focus(); field.select(); } setStatus('Не удалось скопировать автоматически. Текст выделен, скопируйте вручную.', 'warn'); });
 }
 function normalizeText(value) { return String(value || '').trim().toLowerCase(); }
-async function findRecentlyCreatedDeal(maxAttempts = 4) {
+function matchesRecentlyCreatedDeal(deal, startedAt) {
   const address = normalizeText(state.deal.address);
   const objectType = normalizeText(state.deal.objectType);
+  const preparationMode = normalizeText(state.deal.preparationMode);
+  const responseAddress = normalizeText(deal?.address);
+  const responseObjectType = normalizeText(deal?.object_type);
+  const responsePreparationMode = normalizeText(deal?.preparation_mode);
+
+  if (deal?.created_by_current_user === false) return false;
+  if (objectType && responseObjectType !== objectType) return false;
+  if (preparationMode && responsePreparationMode && responsePreparationMode !== preparationMode) return false;
+
+  const createdAt = Date.parse(deal?.created_at || '');
+  if (Number.isFinite(createdAt) && createdAt < Number(startedAt) - 10_000) return false;
+
+  // Новый минимизированный DTO подтверждает автора сделки серверным фактом и
+  // может не возвращать адрес помещения. Старый DTO такого факта не содержит,
+  // поэтому для него обязательно точное совпадение адреса. Совпадения только
+  // по типу объекта недостаточно: оно может открыть чужую или старую карточку.
+  if (deal?.created_by_current_user === true) return true;
+  return Boolean(address && responseAddress === address);
+}
+async function findRecentlyCreatedDeal(startedAt, maxAttempts = 4) {
+  const address = normalizeText(state.deal.address);
+  const objectType = normalizeText(state.deal.objectType);
+  const preparationMode = normalizeText(state.deal.preparationMode);
+  if (!address && !objectType && !preparationMode) return null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const data = await rpc('nav_v2_get_deals_list', { p_limit: 50 }, 30000);
       const items = data.items || [];
-      const byAddress = address ? items.find((deal) => normalizeText(deal.address) === address) : null;
-      if (byAddress) return byAddress;
-      const byType = objectType ? items.find((deal) => normalizeText(deal.object_type) === objectType) : null;
-      if (byType && attempt >= 2) return byType;
+      const match = items.find((deal) => matchesRecentlyCreatedDeal(deal, startedAt));
+      if (match) return match;
     } catch (_) {}
     await sleep(1500 * attempt);
   }
@@ -314,6 +336,7 @@ async function saveDeal() {
   if (isSaving) return;
   const r = readiness();
   if (r.percent < 45 && !confirm('Заявка заполнена слабо. Всё равно сохранить черновик в CRM?')) return;
+  const saveStartedAt = Date.now();
   isSaving = true;
   render();
   try {
@@ -324,7 +347,7 @@ async function saveDeal() {
     setTimeout(() => { location.href = `./deal-card-v2.html?id=${saved.id}`; }, 500);
   } catch (error) {
     setStatus('Ответ от сохранения не получен быстро. Проверяю базу, это может занять до минуты...', 'info');
-    const found = await findRecentlyCreatedDeal(4);
+    const found = await findRecentlyCreatedDeal(saveStartedAt, 4);
     if (found?.id) {
       localStorage.removeItem(DRAFT_KEY);
       setStatus('Сделка найдена в базе. Открываю карточку...', 'ok');
