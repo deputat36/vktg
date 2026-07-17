@@ -1,0 +1,82 @@
+name: Navigator v2 intake prototype v1
+
+on:
+  pull_request:
+    paths:
+      - 'spn-intake-prototype-v2.html'
+      - 'assets/css/nav-v2-intake-prototype.css'
+      - 'assets/js/nav-v2/spn-intake-contract-v1.js'
+      - 'assets/js/nav-v2/spn-intake-prototype-v1.js'
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_intake_contract_v1.py'
+      - 'scripts/check-nav-v2-intake-contract-v1.mjs'
+      - 'scripts/check_nav_v2_intake_prototype_v1.py'
+      - 'tests/fixtures/nav-v2-intake-contract-v1.json'
+      - 'tests/e2e/intake-prototype.spec.js'
+      - '.github/workflows/nav-v2-intake-prototype-v1.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'spn-intake-prototype-v2.html'
+      - 'assets/css/nav-v2-intake-prototype.css'
+      - 'assets/js/nav-v2/spn-intake-contract-v1.js'
+      - 'assets/js/nav-v2/spn-intake-prototype-v1.js'
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-module-budget.json'
+      - 'scripts/check_nav_v2_intake_contract_v1.py'
+      - 'scripts/check-nav-v2-intake-contract-v1.mjs'
+      - 'scripts/check_nav_v2_intake_prototype_v1.py'
+      - 'tests/fixtures/nav-v2-intake-contract-v1.json'
+      - 'tests/e2e/intake-prototype.spec.js'
+      - '.github/workflows/nav-v2-intake-prototype-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source and semantic contracts
+        run: |
+          python3 scripts/check_nav_v2_intake_contract_v1.py
+          node scripts/check-nav-v2-intake-contract-v1.mjs
+          python3 scripts/check_nav_v2_intake_prototype_v1.py
+      - name: Syntax checks
+        run: |
+          node --check assets/js/nav-v2/spn-intake-contract-v1.js
+          node --check assets/js/nav-v2/spn-intake-prototype-v1.js
+          node --check tests/e2e/intake-prototype.spec.js
+          python3 -m py_compile scripts/check_nav_v2_intake_prototype_v1.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile intake prototype
+        run: npx playwright test tests/e2e/intake-prototype.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-intake-prototype-v1
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
