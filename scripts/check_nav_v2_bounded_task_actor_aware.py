@@ -67,8 +67,8 @@ def main() -> int:
     if 'auth.uid()' in uncommented: errors.append('overlay must not source actor from auth.uid()')
     if overlay.count("set_config('request.jwt.claim.sub', v_actor_id::text, true)") != 6:
         errors.append('expected six verified-actor claim injections')
-    if overlay.count('nav_v2_assert_actor_replay(') != 7:
-        errors.append('expected replay helper definition plus six calls')
+    if overlay.count('perform nav_v2_private.nav_v2_assert_actor_replay(') != 6:
+        errors.append('expected six actor-bound replay checks')
     if overlay.count('nav_v2_actor_claim_restore(v_previous_sub)') != 12:
         errors.append('expected success/error claim restoration for six wrappers')
 
