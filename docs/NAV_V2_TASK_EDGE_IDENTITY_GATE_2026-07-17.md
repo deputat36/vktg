@@ -1,53 +1,28 @@
-# Navigator v2 — task Edge identity gate
+# Navigator v2 — task Edge identity and SQL parity gate
 
 Дата: 17 июля 2026 года.
 
-Статус: repository-only identity propagation gate. Это не Edge integration, не deployment и не изменение production SQL.
+Статус: repository-only identity and SQL parity gate. Это не Edge integration, не deployment и не изменение production SQL.
 
-## Текущий конфликт
+## Текущий canonical конфликт
 
-Governed bounded-task RPC в прототипе:
+Canonical governed bounded-task RPC:
 
 - используют `auth.uid()` как источник действующего пользователя;
 - запрещают EXECUTE для `public`, `anon`, `authenticated`;
 - разрешают EXECUTE только `service_role`.
 
-Получается несовместимая пара:
+Пользовательский JWT содержит actor identity, но роль `authenticated` не имеет EXECUTE. Service-role transport имеет EXECUTE, но пользовательский `sub` не гарантирован.
 
-1. пользовательский JWT даёт роль `authenticated` и корректный `auth.uid()`, но RPC недоступен;
-2. service-role вызов имеет EXECUTE, но пользовательский `sub` не гарантирован и `auth.uid()` может быть `null`.
+Canonical signatures без actor-aware overlay нельзя вызывать через Edge как доказуемую пользовательскую операцию.
 
-Поэтому текущий contract нельзя считать напрямую исполнимым через Edge.
+## PR #387: identity propagation proof
 
-## Почему нельзя просто вызвать service-role RPC
+PR #387 доказал этот конфликт в PostgreSQL 17 и установил trust boundary:
 
-Service-role key нельзя передавать в браузер. Edge может использовать service role, но service-role database request сам по себе не доказывает, от имени какого пользователя выполняется действие.
+`bearer token → verified actor UUID → validated action → p_actor_id injection → service-role RPC`
 
-Если SQL продолжает брать actor только из `auth.uid()`, возможны два неправильных варианта:
-
-- `auth.uid()` равен `null`;
-- actor определяется не тем пользовательским контекстом, который прошёл Edge authentication.
-
-Зелёный payload validator не решает эту проблему идентичности.
-
-## Candidate: verified actor injection
-
-Repository rehearsal рассматривает кандидат:
-
-`bearer token → успешная проверка пользователя → verified actor UUID → Edge добавляет p_actor_id → service-role-only RPC`
-
-Правила:
-
-- actor берётся только из результата проверки bearer token;
-- actor не принимается из request body;
-- payload сначала проходит `validateTaskEdgeAction()`;
-- после validation Edge добавляет `p_actor_id` к database args;
-- SQL обязан повторно проверить, что actor имеет активный Navigator profile и нужные права;
-- current governed SQL signatures пока не содержат `p_actor_id`, поэтому требуется отдельный repository refactor и PostgreSQL regression.
-
-Это candidate, а не утверждённая production architecture.
-
-## Client payload boundary
+Client payload не может задавать actor.
 
 Запрещены поля:
 
@@ -56,88 +31,115 @@ Repository rehearsal рассматривает кандидат:
 - `user_id`;
 - `p_user_id`.
 
-Также запрещены неизвестные top-level поля запроса. Client не может подменить identity, даже если знает UUID другого сотрудника.
+Неизвестные top-level поля также отклоняются.
 
-Legacy task path не входит в rehearsal. Он остаётся на текущем user-JWT Edge flow.
+## PR #389: repository SQL resolution
+
+PR #389 добавил repository-only actor-aware SQL overloads:
+
+- сохраняются canonical RPC names;
+- добавляется последний аргумент `p_actor_id`;
+- overloads доступны только `service_role`;
+- active Navigator profile проверяется в SQL;
+- idempotent replay привязан к тому же actor;
+- canonical lifecycle повторно проверяет роль, сделку, назначение, evidence и outcome;
+- actor claim восстанавливается при успехе и ошибке;
+- audit events сохраняют verified actor.
+
+PostgreSQL 17 regression и rollback зелёные.
+
+Merge PR #389: `5d63d490ad8f210e10cea59e0f9f14863e72b0de`.
+
+Repository SQL signatures готовы. Они не deployed в production.
 
 ## Detached Edge module
 
 `task-action-edge-identity-v2.js`:
 
-- принимает canonical bounded action и payload;
-- требует verified actor UUID отдельно от payload;
-- вызывает существующий Edge payload validator;
-- строит exact database args;
+- принимает только governed bounded action;
+- требует verified actor отдельно от client payload;
+- запускает `validateTaskEdgeAction()`;
+- строит canonical `p_*` args;
 - добавляет `p_actor_id`;
 - в preview не вызывает RPC;
-- в `mock_execute` вызывает ровно один injected mock `rpc_client.rpc`;
+- в `mock_execute` вызывает ровно один injected mock RPC;
 - не использует `fetch`, `Deno.env`, service key или Supabase client;
-- не импортирован в `index.ts`.
+- не импортирован в production `index.ts`.
 
-Флаги остаются:
+Флаги:
 
+- `target_sql_signature_ready=true` — только repository prototype;
+- `actor_aware_sql_prototype_ready=true`;
+- `actor_aware_sql_deployed=false`;
 - `runtime_integrated=false`;
 - `edge_deployed=false`;
-- `transport_enabled=false`;
-- `target_sql_signature_ready=false`.
+- `transport_enabled=false`.
 
-## Semantic matrix
+## Exact Edge-to-SQL parity
 
-Проверяются accepted flows:
+Parity runner извлекает реальные actor-aware SQL definitions и порядок параметров.
 
-- start;
-- completion с evidence;
-- waiting_external;
-- terminal not_applicable;
-- terminal replaced;
-- terminal decision.
+Для пяти task actions проверяются exact RPC name и exact порядок аргументов:
 
-Для каждого accepted flow:
+1. start;
+2. completion с evidence;
+3. active outcome;
+4. terminal proposal;
+5. terminal decision.
 
-- preview строит actor-aware RPC args;
-- mock execution вызывает один RPC;
-- `p_actor_id` всегда равен verified actor;
-- сеть не используется.
+Для каждого preview:
 
-Rejected cases:
+- `Object.keys(rpc_args)` совпадает с SQL parameter order;
+- `p_actor_id` последний и равен verified actor;
+- semantic fixture совпадает побайтно по структуре;
+- сеть не вызывается;
+- runtime/deployment/transport остаются выключены.
+
+Шестой overload — `nav_v2_create_bounded_tasks(..., p_actor_id)` — инвентаризируется отдельно, потому что создание selected bounded tasks не является действием кнопки существующей задачи.
+
+## Spoof rejection
+
+До mock RPC отклоняются:
 
 - legacy action;
 - actor в client payload;
-- invalid verified actor;
-- unknown top-level field;
+- неверный verified actor UUID;
+- неизвестное top-level поле;
 - contract version не 2;
 - недопустимый reason code.
 
-## PostgreSQL 17 proof
+Rejected case делает ноль RPC calls и ноль network calls.
 
-Synthetic harness доказывает:
+## PostgreSQL 17 identity proof
 
-### User JWT pattern
+Synthetic identity harness по-прежнему доказывает исходную проблему:
+
+### User JWT
 
 - `auth.uid()` содержит UUID пользователя;
-- роль `authenticated` не имеет EXECUTE на service-role-only probe.
+- `authenticated` не имеет EXECUTE на service-role-only function.
 
-### Service-role pattern
+### Service role
 
 - service role имеет EXECUTE;
-- без пользовательского `sub` функция, использующая только `auth.uid()`, получает `null`.
+- без пользовательского `sub` canonical `auth.uid()` равен `null`.
 
-### Explicit actor candidate
+### Explicit verified actor
 
-- service-role-only facade принимает actor UUID;
-- активный Navigator profile подтверждается;
-- неактивный actor отклоняется;
+- active profile принимается;
+- inactive profile отклоняется;
 - identity probe не меняет profile rows.
 
-Это архитектурное доказательство, а не production authorization test.
+Actor-aware lifecycle и audit отдельно доказаны PR #389.
 
 ## Что этот PR не меняет
 
 - production Supabase;
-- migrations;
-- bounded SQL signatures;
-- grants/RLS/Auth;
+- `supabase/migrations`;
+- production actor-aware SQL;
+- Auth/RLS/grants;
 - deployed Edge `index.ts`;
+- bearer verification runtime;
 - service keys;
 - legacy task transport;
 - frontend bounded transport;
@@ -146,25 +148,26 @@ Synthetic harness доказывает:
 
 ## Production gate
 
-До Edge integration требуется отдельное решение:
+До реальной Edge integration требуются:
 
-1. утвердить actor propagation architecture;
-2. изменить governed SQL signatures или выбрать другой доказуемый identity mechanism;
-3. прогнать PostgreSQL 17 lifecycle/ACL/idempotency regression;
-4. обновить migration storyboard/object diff;
-5. получить approval на database migration;
-6. выполнить настоящий authenticated application E2E;
-7. только затем интегрировать и deploy Edge handler.
+1. owner approval final actor propagation architecture;
+2. production migration approval;
+3. применение bounded + actor-aware SQL в разрешённой среде;
+4. настоящий authenticated application E2E;
+5. доказательство bearer user → verified actor → actor-aware RPC → audit actor;
+6. отдельный Edge integration/deploy PR;
+7. controlled frontend transport switch;
+8. controlled pilot.
 
-Issue #282 остаётся обязательным cost gate.
+Issue #282 остаётся обязательным cost gate. Generic-команда «продолжай» не является cost или deployment approval.
 
 ## Rollback
 
 Repository rollback:
 
-- удалить identity handler rehearsal;
-- удалить semantic fixtures/runner;
-- удалить PostgreSQL identity harness;
-- удалить contract, checker, workflow и этот документ.
+- вернуть identity contract schema v1;
+- вернуть handler flags к состоянию до SQL parity;
+- удалить Edge-to-SQL parity runner;
+- вернуть semantic runner, checker, workflow и этот документ.
 
 Database/Edge rollback не требуется: production не меняется.
