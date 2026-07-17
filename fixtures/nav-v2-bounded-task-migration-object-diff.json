@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "future_migration_object_diff_only",
   "production_applied": false,
   "data_backfill": false,
@@ -69,6 +69,11 @@
         "nav_v2_private.nav_v2_bounded_task_subject_allowed",
         "nav_v2_private.nav_v2_bounded_task_reason_allowed"
       ],
+      "actor_aware_helpers": [
+        "nav_v2_private.nav_v2_require_verified_actor(uuid)",
+        "nav_v2_private.nav_v2_assert_actor_replay(uuid,text,uuid)",
+        "nav_v2_private.nav_v2_actor_claim_restore(text)"
+      ],
       "public_execute": false
     },
     "public_governed_rpcs": [
@@ -78,6 +83,14 @@
       "public.nav_v2_set_bounded_task_active_outcome(uuid,text,text,date,uuid)",
       "public.nav_v2_propose_bounded_task_terminal_outcome(uuid,text,text,uuid,uuid)",
       "public.nav_v2_decide_bounded_task_terminal_outcome(uuid,text,uuid)"
+    ],
+    "actor_aware_overloads": [
+      "public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)",
+      "public.nav_v2_start_bounded_task(uuid,uuid,uuid)",
+      "public.nav_v2_complete_bounded_task(uuid,uuid,uuid,uuid)",
+      "public.nav_v2_set_bounded_task_active_outcome(uuid,text,text,date,uuid,uuid)",
+      "public.nav_v2_propose_bounded_task_terminal_outcome(uuid,text,text,uuid,uuid,uuid)",
+      "public.nav_v2_decide_bounded_task_terminal_outcome(uuid,text,uuid,uuid)"
     ],
     "replaced_legacy_rpcs": [
       "public.nav_v2_add_task(uuid,text,text,public.nav_v2_user_role,public.nav_v2_task_priority,text)",
@@ -95,12 +108,23 @@
       "grant": ["service_role"],
       "revoke": ["public", "anon", "authenticated"]
     },
+    "actor_aware_overloads": {
+      "grant": ["service_role"],
+      "revoke": ["public", "anon", "authenticated"],
+      "actor_argument": "p_actor_id",
+      "client_payload_actor_forbidden": true
+    },
     "legacy_rpcs_transition": {
       "current_authenticated_execute": true,
       "future_prototype_policy": "service_role_only",
       "requires_edge_and_frontend_cutover_plan": true,
       "must_not_change_before_authenticated_e2e": true
     }
+  },
+  "repository_proofs": {
+    "bounded_deployment_readiness": "PR #384",
+    "identity_propagation_gate": "PR #387",
+    "actor_aware_sql_regression": "PR #389"
   },
   "explicit_non_objects": [
     "no Supabase Auth user changes",
