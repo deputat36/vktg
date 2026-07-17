@@ -47,6 +47,7 @@ let catalog = null;
 let state = loadState();
 let statusMessage = '';
 let statusKind = 'info';
+let renderTimer = null;
 
 function blankDraft() {
   return {
@@ -110,6 +111,16 @@ function preserveScrollRender() {
   const y = window.scrollY;
   render();
   requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
+}
+
+function deferredRender(preserveScroll = false) {
+  const y = window.scrollY;
+  if (renderTimer) clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    renderTimer = null;
+    render();
+    if (preserveScroll) requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
+  }, 0);
 }
 
 function choiceButtons(field, items, current) {
@@ -383,13 +394,17 @@ document.addEventListener('input', (event) => {
 document.addEventListener('change', (event) => {
   const field = event.target.closest('[data-input-field]');
   if (field) {
+    // Text/date/textarea values are already persisted by the input handler.
+    // Replacing the form DOM synchronously from their blur-driven change event
+    // can remove the focused node while the browser is still finishing blur.
+    if (field.type !== 'checkbox' && field.tagName !== 'SELECT') return;
     const key = field.dataset.inputField;
     state.draft[key] = field.type === 'checkbox' ? field.checked : field.value;
     if (key === 'dateUnknown' && field.checked) state.draft.targetDate = '';
     if (['lawyerRequestType', 'requestedDecision'].includes(key)) state.draft.lawyerRequestConfirmed = false;
     state.outcome = null;
     saveState();
-    render();
+    deferredRender();
     return;
   }
   const documentField = event.target.closest('[data-document-type]');
@@ -400,7 +415,7 @@ document.addEventListener('change', (event) => {
     if (documentField.value) state.draft.documents.push({ type, title: definition.title, side: definition.side, status: documentField.value });
     state.outcome = null;
     saveState();
-    preserveScrollRender();
+    deferredRender(true);
     return;
   }
   const confirmation = event.target.closest('[data-confirm-lawyer]');
@@ -411,7 +426,7 @@ document.addEventListener('change', (event) => {
     state.draft.lawyerRequestConfirmed = confirmation.checked;
     state.outcome = null;
     saveState();
-    render();
+    deferredRender();
   }
 });
 
