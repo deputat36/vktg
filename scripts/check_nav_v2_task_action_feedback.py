@@ -73,16 +73,27 @@ if not errors:
     ), ROUTER.name)
     require(helper, ('applyPageActionFeedback', "'busy'", "'success'", "'error'"), HELPER.name)
 
-    # The base source is still present in this slice, but the capture handler owns the click
-    # and clears onclick before any routed mutation. Source deletion remains a separate cleanup.
     require(base, (
-        "rpc('nav_v2_update_task_status'",
-        'document.querySelectorAll(\'[data-task-id]\')'
+        'function taskActions(task)',
+        'data-task-status="in_progress"',
+        'data-task-status="done"',
+        'data-task-status="open"',
+        '${taskActions(task)}'
     ), BASE.name)
+    for forbidden in (
+        "rpc('nav_v2_update_task_status'",
+        "document.querySelectorAll('[data-task-id]').forEach((btn) => btn.onclick",
+        "setPageStatus('Обновляю задачу...')",
+    ):
+        if forbidden in base:
+            errors.append(f'{BASE.name}: base task mutation source must be absent: {forbidden}')
+
     require(page, ('task-action-guard-v2.js?v=20260715-01',), PAGE.name)
     if '<script type="module" src="./assets/js/nav-v2/page-action-feedback-v2.js' in page:
         errors.append('page action feedback helper must not increase the HTML entry-module budget')
 
+    # Fixture intentionally keeps a synthetic base onclick so the browser regression proves
+    # that the capture handler owns the action even if a competing listener is introduced later.
     require(fixture, (
         'id="pageStatus"',
         'data-task-status="in_progress"',
@@ -124,4 +135,4 @@ if errors:
     for error in errors:
         print(f'- {error}')
     sys.exit(1)
-print('Navigator v2 task action feedback passed: authoritative capture handler routes legacy actions, bounded transport stays disabled and the dormant base onclick never executes')
+print('Navigator v2 task action feedback passed: deal-card only renders controls, the authoritative capture handler is the single frontend action source, bounded transport stays disabled and the synthetic competing onclick never executes')
