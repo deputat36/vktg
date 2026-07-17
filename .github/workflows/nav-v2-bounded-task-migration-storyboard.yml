@@ -5,16 +5,19 @@ on:
     paths:
       - 'config/nav-v2-bounded-task-migration-storyboard.json'
       - 'config/nav-v2-bounded-task-production-preflight-attestation.json'
+      - 'config/nav-v2-bounded-task-actor-aware-contract.json'
       - 'fixtures/nav-v2-bounded-task-migration-object-diff.json'
       - 'tests/sql/nav_v2_bounded_task_production_preflight_read_only.sql'
       - 'tests/sql/nav_v2_bounded_task_production_like_lite_rpc.sql'
       - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
       - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql'
       - 'supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql'
       - 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
       - 'config/nav-v2-bounded-task-deployment-readiness.json'
       - 'scripts/check_nav_v2_bounded_task_migration_storyboard.py'
       - 'docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md'
+      - 'docs/NAV_V2_BOUNDED_TASK_IDENTITY_STORYBOARD_ADDENDUM_2026-07-17.md'
       - 'supabase/migrations/**'
       - '.github/workflows/nav-v2-bounded-task-migration-storyboard.yml'
   push:
@@ -23,16 +26,19 @@ on:
     paths:
       - 'config/nav-v2-bounded-task-migration-storyboard.json'
       - 'config/nav-v2-bounded-task-production-preflight-attestation.json'
+      - 'config/nav-v2-bounded-task-actor-aware-contract.json'
       - 'fixtures/nav-v2-bounded-task-migration-object-diff.json'
       - 'tests/sql/nav_v2_bounded_task_production_preflight_read_only.sql'
       - 'tests/sql/nav_v2_bounded_task_production_like_lite_rpc.sql'
       - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
       - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql'
       - 'supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql'
       - 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
       - 'config/nav-v2-bounded-task-deployment-readiness.json'
       - 'scripts/check_nav_v2_bounded_task_migration_storyboard.py'
       - 'docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md'
+      - 'docs/NAV_V2_BOUNDED_TASK_IDENTITY_STORYBOARD_ADDENDUM_2026-07-17.md'
       - 'supabase/migrations/**'
       - '.github/workflows/nav-v2-bounded-task-migration-storyboard.yml'
   workflow_dispatch:
@@ -121,7 +127,8 @@ jobs:
               'tasks', (select count(*) from public.nav_deal_tasks_v2),
               'deals', (select count(*) from public.nav_deals_v2),
               'bounded_table', to_regclass('public.nav_deal_task_mutation_events_v2'),
-              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)')
+              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)'),
+              'actor_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)')
             )::text;
           " > preflight-before.json
       - name: Run structural preflight in read-only transaction
@@ -143,7 +150,8 @@ jobs:
               'tasks', (select count(*) from public.nav_deal_tasks_v2),
               'deals', (select count(*) from public.nav_deals_v2),
               'bounded_table', to_regclass('public.nav_deal_task_mutation_events_v2'),
-              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)')
+              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)'),
+              'actor_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)')
             )::text;
           " > preflight-after.json
           cmp preflight-before.json preflight-after.json
@@ -158,7 +166,9 @@ jobs:
             preflight-after.json
             config/nav-v2-bounded-task-migration-storyboard.json
             config/nav-v2-bounded-task-production-preflight-attestation.json
+            config/nav-v2-bounded-task-actor-aware-contract.json
             fixtures/nav-v2-bounded-task-migration-object-diff.json
             docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md
+            docs/NAV_V2_BOUNDED_TASK_IDENTITY_STORYBOARD_ADDENDUM_2026-07-17.md
           if-no-files-found: error
           retention-days: 14

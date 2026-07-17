@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "repository_only_storyboard_not_a_migration",
   "future_migration_placeholder": "YYYYMMDDHHMMSS_nav_v2_bounded_task_contract_and_runtime.sql",
   "migration_file_created": false,
@@ -12,7 +12,9 @@
   "owner_migration_approval": false,
   "authenticated_e2e_proven": false,
   "identity_propagation_proven": false,
-  "actor_aware_sql_contract_ready": false,
+  "actor_aware_sql_contract_ready": true,
+  "actor_aware_postgres_regression_green": true,
+  "actor_aware_prototype_merge": "5d63d490ad8f210e10cea59e0f9f14863e72b0de",
   "phases": [
     {
       "id": "preflight",
@@ -45,12 +47,22 @@
       "adds_governed_rpcs": true,
       "governed_grants": ["service_role"],
       "backfill": false,
-      "current_auth_uid_service_role_conflict": true,
-      "requires_actor_aware_sql_contract": true
+      "current_auth_uid_service_role_conflict": true
+    },
+    {
+      "id": "actor_aware_identity_overlay",
+      "order": 3,
+      "prototype": "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+      "adds_actor_helpers": true,
+      "adds_actor_aware_overloads": true,
+      "actor_argument": "p_actor_id",
+      "execute_roles": ["service_role"],
+      "postgres_regression_proof": "PR #389",
+      "production_applied": false
     },
     {
       "id": "legacy_rpc_transition",
-      "order": 3,
+      "order": 4,
       "replaces": ["nav_v2_add_task", "nav_v2_update_task_status"],
       "current_authenticated_execute": true,
       "target_prototype_execute": ["service_role"],
@@ -61,24 +73,26 @@
     },
     {
       "id": "dto_baseline",
-      "order": 4,
+      "order": 5,
       "prototype": "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
       "dto_version": 1
     },
     {
       "id": "dto_bounded_overlay",
-      "order": 5,
+      "order": 6,
       "prototype": "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
       "dto_version": 2,
       "privacy_minimized": true
     },
     {
       "id": "database_verification",
-      "order": 6,
+      "order": 7,
       "checks": [
         "objects and signatures",
         "RLS and grants",
         "verified actor propagation",
+        "actor replay binding",
+        "claim restoration",
         "no legacy backfill",
         "no deal/document/risk mutation",
         "no automatic task trigger",
@@ -88,7 +102,7 @@
     },
     {
       "id": "edge_integration",
-      "order": 7,
+      "order": 8,
       "deferred": true,
       "requires_database_green": true,
       "requires_verified_actor_propagation": true,
@@ -96,11 +110,16 @@
     },
     {
       "id": "frontend_transport",
-      "order": 8,
+      "order": 9,
       "deferred": true,
       "requires_edge_green": true,
       "requires_controlled_pilot": true
     }
+  ],
+  "cleared_repository_gates": [
+    "PR #384 bounded deployment readiness dry-run",
+    "PR #387 identity propagation gate",
+    "PR #389 actor-aware PostgreSQL 17 regression"
   ],
   "stop_conditions": [
     "PostgreSQL major version is not 17",
@@ -109,10 +128,8 @@
     "any bounded object exists partially",
     "any governed RPC exists before migration",
     "legacy RPC signature or grant differs from attestation",
-    "PR #384 deployment-readiness dry-run is not green",
-    "PR #387 identity propagation gate is not green",
+    "actor-aware object diff differs from PR #389",
     "governed RPC actor propagation architecture is not approved",
-    "actor-aware SQL contract and PostgreSQL 17 regression are not green",
     "owner has not approved a production migration PR",
     "Issue #282 cost approval and authenticated E2E are absent",
     "final grant policy is not approved",
@@ -127,9 +144,11 @@
   "post_apply_verification": [
     "all bounded columns exist and legacy rows remain null",
     "mutation event table exists with RLS",
-    "governed RPC signatures and fixed search_path exist",
+    "canonical and actor-aware governed RPC signatures exist",
     "verified actor comes from authenticated Edge context and cannot be supplied by client payload",
-    "governed SQL resolves an active actor deterministically without relying on service-role auth.uid",
+    "actor-aware overload resolves an active profile without relying on service-role auth.uid",
+    "same-actor replay succeeds and cross-actor replay is rejected",
+    "actor claim is restored on success and error",
     "public/anon/authenticated lack governed EXECUTE",
     "service_role has governed EXECUTE",
     "legacy add/status policy matches approved cutover",
@@ -148,11 +167,16 @@
     },
     {
       "order": 2,
+      "action": "remove actor-aware overloads and actor helpers",
+      "proof": "PR #389 actor-aware overlay rollback"
+    },
+    {
+      "order": 3,
       "action": "remove governed mutation overlay and restore legacy RPC/grants",
       "proof": "PR #384 mutation rollback"
     },
     {
-      "order": 3,
+      "order": 4,
       "action": "remove bounded base columns/catalog/constraints",
       "proof": "PR #384 base rollback"
     }
