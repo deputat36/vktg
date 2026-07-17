@@ -46,7 +46,11 @@
     {
       "id": "minor_seller",
       "patch": {
-        "facts": { "minor_seller": { "value": "yes", "source": "client" } }
+        "facts": { "minor_seller": { "value": "yes", "source": "client" } },
+        "documents": [
+          { "type": "guardianship_permission", "title": "Разрешение или позиция органа опеки", "side": "deal", "status": "requested" },
+          { "type": "child_ownership_status", "title": "Сведения о праве ребёнка", "side": "seller", "status": "available" }
+        ]
       },
       "expect": { "lawyer": true, "broker": false, "rules": ["minor_seller"], "handoff": "ready" }
     },
@@ -167,6 +171,14 @@
         "documentsReviewed": false
       },
       "expect": { "handoff": "urgent_incomplete", "handoff_allowed": true }
+    },
+    {
+      "id": "explicit_legal_problem",
+      "patch": {
+        "stage": "legal_problem",
+        "urgency": "urgent"
+      },
+      "expect": { "lawyer": true, "rules": ["legal_problem"] }
     },
     {
       "id": "draft_without_handoff",
