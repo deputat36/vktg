@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 task action pipeline rehearsal</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell mobile-first-screen-card">
+    <section class="hero">
+      <h1>Task action pipeline rehearsal</h1>
+      <p>Frontend router → detached Edge validator → exact RPC preview. Сеть и deployment выключены.</p>
+    </section>
+    <div id="pageStatus" class="status">Выберите synthetic pipeline action.</div>
+    <section class="card">
+      <div class="actions" style="justify-content:flex-start">
+        <button id="pipelineLegacy" class="btn light" data-pipeline-case="legacy_complete" type="button">Legacy complete</button>
+        <button id="pipelineComplete" class="btn green" data-pipeline-case="bounded_complete" type="button">Bounded complete</button>
+        <button id="pipelineWaiting" class="btn light" data-pipeline-case="bounded_waiting" type="button">Waiting external</button>
+        <button id="pipelineReplaced" class="btn light" data-pipeline-case="bounded_replaced" type="button">Propose replaced</button>
+        <button id="pipelineDecision" class="btn light" data-pipeline-case="bounded_decision" type="button">Decision confirm</button>
+        <button id="pipelineReopen" class="btn light" data-pipeline-case="bounded_reopen" type="button">Bounded reopen</button>
+        <button id="pipelineTampered" class="btn red" data-pipeline-case="tampered_unknown" type="button">Tampered payload</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Validated preview</h2>
+      <pre id="pipelineOutput" data-ok="false" data-stage="idle" data-rpc="">Ожидание действия.</pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import { taskActionEdgePipelinePreview } from '/assets/js/nav-v2/task-action-edge-pipeline-v2.js';
+
+    const cases = {
+      legacy_complete: {
+        task: { id: '20000000-0000-4000-8000-000000000001', task_contract_version: null, can_change_status: true },
+        action: 'complete',
+        input: {}
+      },
+      bounded_complete: {
+        task: { id: '20000000-0000-4000-8000-000000000002', task_contract_version: 2, can_complete: true },
+        action: 'complete',
+        input: { evidence_reference_id: '40000000-0000-4000-8000-000000000001', client_request_id: '30000000-0000-4000-8000-000000000001' }
+      },
+      bounded_waiting: {
+        task: { id: '20000000-0000-4000-8000-000000000003', task_contract_version: 2, can_set_active_outcome: true },
+        action: 'waiting_external',
+        input: { reason_code: 'awaiting_document', review_date: '2026-07-24', client_request_id: '30000000-0000-4000-8000-000000000002' }
+      },
+      bounded_replaced: {
+        task: { id: '20000000-0000-4000-8000-000000000004', task_contract_version: 2, can_propose_terminal_outcome: true },
+        action: 'propose_replaced',
+        input: { reason_code: 'replaced_by_specific_task', replacement_task_id: '20000000-0000-4000-8000-000000000005', client_request_id: '30000000-0000-4000-8000-000000000003' }
+      },
+      bounded_decision: {
+        task: { id: '20000000-0000-4000-8000-000000000006', task_contract_version: 2, can_decide_terminal_outcome: true },
+        action: 'decision_confirm',
+        input: { client_request_id: '30000000-0000-4000-8000-000000000004' }
+      },
+      bounded_reopen: {
+        task: { id: '20000000-0000-4000-8000-000000000002', task_contract_version: 2, can_start: true },
+        action: 'reopen',
+        input: { client_request_id: '30000000-0000-4000-8000-000000000005' }
+      },
+      tampered_unknown: {
+        task: { id: '20000000-0000-4000-8000-000000000002', task_contract_version: 2, can_start: true },
+        action: 'start',
+        input: { client_request_id: '30000000-0000-4000-8000-000000000006' },
+        edge_payload_patch: { client_name: 'forbidden' }
+      }
+    };
+
+    window.__taskPipelineResults = [];
+    const output = document.getElementById('pipelineOutput');
+    document.querySelectorAll('[data-pipeline-case]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.pipelineCase;
+        const result = taskActionEdgePipelinePreview(cases[id]);
+        const summary = {
+          id,
+          ok: result.ok,
+          stage: result.stage,
+          edge_action: result.edge_action,
+          rpc: result.rpc_preview?.name || null,
+          args: result.rpc_preview?.args || null,
+          parity: result.parity,
+          network_called: result.network_called,
+          transport_enabled: result.transport_enabled,
+          errors: result.errors
+        };
+        window.__taskPipelineResults.push(summary);
+        output.dataset.ok = String(summary.ok);
+        output.dataset.stage = summary.stage;
+        output.dataset.rpc = summary.rpc || '';
+        output.textContent = JSON.stringify(summary, null, 2);
+      });
+    });
+  </script>
+</body>
+</html>

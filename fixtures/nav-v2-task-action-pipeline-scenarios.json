@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "synthetic_only": true,
+  "production_changed": false,
+  "network_allowed": false,
+  "valid_cases": [
+    {
+      "id": "legacy_complete",
+      "task": {"id": "20000000-0000-4000-8000-000000000001", "task_contract_version": null, "can_change_status": true},
+      "action": "complete",
+      "input": {},
+      "expected_rpc": "nav_v2_update_task_status",
+      "expected_edge_action": "legacy_update_task_status",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000001", "p_status": "done"}
+    },
+    {
+      "id": "bounded_start",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_start": true},
+      "action": "start",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000001"},
+      "expected_rpc": "nav_v2_start_bounded_task",
+      "expected_edge_action": "bounded_task_start",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000002", "p_client_request_id": "30000000-0000-4000-8000-000000000001"}
+    },
+    {
+      "id": "bounded_complete",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_complete": true},
+      "action": "complete",
+      "input": {"evidence_reference_id": "40000000-0000-4000-8000-000000000001", "client_request_id": "30000000-0000-4000-8000-000000000002"},
+      "expected_rpc": "nav_v2_complete_bounded_task",
+      "expected_edge_action": "bounded_task_complete",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000002", "p_evidence_reference_id": "40000000-0000-4000-8000-000000000001", "p_client_request_id": "30000000-0000-4000-8000-000000000002"}
+    },
+    {
+      "id": "bounded_waiting_external",
+      "task": {"id": "20000000-0000-4000-8000-000000000003", "task_contract_version": 2, "can_set_active_outcome": true},
+      "action": "waiting_external",
+      "input": {"reason_code": "awaiting_document", "review_date": "2026-07-24", "client_request_id": "30000000-0000-4000-8000-000000000003"},
+      "expected_rpc": "nav_v2_set_bounded_task_active_outcome",
+      "expected_edge_action": "bounded_task_active_outcome",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000003", "p_outcome_code": "waiting_external", "p_reason_code": "awaiting_document", "p_review_date": "2026-07-24", "p_client_request_id": "30000000-0000-4000-8000-000000000003"}
+    },
+    {
+      "id": "bounded_deferred",
+      "task": {"id": "20000000-0000-4000-8000-000000000003", "task_contract_version": 2, "can_set_active_outcome": true},
+      "action": "deferred",
+      "input": {"reason_code": "route_changed", "review_date": "2026-08-01", "client_request_id": "30000000-0000-4000-8000-000000000004"},
+      "expected_rpc": "nav_v2_set_bounded_task_active_outcome",
+      "expected_edge_action": "bounded_task_active_outcome",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000003", "p_outcome_code": "deferred", "p_reason_code": "route_changed", "p_review_date": "2026-08-01", "p_client_request_id": "30000000-0000-4000-8000-000000000004"}
+    },
+    {
+      "id": "bounded_propose_not_applicable",
+      "task": {"id": "20000000-0000-4000-8000-000000000004", "task_contract_version": 2, "can_propose_terminal_outcome": true},
+      "action": "propose_not_applicable",
+      "input": {"reason_code": "no_longer_required", "client_request_id": "30000000-0000-4000-8000-000000000005"},
+      "expected_rpc": "nav_v2_propose_bounded_task_terminal_outcome",
+      "expected_edge_action": "bounded_task_terminal_proposal",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000004", "p_outcome_code": "not_applicable", "p_reason_code": "no_longer_required", "p_replacement_task_id": null, "p_client_request_id": "30000000-0000-4000-8000-000000000005"}
+    },
+    {
+      "id": "bounded_propose_replaced",
+      "task": {"id": "20000000-0000-4000-8000-000000000004", "task_contract_version": 2, "can_propose_terminal_outcome": true},
+      "action": "propose_replaced",
+      "input": {"reason_code": "replaced_by_specific_task", "replacement_task_id": "20000000-0000-4000-8000-000000000005", "client_request_id": "30000000-0000-4000-8000-000000000006"},
+      "expected_rpc": "nav_v2_propose_bounded_task_terminal_outcome",
+      "expected_edge_action": "bounded_task_terminal_proposal",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000004", "p_outcome_code": "replaced", "p_reason_code": "replaced_by_specific_task", "p_replacement_task_id": "20000000-0000-4000-8000-000000000005", "p_client_request_id": "30000000-0000-4000-8000-000000000006"}
+    },
+    {
+      "id": "bounded_propose_cancelled",
+      "task": {"id": "20000000-0000-4000-8000-000000000004", "task_contract_version": 2, "can_propose_terminal_outcome": true},
+      "action": "propose_cancelled",
+      "input": {"reason_code": "process_cancelled", "client_request_id": "30000000-0000-4000-8000-000000000007"},
+      "expected_rpc": "nav_v2_propose_bounded_task_terminal_outcome",
+      "expected_edge_action": "bounded_task_terminal_proposal",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000004", "p_outcome_code": "cancelled", "p_reason_code": "process_cancelled", "p_replacement_task_id": null, "p_client_request_id": "30000000-0000-4000-8000-000000000007"}
+    },
+    {
+      "id": "bounded_decision_confirm",
+      "task": {"id": "20000000-0000-4000-8000-000000000006", "task_contract_version": 2, "can_decide_terminal_outcome": true},
+      "action": "decision_confirm",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000008"},
+      "expected_rpc": "nav_v2_decide_bounded_task_terminal_outcome",
+      "expected_edge_action": "bounded_task_terminal_decision",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000006", "p_decision": "confirm", "p_client_request_id": "30000000-0000-4000-8000-000000000008"}
+    },
+    {
+      "id": "bounded_decision_reject",
+      "task": {"id": "20000000-0000-4000-8000-000000000006", "task_contract_version": 2, "can_decide_terminal_outcome": true},
+      "action": "decision_reject",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000009"},
+      "expected_rpc": "nav_v2_decide_bounded_task_terminal_outcome",
+      "expected_edge_action": "bounded_task_terminal_decision",
+      "expected_args": {"p_task_id": "20000000-0000-4000-8000-000000000006", "p_decision": "reject", "p_client_request_id": "30000000-0000-4000-8000-000000000009"}
+    }
+  ],
+  "invalid_cases": [
+    {
+      "id": "router_bounded_reopen",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_start": true},
+      "action": "reopen",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000010"},
+      "expected_stage": "frontend_router"
+    },
+    {
+      "id": "router_missing_evidence",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_complete": true},
+      "action": "complete",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000011"},
+      "expected_stage": "frontend_router"
+    },
+    {
+      "id": "edge_unknown_field",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_start": true},
+      "action": "start",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000012"},
+      "edge_payload_patch": {"client_name": "forbidden"},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_invalid_task_uuid",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_start": true},
+      "action": "start",
+      "input": {"client_request_id": "30000000-0000-4000-8000-000000000013"},
+      "edge_payload_patch": {"task_id": "not-a-uuid"},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_invalid_reason",
+      "task": {"id": "20000000-0000-4000-8000-000000000003", "task_contract_version": 2, "can_set_active_outcome": true},
+      "action": "waiting_external",
+      "input": {"reason_code": "awaiting_document", "review_date": "2026-07-24", "client_request_id": "30000000-0000-4000-8000-000000000014"},
+      "edge_payload_patch": {"reason_code": "route_changed"},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_invalid_calendar_date",
+      "task": {"id": "20000000-0000-4000-8000-000000000003", "task_contract_version": 2, "can_set_active_outcome": true},
+      "action": "waiting_external",
+      "input": {"reason_code": "awaiting_document", "review_date": "2026-07-24", "client_request_id": "30000000-0000-4000-8000-000000000015"},
+      "edge_payload_patch": {"review_date": "2026-02-31"},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_replacement_same_task",
+      "task": {"id": "20000000-0000-4000-8000-000000000004", "task_contract_version": 2, "can_propose_terminal_outcome": true},
+      "action": "propose_replaced",
+      "input": {"reason_code": "replaced_by_specific_task", "replacement_task_id": "20000000-0000-4000-8000-000000000005", "client_request_id": "30000000-0000-4000-8000-000000000016"},
+      "edge_payload_patch": {"replacement_task_id": "20000000-0000-4000-8000-000000000004"},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_contract_version_tampered",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_complete": true},
+      "action": "complete",
+      "input": {"evidence_reference_id": "40000000-0000-4000-8000-000000000001", "client_request_id": "30000000-0000-4000-8000-000000000017"},
+      "edge_payload_patch": {"task_contract_version": 1},
+      "expected_stage": "edge_validation"
+    },
+    {
+      "id": "edge_legacy_action_on_bounded",
+      "task": {"id": "20000000-0000-4000-8000-000000000002", "task_contract_version": 2, "can_complete": true},
+      "action": "complete",
+      "input": {"evidence_reference_id": "40000000-0000-4000-8000-000000000001", "client_request_id": "30000000-0000-4000-8000-000000000018"},
+      "edge_action_override": "legacy_update_task_status",
+      "expected_stage": "edge_validation"
+    }
+  ]
+}
