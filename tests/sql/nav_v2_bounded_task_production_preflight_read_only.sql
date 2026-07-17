@@ -86,6 +86,15 @@ select 1 / case
    and to_regprocedure('public.nav_v2_set_bounded_task_active_outcome(uuid,text,text,date,uuid)') is null
    and to_regprocedure('public.nav_v2_propose_bounded_task_terminal_outcome(uuid,text,text,uuid,uuid)') is null
    and to_regprocedure('public.nav_v2_decide_bounded_task_terminal_outcome(uuid,text,uuid)') is null
+   and to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)') is null
+   and to_regprocedure('public.nav_v2_start_bounded_task(uuid,uuid,uuid)') is null
+   and to_regprocedure('public.nav_v2_complete_bounded_task(uuid,uuid,uuid,uuid)') is null
+   and to_regprocedure('public.nav_v2_set_bounded_task_active_outcome(uuid,text,text,date,uuid,uuid)') is null
+   and to_regprocedure('public.nav_v2_propose_bounded_task_terminal_outcome(uuid,text,text,uuid,uuid,uuid)') is null
+   and to_regprocedure('public.nav_v2_decide_bounded_task_terminal_outcome(uuid,text,uuid,uuid)') is null
+   and to_regprocedure('nav_v2_private.nav_v2_require_verified_actor(uuid)') is null
+   and to_regprocedure('nav_v2_private.nav_v2_assert_actor_replay(uuid,text,uuid)') is null
+   and to_regprocedure('nav_v2_private.nav_v2_actor_claim_restore(text)') is null
   then 1 else 0
 end as assert_no_partial_bounded_deployment;
 
