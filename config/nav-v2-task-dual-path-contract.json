@@ -1,18 +1,17 @@
 {
-  "schema_version": 1,
-  "status": "repository_only_dual_path_gate",
+  "schema_version": 2,
+  "status": "frontend_router_integrated_edge_detached",
   "production_changed": false,
-  "runtime_integrated": false,
+  "frontend_runtime_integrated": true,
+  "edge_runtime_integrated": false,
   "transport_enabled": false,
-  "authoritative_handler_candidate": "assets/js/nav-v2/task-action-router-v2.js",
+  "authoritative_handler": "assets/js/nav-v2/task-action-guard-v2.js",
+  "router": "assets/js/nav-v2/task-action-router-v2.js",
   "edge_action_contract": "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+  "pipeline_rehearsal": "assets/js/nav-v2/task-action-edge-pipeline-v2.js",
   "legacy_path": {
     "rpc": "nav_v2_update_task_status",
-    "actions": [
-      "start",
-      "complete",
-      "reopen"
-    ]
+    "actions": ["start", "complete", "reopen"]
   },
   "bounded_path": {
     "start": "nav_v2_start_bounded_task",
@@ -22,25 +21,32 @@
     "terminal_decision": "nav_v2_decide_bounded_task_terminal_outcome",
     "reopen": "immutable_create_new_audited_task"
   },
-  "runtime_consumers_unchanged": [
-    "assets/js/nav-v2/deal-card-v2.js",
-    "assets/js/nav-v2/task-action-guard-v2.js",
-    "supabase/functions/nav-v2-deal-api/index.ts"
+  "frontend_consumers": ["assets/js/nav-v2/task-action-guard-v2.js"],
+  "renderer_only": ["assets/js/nav-v2/deal-card-v2.js"],
+  "detached_contracts": [
+    "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+    "assets/js/nav-v2/task-action-edge-pipeline-v2.js"
+  ],
+  "closed_blockers": [
+    "authoritative_router_not_integrated",
+    "duplicate_frontend_handlers",
+    "frontend_edge_rpc_parity_missing"
   ],
   "remaining_blockers": [
-    "authoritative_router_not_integrated",
     "edge_actions_not_integrated",
     "authenticated_application_e2e_missing",
     "database_migrations_not_deployed",
-    "frontend_transport_disabled",
+    "minimal_grants_not_deployed",
+    "frontend_bounded_transport_disabled",
     "controlled_pilot_not_approved"
   ],
   "separation_guarantees": {
-    "rpc_called": false,
+    "bounded_rpc_called": false,
     "edge_function_deployed": false,
     "database_changed": false,
     "legacy_rows_changed": false,
     "bounded_rows_changed": false,
-    "routes_or_menu_changed": false
+    "routes_or_menu_changed": false,
+    "deployment_evidence_claimed": false
   }
 }
