@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/nav-v2.css?v=20260701-0830">
+  <title>Navigator v2 task role matrix rehearsal</title>
+</head>
+<body class="nav-v2">
+  <main id="app" class="nav-v2-shell mobile-first-screen-card">
+    <section class="hero">
+      <h1>Task role matrix rehearsal</h1>
+      <p id="scenarioLabel">Synthetic role-scoped DTO. Это не реальная авторизация.</p>
+    </section>
+    <div id="pageStatus" class="status">Выберите действие по задаче.</div>
+
+    <section class="card">
+      <h2>Legacy-задача</h2>
+      <div class="list">
+        <div class="list-item" id="legacyTaskItem">
+          <b>Подтвердить выполнение legacy-задачи</b>
+          <p class="muted">Проверяется точный старый RPC payload и отсутствие competing onclick.</p>
+          <div class="actions">
+            <button id="legacyDone" class="btn green" data-task-status="done" data-task-id="task-role-legacy" type="button">Готово</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Bounded completion</h2>
+      <div class="list">
+        <div class="list-item" id="boundedCompleteItem">
+          <b>Завершить bounded-задачу с evidence</b>
+          <p class="muted">Route разрешается только по DTO permission, но transport остаётся выключенным.</p>
+          <div class="actions">
+            <button id="boundedDone" class="btn green" data-task-action="complete" data-task-id="20000000-0000-4000-8000-000000000002" data-client-request-id="30000000-0000-4000-8000-000000000001" data-evidence-reference-id="40000000-0000-4000-8000-000000000001" type="button">Завершить</button>
+            <button id="boundedReopen" class="btn light" data-task-action="reopen" data-task-id="20000000-0000-4000-8000-000000000002" data-client-request-id="30000000-0000-4000-8000-000000000002" type="button">Открыть снова</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Terminal outcome decision</h2>
+      <div class="list">
+        <div class="list-item" id="boundedDecisionItem">
+          <b>Подтвердить предложенный terminal outcome</b>
+          <p class="muted">Manager/owner/admin permission preview без network mutation.</p>
+          <div class="actions">
+            <button id="boundedDecision" class="btn light" data-task-action="decision_confirm" data-task-id="20000000-0000-4000-8000-000000000003" data-client-request-id="30000000-0000-4000-8000-000000000003" type="button">Подтвердить исход</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const scenario = new URLSearchParams(location.search).get('scenario') || 'unknown';
+    document.getElementById('scenarioLabel').textContent = `Synthetic scenario: ${scenario}. Это не реальная авторизация или RLS-проверка.`;
+    localStorage.setItem('nav_session_v2', JSON.stringify({
+      access_token: 'fixture-access-token',
+      refresh_token: 'fixture-refresh-token',
+      user: { id: `fixture-${scenario}`, email: `${scenario}@example.test` }
+    }));
+    window.__baseTaskHandlerCalls = 0;
+    window.confirm = () => true;
+    document.querySelectorAll('[data-task-id][data-task-status]').forEach((button) => {
+      button.onclick = () => { window.__baseTaskHandlerCalls += 1; };
+    });
+  </script>
+  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260717-01"></script>
+</body>
+</html>
