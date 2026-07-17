@@ -8,11 +8,25 @@ const expectedMockedHttp500 = 'console.error: Failed to load resource: the serve
 
 function permissionPayload(canChange = true, assignedRole = 'spn') {
   return {
-    tasks: [{
-      id: 'task-1',
-      can_change_status: canChange,
-      assigned_role: assignedRole
-    }]
+    tasks: [
+      {
+        id: 'task-1',
+        task_contract_version: null,
+        can_change_status: canChange,
+        assigned_role: assignedRole
+      },
+      {
+        id: '20000000-0000-4000-8000-000000000002',
+        task_contract_version: 2,
+        can_change_status: false,
+        can_start: false,
+        can_complete: true,
+        can_set_active_outcome: false,
+        can_propose_terminal_outcome: false,
+        can_decide_terminal_outcome: false,
+        assigned_role: 'lawyer'
+      }
+    ]
   };
 }
 
@@ -40,13 +54,9 @@ async function routeTaskRpc(page, { canChange = true, assignedRole = 'spn', perm
       await fulfillJson(route, permissionPayload(canChange, assignedRole));
       return;
     }
-    if (url.includes('/rpc/nav_v2_update_task_status')) {
-      mutationCalls.push({ url, body: request.postDataJSON() });
-      if (mutationStatus !== 200) {
-        await fulfillJson(route, { message: 'Сервер временно не сохранил задачу.' }, mutationStatus);
-        return;
-      }
-      await fulfillJson(route, {});
+    mutationCalls.push({ url, body: request.postDataJSON() });
+    if (mutationStatus !== 200) {
+      await fulfillJson(route, { message: 'Сервер временно не сохранил задачу.' }, mutationStatus);
       return;
     }
     await fulfillJson(route, {});
@@ -54,17 +64,18 @@ async function routeTaskRpc(page, { canChange = true, assignedRole = 'spn', perm
   return { permissionCalls, mutationCalls };
 }
 
-async function waitForGuard(page) {
-  await expect(page.locator('#taskDone')).toHaveAttribute('data-task-action-guard', 'ready');
+async function waitForGuard(page, selector = '#taskDone') {
+  await expect(page.locator(selector)).toHaveAttribute('data-task-action-guard', 'ready');
 }
 
-test('cold first click checks permission and performs one task mutation without a repeat click', async ({ page }, testInfo) => {
+test('cold first click checks permission and authoritative handler performs one legacy mutation', async ({ page }, testInfo) => {
   const failures = captureRuntimeFailures(page);
   const calls = await routeTaskRpc(page, { permissionDelay: 220 });
   await openPage(page, fixture);
 
   await page.locator('#taskDone').click();
   await expect.poll(() => calls.mutationCalls.length).toBe(1);
+  expect(calls.mutationCalls[0].url).toContain('/rpc/nav_v2_update_task_status');
   expect(calls.mutationCalls[0].body).toEqual({ p_task_id: 'task-1', p_status: 'done' });
   await expect(page.locator('#pageStatus')).toHaveAttribute('role', 'status');
   await expect(page.locator('#pageStatus')).toHaveAttribute('aria-live', 'polite');
@@ -83,7 +94,7 @@ test('permission denial explains the responsible role and never mutates the task
   await expect(page.locator('#pageStatus')).toHaveAttribute('role', 'alert');
   await expect(page.locator('#pageStatus')).toContainText('юрист');
   await expect(page.locator('#taskDone')).toBeDisabled();
-  await expect(page.locator('[data-task-permission-hint]')).toContainText('ответственному специалисту');
+  await expect(page.locator('#taskItem [data-task-permission-hint]')).toContainText('ответственному специалисту');
   expect(calls.mutationCalls).toHaveLength(0);
   expect(await page.evaluate(() => window.__baseTaskHandlerCalls)).toBe(0);
   await expectNoRuntimeFailures(failures, testInfo, 'task-action-denied');
@@ -104,7 +115,7 @@ test('permission lookup failure is assertive and leaves the task visible', async
   await expectNoRuntimeFailures(unexpectedFailures, testInfo, 'task-action-permission-error');
 });
 
-test('task mutation error restores controls and keeps the exact existing payload', async ({ page }, testInfo) => {
+test('legacy mutation error restores controls and keeps the exact existing payload', async ({ page }, testInfo) => {
   const failures = captureRuntimeFailures(page);
   const calls = await routeTaskRpc(page, { mutationStatus: 400 });
   await openPage(page, fixture);
@@ -112,6 +123,7 @@ test('task mutation error restores controls and keeps the exact existing payload
 
   await page.locator('#taskProgress').click();
   await expect.poll(() => calls.mutationCalls.length).toBe(1);
+  expect(calls.mutationCalls[0].url).toContain('/rpc/nav_v2_update_task_status');
   expect(calls.mutationCalls[0].body).toEqual({ p_task_id: 'task-1', p_status: 'in_progress' });
   await expect(page.locator('#pageStatus')).toHaveAttribute('role', 'alert');
   await expect(page.locator('#pageStatus')).toHaveAttribute('aria-busy', 'false');
@@ -123,7 +135,7 @@ test('task mutation error restores controls and keeps the exact existing payload
   await expectNoRuntimeFailures(unexpectedFailures, testInfo, 'task-action-mutation-error');
 });
 
-test('completion and reopen use the same existing RPC without duplicate handlers', async ({ page }, testInfo) => {
+test('legacy completion and reopen use the same RPC while base onclick stays dormant', async ({ page }, testInfo) => {
   const failures = captureRuntimeFailures(page);
   const calls = await routeTaskRpc(page);
   await openPage(page, fixture);
@@ -142,4 +154,18 @@ test('completion and reopen use the same existing RPC without duplicate handlers
   ]);
   expect(await page.evaluate(() => window.__baseTaskHandlerCalls)).toBe(0);
   await expectNoRuntimeFailures(failures, testInfo, 'task-action-reopen');
+});
+
+test('bounded completion is routed by authoritative handler but transport remains disabled', async ({ page }, testInfo) => {
+  const failures = captureRuntimeFailures(page);
+  const calls = await routeTaskRpc(page);
+  await openPage(page, fixture);
+  await waitForGuard(page, '#boundedDone');
+
+  await page.locator('#boundedDone').click();
+  await expect(page.locator('#pageStatus')).toContainText('сохранение ещё не включено');
+  expect(calls.mutationCalls).toHaveLength(0);
+  expect(await page.evaluate(() => window.__baseTaskHandlerCalls)).toBe(0);
+  await expect(page.locator('#boundedReopen')).toBeDisabled();
+  await expectNoRuntimeFailures(failures, testInfo, 'task-action-bounded-transport-disabled');
 });
