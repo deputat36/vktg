@@ -4,7 +4,7 @@
 
 - Дата: 17 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `bd7b0ca3365dbd2ec4b7cf04e409ec4ab1075556` — squash merge PR #392.
+- Production `main`: `8070f911a751855bf68e78c603e1d75c513f1817` — squash merge PR #398.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
@@ -54,6 +54,9 @@ Navigator не является CRM, файловым архивом, банко
 - `docs/NAV_V2_TASK_ROLE_MATRIX_REHEARSAL_2026-07-17.md` — cost-free mocked role matrix.
 - `docs/NAV_V2_AUTH_E2E_READINESS_2026-07-17.md` — authenticated E2E roles/environment/evidence package.
 - `docs/NAV_V2_AUTH_E2E_TARGET_RUNBOOK.md` — реальный cloud run только после approval.
+- `docs/NAV_V2_SPN_INTAKE_AUDIT_2026-07-17.md` — ролевой аудит текущего добавления сделки и карта `вопрос → проблема → новое решение → влияние на юриста`.
+- `docs/NAV_V2_SPN_INTAKE_DESIGN_2026-07-17.md` — трёхэтапный путь, legal passport v1, gates, side-aware documents/tasks и backward compatibility.
+- `config/nav-v2-intake-contract-v1.json` — versioned source contract вопросов, триггеров, рисков, документов, владельцев и ожидаемых решений.
 
 ## Live production baseline
 
@@ -69,6 +72,15 @@ Navigator не является CRM, файловым архивом, банко
 - canonical governed RPC отсутствуют;
 - actor-aware overloads/helpers отсутствуют;
 - production consultation и corporate-document сущностей нет.
+
+Дополнительный read-only срез новой анкеты 17 июля 2026 года:
+
+- 24 участника, 198 документов, 53 риска, 98 задач, 122 события и 3 review;
+- у 22 из 23 сделок нет структурированного `clientNextStep`;
+- у 23 из 23 нет нового финального комментария СПН;
+- у 17 сделок с `lawyer_needed=true` нет структурированного вопроса/контекста риска;
+- в buyer-only карточке обнаружены 9 seller-side документов, что подтверждает необходимость side-aware плана;
+- production server broker scope уже ограничен ипотекой; frontend repository-only contract закрепляет то же правило.
 
 Не использовать сырые показатели для оценки сотрудников: присутствуют тестовые, учебные и исторические записи.
 
@@ -200,6 +212,54 @@ Merge: `607918f748367c933706cc0975adad865f0dd25f`.
 
 Merge: `bd7b0ca3365dbd2ec4b7cf04e409ec4ab1075556`.
 
+### PR #394 — безопасное восстановление результата сохранения
+
+После неопределённого save мастер больше не ищет созданную сделку только по типу объекта. Recovery требует серверного признака текущего автора и точного контекста; для legacy DTO используется ещё более строгий fallback. Duplicate/idempotency guards сохранены.
+
+Merge: `22c9e342`.
+
+### PR #395 — аудит и intake contract v1
+
+- ролевой аудит и карта текущих вопросов;
+- ровно три верхнеуровневых этапа;
+- четыре состояния факта и отдельный evidence source;
+- versioned каталог юридических триггеров;
+- legal passport v1 и gates `save_draft / form_card / handoff_lawyer`;
+- 22 semantic business fixtures;
+- mortgage-only broker scope.
+
+Merge: `a73f924`.
+
+### PR #396 — detached трёхэтапный prototype
+
+- отдельный zero-mutation presentation layer;
+- одна primary action, local autosave/reload recovery;
+- preview паспорта, документов, рисков и handoff;
+- desktop/mobile Playwright;
+- страница: https://deputat36.github.io/vktg/spn-intake-prototype-v2.html
+
+Merge: `09a8c395`.
+
+### PR #397 — lawyer-first legal passport
+
+Для роли lawyer legal passport v1 показан перед legacy-профилем: запрос, решение, срок, факты по evidence, неизвестное, риски, документы, расчёты, следующий шаг и СПН по сторонам. Старые сделки получают честный read-only fallback; решения переиспользуют существующий legal lifecycle.
+
+Merge: `773d66a3`.
+
+### PR #398 — side-aware documents и конкретные tasks
+
+- документы строятся только из matched rules и для сопровождаемой стороны;
+- partner side не угадывается, неуместные документы остаются в `skipped_documents`;
+- object/deal документы допустимы только по explicit rule;
+- task candidate содержит owner, action, deadline rule, evidence, expected result и gate impact;
+- без owner id задача не попадает в `ready_tasks`;
+- ипотека+маткапитал разделяются между broker и lawyer;
+- 7 work-plan fixtures и desktop/mobile browser regression.
+
+Merge: `8070f911`.
+
+Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#398 не менялись. Новые mutation routes отсутствуют.
+
 ## Текущий task runtime
 
 ### Legacy rows
@@ -232,40 +292,37 @@ Merge: `bd7b0ca3365dbd2ec4b7cf04e409ec4ab1075556`.
 
 ## Следующий безопасный slice
 
-Техническая repository preparation для authenticated E2E завершена.
+Repository-only прототип этапа 3 завершён. Следующий допустимый шаг — не прямой production deploy, а отдельный SQL integration prototype с PostgreSQL 17 harness.
 
-Без owner/cost approval разрешены только:
+Без production approval можно:
 
-1. поддержка contracts/checkers при изменении кода;
-2. read-only production structural preflight;
-3. исправление обычных legacy runtime bugs, не связанных с bounded deployment;
-4. обновление документации/handoff;
-5. security review repository artifacts без production changes.
+1. подготовить repository-only adapter входа `wizard_snapshot.deal.legal_passport` и `work_plan` к существующему save contract;
+2. доказать в PG17, что frontend/server используют одну версию каталога и одинаковый broker scope;
+3. проверить side-aware document rows и task completion contract без записи в production;
+4. сохранить legacy payload, idempotency/request ID и exact recovery;
+5. подготовить migration/rollback plan без файла в `supabase/migrations`;
+6. продолжать read-only production preflight и обычные legacy bugfixes.
 
 Запрещено автоматически:
 
-- создавать Supabase branch;
-- создавать technical Auth users;
-- применять bounded/actor-aware SQL;
-- создавать production migration PR;
-- менять production grants/RLS/Auth;
-- импортировать identity handler в deployed Edge runtime;
-- deploy Edge Function;
-- включать bounded frontend transport;
-- запускать controlled pilot.
+- подключать detached prototype к production save RPC;
+- добавлять migration в production chain;
+- применять SQL, RLS, grants или массовый backfill;
+- создавать Supabase branch или technical Auth users;
+- импортировать новый bounded transport или deploy Edge Function;
+- превращать task candidates без owner id в реальные задачи;
+- создавать документы несопровождаемой стороны;
+- считать маршрутизацию юридическим заключением.
 
-Следующая последовательность после отдельного approval:
+После отдельного deployment approval последовательность должна быть такой:
 
-1. получить свежую стоимость и explicit cost confirmation;
-2. создать disposable non-production branch не более чем на 6 часов;
-3. применить approved migration package;
-4. создать только synthetic accounts/data;
-5. deploy approved Edge candidate;
-6. выполнить authenticated role/identity matrix;
-7. сохранить evidence;
-8. немедленно удалить branch/accounts;
-9. подтвердить cleanup;
-10. отдельно решить production migration, Edge deploy и pilot.
+1. утвердить exact JSON/server contract и catalog version;
+2. прогнать PG17 apply/smoke/rollback и legacy fixtures;
+3. проверить authenticated role matrix только в разрешённой изоляции;
+4. выпустить feature-flagged integration PR;
+5. пилотировать на новых synthetic/approved кейсах без backfill;
+6. подтвердить idempotency, side-aware rows, lawyer passport и audit evidence;
+7. отдельно принять решение о production rollout.
 
 ## Ручные ограничения
 
@@ -313,8 +370,13 @@ Merge: `bd7b0ca3365dbd2ec4b7cf04e409ec4ab1075556`.
 - actor-aware SQL lifecycle;
 - Edge↔SQL parameter parity;
 - authenticated E2E readiness package;
+- ролевой intake-аудит и трёхэтапный UX;
+- intake contract v1, 22 business fixtures и mortgage-only broker scope;
+- detached intake prototype, reload recovery и zero-mutation browser suite;
+- lawyer-first passport v1 и честный legacy fallback;
+- side-aware document/task work plan и owner gate;
 - production cleanup без owner decision.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #392. Не создавай Supabase branch и не применяй SQL без explicit cost/owner approval. Если approval отсутствует, работай только над безопасными legacy bugs, repository security/QA, read-only production preflight и актуализацией contracts/handoff.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #398. Следующий slice — repository-only save/SQL adapter и PostgreSQL 17 harness для intake contract v1. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
