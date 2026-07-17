@@ -1,6 +1,17 @@
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+const ACTIVE_REASONS = Object.freeze({
+  waiting_external: Object.freeze(['awaiting_counterparty', 'awaiting_bank', 'awaiting_document']),
+  deferred: Object.freeze(['postponed_by_client', 'route_changed'])
+});
+
+const TERMINAL_REASONS = Object.freeze({
+  not_applicable: Object.freeze(['no_longer_required', 'route_changed']),
+  replaced: Object.freeze(['replaced_by_specific_task', 'duplicate_work_item']),
+  cancelled: Object.freeze(['process_cancelled', 'route_changed'])
+});
+
 const ACTIONS = Object.freeze({
   legacy_update_task_status: {
     rpc: 'nav_v2_update_task_status',
@@ -9,25 +20,25 @@ const ACTIONS = Object.freeze({
   },
   bounded_task_start: {
     rpc: 'nav_v2_start_bounded_task',
-    required: ['task_id', 'client_request_id']
+    required: ['task_id', 'client_request_id', 'task_contract_version']
   },
   bounded_task_complete: {
     rpc: 'nav_v2_complete_bounded_task',
-    required: ['task_id', 'evidence_reference_id', 'client_request_id']
+    required: ['task_id', 'evidence_reference_id', 'client_request_id', 'task_contract_version']
   },
   bounded_task_active_outcome: {
     rpc: 'nav_v2_set_bounded_task_active_outcome',
-    required: ['task_id', 'outcome_code', 'reason_code', 'review_date', 'client_request_id'],
+    required: ['task_id', 'outcome_code', 'reason_code', 'review_date', 'client_request_id', 'task_contract_version'],
     enums: { outcome_code: ['waiting_external', 'deferred'] }
   },
   bounded_task_terminal_proposal: {
     rpc: 'nav_v2_propose_bounded_task_terminal_outcome',
-    required: ['task_id', 'outcome_code', 'reason_code', 'client_request_id'],
+    required: ['task_id', 'outcome_code', 'reason_code', 'client_request_id', 'task_contract_version'],
     enums: { outcome_code: ['not_applicable', 'replaced', 'cancelled'] }
   },
   bounded_task_terminal_decision: {
     rpc: 'nav_v2_decide_bounded_task_terminal_outcome',
-    required: ['task_id', 'decision', 'client_request_id'],
+    required: ['task_id', 'decision', 'client_request_id', 'task_contract_version'],
     enums: { decision: ['confirm', 'reject'] }
   }
 });
@@ -41,6 +52,35 @@ const UUID_FIELDS = new Set([
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function requiredMissing(source, key) {
+  if (key === 'task_contract_version') {
+    return source[key] === null || source[key] === undefined || source[key] === '';
+  }
+  return source[key] === null || source[key] === undefined || clean(source[key]) === '';
+}
+
+function validCalendarDate(value) {
+  if (!DATE_RE.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+function validateReason(action, normalized, errors) {
+  if (action === 'bounded_task_active_outcome') {
+    if (!ACTIVE_REASONS[normalized.outcome_code]?.includes(normalized.reason_code)) {
+      errors.push('reason_code не разрешён для active outcome.');
+    }
+  }
+  if (action === 'bounded_task_terminal_proposal') {
+    if (!TERMINAL_REASONS[normalized.outcome_code]?.includes(normalized.reason_code)) {
+      errors.push('reason_code не разрешён для terminal outcome.');
+    }
+  }
 }
 
 export function validateTaskEdgeAction(action, payload = {}) {
@@ -70,9 +110,7 @@ export function validateTaskEdgeAction(action, payload = {}) {
   if (unknown.length) errors.push(`Неизвестные поля: ${unknown.join(', ')}.`);
 
   for (const key of contract.required) {
-    if (source[key] === null || source[key] === undefined || clean(source[key]) === '') {
-      errors.push(`Поле ${key} обязательно.`);
-    }
+    if (requiredMissing(source, key)) errors.push(`Поле ${key} обязательно.`);
   }
 
   const normalized = {};
@@ -93,9 +131,11 @@ export function validateTaskEdgeAction(action, payload = {}) {
     if (!values.includes(normalized[key])) errors.push(`${key} имеет недопустимое значение.`);
   }
 
-  if ('review_date' in normalized && normalized.review_date && !DATE_RE.test(normalized.review_date)) {
-    errors.push('review_date должен быть YYYY-MM-DD.');
+  if ('review_date' in normalized && normalized.review_date && !validCalendarDate(normalized.review_date)) {
+    errors.push('review_date должен быть реальной датой YYYY-MM-DD.');
   }
+
+  validateReason(action, normalized, errors);
 
   if (action === 'bounded_task_terminal_proposal') {
     if (normalized.outcome_code === 'replaced' && !normalized.replacement_task_id) {
@@ -109,8 +149,11 @@ export function validateTaskEdgeAction(action, payload = {}) {
     }
   }
 
-  if (action === 'legacy_update_task_status' && source.task_contract_version === 2) {
+  if (action === 'legacy_update_task_status' && Number(source.task_contract_version) === 2) {
     errors.push('Legacy action запрещён для contract-v2 задачи.');
+  }
+  if (action.startsWith('bounded_') && normalized.task_contract_version !== 2) {
+    errors.push('Governed action разрешён только для contract-v2 задачи.');
   }
 
   return {
@@ -125,3 +168,7 @@ export function validateTaskEdgeAction(action, payload = {}) {
 }
 
 export const TASK_EDGE_ACTION_CONTRACT = ACTIONS;
+export const TASK_EDGE_REASON_CONTRACT = Object.freeze({
+  active: ACTIVE_REASONS,
+  terminal: TERMINAL_REASONS
+});
