@@ -14,7 +14,7 @@ UI_PREVIEW = ROOT / 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
 ROUTER = ROOT / 'assets/js/nav-v2/task-action-router-v2.js'
 EDGE_CONTRACT = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
 DUAL_E2E = ROOT / 'tests/e2e/task-action-dual-path.spec.js'
-LEGACY_E2E = ROOT / 'tests/e2e/task-action-feedback.spec.js'
+RUNTIME_E2E = ROOT / 'tests/e2e/task-action-feedback.spec.js'
 RPC_SURFACE = ROOT / 'config/nav-v2-rpc-surface.json'
 DOC = ROOT / 'docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md'
 WORKFLOW = ROOT / '.github/workflows/nav-v2-task-rpc-consumer-matrix.yml'
@@ -40,7 +40,7 @@ def occurrence_paths(needle: str) -> set[str]:
 
 def main() -> int:
     errors: list[str] = []
-    paths = (MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, UI_PREVIEW, ROUTER, EDGE_CONTRACT, DUAL_E2E, LEGACY_E2E, RPC_SURFACE, DOC, WORKFLOW)
+    paths = (MATRIX, DEAL_CARD, GUARD, EDGE, LITE_BOUNDED, UI_PREVIEW, ROUTER, EDGE_CONTRACT, DUAL_E2E, RUNTIME_E2E, RPC_SURFACE, DOC, WORKFLOW)
     for path in paths:
         if not path.exists():
             errors.append(f'missing {path.relative_to(ROOT)}')
@@ -57,40 +57,47 @@ def main() -> int:
     router = ROUTER.read_text(encoding='utf-8')
     edge_contract = EDGE_CONTRACT.read_text(encoding='utf-8')
     dual_e2e = DUAL_E2E.read_text(encoding='utf-8')
-    legacy_e2e = LEGACY_E2E.read_text(encoding='utf-8')
+    runtime_e2e = RUNTIME_E2E.read_text(encoding='utf-8')
     rpc_surface = RPC_SURFACE.read_text(encoding='utf-8')
     doc = DOC.read_text(encoding='utf-8')
     workflow = WORKFLOW.read_text(encoding='utf-8')
 
-    if matrix.get('schema_version') != 2:
-        errors.append('consumer matrix must use schema version 2')
-    if matrix.get('status') != 'repository_only_deployment_gate':
+    if matrix.get('schema_version') != 3:
+        errors.append('consumer matrix must use schema version 3')
+    if matrix.get('status') != 'frontend_authoritative_integrated_transport_disabled':
         errors.append('consumer matrix status drifted')
-    if matrix.get('production_changed') is not False or matrix.get('deployment_ready') is not False:
-        errors.append('consumer matrix must remain non-production and deployment-blocking')
+    if matrix.get('frontend_runtime_changed') is not True:
+        errors.append('frontend runtime integration must be explicit')
+    if matrix.get('production_database_changed') is not False or matrix.get('deployment_ready') is not False:
+        errors.append('database must remain unchanged and deployment must remain blocked')
 
     legacy = matrix.get('legacy_rpcs') or {}
     update = legacy.get('nav_v2_update_task_status') or {}
     add = legacy.get('nav_v2_add_task') or {}
     expected_active = {item['path'] for item in update.get('active_runtime_consumers') or []}
     required_active = {
-        DEAL_CARD.relative_to(ROOT).as_posix(),
         GUARD.relative_to(ROOT).as_posix(),
         EDGE.relative_to(ROOT).as_posix(),
     }
     if expected_active != required_active:
         errors.append(f'active runtime consumer inventory drifted: {sorted(expected_active)}')
 
-    detached_preview_paths = {
+    dormant = {item['path'] for item in update.get('dormant_source_handlers') or []}
+    required_dormant = {DEAL_CARD.relative_to(ROOT).as_posix()}
+    if dormant != required_dormant:
+        errors.append(f'dormant source inventory drifted: {sorted(dormant)}')
+
+    literal_occurrences = {
+        DEAL_CARD.relative_to(ROOT).as_posix(),
+        EDGE.relative_to(ROOT).as_posix(),
         UI_PREVIEW.relative_to(ROOT).as_posix(),
         ROUTER.relative_to(ROOT).as_posix(),
         EDGE_CONTRACT.relative_to(ROOT).as_posix(),
     }
     actual_update = occurrence_paths('nav_v2_update_task_status')
-    expected_occurrences = required_active | detached_preview_paths
-    if actual_update != expected_occurrences:
+    if actual_update != literal_occurrences:
         errors.append(
-            f'update_task_status occurrence drift: actual={sorted(actual_update)}, expected={sorted(expected_occurrences)}'
+            f'update_task_status occurrence drift: actual={sorted(actual_update)}, expected={sorted(literal_occurrences)}'
         )
 
     if occurrence_paths('nav_v2_add_task'):
@@ -107,10 +114,15 @@ def main() -> int:
         'data-task-status="open"',
     ), DEAL_CARD.name, errors)
     require(guard, (
+        "import { taskActionControlModel, taskActionRoutePreview } from './task-action-router-v2.js?v=20260716-01';",
         "rpc('nav_v2_get_deal_card_lite'",
-        "rpc('nav_v2_update_task_status'",
+        'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
+        'const BOUNDED_TRANSPORT_ENABLED = false;',
         'event.stopImmediatePropagation()',
-        'can_change_status',
+        "app.addEventListener('click', handleTaskAction, true)",
+        'button.onclick = null',
+        'data-task-status',
+        'data-task-action',
     ), GUARD.name, errors)
     require(edge, (
         '| "update_task_status"',
@@ -118,7 +130,7 @@ def main() -> int:
         'return await callUserRpc(req, "nav_v2_update_task_status"',
     ), EDGE.name, errors)
 
-    for field in (matrix.get('lite_dto') or {}).get('required_fields_present') or []:
+    for field in (matrix.get('lite_dto') or {}).get('required_fields_present_in_prototype') or []:
         if f"'{field}'" not in lite:
             errors.append(f'bounded lite DTO field missing: {field}')
 
@@ -131,7 +143,6 @@ def main() -> int:
         'taskActionRoutePreview',
         'taskActionControlModel',
         'duplicate_handler_allowed: false',
-        'runtime_integrated: false',
         'transport_enabled: false',
         'Завершённая bounded-задача неизменяема',
     ), ROUTER.name, errors)
@@ -144,9 +155,10 @@ def main() -> int:
         'transport_enabled: false',
     ), EDGE_CONTRACT.name, errors)
 
-    for runtime_text, label in ((deal_card, DEAL_CARD.name), (guard, GUARD.name), (edge, EDGE.name)):
-        if 'task-action-router-v2.js' in runtime_text or 'task-action-contract-v2.js' in runtime_text:
-            errors.append(f'detached dual-path artifact was integrated prematurely: {label}')
+    if 'task-action-router-v2.js' in deal_card or 'task-action-contract-v2.js' in deal_card:
+        errors.append('deal-card base must not become an additional authoritative router consumer')
+    if 'task-action-contract-v2.js' in guard or 'task-action-router-v2.js' in edge:
+        errors.append('Edge contract must stay detached until database deployment')
 
     require(dual_e2e, (
         'legacy and bounded actions select exactly one transport-free route',
@@ -154,10 +166,13 @@ def main() -> int:
         'networkCalls',
         'toEqual([])',
     ), DUAL_E2E.name, errors)
-    require(legacy_e2e, (
-        "url.includes('/rpc/nav_v2_update_task_status')",
-        'completion and reopen use the same existing RPC',
-    ), LEGACY_E2E.name, errors)
+    require(runtime_e2e, (
+        'authoritative handler performs one legacy mutation',
+        'base onclick stays dormant',
+        'bounded completion is routed by authoritative handler but transport remains disabled',
+        '__baseTaskHandlerCalls',
+        'calls.mutationCalls).toHaveLength(0)',
+    ), RUNTIME_E2E.name, errors)
 
     closed = set(matrix.get('closed_blockers') or [])
     for blocker in (
@@ -166,19 +181,20 @@ def main() -> int:
         'reopen_semantics_undefined',
         'governed_action_validation_missing',
         'dual_path_browser_contract_missing',
+        'authoritative_handler_not_integrated',
+        'duplicate_handler_execution_risk',
     ):
         if blocker not in closed:
             errors.append(f'closed blocker missing: {blocker}')
 
     remaining = set(matrix.get('remaining_blockers') or [])
     for blocker in (
-        'authoritative_handler_not_integrated',
-        'duplicate_runtime_handlers',
+        'dormant_base_handler_source_not_removed',
         'edge_actions_not_integrated',
         'database_migrations_not_deployed',
         'minimal_grants_not_deployed',
         'authenticated_application_e2e_missing',
-        'frontend_transport_disabled',
+        'frontend_bounded_transport_disabled',
         'controlled_pilot_not_approved',
     ):
         if blocker not in remaining:
@@ -187,18 +203,16 @@ def main() -> int:
     require(rpc_surface, ('"nav_v2_add_task"', '"nav_v2_update_task_status"'), RPC_SURFACE.name, errors)
     guarantees = matrix.get('separation_guarantees') or {}
     if any(value is not False for value in guarantees.values()):
-        errors.append('all consumer matrix separation guarantees must remain false')
+        errors.append('all separation guarantees must remain false')
 
     require(doc, (
-        'repository-only deployment gate v2',
-        'PR #371',
-        'PR #372',
-        'PR #373',
-        'PR #374',
-        'PR #375',
+        'frontend authoritative integration gate v3',
+        'PR #377',
+        'Authoritative runtime handler',
+        'Dormant base source',
+        'Bounded transport выключен',
         'Закрытые blockers',
         'Оставшиеся blockers',
-        'authoritative handler',
         'Production gate',
         'Rollback',
     ), DOC.name, errors)
@@ -210,6 +224,7 @@ def main() -> int:
         'task-action-router-v2.js',
         'task-action-contract-v2.js',
         'nav_v2_get_deal_card_lite_bounded_tasks.sql',
+        'task-action-feedback.spec.js',
         'task-action-dual-path.spec.js',
     ), WORKFLOW.name, errors)
 
@@ -219,7 +234,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v2 passed: DTO/evidence/reopen/validation blockers are closed, active runtime consumers remain explicit, detached previews are accounted for, and deployment stays blocked on integration/E2E/deploy/pilot')
+    print('Navigator v2 task RPC consumer matrix v3 passed: capture handler owns runtime task clicks, legacy mutation stays compatible, bounded transport is disabled, dormant base source is explicit and database deployment remains blocked')
     return 0
 
 
