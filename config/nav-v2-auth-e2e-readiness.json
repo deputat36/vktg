@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_e2e_readiness_package",
+  "production_applied": false,
+  "supabase_branch_created": false,
+  "cloud_execution_allowed": false,
+  "cost_approval_confirmed": false,
+  "authenticated_e2e_proven": false,
+  "deployment_ready": false,
+  "cost_gate_issue": 282,
+  "environment_name": "navigator-e2e",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "historical_cost_snapshot": {
+    "checked_at": "2026-07-14",
+    "amount_usd_per_hour": 0.01344,
+    "stale_for_execution": true,
+    "must_recheck_before_branch_creation": true
+  },
+  "required_roles": [
+    "admin",
+    "manager",
+    "spn",
+    "lawyer",
+    "broker",
+    "viewer"
+  ],
+  "optional_roles": ["owner"],
+  "required_environment_variables": [
+    "NAV_E2E_SUPABASE_URL",
+    "NAV_E2E_SUPABASE_PROJECT_REF",
+    "NAV_E2E_SPN_ALLOWED_DEAL_ID",
+    "NAV_E2E_SPN_FORBIDDEN_DEAL_ID"
+  ],
+  "required_environment_secrets": [
+    "NAV_E2E_SUPABASE_PUBLISHABLE_KEY",
+    "NAV_E2E_ADMIN_EMAIL",
+    "NAV_E2E_ADMIN_PASSWORD",
+    "NAV_E2E_MANAGER_EMAIL",
+    "NAV_E2E_MANAGER_PASSWORD",
+    "NAV_E2E_SPN_EMAIL",
+    "NAV_E2E_SPN_PASSWORD",
+    "NAV_E2E_LAWYER_EMAIL",
+    "NAV_E2E_LAWYER_PASSWORD",
+    "NAV_E2E_BROKER_EMAIL",
+    "NAV_E2E_BROKER_PASSWORD",
+    "NAV_E2E_VIEWER_EMAIL",
+    "NAV_E2E_VIEWER_PASSWORD"
+  ],
+  "forbidden_environment_secrets": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "NAV_E2E_SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_DB_PASSWORD",
+    "SUPABASE_ACCESS_TOKEN",
+    "NAV_E2E_ACCESS_TOKEN",
+    "NAV_E2E_REFRESH_TOKEN"
+  ],
+  "technical_identity_policy": {
+    "email_prefix": "nav-e2e",
+    "full_name_prefix": "[NAV E2E]",
+    "real_employee_credentials_allowed": false,
+    "owner_account_requires_separate_opt_in": true,
+    "spn_requires_synthetic_manager": true
+  },
+  "synthetic_data_policy": {
+    "production_data_copy_allowed": false,
+    "real_client_data_allowed": false,
+    "real_address_allowed": false,
+    "real_document_allowed": false,
+    "minimum_deals": 2,
+    "allowed_deal_required": true,
+    "forbidden_deal_required": true,
+    "legacy_task_required": true,
+    "bounded_tasks_required": true,
+    "document_evidence_required": true,
+    "terminal_outcome_required": true,
+    "broker_mortgage_only_case_required": true,
+    "matcap_without_mortgage_must_exclude_broker": true
+  },
+  "identity_chain": {
+    "bearer_user_verified": true,
+    "client_actor_fields_forbidden": ["actor_id", "p_actor_id", "user_id", "p_user_id"],
+    "edge_verified_actor_equals_auth_user": true,
+    "sql_actor_argument": "p_actor_id",
+    "task_actor_fields_match_verified_actor": true,
+    "audit_actor_matches_verified_actor": true,
+    "one_client_request_one_event": true,
+    "cross_actor_replay_rejected": true
+  },
+  "repository_proofs": {
+    "bounded_database_readiness": "PR #384",
+    "identity_conflict_and_candidate": "PR #387",
+    "actor_aware_sql_lifecycle": "PR #389",
+    "migration_storyboard_v2": "PR #390",
+    "edge_sql_parameter_parity": "PR #391"
+  },
+  "mandatory_evidence": [
+    "cost snapshot and explicit approval",
+    "non-production project reference",
+    "synthetic fixture manifest",
+    "role-by-role result",
+    "identity-chain result for each successful mutation",
+    "negative authorization result",
+    "browser traces/screenshots/videos on failure",
+    "workflow run URL",
+    "branch creation and deletion timestamps",
+    "final branch-list cleanup proof"
+  ],
+  "stop_conditions": [
+    "cost not rechecked",
+    "explicit cost approval absent",
+    "project reference equals production",
+    "production data copy detected",
+    "required role missing",
+    "required variable or secret missing",
+    "forbidden secret present",
+    "technical identity prefix mismatch",
+    "actor identity chain mismatch",
+    "service-role key exposed to browser workflow",
+    "branch lifetime reaches six hours",
+    "cleanup cannot be verified"
+  ],
+  "cleanup_acceptance": {
+    "branch_deleted": true,
+    "technical_auth_users_remaining": 0,
+    "active_technical_profiles_remaining": 0,
+    "open_p0_if_cleanup_fails": true
+  },
+  "remaining_blockers": [
+    "fresh_cost_snapshot_missing",
+    "explicit_cost_approval_missing",
+    "disposable_branch_missing",
+    "technical_accounts_missing",
+    "github_environment_not_proven",
+    "production_database_migration_not_approved",
+    "edge_function_not_deployed",
+    "authenticated_role_matrix_not_run",
+    "cleanup_evidence_missing"
+  ]
+}
