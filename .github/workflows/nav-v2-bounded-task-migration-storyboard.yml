@@ -1,0 +1,161 @@
+name: Navigator v2 bounded task migration storyboard
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-bounded-task-migration-storyboard.json'
+      - 'config/nav-v2-bounded-task-production-preflight-attestation.json'
+      - 'fixtures/nav-v2-bounded-task-migration-object-diff.json'
+      - 'tests/sql/nav_v2_bounded_task_production_preflight_read_only.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
+      - 'config/nav-v2-bounded-task-deployment-readiness.json'
+      - 'scripts/check_nav_v2_bounded_task_migration_storyboard.py'
+      - 'docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md'
+      - 'supabase/migrations/**'
+      - '.github/workflows/nav-v2-bounded-task-migration-storyboard.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-bounded-task-migration-storyboard.json'
+      - 'config/nav-v2-bounded-task-production-preflight-attestation.json'
+      - 'fixtures/nav-v2-bounded-task-migration-object-diff.json'
+      - 'tests/sql/nav_v2_bounded_task_production_preflight_read_only.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_contract.sql'
+      - 'supabase/prototypes/nav_v2_bounded_task_mutations.sql'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
+      - 'config/nav-v2-bounded-task-deployment-readiness.json'
+      - 'scripts/check_nav_v2_bounded_task_migration_storyboard.py'
+      - 'docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md'
+      - 'supabase/migrations/**'
+      - '.github/workflows/nav-v2-bounded-task-migration-storyboard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storyboard-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject accidental production migration artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            base_ref="origin/${{ github.base_ref }}"
+          else
+            base_ref="HEAD^"
+          fi
+          changed="$(git diff --name-only "$base_ref...HEAD" -- 'supabase/migrations/' || true)"
+          if [ -n "$changed" ]; then
+            echo 'Storyboard PR must not add or modify files under supabase/migrations:'
+            echo "$changed"
+            exit 1
+          fi
+      - name: Validate storyboard source contract
+        run: python3 scripts/check_nav_v2_bounded_task_migration_storyboard.py
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_bounded_task_migration_storyboard.py
+
+  read-only-preflight:
+    needs: storyboard-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_bounded_storyboard
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_bounded_storyboard"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_bounded_storyboard
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Create production-like legacy environment
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_deal_card_lite_bounded_setup.sql
+      - name: Capture structural snapshot before preflight
+        shell: bash
+        run: |
+          psql -X -A -t -c "
+            select json_build_object(
+              'columns', (select array_agg(column_name order by ordinal_position) from information_schema.columns where table_schema='public' and table_name='nav_deal_tasks_v2'),
+              'constraints', (select array_agg(conname order by conname) from pg_constraint where conrelid='public.nav_deal_tasks_v2'::regclass),
+              'tasks', (select count(*) from public.nav_deal_tasks_v2),
+              'deals', (select count(*) from public.nav_deals_v2),
+              'bounded_table', to_regclass('public.nav_deal_task_mutation_events_v2'),
+              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)')
+            )::text;
+          " > preflight-before.json
+      - name: Run structural preflight in read-only transaction
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -X -v ON_ERROR_STOP=1 2>&1 <<'SQL' | tee bounded-migration-preflight.log
+          BEGIN TRANSACTION READ ONLY;
+          \i tests/sql/nav_v2_bounded_task_production_preflight_read_only.sql
+          ROLLBACK;
+          SQL
+      - name: Capture structural snapshot after preflight
+        shell: bash
+        run: |
+          psql -X -A -t -c "
+            select json_build_object(
+              'columns', (select array_agg(column_name order by ordinal_position) from information_schema.columns where table_schema='public' and table_name='nav_deal_tasks_v2'),
+              'constraints', (select array_agg(conname order by conname) from pg_constraint where conrelid='public.nav_deal_tasks_v2'::regclass),
+              'tasks', (select count(*) from public.nav_deal_tasks_v2),
+              'deals', (select count(*) from public.nav_deals_v2),
+              'bounded_table', to_regclass('public.nav_deal_task_mutation_events_v2'),
+              'bounded_create', to_regprocedure('public.nav_v2_create_bounded_tasks(uuid,jsonb,uuid)')
+            )::text;
+          " > preflight-after.json
+          cmp preflight-before.json preflight-after.json
+      - name: Upload storyboard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-task-migration-storyboard
+          path: |
+            bounded-migration-preflight.log
+            preflight-before.json
+            preflight-after.json
+            config/nav-v2-bounded-task-migration-storyboard.json
+            config/nav-v2-bounded-task-production-preflight-attestation.json
+            fixtures/nav-v2-bounded-task-migration-object-diff.json
+            docs/NAV_V2_BOUNDED_TASK_MIGRATION_STORYBOARD_2026-07-17.md
+          if-no-files-found: error
+          retention-days: 14
