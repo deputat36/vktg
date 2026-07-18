@@ -98,6 +98,8 @@ def main() -> int:
     require(setup, (
         "create role service_role nologin bypassrls",
         "revoke all on schema nav_v2_private from public, anon, authenticated",
+        "create schema harness",
+        "create or replace function harness.assert_true",
         "Marker tables prove that the adapter never creates or changes business rows",
     ), SETUP.name, errors)
     require(assertions, (
@@ -120,7 +122,7 @@ def main() -> int:
     ), ASSERTIONS.name, errors)
     require(rollback, (
         "rollback preflight found changed deal rows",
-        "drop function nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb)",
+        "drop function if exists nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb)",
         "server adapter function survived rollback",
         "Navigator v2 intake server adapter rollback passed",
     ), ROLLBACK.name, errors)

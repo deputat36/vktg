@@ -10,12 +10,12 @@ begin
 end;
 $no_writes_before_rollback$;
 
-drop function nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb);
-drop function nav_v2_private.nav_v2_intake_rule_matches_v1(jsonb, jsonb, jsonb);
-drop function nav_v2_private.nav_v2_intake_show_when_matches_v1(jsonb, jsonb);
-drop function nav_v2_private.nav_v2_intake_contains_forbidden_key_v1(jsonb);
-drop function nav_v2_private.nav_v2_intake_catalog_sha256_v1();
-drop function nav_v2_private.nav_v2_intake_catalog_v1();
+drop function if exists nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb);
+drop function if exists nav_v2_private.nav_v2_intake_rule_matches_v1(jsonb, jsonb, jsonb);
+drop function if exists nav_v2_private.nav_v2_intake_show_when_matches_v1(jsonb, jsonb);
+drop function if exists nav_v2_private.nav_v2_intake_contains_forbidden_key_v1(jsonb);
+drop function if exists nav_v2_private.nav_v2_intake_catalog_sha256_v1();
+drop function if exists nav_v2_private.nav_v2_intake_catalog_v1();
 
 do $adapter_removed$
 begin

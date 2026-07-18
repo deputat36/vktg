@@ -444,14 +444,15 @@ begin
   into v_passport_documents
   from jsonb_array_elements(v_documents) item;
 
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'id', rule->>'id', 'level', rule->>'risk_level',
-    'blocks_deposit', coalesce((rule->>'blocks_deposit')::boolean, false),
-    'blocks_deal', coalesce((rule->>'blocks_deal')::boolean, false),
-    'owner', rule->>'owner', 'required_documents', coalesce(rule->'documents', '[]'::jsonb)
-  ) order by rule->>'id'), '[]'::jsonb)
-  into v_risk_flags
-  from jsonb_array_elements(v_matched_rules) rule;
+  v_risk_flags := coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', rule->>'id', 'level', rule->>'risk_level',
+      'blocks_deposit', coalesce((rule->>'blocks_deposit')::boolean, false),
+      'blocks_deal', coalesce((rule->>'blocks_deal')::boolean, false),
+      'owner', rule->>'owner', 'required_documents', coalesce(rule->'documents', '[]'::jsonb)
+    ) order by rule->>'id')
+    from jsonb_array_elements(v_matched_rules) rule
+  ), '[]'::jsonb);
 
   if v_request_type = '' then v_draft_missing := v_draft_missing || '"request_type"'::jsonb; end if;
   if v_stage = '' then v_draft_missing := v_draft_missing || '"stage"'::jsonb; end if;

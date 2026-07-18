@@ -8,6 +8,20 @@ create schema nav_v2_private;
 revoke all on schema nav_v2_private from public, anon, authenticated;
 grant usage on schema nav_v2_private to service_role;
 
+create schema harness;
+
+create or replace function harness.assert_true(p_condition boolean, p_message text)
+returns void
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  if coalesce(p_condition, false) is not true then
+    raise exception 'ASSERTION FAILED: %', p_message;
+  end if;
+end;
+$$;
+
 -- Marker tables prove that the adapter never creates or changes business rows.
 create table public.nav_deals_v2 (id integer primary key, marker text not null);
 create table public.nav_deal_documents_v2 (id integer primary key, marker text not null);

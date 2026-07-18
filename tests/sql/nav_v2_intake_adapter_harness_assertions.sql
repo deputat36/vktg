@@ -1,19 +1,5 @@
 \set ON_ERROR_STOP on
 
-create schema harness;
-
-create or replace function harness.assert_true(p_condition boolean, p_message text)
-returns void
-language plpgsql
-set search_path = pg_catalog
-as $$
-begin
-  if coalesce(p_condition, false) is not true then
-    raise exception 'ASSERTION FAILED: %', p_message;
-  end if;
-end;
-$$;
-
 create or replace function harness.base_intake()
 returns jsonb
 language sql
