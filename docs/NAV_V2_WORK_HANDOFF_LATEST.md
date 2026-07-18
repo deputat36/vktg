@@ -4,12 +4,12 @@
 
 - Дата: 18 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `32b3fc9868d310ae76d7257ddf9aa67999ca5b33` — squash merge PR #402.
+- Production `main`: `6808fd691c5bd3560b7b00b4cb7411038a052d1d` — squash merge PR #404.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Последняя общая production migration: `20260716133531_leader_calculation_revisions`; она не относится к Navigator.
+- Последняя общая production migration: `20260716143113_leader_outdated_offer_lifecycle`; она не относится к Navigator.
 - Consultation, corporate-document, bounded-task, actor-aware и legacy-review SQL остаются только в `supabase/prototypes`.
 - Production consultation/corporate-document сущностей нет.
 - Production bounded-task columns, mutation event table, canonical governed RPC и actor-aware overloads отсутствуют.
@@ -62,6 +62,9 @@ Navigator не является CRM, файловым архивом, банко
 - `docs/NAV_V2_INTAKE_SAVE_INTEGRATION_V1_2026-07-18.md` — exact allowlist, request/actor scope, owner/parity gates, legacy STOP-факторы и PG17 evidence.
 - `config/nav-v2-intake-save-integration-v1.json` — repository-only integration contract и полный inventory 13 projected / 12 unsupported legacy rules.
 - `supabase/prototypes/nav_v2_intake_save_integration_v1.sql` — pure legacy-call preview; production call всегда выключен.
+- `docs/NAV_V2_GOVERNED_INTAKE_SAVE_BOUNDARY_V1_2026-07-18.md` — atomic ledger, owner/side-aware row plan, concurrency/failure recovery и phased migration storyboard.
+- `config/nav-v2-governed-intake-save-boundary-v1.json` — repository-only ledger/write-boundary contract и обязательные production STOP.
+- `supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql` — private governed boundary prototype; не migration и не production surface.
 
 ## Live production baseline
 
@@ -87,7 +90,9 @@ Navigator не является CRM, файловым архивом, банко
 - в buyer-only карточке обнаружены 9 seller-side документов, что подтверждает необходимость side-aware плана;
 - production server broker scope уже ограничен ипотекой; frontend repository-only contract закрепляет то же правило.
 - `nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb)` в production отсутствует.
-- `nav_v2_private.nav_v2_prepare_intake_legacy_save_v1(jsonb,uuid,jsonb)` в production отсутствует; повторный read-only срез после PR #402 сохранил counts 23/24/198/53/98/122/3.
+- `nav_v2_private.nav_v2_prepare_intake_legacy_save_v1(jsonb,uuid,jsonb)` в production отсутствует.
+- `nav_v2_private.nav_v2_build_governed_intake_write_plan_v1(jsonb,uuid,jsonb)` и ledger `nav_v2_private.nav_v2_intake_save_requests_v1` в production отсутствуют.
+- Повторный read-only срез после PR #404 сохранил counts 23/24/198/53/98/122/3 и подтвердил отсутствие integration/governed объектов.
 
 Не использовать сырые показатели для оценки сотрудников: присутствуют тестовые, учебные и исторические записи.
 
@@ -290,7 +295,19 @@ Merge: `79cb6f661ec54f86bdbfb823122541f4d4914467`.
 
 Merge: `32b3fc9868d310ae76d7257ddf9aa67999ca5b33`.
 
-Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#402 не менялись. Новые mutation routes отсутствуют.
+### PR #404 — governed intake save boundary v1
+
+- private request ledger связывает UUID с verified actor и fingerprint;
+- advisory lock сериализует concurrent replay, exact completed replay возвращает stored result;
+- deferred constraint запрещает commit stranded `started`, поэтому claim, business rows и completion имеют одну atomic судьбу;
+- explicit write plan задаёт deal/participants/documents/risks/tasks/event, owner IDs и сопровождаемые стороны без client owner fields и неявного `auth.uid()`;
+- 12 unsupported legacy rules остаются fail-closed;
+- PostgreSQL 17 доказал seller-only documents, manager→lead ownership, changed actor/payload rejection, две конкурентные сессии, fault-after-rows rollback/retry и layered rollback;
+- все 16 PR workflow runs завершились success, review threads отсутствовали.
+
+Merge: `6808fd691c5bd3560b7b00b4cb7411038a052d1d`.
+
+Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#404 не менялись. Новые mutation routes отсутствуют.
 
 ## Текущий task runtime
 
@@ -324,17 +341,17 @@ Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и р
 
 ## Следующий безопасный slice
 
-Repository-only integration contract и PostgreSQL 17 lifecycle завершены. Следующий допустимый шаг — governed save-boundary storyboard, который закрывает три production STOP-фактора без подключения к production.
+Repository-only governed save boundary и PostgreSQL 17 atomic lifecycle завершены. Следующий допустимый шаг — exact production-schema mapping rehearsal для 13 поддержанных правил без подключения к production.
 
 Без production approval можно:
 
-1. спроектировать repository-only persistent request-ledger contract с actor scope, fingerprint, transaction state, exact recovery и конкурентным replay;
-2. описать owner-aware write plan для deal/participants/tasks без неявного `auth.uid()` и без приёма client owner id;
-3. заменить generic document projection на side-aware row plan и сохранить legacy backward compatibility;
-4. определить fail-closed handling для 12 unsupported legacy rules без потери legal passport/work-plan semantics;
-5. доказать в PostgreSQL 17 concurrent replay, partial-failure recovery, no-public-write preview и rollback;
-6. подготовить phased migration/rollback storyboard без файла в `supabase/migrations`;
-7. продолжать read-only production preflight и обычные legacy bugfixes.
+1. зафиксировать read-only snapshot exact production columns, constraints, indexes и grants для deal/participants/documents/risks/tasks/events;
+2. описать repository-only row mapper из governed plan в существующие production columns без вызова legacy save;
+3. воспроизвести exact schema subset в PostgreSQL 17 и прогнать 13 supported rule fixtures;
+4. доказать FK/null/unique/status compatibility, owner/side preservation, atomic replay и полный rollback на synthetic rows;
+5. сохранить жёсткий STOP для 12 unsupported rules и любых отсутствующих production semantics;
+6. проверить backward-compatible result/audit payload для текущих consumers без frontend/Edge подключения;
+7. обновить phased migration storyboard, не создавая migration-файл или Supabase branch.
 
 Запрещено автоматически:
 
@@ -410,8 +427,9 @@ Repository-only integration contract и PostgreSQL 17 lifecycle завершен
 - side-aware document/task work plan и owner gate;
 - intake server recomputation, privacy allowlist, PG17 no-write lifecycle и rollback;
 - intake recompute/allowlist/sanitizer integration, request/actor replay mock и legacy parity inventory;
+- governed atomic request ledger, owner/side-aware shadow rows, concurrent replay/failure recovery и phased rollback;
 - production cleanup без owner decision.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #402. Следующий slice — repository-only governed save-boundary storyboard: persistent request ledger, owner-aware assignments, side-aware rows, concurrent PG17 replay/recovery и rollback. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #404. Следующий slice — repository-only exact production-schema mapping rehearsal для governed intake: current columns/constraints/grants snapshot, 13 supported-rule fixtures, PG17 FK/status/replay/rollback. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
