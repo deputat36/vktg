@@ -170,3 +170,11 @@ Production project ref блокируется preflight-проверкой. Ко
 Первый этап остаётся repository-only pure SQL adapter: без DML, migration и публичного RPC. Функции размещаются в private schema, исполняются только server role и проходят detached PostgreSQL 17 harness. Подключение к legacy save, назначение реальных участников и production deployment требуют отдельных branch rehearsal, rollback и явного approval.
 
 Причина: browser preview можно изменить до отправки. Сервер должен повторить бизнес-правила, не расширять брокерский scope за пределы ипотеки, не создавать задачи без проверенного исполнителя и не сохранять запрещённые персональные или документные поля.
+
+## ADR-021. Legacy save нельзя вызывать до закрытия request, owner и parity gates
+
+Принято: новая анкета проходит отдельную pure-цепочку `recompute → exact allowlist → production sanitizer snapshot → legacy call preview`. `client_request_id` передаётся отдельным UUID, а owner assignments — только отдельным trusted server context. Client owner IDs, готовые задачи и паспорт не являются источником истины.
+
+Даже при успешной подготовке `production_call.allowed` остаётся false. Текущий production wrapper не имеет persistent replay ledger; legacy save создаёт generic документы обеих сторон и назначает `auth.uid()` вместо проверенного lead SPN. Из 25 canonical rules 12 не имеют точной legacy semantics. Harness mock разрешён только для доказательства одного business write, exact replay и rollback.
+
+Причина: зелёный pure adapter ещё не делает старую mutation boundary идемпотентной, side-aware и actor-aware. Молчаливое использование legacy создало бы дубли, неверные назначения и документы несопровождаемой стороны.

@@ -1,0 +1,141 @@
+name: Navigator v2 intake save integration v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-intake-save-integration-v1.json'
+      - 'scripts/render-nav-v2-intake-server-adapter-v1.mjs'
+      - 'scripts/check-nav-v2-intake-save-integration-v1.mjs'
+      - 'scripts/check_nav_v2_intake_save_integration_v1.py'
+      - 'supabase/prototypes/nav_v2_intake_save_adapter_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_save_integration_v1.sql'
+      - 'supabase/migrations/20260715224500_nav_v2_minimize_client_identifiers.sql'
+      - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
+      - 'tests/sql/nav_v2_intake_save_integration_harness_*.sql'
+      - 'docs/NAV_V2_INTAKE_SAVE_INTEGRATION_V1_2026-07-18.md'
+      - '.github/workflows/nav-v2-intake-save-integration-v1.yml'
+      - '.github/workflows/nav-v2-static.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-intake-save-integration-v1.json'
+      - 'scripts/render-nav-v2-intake-server-adapter-v1.mjs'
+      - 'scripts/check-nav-v2-intake-save-integration-v1.mjs'
+      - 'scripts/check_nav_v2_intake_save_integration_v1.py'
+      - 'supabase/prototypes/nav_v2_intake_save_adapter_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_save_integration_v1.sql'
+      - 'supabase/migrations/20260715224500_nav_v2_minimize_client_identifiers.sql'
+      - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
+      - 'tests/sql/nav_v2_intake_save_integration_harness_*.sql'
+      - 'docs/NAV_V2_INTAKE_SAVE_INTEGRATION_V1_2026-07-18.md'
+      - '.github/workflows/nav-v2-intake-save-integration-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate intake save integration source contract
+        run: python3 scripts/check_nav_v2_intake_save_integration_v1.py
+      - name: Check legacy parity inventory
+        run: node scripts/check-nav-v2-intake-save-integration-v1.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_intake_save_integration_v1.py
+
+  postgres-17-integration:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_intake_save_integration
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_intake_save_integration"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_intake_save_integration
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Render canonical intake adapter
+        run: node scripts/render-nav-v2-intake-server-adapter-v1.mjs --output /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Create base synthetic roles and marker rows
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_setup.sql
+      - name: Create exact sanitizer snapshot and mock write boundary
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_setup.sql
+      - name: Apply rendered pure server adapter
+        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Preserve canonical adapter regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_assertions.sql
+      - name: Apply pure integration preview
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_save_integration_v1.sql
+      - name: Run request-ID, owner, parity and mock-boundary assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_assertions.sql 2>&1 | tee nav-v2-intake-save-integration-assertions.log
+      - name: Rehearse integration overlay rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_rollback.sql 2>&1 | tee nav-v2-intake-save-integration-rollback.log
+      - name: Rehearse base adapter rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_rollback.sql 2>&1 | tee nav-v2-intake-save-adapter-rollback.log
+      - name: Upload PostgreSQL 17 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-intake-save-integration-v1
+          path: |
+            config/nav-v2-intake-save-integration-v1.json
+            supabase/prototypes/nav_v2_intake_save_integration_v1.sql
+            tests/sql/nav_v2_intake_save_integration_harness_setup.sql
+            tests/sql/nav_v2_intake_save_integration_harness_assertions.sql
+            tests/sql/nav_v2_intake_save_integration_harness_rollback.sql
+            docs/NAV_V2_INTAKE_SAVE_INTEGRATION_V1_2026-07-18.md
+            nav-v2-intake-save-integration-assertions.log
+            nav-v2-intake-save-integration-rollback.log
+            nav-v2-intake-save-adapter-rollback.log
+          if-no-files-found: warn
+          retention-days: 14

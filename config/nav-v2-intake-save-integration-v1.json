@@ -1,0 +1,86 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "production_call_allowed": false,
+  "write_boundary": "harness_mock_only",
+  "request_id": {
+    "type": "uuid",
+    "required": true,
+    "scope": "verified_actor_and_payload_fingerprint",
+    "production_ledger_present": false
+  },
+  "request_type_to_legacy_mode": {
+    "capture_situation": "consult",
+    "check_documents": "check_docs",
+    "prepare_deposit": "deposit",
+    "prepare_deal": "deal",
+    "rework_deal": "rework"
+  },
+  "legacy_rule_projection": {
+    "supported": [
+      "minor_seller",
+      "minor_buyer",
+      "child_money",
+      "power_of_attorney",
+      "shares",
+      "minor_registered",
+      "privatisation",
+      "court_basis",
+      "matcap",
+      "mortgage",
+      "military_mortgage",
+      "settlements_not_agreed",
+      "expenses_not_agreed"
+    ],
+    "unsupported": [
+      "spouse",
+      "seller_absent",
+      "encumbrance",
+      "inheritance",
+      "bankruptcy_risk",
+      "redevelopment",
+      "after_registration",
+      "legal_problem",
+      "partner_agency",
+      "flat_ground",
+      "house_land",
+      "certificate"
+    ]
+  },
+  "trusted_server_context_keys": [
+    "verified_actor_id",
+    "verified_actor_role",
+    "lead_spn_id",
+    "seller_spn_id",
+    "buyer_spn_id",
+    "lawyer_id",
+    "broker_id"
+  ],
+  "client_deal_keys_preserved": [
+    "intake_contract_version",
+    "intake_catalog_version",
+    "intake_action",
+    "intake_draft"
+  ],
+  "server_fields_recomputed": [
+    "legal_passport",
+    "intake_work_plan",
+    "preparationMode",
+    "representation",
+    "stage",
+    "objectType",
+    "address",
+    "flags",
+    "payments",
+    "basis",
+    "expensesAgreed",
+    "settlementsAgreed",
+    "client_request_id"
+  ],
+  "mandatory_stop_reasons": [
+    "production_request_ledger_missing",
+    "legacy_creates_generic_document_rows",
+    "legacy_assigns_current_actor"
+  ]
+}

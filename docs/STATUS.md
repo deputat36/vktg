@@ -1,5 +1,14 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 18 июля 2026 — integration contract сохранения intake
+
+- Добавлена pure repository-only цепочка `recompute → allowlist → sanitize → legacy save mock` с обязательным UUID request ID и отдельным trusted server context.
+- Client owner IDs, произвольные верхнеуровневые поля и client passport/work-plan preview не проходят в legacy payload; legal passport и work plan вычисляются заново.
+- Server owner-resolution показывает только preview: без назначенного lawyer/broker роль остаётся unresolved, реальные задачи не создаются.
+- Exact production snapshot выявляет три STOP-фактора: нет request ledger, legacy создаёт generic документы обеих сторон и назначает текущего actor вместо подтверждённого lead SPN.
+- Из 25 canonical rules 13 имеют точную legacy projection, 12 зафиксированы как явные semantic gaps. Production call всегда выключен.
+- PostgreSQL 17 harness доказывает exact replay/recovery, отказ при changed payload, один mock business write, privacy allowlist и полный rollback. Production Supabase не изменён.
+
 ## Актуально на 18 июля 2026 — server adapter новой анкеты
 
 - Добавлен repository-only SQL-адаптер, который заново вычисляет 25 intake rules, маршрут специалистов, юридический паспорт, side-aware документы, task candidates и gates из канонического каталога.
