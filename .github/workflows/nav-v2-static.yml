@@ -14,6 +14,7 @@ on:
       - 'config/nav-v2-release-baseline.json'
       - 'config/nav-v2-intake-contract-v1.json'
       - 'config/nav-v2-intake-save-integration-v1.json'
+      - 'config/nav-v2-governed-intake-save-boundary-v1.json'
       - 'package.json'
       - 'package-lock.json'
       - 'playwright.config.mjs'
@@ -74,6 +75,8 @@ on:
       - 'scripts/check-nav-v2-intake-server-adapter-v1.mjs'
       - 'scripts/check_nav_v2_intake_save_integration_v1.py'
       - 'scripts/check-nav-v2-intake-save-integration-v1.mjs'
+      - 'scripts/check_nav_v2_governed_intake_save_boundary_v1.py'
+      - 'scripts/check-nav-v2-governed-intake-save-boundary-v1.mjs'
       - 'scripts/check_nav_v2_intake_work_plan_v1.py'
       - 'scripts/check-nav-v2-intake-work-plan-v1.mjs'
       - 'scripts/check_nav_v2_intake_prototype_v1.py'
@@ -110,12 +113,15 @@ on:
       - '.github/workflows/nav-v2-intake-contract-v1.yml'
       - '.github/workflows/nav-v2-intake-server-adapter-v1.yml'
       - '.github/workflows/nav-v2-intake-save-integration-v1.yml'
+      - '.github/workflows/nav-v2-governed-intake-save-boundary-v1.yml'
       - '.github/workflows/nav-v2-intake-prototype-v1.yml'
       - '.github/workflows/nav-v2-legal-passport-preview.yml'
       - 'supabase/prototypes/nav_v2_intake_save_adapter_v1.sql'
       - 'supabase/prototypes/nav_v2_intake_save_integration_v1.sql'
+      - 'supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql'
       - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
       - 'tests/sql/nav_v2_intake_save_integration_harness_*.sql'
+      - 'tests/sql/nav_v2_governed_intake_save_*'
   push:
     branches:
       - main
@@ -289,6 +295,10 @@ jobs:
         run: |
           python3 scripts/check_nav_v2_intake_save_integration_v1.py
           node scripts/check-nav-v2-intake-save-integration-v1.mjs
+      - name: Check detached governed intake save boundary v1
+        run: |
+          python3 scripts/check_nav_v2_governed_intake_save_boundary_v1.py
+          node scripts/check-nav-v2-governed-intake-save-boundary-v1.mjs
       - name: Check detached SPN intake prototype v1
         run: |
           python3 scripts/check_nav_v2_intake_work_plan_v1.py
