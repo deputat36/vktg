@@ -1,0 +1,76 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_prototype",
+  "production_applied": false,
+  "production_rpc_exposed": false,
+  "write_boundary": "single_private_transaction",
+  "request_ledger": {
+    "table": "nav_v2_private.nav_v2_intake_save_requests_v1",
+    "primary_key": ["client_request_id"],
+    "bound_fields": ["verified_actor_id", "payload_fingerprint"],
+    "states": ["started", "completed"],
+    "serialization": "pg_advisory_xact_lock_by_request_id",
+    "stranded_started_commit_allowed": false,
+    "exact_replay_returns_stored_result": true,
+    "changed_actor_or_payload_rejected": true
+  },
+  "trusted_owner_sources": {
+    "created_by": "verified_actor_id",
+    "lead_spn": "lead_spn_id",
+    "seller_spn": "seller_spn_id",
+    "buyer_spn": "buyer_spn_id",
+    "lawyer": "lawyer_id",
+    "broker": "broker_id"
+  },
+  "planned_rows": [
+    "deal",
+    "participants",
+    "documents",
+    "risks",
+    "tasks",
+    "created_event"
+  ],
+  "document_scope": {
+    "source": "canonical_server_work_plan",
+    "side_aware": true,
+    "allowed_sides": ["seller", "buyer", "object", "deal"],
+    "generic_seller_buyer_rows": false,
+    "unresolved_owner_blocks_write": true
+  },
+  "legacy_stop_factors_replaced_in_harness": [
+    "production_request_ledger_missing",
+    "legacy_creates_generic_document_rows",
+    "legacy_assigns_current_actor"
+  ],
+  "unsupported_legacy_rules": [
+    "spouse",
+    "seller_absent",
+    "encumbrance",
+    "inheritance",
+    "bankruptcy_risk",
+    "redevelopment",
+    "after_registration",
+    "legal_problem",
+    "partner_agency",
+    "flat_ground",
+    "house_land",
+    "certificate"
+  ],
+  "mandatory_production_stops": [
+    "unsupported_rule_semantics",
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing",
+    "production_migration_missing"
+  ],
+  "harness_proofs": [
+    "exact_replay",
+    "concurrent_replay",
+    "changed_actor_rejection",
+    "changed_payload_rejection",
+    "partial_failure_rollback_and_retry",
+    "side_aware_documents",
+    "owner_aware_participants_and_tasks",
+    "unsupported_rule_fail_closed",
+    "full_overlay_rollback"
+  ]
+}

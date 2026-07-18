@@ -178,3 +178,11 @@ Production project ref блокируется preflight-проверкой. Ко
 Даже при успешной подготовке `production_call.allowed` остаётся false. Текущий production wrapper не имеет persistent replay ledger; legacy save создаёт generic документы обеих сторон и назначает `auth.uid()` вместо проверенного lead SPN. Из 25 canonical rules 12 не имеют точной legacy semantics. Harness mock разрешён только для доказательства одного business write, exact replay и rollback.
 
 Причина: зелёный pure adapter ещё не делает старую mutation boundary идемпотентной, side-aware и actor-aware. Молчаливое использование legacy создало бы дубли, неверные назначения и документы несопровождаемой стороны.
+
+## ADR-022. Governed intake save использует atomic ledger и явный row plan
+
+Принято: будущая mutation boundary новой анкеты не оборачивает legacy save. Она в одной private transaction выполняет canonical recompute, request claim, explicit deal/participant/document/risk/task/event rows и ledger completion. Request UUID глобально связывается с verified actor и fingerprint; exact completed replay возвращает stored result, другой actor или payload отклоняется. Deferred constraint запрещает commit промежуточного `started`.
+
+Документы создаются только для сопровождаемой стороны из canonical server work plan. Creator, lead SPN, side SPN, lawyer и broker берутся только из trusted server context. Три прежних legacy STOP считаются архитектурно заменёнными только в detached harness; 12 semantic gaps остаются blocking. Prototype не является migration, не создаёт public RPC и не разрешает production deployment.
+
+Причина: request ledger, business rows и audit result должны иметь одну atomic судьбу. Иначе retry после неопределённого ответа может создать дубликаты, частичный план или строки с неверной стороной/владельцем.

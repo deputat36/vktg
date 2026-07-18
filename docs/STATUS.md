@@ -1,5 +1,14 @@
 # Статус проекта «Навигатор сделок»
 
+## Актуально на 18 июля 2026 — governed save boundary новой анкеты
+
+- Добавлен repository-only private ledger contract: request UUID связан с verified actor и fingerprint, exact completed replay возвращает stored result, changed actor/payload отклоняется.
+- Deferred constraint запрещает commit `started`, поэтому claim, owner/side-aware business rows и completion обязаны выполняться в одной транзакции.
+- Новый write plan заменяет только три архитектурных legacy STOP в harness: отсутствие ledger, generic seller/buyer documents и неявный current actor. Client owner IDs не принимаются.
+- Все 12 неподдержанных legacy semantic rules остаются fail-closed; production migration, public RPC и deployment отсутствуют.
+- PostgreSQL 17 workflow проверяет seller-only rows, manager→lead assignment, exact replay, две конкурентные сессии, failure-after-rows rollback/retry и полный layered rollback.
+- Production Supabase не изменён.
+
 ## Актуально на 18 июля 2026 — integration contract сохранения intake
 
 - Добавлена pure repository-only цепочка `recompute → allowlist → sanitize → legacy save mock` с обязательным UUID request ID и отдельным trusted server context.
