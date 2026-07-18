@@ -441,6 +441,7 @@ begin
     'requested', coalesce(jsonb_agg(jsonb_build_object('type', item->>'type', 'title', item->>'title', 'side', item->>'side') order by item->>'type') filter (where item->>'status' = 'requested'), '[]'::jsonb),
     'missing', coalesce(jsonb_agg(jsonb_build_object('type', item->>'type', 'title', item->>'title', 'side', item->>'side') order by item->>'type') filter (where item->>'status' = 'missing'), '[]'::jsonb),
     'problem', coalesce(jsonb_agg(jsonb_build_object('type', item->>'type', 'title', item->>'title', 'side', item->>'side') order by item->>'type') filter (where item->>'status' = 'problem'), '[]'::jsonb)
+  )
   into v_passport_documents
   from jsonb_array_elements(v_documents) item;
 
