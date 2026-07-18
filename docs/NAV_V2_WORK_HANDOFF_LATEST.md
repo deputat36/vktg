@@ -4,7 +4,7 @@
 
 - Дата: 18 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `79cb6f661ec54f86bdbfb823122541f4d4914467` — squash merge PR #400.
+- Production `main`: `32b3fc9868d310ae76d7257ddf9aa67999ca5b33` — squash merge PR #402.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
@@ -59,6 +59,9 @@ Navigator не является CRM, файловым архивом, банко
 - `config/nav-v2-intake-contract-v1.json` — versioned source contract вопросов, триггеров, рисков, документов, владельцев и ожидаемых решений.
 - `docs/NAV_V2_INTAKE_SERVER_ADAPTER_V1_2026-07-18.md` — trust boundary, pure SQL adapter, PG17 evidence, production gate и rollback.
 - `supabase/prototypes/nav_v2_intake_save_adapter_v1.sql` — rendered server recomputation template; не migration и не production surface.
+- `docs/NAV_V2_INTAKE_SAVE_INTEGRATION_V1_2026-07-18.md` — exact allowlist, request/actor scope, owner/parity gates, legacy STOP-факторы и PG17 evidence.
+- `config/nav-v2-intake-save-integration-v1.json` — repository-only integration contract и полный inventory 13 projected / 12 unsupported legacy rules.
+- `supabase/prototypes/nav_v2_intake_save_integration_v1.sql` — pure legacy-call preview; production call всегда выключен.
 
 ## Live production baseline
 
@@ -84,6 +87,7 @@ Navigator не является CRM, файловым архивом, банко
 - в buyer-only карточке обнаружены 9 seller-side документов, что подтверждает необходимость side-aware плана;
 - production server broker scope уже ограничен ипотекой; frontend repository-only contract закрепляет то же правило.
 - `nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb)` в production отсутствует.
+- `nav_v2_private.nav_v2_prepare_intake_legacy_save_v1(jsonb,uuid,jsonb)` в production отсутствует; повторный read-only срез после PR #402 сохранил counts 23/24/198/53/98/122/3.
 
 Не использовать сырые показатели для оценки сотрудников: присутствуют тестовые, учебные и исторические записи.
 
@@ -274,7 +278,19 @@ Merge: `8070f911`.
 
 Merge: `79cb6f661ec54f86bdbfb823122541f4d4914467`.
 
-Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#400 не менялись. Новые mutation routes отсутствуют.
+### PR #402 — detached intake save integration v1
+
+- pure-цепочка recompute → exact allowlist → production sanitizer snapshot → legacy call preview;
+- обязательный request UUID привязан fingerprint к verified actor, trusted owner context и подготовленному payload;
+- client owner IDs, passport/work-plan preview и готовые задачи не являются доверенными;
+- mock boundary открывается только после adapter, owner, rule, side и actor gates;
+- 13 canonical rules имеют точную legacy projection, 12 зафиксированы как блокирующие semantic gaps;
+- production STOP фиксирует отсутствие request ledger, generic документы обеих сторон и legacy `auth.uid()` actor model;
+- PostgreSQL 17 доказал exact replay, отказ другому actor/изменённому payload, один mock business write, no-production-write и полный rollback.
+
+Merge: `32b3fc9868d310ae76d7257ddf9aa67999ca5b33`.
+
+Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#402 не менялись. Новые mutation routes отсутствуют.
 
 ## Текущий task runtime
 
@@ -308,16 +324,17 @@ Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и р
 
 ## Следующий безопасный slice
 
-Repository-only server adapter и PostgreSQL 17 harness завершены. Следующий допустимый шаг — exact integration contract между recomputed `prepared_payload`, production sanitizer и legacy save без подключения к production.
+Repository-only integration contract и PostgreSQL 17 lifecycle завершены. Следующий допустимый шаг — governed save-boundary storyboard, который закрывает три production STOP-фактора без подключения к production.
 
 Без production approval можно:
 
-1. зафиксировать exact allowlist production sanitizer для `intake_draft`, `legal_passport` и `intake_work_plan` без ослабления privacy contract;
-2. собрать repository-only integration wrapper/harness: recompute → sanitize → legacy save mock, с одним request ID и одним write boundary;
-3. доказать сохранение legacy payload, idempotency, exact recovery и отказ при catalog/version mismatch;
-4. определить server-side owner-role resolution без приёма client owner id и без создания реальных задач;
-5. подготовить migration/rollback storyboard без файла в `supabase/migrations`;
-6. продолжать read-only production preflight и обычные legacy bugfixes.
+1. спроектировать repository-only persistent request-ledger contract с actor scope, fingerprint, transaction state, exact recovery и конкурентным replay;
+2. описать owner-aware write plan для deal/participants/tasks без неявного `auth.uid()` и без приёма client owner id;
+3. заменить generic document projection на side-aware row plan и сохранить legacy backward compatibility;
+4. определить fail-closed handling для 12 unsupported legacy rules без потери legal passport/work-plan semantics;
+5. доказать в PostgreSQL 17 concurrent replay, partial-failure recovery, no-public-write preview и rollback;
+6. подготовить phased migration/rollback storyboard без файла в `supabase/migrations`;
+7. продолжать read-only production preflight и обычные legacy bugfixes.
 
 Запрещено автоматически:
 
@@ -392,8 +409,9 @@ Repository-only server adapter и PostgreSQL 17 harness завершены. Сл
 - lawyer-first passport v1 и честный legacy fallback;
 - side-aware document/task work plan и owner gate;
 - intake server recomputation, privacy allowlist, PG17 no-write lifecycle и rollback;
+- intake recompute/allowlist/sanitizer integration, request/actor replay mock и legacy parity inventory;
 - production cleanup без owner decision.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #400. Следующий slice — repository-only integration contract recompute → sanitize → legacy save mock с exact request ID, owner-resolution gate и PostgreSQL 17 rollback. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #402. Следующий slice — repository-only governed save-boundary storyboard: persistent request ledger, owner-aware assignments, side-aware rows, concurrent PG17 replay/recovery и rollback. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
