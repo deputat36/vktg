@@ -2,9 +2,9 @@
 
 ## Точка продолжения
 
-- Дата: 17 июля 2026 года.
+- Дата: 18 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Production `main`: `8070f911a751855bf68e78c603e1d75c513f1817` — squash merge PR #398.
+- Production `main`: `79cb6f661ec54f86bdbfb823122541f4d4914467` — squash merge PR #400.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
@@ -57,6 +57,8 @@ Navigator не является CRM, файловым архивом, банко
 - `docs/NAV_V2_SPN_INTAKE_AUDIT_2026-07-17.md` — ролевой аудит текущего добавления сделки и карта `вопрос → проблема → новое решение → влияние на юриста`.
 - `docs/NAV_V2_SPN_INTAKE_DESIGN_2026-07-17.md` — трёхэтапный путь, legal passport v1, gates, side-aware documents/tasks и backward compatibility.
 - `config/nav-v2-intake-contract-v1.json` — versioned source contract вопросов, триггеров, рисков, документов, владельцев и ожидаемых решений.
+- `docs/NAV_V2_INTAKE_SERVER_ADAPTER_V1_2026-07-18.md` — trust boundary, pure SQL adapter, PG17 evidence, production gate и rollback.
+- `supabase/prototypes/nav_v2_intake_save_adapter_v1.sql` — rendered server recomputation template; не migration и не production surface.
 
 ## Live production baseline
 
@@ -73,7 +75,7 @@ Navigator не является CRM, файловым архивом, банко
 - actor-aware overloads/helpers отсутствуют;
 - production consultation и corporate-document сущностей нет.
 
-Дополнительный read-only срез новой анкеты 17 июля 2026 года:
+Дополнительный read-only срез новой анкеты, повторно подтверждённый 18 июля 2026 года:
 
 - 24 участника, 198 документов, 53 риска, 98 задач, 122 события и 3 review;
 - у 22 из 23 сделок нет структурированного `clientNextStep`;
@@ -81,6 +83,7 @@ Navigator не является CRM, файловым архивом, банко
 - у 17 сделок с `lawyer_needed=true` нет структурированного вопроса/контекста риска;
 - в buyer-only карточке обнаружены 9 seller-side документов, что подтверждает необходимость side-aware плана;
 - production server broker scope уже ограничен ипотекой; frontend repository-only contract закрепляет то же правило.
+- `nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb)` в production отсутствует.
 
 Не использовать сырые показатели для оценки сотрудников: присутствуют тестовые, учебные и исторические записи.
 
@@ -258,7 +261,20 @@ Merge: `773d66a3`.
 
 Merge: `8070f911`.
 
-Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#398 не менялись. Новые mutation routes отсутствуют.
+### PR #400 — detached server adapter intake v1
+
+- сервер заново вычисляет все 25 canonical rules, маршрут, legal passport, side-aware documents/tasks и gates;
+- client passport/work plan, owner id и task readiness не считаются доверенными;
+- recursive privacy guard отклоняет неизвестные, персональные, банковские, паспортные и document-content поля;
+- broker scope остаётся только `mortgage` и `military_mortgage`;
+- generator встраивает canonical JSON и SHA-256;
+- PostgreSQL 17 выполняет apply, 13 routing/privacy/no-write scenarios и полный rollback;
+- private ACL оставляет execute только service role;
+- SQL остаётся в `supabase/prototypes`, `ready_tasks` пуст, production save RPC не подключён.
+
+Merge: `79cb6f661ec54f86bdbfb823122541f4d4914467`.
+
+Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и рабочие строки в PR #394–#400 не менялись. Новые mutation routes отсутствуют.
 
 ## Текущий task runtime
 
@@ -292,15 +308,15 @@ Production Supabase, migrations, schema, RLS, grants, Auth, Edge Functions и р
 
 ## Следующий безопасный slice
 
-Repository-only прототип этапа 3 завершён. Следующий допустимый шаг — не прямой production deploy, а отдельный SQL integration prototype с PostgreSQL 17 harness.
+Repository-only server adapter и PostgreSQL 17 harness завершены. Следующий допустимый шаг — exact integration contract между recomputed `prepared_payload`, production sanitizer и legacy save без подключения к production.
 
 Без production approval можно:
 
-1. подготовить repository-only adapter входа `wizard_snapshot.deal.legal_passport` и `work_plan` к существующему save contract;
-2. доказать в PG17, что frontend/server используют одну версию каталога и одинаковый broker scope;
-3. проверить side-aware document rows и task completion contract без записи в production;
-4. сохранить legacy payload, idempotency/request ID и exact recovery;
-5. подготовить migration/rollback plan без файла в `supabase/migrations`;
+1. зафиксировать exact allowlist production sanitizer для `intake_draft`, `legal_passport` и `intake_work_plan` без ослабления privacy contract;
+2. собрать repository-only integration wrapper/harness: recompute → sanitize → legacy save mock, с одним request ID и одним write boundary;
+3. доказать сохранение legacy payload, idempotency, exact recovery и отказ при catalog/version mismatch;
+4. определить server-side owner-role resolution без приёма client owner id и без создания реальных задач;
+5. подготовить migration/rollback storyboard без файла в `supabase/migrations`;
 6. продолжать read-only production preflight и обычные legacy bugfixes.
 
 Запрещено автоматически:
@@ -375,8 +391,9 @@ Repository-only прототип этапа 3 завершён. Следующи
 - detached intake prototype, reload recovery и zero-mutation browser suite;
 - lawyer-first passport v1 и честный legacy fallback;
 - side-aware document/task work plan и owner gate;
+- intake server recomputation, privacy allowlist, PG17 no-write lifecycle и rollback;
 - production cleanup без owner decision.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #398. Следующий slice — repository-only save/SQL adapter и PostgreSQL 17 harness для intake contract v1. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #400. Следующий slice — repository-only integration contract recompute → sanitize → legacy save mock с exact request ID, owner-resolution gate и PostgreSQL 17 rollback. Не подключай prototype к production, не создавай Supabase branch и не применяй SQL без explicit deployment/cost/owner approval.`
