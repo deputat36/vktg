@@ -400,7 +400,7 @@ begin
   from planned;
 
   select coalesce(jsonb_agg(jsonb_build_object(
-    'id', 'intake-rule:' || rule->>'id',
+    'id', 'intake-rule:' || (rule->>'id'),
     'rule_id', rule->>'id',
     'owner_role', rule->>'owner',
     'assignment_state', 'needs_server_assignment',

@@ -65,6 +65,7 @@ def main() -> int:
         "v_deal - 'legal_passport' - 'intake_work_plan'",
         "'ready_tasks', '[]'::jsonb",
         "'assignment_source', 'server_required'",
+        "'intake-rule:' || (rule->>'id')",
         "'writes_performed', false",
         "rule->>'id' <> all(array['mortgage', 'military_mortgage'])",
         "revoke all on function nav_v2_private.nav_v2_prepare_intake_save_v1(jsonb) from public, anon, authenticated",
