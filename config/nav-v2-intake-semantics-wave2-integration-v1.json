@@ -1,0 +1,74 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_integration_rehearsal",
+  "production_applied": false,
+  "production_ready": false,
+  "base_effective_supported_count": 17,
+  "base_effective_unsupported_count": 8,
+  "qualified_wave2_rules": [
+    "bankruptcy_risk",
+    "redevelopment",
+    "after_registration",
+    "certificate"
+  ],
+  "effective_supported_rules": [
+    "minor_seller",
+    "minor_buyer",
+    "child_money",
+    "power_of_attorney",
+    "shares",
+    "minor_registered",
+    "privatisation",
+    "court_basis",
+    "matcap",
+    "mortgage",
+    "military_mortgage",
+    "settlements_not_agreed",
+    "expenses_not_agreed",
+    "spouse",
+    "seller_absent",
+    "encumbrance",
+    "inheritance",
+    "bankruptcy_risk",
+    "redevelopment",
+    "after_registration",
+    "certificate"
+  ],
+  "effective_unsupported_rules": [
+    "legal_problem",
+    "partner_agency",
+    "flat_ground",
+    "house_land"
+  ],
+  "effective_supported_count": 21,
+  "effective_unsupported_count": 4,
+  "layers": [
+    "canonical_intake_adapter_v1",
+    "legacy_save_preview_v1",
+    "governed_write_plan_v1",
+    "wave1_qualification_and_integration",
+    "wave2_semantics_qualification",
+    "wave2_effective_parity_wrapper",
+    "wave2_governed_plan_wrapper",
+    "wave2_production_schema_mapper_wrapper"
+  ],
+  "required_proofs": [
+    "wave1_17_8_regression",
+    "four_wave2_positive_fixtures",
+    "combined_wave2_fixture",
+    "remaining_4_fail_closed",
+    "lawyer_owner_and_document_side_preserved",
+    "risk_and_gate_flags_preserved",
+    "production_fk_enum_status_compatibility",
+    "exact_replay",
+    "zero_production_calls",
+    "layered_rollback"
+  ],
+  "mandatory_stops": [
+    "repository_only_not_deployed",
+    "privacy_quality_replacement_not_deployed",
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing",
+    "cleanup_owner_option_unselected"
+  ]
+}
