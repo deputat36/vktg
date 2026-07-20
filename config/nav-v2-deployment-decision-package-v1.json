@@ -23,26 +23,9 @@
     "bounded_task_repository_contract_proven": true
   },
   "owner_options": [
-    {
-      "id": "authenticated_e2e_only",
-      "recommended_next": true,
-      "requires_current_cost_lookup": true,
-      "requires_explicit_cost_approval": true,
-      "allows_production_merge": false
-    },
-    {
-      "id": "staged_production_pilot_after_e2e",
-      "recommended_next": false,
-      "requires_authenticated_e2e": true,
-      "requires_separate_deployment_approval": true,
-      "allows_automatic_cleanup": false
-    },
-    {
-      "id": "remain_repository_only",
-      "recommended_next": false,
-      "requires_cost": false,
-      "keeps_production_unchanged": true
-    }
+    {"id":"authenticated_e2e_only","recommended_next":true,"requires_current_cost_lookup":true,"requires_explicit_cost_approval":true,"allows_production_merge":false},
+    {"id":"staged_production_pilot_after_e2e","recommended_next":false,"requires_authenticated_e2e":true,"requires_separate_deployment_approval":true,"allows_automatic_cleanup":false},
+    {"id":"remain_repository_only","recommended_next":false,"requires_cost":false,"keeps_production_unchanged":true}
   ],
   "ordered_rollout": [
     {"order":0,"id":"read_only_preflight","writes_allowed":false,"required_evidence":["main_sha","production_counts","production_object_absence","migration_head"]},
@@ -81,7 +64,7 @@
     "config/nav-v2-intake-special-semantics-integration-v1.json",
     "config/nav-v2-legacy-quality-cleanup-decision-v1.json",
     "supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql",
-    "supabase/prototypes/nav_v2_actor_aware_bounded_tasks_v1.sql",
+    "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
     "supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql",
     "supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql"
   ]
