@@ -20,7 +20,14 @@ assert(config.base_effective_unsupported_count === 8, 'wave1 unsupported baselin
 assert(config.effective_supported_count === 21, 'wave2 effective support differs from 21');
 assert(config.effective_unsupported_count === 4, 'wave2 effective unsupported differs from 4');
 assert(wave1.effective_supported_rules.join(',') === config.effective_supported_rules.slice(0, 17).join(','), 'wave1 effective inventory drifted');
-assert(wave1.effective_unsupported_rules.slice(0, 4).join(',') === config.qualified_wave2_rules.join(','), 'wave2 qualification order drifted');
+assert(
+  wave1.effective_unsupported_rules.filter((rule) => config.qualified_wave2_rules.includes(rule)).join(',') === config.qualified_wave2_rules.join(','),
+  'wave2 qualification order drifted',
+);
+assert(
+  wave1.effective_unsupported_rules.filter((rule) => !config.qualified_wave2_rules.includes(rule)).join(',') === config.effective_unsupported_rules.join(','),
+  'wave2 remaining special inventory drifted',
+);
 
 for (const rule of config.qualified_wave2_rules) assert(sql.includes(`'${rule}'`), `missing wave2 rule ${rule}`);
 for (const marker of [
