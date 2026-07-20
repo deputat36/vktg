@@ -1,0 +1,70 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_qualification",
+  "production_applied": false,
+  "production_ready": false,
+  "changes_supported_inventory": false,
+  "base_effective_supported_count": 17,
+  "base_effective_unsupported_count": 8,
+  "candidate_rules": [
+    {
+      "id": "bankruptcy_risk",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "lawyer_request_type": "check_bankruptcy",
+      "expected_decision": "Оценить банкротный риск и допустимую конструкцию сделки.",
+      "documents": ["bankruptcy_check"]
+    },
+    {
+      "id": "redevelopment",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "lawyer_request_type": "check_redevelopment",
+      "expected_decision": "Определить влияние перепланировки на сделку и ипотеку.",
+      "documents": ["technical_plan", "redevelopment_approval"]
+    },
+    {
+      "id": "after_registration",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "lawyer_request_type": "check_post_registration_payment",
+      "expected_decision": "Подтвердить безопасные условия перечисления денег после регистрации.",
+      "documents": ["settlement_scheme"]
+    },
+    {
+      "id": "certificate",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "lawyer_request_type": "design_safe_structure",
+      "expected_decision": "Проверить условия сертификата и безопасный порядок расчётов.",
+      "documents": ["certificate_terms"]
+    }
+  ],
+  "qualification_requirements": [
+    "server_matched_rule",
+    "fact_value_yes",
+    "fact_evidence_source_client_or_document",
+    "exact_catalog_risk_flag",
+    "exact_lawyer_task_contract",
+    "all_required_documents_present",
+    "all_required_document_statuses_known",
+    "lawyer_owner_resolved",
+    "lawyer_handoff_ready_or_urgent_incomplete",
+    "no_broker_scope_expansion"
+  ],
+  "mandatory_stops": [
+    "qualification_only_not_support",
+    "effective_17_8_inventory_unchanged",
+    "wave2_integration_not_added",
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing"
+  ]
+}
