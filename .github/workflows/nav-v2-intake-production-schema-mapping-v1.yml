@@ -1,0 +1,108 @@
+name: Navigator v2 intake production schema mapping v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-intake-production-schema-mapping-v1.json'
+      - 'scripts/check_nav_v2_intake_production_schema_mapping_v1.py'
+      - 'scripts/check-nav-v2-intake-production-schema-mapping-v1.mjs'
+      - 'supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql'
+      - 'tests/sql/nav_v2_intake_production_schema_*.sql'
+      - 'docs/NAV_V2_INTAKE_PRODUCTION_SCHEMA_MAPPING_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-production-schema-mapping-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-intake-production-schema-mapping-v1.json'
+      - 'scripts/check_nav_v2_intake_production_schema_mapping_v1.py'
+      - 'scripts/check-nav-v2-intake-production-schema-mapping-v1.mjs'
+      - 'supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql'
+      - 'tests/sql/nav_v2_intake_production_schema_*.sql'
+      - 'docs/NAV_V2_INTAKE_PRODUCTION_SCHEMA_MAPPING_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-production-schema-mapping-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate source boundary
+        run: python3 scripts/check_nav_v2_intake_production_schema_mapping_v1.py
+      - name: Validate mapping semantics
+        run: node scripts/check-nav-v2-intake-production-schema-mapping-v1.mjs
+      - name: Compile Python checker
+        run: python3 -m py_compile scripts/check_nav_v2_intake_production_schema_mapping_v1.py
+
+  postgres-17-mapping:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_intake_mapping
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_intake_mapping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_intake_mapping
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Create exact synthetic write surface
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_harness_setup.sql
+      - name: Apply repository-only mapper
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql
+      - name: Run 13-rule FK, enum, replay and trigger assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_assertions.sql 2>&1 | tee nav-v2-intake-production-schema-mapping.log
+      - name: Rehearse full rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_rollback.sql 2>&1 | tee nav-v2-intake-production-schema-rollback.log
+      - name: Upload mapping evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-intake-production-schema-mapping-v1
+          path: |
+            config/nav-v2-intake-production-schema-mapping-v1.json
+            supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql
+            tests/sql/nav_v2_intake_production_schema_*.sql
+            docs/NAV_V2_INTAKE_PRODUCTION_SCHEMA_MAPPING_V1_2026-07-20.md
+            nav-v2-intake-production-schema-*.log
+          if-no-files-found: warn
+          retention-days: 14
