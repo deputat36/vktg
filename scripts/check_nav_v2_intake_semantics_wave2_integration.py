@@ -32,7 +32,16 @@ def main() -> None:
     require(len(config["effective_supported_rules"]) == 21, "effective supported inventory length changed")
     require(len(config["effective_unsupported_rules"]) == 4, "effective unsupported inventory length changed")
     require(wave1["effective_supported_rules"] == config["effective_supported_rules"][:17], "wave1 17 support inventory drifted")
-    require(wave1["effective_unsupported_rules"][:4] == config["qualified_wave2_rules"], "qualified wave2 order differs from wave1 unsupported inventory")
+    require(
+        [rule for rule in wave1["effective_unsupported_rules"] if rule in config["qualified_wave2_rules"]]
+        == config["qualified_wave2_rules"],
+        "qualified wave2 order differs from wave1 unsupported inventory",
+    )
+    require(
+        [rule for rule in wave1["effective_unsupported_rules"] if rule not in config["qualified_wave2_rules"]]
+        == config["effective_unsupported_rules"],
+        "remaining special inventory differs from wave1 unsupported inventory",
+    )
 
     required_sql = [
         "nav_v2_prepare_intake_legacy_save_wave2_v1",
