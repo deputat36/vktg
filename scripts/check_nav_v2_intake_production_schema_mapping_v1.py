@@ -39,8 +39,9 @@ def main() -> None:
         "'production_ready', false",
         "'privacy_quality_task_collision'",
         "'intake_v1:'",
-        "'object' then 'both'",
-        "'deal' then 'both'",
+        "p_side in ('object', 'deal')",
+        "return 'both'",
+        "grant execute on function nav_v2_private.nav_v2_map_intake_document_side_v1(text) to service_role",
     ]
     for marker in required_sql:
         require(marker in sql, f"SQL marker missing: {marker}")
