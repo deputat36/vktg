@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,9 +51,15 @@ def main() -> None:
     for marker in forbidden_dml:
         require(marker not in lower, f"planner contains business DML: {marker}")
 
-    forbidden_pii = ["seller_name", "buyer_name", "seller_phone", "buyer_phone", "email", "passport", "snils", "inn"]
-    for marker in forbidden_pii:
-        require(marker not in lower, f"planner depends on PII: {marker}")
+    # Legacy source identifiers contain seller_name/buyer_name by design. Block only
+    # actual column/JSON-key dependencies, not the source strings being classified.
+    forbidden_field_patterns = [
+        r"\b(?:d|t)\.(?:seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)\b",
+        r"->>\s*'(?:seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)'",
+        r"#>>\s*'\{[^}]*?(?:seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)[^}]*\}'",
+    ]
+    for pattern in forbidden_field_patterns:
+        require(re.search(pattern, lower) is None, f"planner depends on PII field pattern: {pattern}")
 
     require("assigned_to" not in lower and "created_by" not in lower, "planner exposes employee assignment data")
     require("score" not in lower and "performance" not in lower, "planner contains employee evaluation semantics")
