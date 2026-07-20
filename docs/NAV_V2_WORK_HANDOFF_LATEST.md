@@ -4,12 +4,12 @@
 
 - Дата: 20 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `bbef9776d9ba87ed19ae13e82eae7498cb94d3ff` — squash merge PR #413.
+- `main`: `2579bb52661eb9469b585eadba71974178920f7e` — squash merge PR #416.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Project status: `ACTIVE_HEALTHY`.
 - PostgreSQL: 17.6.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#413 не менялись.
+- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#416 не менялись.
 - Intake, governed save, schema mapping, privacy-aligned quality, cleanup planner и semantics overlays остаются только в `supabase/prototypes`.
 
 Live counts могут меняться от реальной работы пользователей. Не откатывать данные только из-за изменения counts.
@@ -37,7 +37,7 @@ Navigator не является CRM, файловым архивом, банко
 
 ## Текущий production baseline
 
-Read-only проверка после PR #413:
+Read-only проверка после PR #416:
 
 - 23 сделки;
 - 24 участника;
@@ -45,17 +45,15 @@ Read-only проверка после PR #413:
 - 53 риска;
 - 98 задач;
 - 122 события;
-- wave1 qualifier отсутствует;
-- wave1 effective preview отсутствует;
-- wave1 governed builder отсутствует;
-- wave1 production-schema mapper отсутствует;
+- wave1/wave2 qualifiers отсутствуют;
+- wave1/wave2 effective previews и mappers отсутствуют;
 - governed intake ledger отсутствует;
 - privacy-aligned quality helper отсутствует;
 - cleanup planner отсутствует;
 - bounded task columns и canonical governed task RPC отсутствуют;
 - intake Edge route и новый frontend transport отсутствуют.
 
-Exact production quality hashes остались прежними:
+Exact production quality hashes остаются прежними:
 
 - `nav_v2_sync_deal_quality_tasks(uuid)` — `c7163ba2e7ee374203c462b196bd629f`;
 - `nav_v2_deal_quality_tasks_trigger()` — `3c9c1f1ed95e63cb11a10ad33f76a45e`.
@@ -141,79 +139,69 @@ Owner options:
 
 `selected_option=null`. Production cleanup не выполнялся.
 
-### PR #412 — legal semantics wave 1 qualification
+### PR #412–#413 — legal semantics wave 1
 
-Merge: `c0f9149019c74d538130e7dad24eab8a796c8da9`.
-
-Квалифицированы exact catalog semantics:
+Qualification и integration для:
 
 - `spouse`;
 - `seller_absent`;
 - `encumbrance`;
 - `inheritance`.
 
-Qualification проверяет fact/evidence, exact risk, block flags, expected decision, lawyer-only task, required document title/side/status/owner, resolved lawyer и handoff readiness. Любой tamper или gap остаётся fail-closed.
+Effective repository overlay: 17 supported / 8 unsupported.
 
-PR #412 не изменял support inventory: base 13/12 был сохранён.
+Доказаны exact catalog semantics, lawyer ownership, side-aware documents, risk/gate flags, exact replay, partial-failure rollback и exact production-like schema на 17 fixtures.
 
-### PR #413 — legal semantics wave 1 integration
+### PR #415–#416 — legal semantics wave 2
 
-Merge: `bbef9776d9ba87ed19ae13e82eae7498cb94d3ff`.
+Qualification и integration для:
 
-Effective repository overlay теперь даёт:
+- `bankruptcy_risk`;
+- `redevelopment`;
+- `after_registration`;
+- `certificate`.
 
-- supported — 17;
-- unsupported — 8.
-
-Базовые v1 config/functions остаются 13/12 для сохранения исторического контракта.
+Effective repository overlay: 21 supported / 4 unsupported.
 
 Server/governed PostgreSQL 17 доказал:
 
-- base regression сохранён;
-- effective parity снимает gap только после qualification;
-- lawyer owner, side-aware documents, risk и gate flags сохраняются;
+- wave1 17/8 regression сохранён;
+- gap снимается только при exact wave2 qualification;
+- lawyer owner и document scope seller/object/deal/buyer сохраняются;
+- combined plan допускает базовые SPN rules и четыре wave2 lawyer rules одновременно;
 - exact ledger replay не создаёт дубли;
-- combined four-rule plan даёт 17/8;
-- missing status и оставшиеся rules остаются blocked;
+- remaining special semantics остаются blocked;
 - partial failure не оставляет ledger/shadow rows;
 - layered rollback проходит.
 
 Exact-schema PostgreSQL 17 доказал:
 
-- прежние 13 fixtures проходят;
-- четыре wave1 fixtures добавлены;
-- итог — 17 synthetic deals;
-- production-like FK, enum, task type, status и trigger constraints проходят;
-- seller scope сохраняется;
-- object scope отображается в enum `both` с исходным `source_hint`;
-- создаются только lawyer `legal_blocker` tasks;
-- risk и deposit/deal flags сохраняются;
-- exact replay проходит;
-- remaining unsupported, missing qualification, tampered risk и invalid FK fail closed;
-- полный rollback проходит.
+- base 13 + wave1 4 + wave2 4 = 21 synthetic deals;
+- production-like FK/enums/status/task types проходят;
+- object/deal отображаются в `both` с исходным `source_hint`;
+- seller/buyer scope сохраняется напрямую;
+- создаются lawyer `legal_blocker` tasks с `intake_v1:<rule>`;
+- exact replay, tamper/FK failures и полный rollback проходят.
 
 `production_ready=false`. Production execute отсутствует.
 
 ## Effective supported и fail-closed rules
 
-Effective repository supported inventory:
+Effective repository supported inventory — 21 правило:
 
 - `minor_seller`, `minor_buyer`, `child_money`, `power_of_attorney`, `shares`;
 - `minor_registered`, `privatisation`, `court_basis`;
 - `matcap`, `mortgage`, `military_mortgage`;
 - `settlements_not_agreed`, `expenses_not_agreed`;
-- `spouse`, `seller_absent`, `encumbrance`, `inheritance`.
+- `spouse`, `seller_absent`, `encumbrance`, `inheritance`;
+- `bankruptcy_risk`, `redevelopment`, `after_registration`, `certificate`.
 
-Effective fail-closed inventory:
+Effective fail-closed inventory — 4 специальных правила:
 
-- `bankruptcy_risk`;
-- `redevelopment`;
-- `after_registration`;
 - `legal_problem`;
 - `partner_agency`;
 - `flat_ground`;
-- `house_land`;
-- `certificate`.
+- `house_land`.
 
 ## Текущие gates
 
@@ -232,7 +220,7 @@ Effective fail-closed inventory:
 
 Подключение нового intake save path запрещено без:
 
-- завершения remaining fail-closed semantics;
+- завершения четырёх special semantics;
 - authenticated E2E;
 - explicit owner/deployment approval;
 - approved migration/Edge rollout;
@@ -251,8 +239,10 @@ Effective fail-closed inventory:
 - `docs/NAV_V2_LEGACY_QUALITY_CLEANUP_DECISION_V1_2026-07-20.md`
 - `docs/NAV_V2_INTAKE_SEMANTICS_WAVE1_QUALIFICATION_2026-07-20.md`
 - `docs/NAV_V2_INTAKE_SEMANTICS_WAVE1_INTEGRATION_2026-07-20.md`
-- `config/nav-v2-intake-semantics-wave1-integration-v1.json`
-- `supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql`
+- `docs/NAV_V2_INTAKE_SEMANTICS_WAVE2_QUALIFICATION_2026-07-20.md`
+- `docs/NAV_V2_INTAKE_SEMANTICS_WAVE2_INTEGRATION_2026-07-20.md`
+- `config/nav-v2-intake-semantics-wave2-integration-v1.json`
+- `supabase/prototypes/nav_v2_intake_semantics_wave2_integration_v1.sql`
 
 ## Binding ограничения
 
@@ -272,26 +262,28 @@ Generic команда `продолжай` не является:
 
 ## Следующий безопасный slice
 
-Cleanup остаётся owner-gated. Продолжить repository-only legal semantics wave 2 qualification для четырёх обычных catalog-driven правил:
+Cleanup остаётся owner-gated. Продолжить repository-only special semantics qualification для четырёх оставшихся правил:
 
-1. `bankruptcy_risk` — seller document `bankruptcy_check`.
-2. `redevelopment` — object documents `technical_plan`, `redevelopment_approval`.
-3. `after_registration` — deal document `settlement_scheme`.
-4. `certificate` — buyer document `certificate_terms`.
+1. `legal_problem` — stage-driven urgent lawyer case, documents могут отсутствовать.
+2. `partner_agency` — representation-driven responsibility boundary.
+3. `flat_ground` — object-type driven проверка связи помещения с землёй, входом и коммуникациями.
+4. `house_land` — object-type driven согласованность документов дома и участка.
 
 Требования:
 
 - использовать только exact versioned catalog;
 - не принимать юридическое решение автоматически;
 - сохранить lawyer ownership и отсутствие broker leakage;
-- квалифицировать только при fact yes + evidence source + exact risk/task/doc contract + resolved lawyer + ready/urgent handoff;
-- проверить seller/object/deal/buyer document scope;
-- сохранить base effective 17/8 до отдельной integration wave 2;
+- отдельно квалифицировать trigger kind: stage / representation / object_type;
+- проверить no-document rule для `legal_problem`;
+- проверить partner responsibility document scope;
+- проверить object/document scopes для `flat_ground` и `house_land`;
+- сохранить effective 21/4 до отдельной final integration wave;
 - доказать positive/combined/negative cases и rollback в PostgreSQL 17;
 - не подключать production mapper, Edge или frontend.
 
-После qualification отдельным PR можно интегрировать wave 2 и перейти к effective 21/4. Оставшиеся специальные правила `legal_problem`, `partner_agency`, `flat_ground`, `house_land` должны идти отдельной последней волной.
+После qualification отдельным PR можно интегрировать special wave и перейти к effective 25/0. Это всё ещё не является deployment readiness без authenticated E2E и owner approval.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #413. Cleanup остаётся owner-gated. Следующий slice — repository-only legal semantics wave 2 qualification для bankruptcy_risk, redevelopment, after_registration и certificate с exact catalog/owner/document/risk/handoff PG17 evidence. Не применяй migration, не создавай Supabase branch и не меняй production без explicit owner/deployment/cost approval.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #416. Cleanup остаётся owner-gated. Следующий slice — repository-only special semantics qualification для legal_problem, partner_agency, flat_ground и house_land с exact catalog trigger/owner/document/risk/handoff PG17 evidence. Не применяй migration, не создавай Supabase branch и не меняй production без explicit owner/deployment/cost approval.`
