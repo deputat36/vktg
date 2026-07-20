@@ -162,7 +162,7 @@ begin
  q_house:=nav_v2_private.nav_v2_qualify_intake_special_semantics_v1(a,harness.special_owner_context());
  perform harness.assert_true(jsonb_array_length(q_house->'qualified_rule_ids')=3,'house composite did not qualify three compatible rules');
  perform harness.assert_true((q_house->'qualified_rule_ids') @> '["legal_problem","partner_agency","house_land"]'::jsonb,'house composite coverage changed');
- perform harness.assert_true((q_flat->'qualified_rule_ids') || (q_house->'qualified_rule_ids') @> '["legal_problem","partner_agency","flat_ground","house_land"]'::jsonb,'composite union does not cover all special rules');
+ perform harness.assert_true(((q_flat->'qualified_rule_ids') || (q_house->'qualified_rule_ids')) @> '["legal_problem","partner_agency","flat_ground","house_land"]'::jsonb,'composite union does not cover all special rules');
 
  perform harness.assert_true((q->>'base_effective_supported_count')::integer=21,'special qualification changed supported baseline');
  perform harness.assert_true((q->>'base_effective_unsupported_inventory')::integer=4,'special qualification changed unsupported baseline');
@@ -200,7 +200,7 @@ begin
  perform harness.assert_true(not (q->'qualified_rule_ids' @> '["flat_ground"]'::jsonb),'flat_ground with tampered document side qualified');
 
  p:=harness.special_house_land();
- p:=jsonb_set(p,'{deal,intake_draft,documents}',(p#>'{deal,intake_draft,documents}')-'2',true);
+ p:=jsonb_set(p,'{deal,intake_draft,documents}',(p#>'{deal,intake_draft,documents}') - 2,true);
  a:=nav_v2_private.nav_v2_prepare_intake_save_v1(p);
  q:=nav_v2_private.nav_v2_qualify_intake_special_semantics_v1(a,harness.special_owner_context());
  perform harness.assert_true(not (q->'qualified_rule_ids' @> '["house_land"]'::jsonb),'house_land with missing document status qualified');
