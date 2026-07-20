@@ -142,15 +142,15 @@ with candidates as (
       'replacement_source', decision->>'replacement_source'
     ) as item
   from candidates
+), grouped as (
+  select decision->>'classification' as classification, count(*)::integer as row_count
+  from candidates
+  group by decision->>'classification'
 ), summary as (
   select
-    count(*)::integer as total,
+    (select count(*)::integer from candidates) as total,
     coalesce(jsonb_object_agg(classification, row_count order by classification), '{}'::jsonb) as by_classification
-  from (
-    select decision->>'classification' as classification, count(*)::integer as row_count
-    from candidates
-    group by decision->>'classification'
-  ) grouped
+  from grouped
 )
 select jsonb_build_object(
   'contract_version', 1,
