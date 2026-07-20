@@ -1,5 +1,8 @@
 \set ON_ERROR_STOP on
 
+drop function if exists harness.write_mapping_wave2(uuid,jsonb);
+drop function if exists harness.wave2_combined_mapping_plan();
+drop function if exists harness.wave2_mapping_plan(text);
 drop function if exists harness.mock_governed_intake_save_wave2_v1(jsonb,uuid,jsonb,boolean);
 drop function if exists harness.wave2_all_intake();
 drop function if exists harness.wave2_intake(text,text);
