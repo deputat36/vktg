@@ -1,0 +1,67 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_decision_package",
+  "production_applied": false,
+  "production_ready": false,
+  "writes_allowed": false,
+  "selected_option": null,
+  "inventory_snapshot": {
+    "captured_at": "2026-07-20",
+    "total_open_rows": 46,
+    "obsolete_privacy_conflict": 40,
+    "replace_object_context": 4,
+    "replace_representation": 2,
+    "age_0_7_days": 2,
+    "age_8_30_days": 44
+  },
+  "managed_legacy_sources": [
+    "auto_quality_seller_name",
+    "auto_quality_buyer_name",
+    "auto_quality_address",
+    "auto_quality_responsible_spn"
+  ],
+  "classifications": [
+    "obsolete_privacy_conflict",
+    "resolved_under_new_contract",
+    "replace_object_context",
+    "replace_representation",
+    "replace_seller_spn",
+    "replace_buyer_spn",
+    "replace_both_spn",
+    "replace_one_spn_consistency",
+    "manual_review"
+  ],
+  "owner_options": [
+    {
+      "id": "gradual_on_touch",
+      "recommended": true,
+      "description": "Close obsolete rows only when a deal is synchronized by the deployed replacement; no batch cleanup."
+    },
+    {
+      "id": "one_time_name_only_after_deploy",
+      "recommended": false,
+      "description": "After deployment and authenticated verification, close only the 40 privacy-conflicting name tasks in one controlled action."
+    },
+    {
+      "id": "controlled_reconciliation_after_deploy",
+      "recommended": false,
+      "description": "After deployment, reconcile all four legacy sources against the new contract with dry-run evidence and rollback."
+    }
+  ],
+  "prohibited_uses": [
+    "employee_scoring",
+    "performance_evaluation",
+    "restore_client_names_or_phones",
+    "automatic_cleanup",
+    "production_dml",
+    "mass_backfill"
+  ],
+  "mandatory_stops": [
+    "selected_option_missing",
+    "privacy_aligned_replacement_not_deployed",
+    "authenticated_role_matrix_not_run",
+    "owner_cleanup_approval_missing",
+    "deployment_approval_missing",
+    "rollback_attestation_missing"
+  ]
+}
