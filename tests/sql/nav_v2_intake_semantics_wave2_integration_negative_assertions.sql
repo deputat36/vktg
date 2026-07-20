@@ -13,7 +13,15 @@ begin
  perform harness.assert_true(jsonb_array_length(plan#>'{wave2_qualification,qualified_rule_ids}')=4,'combined wave2 qualification count differs from four');
  perform harness.assert_true(jsonb_array_length(plan->'documents')=5,'combined wave2 document count differs from five');
  perform harness.assert_true((select count(*) from jsonb_array_elements(plan->'tasks') t where t->>'owner_role'='lawyer')=4,'combined wave2 lawyer task count differs from four');
- perform harness.assert_true((select count(*) from jsonb_array_elements(plan->'risks') r where r->>'level'='yellow')=4,'combined wave2 yellow risk count differs from four');
+ perform harness.assert_true(
+  (select count(*) from jsonb_array_elements(plan->'risks') r
+   where r->>'id' in ('bankruptcy_risk','redevelopment','after_registration','certificate') and r->>'level'='yellow')=4,
+  'combined wave2 yellow risk count differs from four'
+ );
+ perform harness.assert_true(
+  (select count(*) from jsonb_array_elements(plan->'risks') r where r->>'id' in ('settlements_not_agreed','expenses_not_agreed'))=2,
+  'combined base SPN risk regression changed'
+ );
 
  p:=jsonb_set(harness.base_intake(),'{deal,intake_action}','"lawyer"'::jsonb,true);
  p:=jsonb_set(p,'{deal,intake_draft,lawyerRequestConfirmed}','true'::jsonb,true);
