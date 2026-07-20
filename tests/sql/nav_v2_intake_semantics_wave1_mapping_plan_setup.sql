@@ -48,7 +48,8 @@ begin
  task:=jsonb_build_object(
   'id','intake-rule:'||p_rule_id,'rule_id',p_rule_id,'owner_role','lawyer',
   'owner_id','63000000-0000-4000-8000-000000000003','action','Рассмотреть структурированный запрос.',
-  'evidence','structured_document_statuses','expected_result',decision,'deadline_rule',case when blocks_deposit then 'before_deposit' when blocks_deal then 'before_deal' else 'next_review' end,
+  'evidence','structured_document_statuses','expected_result',decision,
+  'deadline_rule',case when blocks_deposit then 'before_deposit' when blocks_deal then 'before_deal' else 'next_review' end,
   'deadline',null,'gate_impact',jsonb_build_object('blocks_deposit',blocks_deposit,'blocks_deal',blocks_deal)
  );
  p:=jsonb_set(p,'{documents}',docs,true);
@@ -67,14 +68,14 @@ language plpgsql
 immutable
 set search_path=pg_catalog,harness
 as $function$
-declare p jsonb; item jsonb; one jsonb;
+declare p jsonb; one jsonb; v_rule_id text;
 begin
  p:=harness.wave1_mapping_plan('spouse');
  p:=jsonb_set(p,'{documents}','[]'::jsonb,true);
  p:=jsonb_set(p,'{risks}','[]'::jsonb,true);
  p:=jsonb_set(p,'{tasks}','[]'::jsonb,true);
- foreach item in array array['"spouse"'::jsonb,'"seller_absent"'::jsonb,'"encumbrance"'::jsonb,'"inheritance"'::jsonb] loop
-  one:=harness.wave1_mapping_plan(item#>>'{}');
+ for v_rule_id in select unnest(array['spouse','seller_absent','encumbrance','inheritance']) loop
+  one:=harness.wave1_mapping_plan(v_rule_id);
   p:=jsonb_set(p,'{documents}',p->'documents'||one->'documents',true);
   p:=jsonb_set(p,'{risks}',p->'risks'||one->'risks',true);
   p:=jsonb_set(p,'{tasks}',p->'tasks'||one->'tasks',true);
