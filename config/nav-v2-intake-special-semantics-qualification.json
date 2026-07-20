@@ -1,0 +1,16 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_qualification",
+  "production_applied": false,
+  "production_ready": false,
+  "changes_supported_inventory": false,
+  "base_effective_supported_count": 21,
+  "base_effective_unsupported_count": 4,
+  "candidate_rules": [
+    {"id":"legal_problem","trigger_kind":"stage","trigger_value":"legal_problem","owner":"lawyer","risk_level":"red","blocks_deposit":true,"blocks_deal":false,"lawyer_request_type":"assess_urgent_case","documents":[]},
+    {"id":"partner_agency","trigger_kind":"representation","trigger_value":"partner_agency","owner":"lawyer","risk_level":"yellow","blocks_deposit":false,"blocks_deal":false,"lawyer_request_type":"check_partner_deal","documents":["partner_responsibility_note"]},
+    {"id":"flat_ground","trigger_kind":"object_type","trigger_value":"flat_ground","owner":"lawyer","risk_level":"yellow","blocks_deposit":true,"blocks_deal":false,"lawyer_request_type":"design_safe_structure","documents":["land_status","object_title_basis"]},
+    {"id":"house_land","trigger_kind":"object_type","trigger_value":"house_land","owner":"lawyer","risk_level":"yellow","blocks_deposit":false,"blocks_deal":false,"lawyer_request_type":"check_document_package","documents":["house_title_basis","land_title_basis","boundary_status"]}
+  ],
+  "mandatory_stops": ["qualification_only_not_support","effective_21_4_inventory_unchanged","special_integration_not_added","authenticated_role_matrix_not_run","deployment_approval_missing"]
+}
