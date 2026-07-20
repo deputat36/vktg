@@ -1,0 +1,54 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_rehearsal",
+  "production_applied": false,
+  "production_ready": false,
+  "quality_principle": "Navigator completeness never requires client names or phones",
+  "structured_only_checks": [
+    "target_date_or_date_unknown",
+    "lawyer_requested_decision",
+    "broker_work_plan_contract"
+  ],
+  "representation_rules": {
+    "seller": ["seller_spn"],
+    "buyer": ["buyer_spn"],
+    "both": ["seller_spn", "buyer_spn"],
+    "one_spn_both": ["seller_spn", "buyer_spn", "same_spn"],
+    "partner_agency": ["explicit_partner_side"],
+    "unknown": ["clarify_representation"]
+  },
+  "managed_sources": [
+    "auto_quality_representation",
+    "auto_quality_seller_spn",
+    "auto_quality_buyer_spn",
+    "auto_quality_one_spn_consistency",
+    "auto_quality_object_context",
+    "auto_quality_next_action",
+    "auto_quality_target_date",
+    "auto_quality_lawyer_question",
+    "auto_quality_broker_question"
+  ],
+  "obsolete_sources_closed_only_when_deal_is_touched": [
+    "auto_quality_seller_name",
+    "auto_quality_buyer_name",
+    "auto_quality_address",
+    "auto_quality_responsible_spn"
+  ],
+  "no_mass_backfill": true,
+  "production_snapshot": {
+    "deals": 23,
+    "tasks": 98,
+    "open_auto_quality_seller_name": 23,
+    "open_auto_quality_buyer_name": 17,
+    "open_auto_quality_address": 4,
+    "open_auto_quality_responsible_spn": 2,
+    "sync_function_md5": "c7163ba2e7ee374203c462b196bd629f",
+    "trigger_function_md5": "3c9c1f1ed95e63cb11a10ad33f76a45e"
+  },
+  "mandatory_stops": [
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing",
+    "production_migration_missing",
+    "legacy_quality_cleanup_decision_missing"
+  ]
+}
