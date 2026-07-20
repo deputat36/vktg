@@ -28,7 +28,11 @@ assert(sql.includes("'writes_performed', false"), 'planner write evidence missin
 assert(sql.includes("'production_ready', false"), 'planner production gate missing');
 assert(sql.includes('order by source, deal_id, task_id'), 'planner output is not deterministically ordered');
 assert(!/\b(insert|update|delete|truncate)\s+(into\s+|from\s+)?public\./i.test(sql), 'planner contains public-table DML');
-assert(!/(seller_name|buyer_name|seller_phone|buyer_phone|passport|snils|\binn\b)/i.test(sql), 'planner contains PII dependency');
+
+// Source names intentionally include seller_name/buyer_name. Forbid real field access,
+// not the identifiers of the legacy sources being inventoried.
+assert(!/\b(?:d|t)\.(?:seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)\b/i.test(sql), 'planner reads a PII column');
+assert(!/->>\s*'(?:seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)'/i.test(sql), 'planner reads a PII JSON key');
 assert(!/(assigned_to|created_by|employee_score|performance)/i.test(sql), 'planner contains employee evaluation or assignment data');
 assert(sql.includes('to service_role'), 'service-only grant is missing');
 
