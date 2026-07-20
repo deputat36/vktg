@@ -1,0 +1,20 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_rehearsal",
+  "production_applied": false,
+  "supported_rules_count": 13,
+  "unsupported_rules_count": 12,
+  "document_side_mapping": {
+    "seller": "seller",
+    "buyer": "buyer",
+    "object": "both",
+    "deal": "both"
+  },
+  "production_ready": false,
+  "blocking_findings": [
+    "privacy_quality_task_collision",
+    "unsupported_rule_semantics",
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing"
+  ]
+}
