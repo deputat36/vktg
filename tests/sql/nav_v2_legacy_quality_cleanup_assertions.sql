@@ -25,9 +25,24 @@ begin
   perform harness.assert_true(jsonb_array_length(v_plan->'items') = 46, 'planner item count differs from 46');
   perform harness.assert_true(jsonb_array_length(v_plan->'owner_options') = 3, 'owner option count differs from three');
   perform harness.assert_true(jsonb_array_length(v_plan->'mandatory_stops') = 6, 'mandatory stop count differs from six');
+
+  -- Legacy source values intentionally contain seller_name/buyer_name. Validate the
+  -- exact output key allowlist instead of treating source values as PII fields.
   perform harness.assert_true(
-    not (lower(v_plan::text) ~ '(seller_name|buyer_name|seller_phone|buyer_phone|email|passport|snils|inn)'),
-    'planner output contains a forbidden identifier key'
+    not exists(
+      select 1
+      from jsonb_array_elements(v_plan->'items') item
+      cross join lateral jsonb_object_keys(item) item_key
+      where item_key not in (
+        'task_id','deal_id','source','status','age_bucket',
+        'classification','proposed_action','replacement_source'
+      )
+    ),
+    'planner item contains a field outside the safe output allowlist'
+  );
+  perform harness.assert_true(
+    not (lower(v_plan::text) ~ '(seller_phone|buyer_phone|email|passport|snils|"inn")'),
+    'planner output contains a forbidden identifier field'
   );
 
   perform harness.assert_true(
