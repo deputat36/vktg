@@ -1,0 +1,138 @@
+name: Navigator v2 intake semantics wave2 qualification
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-intake-semantics-wave2-qualification.json'
+      - 'scripts/render-nav-v2-intake-server-adapter-v1.mjs'
+      - 'scripts/check_nav_v2_intake_semantics_wave2_qualification.py'
+      - 'scripts/check-nav-v2-intake-semantics-wave2-qualification.mjs'
+      - 'supabase/prototypes/nav_v2_intake_save_adapter_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql'
+      - 'supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_save_integration_v1.sql'
+      - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
+      - 'tests/sql/nav_v2_intake_semantics_wave2_*.sql'
+      - 'docs/NAV_V2_INTAKE_SEMANTICS_WAVE2_QUALIFICATION_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-semantics-wave2-qualification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-intake-contract-v1.json'
+      - 'config/nav-v2-intake-semantics-wave2-qualification.json'
+      - 'scripts/render-nav-v2-intake-server-adapter-v1.mjs'
+      - 'scripts/check_nav_v2_intake_semantics_wave2_qualification.py'
+      - 'scripts/check-nav-v2-intake-semantics-wave2-qualification.mjs'
+      - 'supabase/prototypes/nav_v2_intake_save_adapter_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql'
+      - 'supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_save_integration_v1.sql'
+      - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
+      - 'tests/sql/nav_v2_intake_semantics_wave2_*.sql'
+      - 'docs/NAV_V2_INTAKE_SEMANTICS_WAVE2_QUALIFICATION_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-semantics-wave2-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate wave2 qualification source boundary
+        run: python3 scripts/check_nav_v2_intake_semantics_wave2_qualification.py
+      - name: Validate wave2 qualification semantics
+        run: node scripts/check-nav-v2-intake-semantics-wave2-qualification.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_intake_semantics_wave2_qualification.py
+
+  postgres-17-qualification:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_intake_semantics_wave2
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_intake_semantics_wave2"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_intake_semantics_wave2
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Render canonical intake server adapter
+        run: node scripts/render-nav-v2-intake-server-adapter-v1.mjs --output /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Create base synthetic roles and marker rows
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_setup.sql
+      - name: Apply rendered canonical adapter
+        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Preserve canonical adapter regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_assertions.sql
+      - name: Apply wave2 qualification overlay
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql
+      - name: Run four-rule owner, document, risk and fail-closed assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_assertions.sql 2>&1 | tee nav-v2-intake-semantics-wave2-assertions.log
+      - name: Rehearse wave2 overlay rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_rollback.sql 2>&1 | tee nav-v2-intake-semantics-wave2-rollback.log
+      - name: Rehearse base adapter rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_rollback.sql 2>&1 | tee nav-v2-intake-semantics-wave2-base-rollback.log
+      - name: Upload PostgreSQL 17 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-intake-semantics-wave2-qualification
+          path: |
+            config/nav-v2-intake-semantics-wave2-qualification.json
+            supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql
+            tests/sql/nav_v2_intake_semantics_wave2_assertions.sql
+            tests/sql/nav_v2_intake_semantics_wave2_rollback.sql
+            docs/NAV_V2_INTAKE_SEMANTICS_WAVE2_QUALIFICATION_2026-07-20.md
+            nav-v2-intake-semantics-wave2-*.log
+          if-no-files-found: warn
+          retention-days: 14
