@@ -1,0 +1,88 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_decision_package",
+  "generated_at": "2026-07-20",
+  "production_project_id": "ofewxuqfjhamgerwzull",
+  "production_applied": false,
+  "production_ready": false,
+  "deployment_bundle_ready": false,
+  "authenticated_e2e_proven": false,
+  "branch_cost_rechecked": false,
+  "branch_creation_allowed": false,
+  "technical_accounts_created": false,
+  "selected_deployment_option": null,
+  "selected_cleanup_option": null,
+  "repository_evidence": {
+    "catalog_supported_count": 25,
+    "catalog_unsupported_count": 0,
+    "governed_pg17_proven": true,
+    "production_schema_pg17_proven": true,
+    "privacy_quality_replacement_proven": true,
+    "legacy_cleanup_plan_proven": true,
+    "actor_identity_repository_contract_proven": true,
+    "bounded_task_repository_contract_proven": true
+  },
+  "owner_options": [
+    {
+      "id": "authenticated_e2e_only",
+      "recommended_next": true,
+      "requires_current_cost_lookup": true,
+      "requires_explicit_cost_approval": true,
+      "allows_production_merge": false
+    },
+    {
+      "id": "staged_production_pilot_after_e2e",
+      "recommended_next": false,
+      "requires_authenticated_e2e": true,
+      "requires_separate_deployment_approval": true,
+      "allows_automatic_cleanup": false
+    },
+    {
+      "id": "remain_repository_only",
+      "recommended_next": false,
+      "requires_cost": false,
+      "keeps_production_unchanged": true
+    }
+  ],
+  "ordered_rollout": [
+    {"order":0,"id":"read_only_preflight","writes_allowed":false,"required_evidence":["main_sha","production_counts","production_object_absence","migration_head"]},
+    {"order":1,"id":"cost_and_owner_gate","writes_allowed":false,"required_evidence":["current_branch_cost","explicit_cost_approval","six_hour_ceiling"]},
+    {"order":2,"id":"disposable_preview_branch","writes_allowed":true,"target":"non_production_only","required_evidence":["new_project_ref","no_production_data","automatic_delete_plan"]},
+    {"order":3,"id":"branch_deployment_bundle","writes_allowed":true,"target":"preview_branch_only","required_evidence":["ordered_migrations","edge_bundle","transport_flag_false","rollback_scripts"]},
+    {"order":4,"id":"synthetic_auth_and_data","writes_allowed":true,"target":"preview_branch_only","required_roles":["admin","manager","spn","lawyer","broker","viewer"],"owner_role":"optional_opt_in"},
+    {"order":5,"id":"authenticated_role_matrix","writes_allowed":false,"required_evidence":["allowed_deals","forbidden_deals","broker_mortgage_only","viewer_read_only","cross_actor_replay_rejected","identity_chain"]},
+    {"order":6,"id":"branch_rollback_and_delete","writes_allowed":true,"target":"preview_branch_only","required_evidence":["rollback_passed","branch_deleted","branch_list_absence"]},
+    {"order":7,"id":"separate_production_decision","writes_allowed":false,"required_evidence":["authenticated_e2e_attestation","deployment_bundle_attestation","owner_deployment_approval","pilot_scope"]},
+    {"order":8,"id":"controlled_production_pilot","writes_allowed":true,"target":"production_only_after_approval","required_evidence":["schema_apply","edge_deploy","transport_pilot","monitoring","rollback_trigger"]},
+    {"order":9,"id":"optional_legacy_cleanup","writes_allowed":true,"target":"production_only_after_replacement","required_evidence":["selected_cleanup_option","privacy_quality_replacement_live","owner_cleanup_approval","reconciliation_attestation"]}
+  ],
+  "production_order": [
+    "privacy_aligned_quality_replacement",
+    "bounded_task_contract_and_actor_identity",
+    "governed_intake_ledger_and_full_25_rule_mapper",
+    "edge_identity_and_action_routes",
+    "frontend_transport_flagged_pilot",
+    "optional_owner_approved_legacy_cleanup"
+  ],
+  "mandatory_stops": [
+    "selected_deployment_option_missing",
+    "current_branch_cost_missing",
+    "explicit_cost_approval_missing",
+    "deployment_bundle_not_ready",
+    "authenticated_e2e_not_proven",
+    "production_deployment_approval_missing",
+    "pilot_scope_missing",
+    "rollback_attestation_missing",
+    "cleanup_option_unselected"
+  ],
+  "source_artifacts": [
+    "docs/NAV_V2_WORK_HANDOFF_LATEST.md",
+    "config/nav-v2-auth-e2e-readiness.json",
+    "config/nav-v2-intake-special-semantics-integration-v1.json",
+    "config/nav-v2-legacy-quality-cleanup-decision-v1.json",
+    "supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql",
+    "supabase/prototypes/nav_v2_actor_aware_bounded_tasks_v1.sql",
+    "supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql",
+    "supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql"
+  ]
+}
