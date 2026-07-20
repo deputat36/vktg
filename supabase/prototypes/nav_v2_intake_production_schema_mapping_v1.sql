@@ -9,13 +9,10 @@ security invoker
 set search_path = pg_catalog
 as $function$
 begin
-  return case p_side
-    when 'seller' then 'seller'
-    when 'buyer' then 'buyer'
-    when 'object' then 'both'
-    when 'deal' then 'both'
-    else raise_exception('unsupported intake document side')
-  end;
+  if p_side = 'seller' then return 'seller'; end if;
+  if p_side = 'buyer' then return 'buyer'; end if;
+  if p_side in ('object', 'deal') then return 'both'; end if;
+  raise exception 'Unsupported intake document side: %', p_side using errcode = '22023';
 end;
 $function$;
 
@@ -58,12 +55,10 @@ security invoker
 set search_path = pg_catalog
 as $function$
 begin
-  return case p_owner_role
-    when 'lawyer' then 'legal_blocker'
-    when 'broker' then 'broker_task'
-    when 'spn' then 'operational_task'
-    else raise_exception('unsupported intake task owner role')
-  end;
+  if p_owner_role = 'lawyer' then return 'legal_blocker'; end if;
+  if p_owner_role = 'broker' then return 'broker_task'; end if;
+  if p_owner_role = 'spn' then return 'operational_task'; end if;
+  raise exception 'Unsupported intake task owner role: %', p_owner_role using errcode = '22023';
 end;
 $function$;
 
@@ -172,8 +167,10 @@ begin
   end loop;
 
   for v_item in select value from jsonb_array_elements(coalesce(p_plan->'risks', '[]'::jsonb)) loop
-    if nav_v2_private.nav_v2_map_intake_risk_level_v1(v_item->>'risk_level') = 'red' then v_level := 'red';
-    elsif v_level <> 'red' and nav_v2_private.nav_v2_map_intake_risk_level_v1(v_item->>'risk_level') = 'yellow' then v_level := 'yellow';
+    if nav_v2_private.nav_v2_map_intake_risk_level_v1(v_item->>'risk_level') = 'red' then
+      v_level := 'red';
+    elsif v_level <> 'red' and nav_v2_private.nav_v2_map_intake_risk_level_v1(v_item->>'risk_level') = 'yellow' then
+      v_level := 'yellow';
     end if;
     v_risks := v_risks || jsonb_build_array(jsonb_build_object(
       'level', nav_v2_private.nav_v2_map_intake_risk_level_v1(v_item->>'risk_level'),
@@ -216,7 +213,9 @@ begin
     'writes_performed', false,
     'structurally_mappable', true,
     'production_ready', false,
-    'production_blockers', jsonb_build_array('privacy_quality_task_collision','authenticated_role_matrix_not_run','deployment_approval_missing'),
+    'production_blockers', jsonb_build_array(
+      'privacy_quality_task_collision','authenticated_role_matrix_not_run','deployment_approval_missing'
+    ),
     'rule_ids', v_rule_ids,
     'deal', jsonb_build_object(
       'title', concat_ws(' — ', coalesce(nullif(v_deal->>'object_type', ''), 'Объект'), coalesce(nullif(v_deal->>'address', ''), 'ориентир уточняется')),
@@ -243,7 +242,11 @@ begin
       'expenses_agreed', not (v_rule_ids ? 'expenses_not_agreed'),
       'settlements_agreed', not (v_rule_ids ? 'settlements_not_agreed'),
       'documents_min_ready', false,
-      'deal_summary', jsonb_build_object('legal_passport', v_passport, 'intake_work_plan', v_work_plan, 'mapping_version', 1),
+      'deal_summary', jsonb_build_object(
+        'legal_passport', v_passport,
+        'intake_work_plan', v_work_plan,
+        'mapping_version', 1
+      ),
       'wizard_snapshot', coalesce(v_deal->'wizard_snapshot', '{}'::jsonb),
       'next_action', v_next_action,
       'seller_name', null,
@@ -259,7 +262,8 @@ begin
       'actor_id', p_plan #>> '{created_event,actor_id}',
       'event_type', 'intake_governed_created',
       'event_title', 'Сделка создана из нового мастера',
-      'event_data', coalesce(p_plan #> '{created_event,event_data}', '{}'::jsonb) || jsonb_build_object('mapping_version', 1)
+      'event_data', coalesce(p_plan #> '{created_event,event_data}', '{}'::jsonb)
+        || jsonb_build_object('mapping_version', 1)
     )
   );
 end;
@@ -271,4 +275,10 @@ revoke all on function nav_v2_private.nav_v2_map_intake_risk_level_v1(text) from
 revoke all on function nav_v2_private.nav_v2_map_intake_task_type_v1(text) from public, anon, authenticated;
 revoke all on function nav_v2_private.nav_v2_map_intake_task_priority_v1(jsonb) from public, anon, authenticated;
 revoke all on function nav_v2_private.nav_v2_map_governed_intake_to_production_v1(jsonb) from public, anon, authenticated;
+
+grant execute on function nav_v2_private.nav_v2_map_intake_document_side_v1(text) to service_role;
+grant execute on function nav_v2_private.nav_v2_map_intake_document_status_v1(text) to service_role;
+grant execute on function nav_v2_private.nav_v2_map_intake_risk_level_v1(text) to service_role;
+grant execute on function nav_v2_private.nav_v2_map_intake_task_type_v1(text) to service_role;
+grant execute on function nav_v2_private.nav_v2_map_intake_task_priority_v1(jsonb) to service_role;
 grant execute on function nav_v2_private.nav_v2_map_governed_intake_to_production_v1(jsonb) to service_role;
