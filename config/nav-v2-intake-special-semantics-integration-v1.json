@@ -1,0 +1,27 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_integration_rehearsal",
+  "production_applied": false,
+  "production_ready": false,
+  "base_effective_supported_count": 21,
+  "base_effective_unsupported_count": 4,
+  "qualified_special_rules": ["legal_problem","partner_agency","flat_ground","house_land"],
+  "effective_supported_count": 25,
+  "effective_unsupported_count": 0,
+  "effective_supported_rules": [
+    "minor_seller","minor_buyer","child_money","power_of_attorney","shares",
+    "minor_registered","privatisation","court_basis","matcap","mortgage","military_mortgage",
+    "settlements_not_agreed","expenses_not_agreed","spouse","seller_absent","encumbrance","inheritance",
+    "bankruptcy_risk","redevelopment","after_registration","certificate",
+    "legal_problem","partner_agency","flat_ground","house_land"
+  ],
+  "required_proofs": [
+    "wave2_21_4_regression","special_trigger_qualification","legal_problem_empty_document_set",
+    "special_document_scope_preserved","lawyer_owner_and_risk_flags_preserved",
+    "production_fk_enum_status_compatibility","exact_replay","zero_production_calls","layered_rollback"
+  ],
+  "mandatory_stops": [
+    "repository_only_not_deployed","privacy_quality_replacement_not_deployed",
+    "authenticated_role_matrix_not_run","deployment_approval_missing","cleanup_owner_option_unselected"
+  ]
+}

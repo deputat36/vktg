@@ -1,0 +1,284 @@
+name: Navigator v2 intake special semantics integration
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-intake-special-semantics-qualification.json'
+      - 'config/nav-v2-intake-special-semantics-integration-v1.json'
+      - 'config/nav-v2-intake-semantics-wave2-integration-v1.json'
+      - 'scripts/check_nav_v2_intake_special_semantics_integration.py'
+      - 'scripts/check-nav-v2-intake-special-semantics-integration.mjs'
+      - 'supabase/prototypes/nav_v2_intake_*.sql'
+      - 'supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql'
+      - 'tests/sql/nav_v2_intake_adapter_harness_*.sql'
+      - 'tests/sql/nav_v2_intake_save_integration_harness_*.sql'
+      - 'tests/sql/nav_v2_governed_intake_save_*.sql'
+      - 'tests/sql/nav_v2_intake_production_schema_*.sql'
+      - 'tests/sql/nav_v2_intake_semantics_wave1_*.sql'
+      - 'tests/sql/nav_v2_intake_semantics_wave2_*.sql'
+      - 'tests/sql/nav_v2_intake_special_semantics_*.sql'
+      - 'docs/NAV_V2_INTAKE_SPECIAL_SEMANTICS_INTEGRATION_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-special-semantics-integration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-intake-special-semantics-integration-v1.json'
+      - 'scripts/check_nav_v2_intake_special_semantics_integration.py'
+      - 'scripts/check-nav-v2-intake-special-semantics-integration.mjs'
+      - 'supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql'
+      - 'supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql'
+      - 'tests/sql/nav_v2_intake_special_semantics_*.sql'
+      - 'docs/NAV_V2_INTAKE_SPECIAL_SEMANTICS_INTEGRATION_2026-07-20.md'
+      - '.github/workflows/nav-v2-intake-special-semantics-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate final integration source boundary
+        run: python3 scripts/check_nav_v2_intake_special_semantics_integration.py
+      - name: Validate final integration semantics
+        run: node scripts/check-nav-v2-intake-special-semantics-integration.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_intake_special_semantics_integration.py
+
+  postgres-17-governed-integration:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_final_governed
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_final_governed"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_final_governed
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Render canonical intake adapter
+        run: node scripts/render-nav-v2-intake-server-adapter-v1.mjs --output /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Create base roles and marker rows
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_setup.sql
+      - name: Create legacy preview harness
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_setup.sql
+      - name: Apply canonical adapter
+        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav_v2_intake_save_adapter_v1.sql
+      - name: Preserve canonical adapter regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_assertions.sql
+      - name: Apply base legacy integration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_save_integration_v1.sql
+      - name: Preserve base integration regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_assertions.sql
+      - name: Apply governed base
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql
+      - name: Create governed shadow harness
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_harness_setup.sql
+      - name: Preserve governed base regression
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_assertions.sql
+      - name: Apply wave1 qualification and integration
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave1_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_rule_assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_negative_assertions.sql
+      - name: Apply wave2 qualification and integration
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave2_integration_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_rule_assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_negative_assertions.sql
+      - name: Apply and prove special qualification
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_assertions.sql
+      - name: Apply final preview and mapper overlays
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql
+      - name: Create compact final governed harness
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql
+      - name: Run final governed, replay and failure assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_assertions.sql 2>&1 | tee nav-v2-final-governed.log
+      - name: Roll back final overlay
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql
+      - name: Roll back special qualification
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_rollback.sql
+      - name: Normalize synthetic governed rows
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql
+      - name: Roll back wave2 and wave1 overlays
+        if: always()
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_rollback.sql
+      - name: Roll back governed, integration and adapter bases
+        if: always()
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_rollback.sql
+      - name: Upload governed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-final-semantics-governed
+          path: |
+            config/nav-v2-intake-special-semantics-integration-v1.json
+            supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql
+            supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql
+            tests/sql/nav_v2_intake_special_semantics_integration_*.sql
+            nav-v2-final-governed.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  postgres-17-production-schema:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_final_schema
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_final_schema"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5433
+      PGDATABASE: navigator_final_schema
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Create exact production-like surface
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_harness_setup.sql
+      - name: Apply base mapper and preserve 13 fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_assertions.sql
+      - name: Apply wave1 and preserve 17 fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave1_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_mapping_plan_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_mapping_writer_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_mapping_assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_mapping_negative_assertions.sql
+      - name: Apply wave2 and preserve 21 fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_semantics_wave2_integration_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_mapping_plan_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_mapping_writer_setup.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_mapping_assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_mapping_negative_assertions.sql
+      - name: Apply final qualification and mapper
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_qualification.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_mapping_plan_setup.sql
+      - name: Generate final writer from proven wave2 writer
+        run: |
+          sed -e 's/write_mapping_wave2/write_mapping_special/g' \
+              -e 's/nav_v2_map_governed_intake_to_production_wave2_v1/nav_v2_map_governed_intake_to_production_special_v1/g' \
+              tests/sql/nav_v2_intake_semantics_wave2_mapping_writer_setup.sql > /tmp/nav_v2_intake_special_writer.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/nav_v2_intake_special_writer.sql
+      - name: Run full 25-fixture exact-schema assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_mapping_assertions.sql 2>&1 | tee nav-v2-final-schema.log
+      - name: Run final fail-closed and FK assertions
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_mapping_negative_assertions.sql
+      - name: Roll back final overlay
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql
+      - name: Roll back special qualification
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_qualification_only_rollback.sql
+      - name: Roll back wave2 and wave1 layers
+        if: always()
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_qualification_only_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_qualification_only_rollback.sql
+      - name: Roll back exact production-like schema
+        if: always()
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_production_schema_rollback.sql
+      - name: Upload exact-schema evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-final-semantics-production-schema
+          path: |
+            config/nav-v2-intake-special-semantics-integration-v1.json
+            supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql
+            tests/sql/nav_v2_intake_special_semantics_mapping_*.sql
+            nav-v2-final-schema.log
+          if-no-files-found: warn
+          retention-days: 14
