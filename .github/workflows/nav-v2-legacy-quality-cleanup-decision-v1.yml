@@ -1,0 +1,110 @@
+name: Navigator v2 legacy quality cleanup decision v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'
+      - 'scripts/check_nav_v2_legacy_quality_cleanup_decision_v1.py'
+      - 'scripts/check-nav-v2-legacy-quality-cleanup-decision-v1.mjs'
+      - 'supabase/prototypes/nav_v2_legacy_quality_cleanup_plan_v1.sql'
+      - 'tests/sql/nav_v2_legacy_quality_cleanup_*.sql'
+      - 'docs/NAV_V2_LEGACY_QUALITY_CLEANUP_DECISION_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-legacy-quality-cleanup-decision-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'
+      - 'scripts/check_nav_v2_legacy_quality_cleanup_decision_v1.py'
+      - 'scripts/check-nav-v2-legacy-quality-cleanup-decision-v1.mjs'
+      - 'supabase/prototypes/nav_v2_legacy_quality_cleanup_plan_v1.sql'
+      - 'tests/sql/nav_v2_legacy_quality_cleanup_*.sql'
+      - 'docs/NAV_V2_LEGACY_QUALITY_CLEANUP_DECISION_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-legacy-quality-cleanup-decision-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate cleanup decision source boundary
+        run: python3 scripts/check_nav_v2_legacy_quality_cleanup_decision_v1.py
+      - name: Validate cleanup decision semantics
+        run: node scripts/check-nav-v2-legacy-quality-cleanup-decision-v1.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_legacy_quality_cleanup_decision_v1.py
+
+  postgres-17-zero-write-plan:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_cleanup_decision
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_cleanup_decision"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_cleanup_decision
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Create synthetic 46-row legacy inventory
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_legacy_quality_cleanup_harness_setup.sql
+      - name: Apply read-only cleanup planner
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_legacy_quality_cleanup_plan_v1.sql
+      - name: Run deterministic classification and zero-write assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_legacy_quality_cleanup_assertions.sql 2>&1 | tee nav-v2-cleanup-decision-assertions.log
+      - name: Rehearse planner rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_legacy_quality_cleanup_rollback.sql 2>&1 | tee nav-v2-cleanup-decision-rollback.log
+      - name: Upload PostgreSQL 17 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-legacy-quality-cleanup-decision-v1
+          path: |
+            config/nav-v2-legacy-quality-cleanup-decision-v1.json
+            supabase/prototypes/nav_v2_legacy_quality_cleanup_plan_v1.sql
+            tests/sql/nav_v2_legacy_quality_cleanup_harness_setup.sql
+            tests/sql/nav_v2_legacy_quality_cleanup_assertions.sql
+            tests/sql/nav_v2_legacy_quality_cleanup_rollback.sql
+            docs/NAV_V2_LEGACY_QUALITY_CLEANUP_DECISION_V1_2026-07-20.md
+            nav-v2-cleanup-decision-*.log
+          if-no-files-found: warn
+          retention-days: 14
