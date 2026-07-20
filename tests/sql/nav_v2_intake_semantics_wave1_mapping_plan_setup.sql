@@ -76,9 +76,9 @@ begin
  p:=jsonb_set(p,'{tasks}','[]'::jsonb,true);
  for v_rule_id in select unnest(array['spouse','seller_absent','encumbrance','inheritance']) loop
   one:=harness.wave1_mapping_plan(v_rule_id);
-  p:=jsonb_set(p,'{documents}',p->'documents'||one->'documents',true);
-  p:=jsonb_set(p,'{risks}',p->'risks'||one->'risks',true);
-  p:=jsonb_set(p,'{tasks}',p->'tasks'||one->'tasks',true);
+  p:=jsonb_set(p,'{documents}',(p->'documents')||(one->'documents'),true);
+  p:=jsonb_set(p,'{risks}',(p->'risks')||(one->'risks'),true);
+  p:=jsonb_set(p,'{tasks}',(p->'tasks')||(one->'tasks'),true);
  end loop;
  p:=jsonb_set(p,'{wave1_qualification}',jsonb_build_object('qualified_rule_ids','["spouse","seller_absent","encumbrance","inheritance"]'::jsonb),true);
  return p;
