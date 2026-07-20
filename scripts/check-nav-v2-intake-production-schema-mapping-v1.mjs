@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,11 +29,13 @@ const expectedHelpers = [
   'nav_v2_map_governed_intake_to_production_v1'
 ];
 for (const name of expectedHelpers) assert(sql.includes(name), `missing SQL helper ${name}`);
-assert(sql.includes("'info' then 'green'"), 'informational broker rule is not mapped to production risk enum');
-assert(sql.includes("'lawyer' then 'legal_blocker'"), 'lawyer task type mapping is missing');
-assert(sql.includes("'broker' then 'broker_task'"), 'broker task type mapping is missing');
-assert(sql.includes("'spn' then 'operational_task'"), 'SPN task type mapping is missing');
+assert(sql.includes("when 'info' then 'green'"), 'informational broker rule is not mapped to production risk enum');
+assert(sql.includes("p_owner_role = 'lawyer' then return 'legal_blocker'"), 'lawyer task type mapping is missing');
+assert(sql.includes("p_owner_role = 'broker' then return 'broker_task'"), 'broker task type mapping is missing');
+assert(sql.includes("p_owner_role = 'spn' then return 'operational_task'"), 'SPN task type mapping is missing');
+assert(sql.includes("p_side in ('object', 'deal') then return 'both'"), 'deal/object scope mapping is missing');
 assert(sql.includes("'source', 'intake_v1:'"), 'safe source prefix is missing');
+assert(sql.includes("grant execute on function nav_v2_private.nav_v2_map_intake_task_type_v1(text) to service_role"), 'nested helper grant is missing');
 assert(!sql.includes("'source', 'auto_"), 'mapper can accidentally activate production auto due-date semantics');
 assert(!sql.match(/\b(insert|update|delete)\s+(into\s+|from\s+)?public\.nav_/i), 'prototype performs production-table DML');
 
