@@ -1,0 +1,68 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_qualification",
+  "production_applied": false,
+  "production_ready": false,
+  "changes_supported_inventory": false,
+  "candidate_rules": [
+    {
+      "id": "spouse",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": false,
+      "blocks_deal": false,
+      "lawyer_request_type": "determine_notary",
+      "expected_decision": "Определить, требуется ли согласие супруга и в какой форме.",
+      "documents": ["spouse_consent_status"]
+    },
+    {
+      "id": "seller_absent",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "lawyer_request_type": "check_power_of_attorney",
+      "expected_decision": "Определить допустимый способ участия продавца и необходимые полномочия представителя.",
+      "documents": ["participation_plan", "power_of_attorney"]
+    },
+    {
+      "id": "encumbrance",
+      "owner": "lawyer",
+      "risk_level": "red",
+      "blocks_deposit": true,
+      "blocks_deal": true,
+      "lawyer_request_type": "check_encumbrance",
+      "expected_decision": "Определить, можно ли продолжать сделку и как снять или учесть ограничение.",
+      "documents": ["encumbrance_extract", "release_terms"]
+    },
+    {
+      "id": "inheritance",
+      "owner": "lawyer",
+      "risk_level": "yellow",
+      "blocks_deposit": true,
+      "blocks_deal": false,
+      "lawyer_request_type": "check_inheritance",
+      "expected_decision": "Оценить основание права, наследников и возможность безопасного задатка.",
+      "documents": ["inheritance_certificate"]
+    }
+  ],
+  "qualification_requirements": [
+    "server_matched_rule",
+    "fact_value_yes",
+    "fact_evidence_source_client_or_document",
+    "exact_catalog_risk_flag",
+    "exact_lawyer_task_contract",
+    "all_required_documents_present",
+    "all_required_document_statuses_known",
+    "lawyer_owner_resolved",
+    "lawyer_handoff_ready_or_urgent_incomplete",
+    "no_broker_scope_expansion"
+  ],
+  "mandatory_stops": [
+    "qualification_only_not_support",
+    "base_unsupported_inventory_unchanged",
+    "production_mapper_not_updated",
+    "authenticated_role_matrix_not_run",
+    "deployment_approval_missing"
+  ]
+}
