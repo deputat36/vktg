@@ -22,68 +22,67 @@ declare
   v_action text;
   v_replacement text;
 begin
-  case p_source
-    when 'auto_quality_seller_name', 'auto_quality_buyer_name' then
-      v_classification := 'obsolete_privacy_conflict';
-      v_action := 'close_only_after_replacement_deployed_and_owner_approved';
+  if p_source in ('auto_quality_seller_name', 'auto_quality_buyer_name') then
+    v_classification := 'obsolete_privacy_conflict';
+    v_action := 'close_only_after_replacement_deployed_and_owner_approved';
+    v_replacement := null;
+  elsif p_source = 'auto_quality_address' then
+    if coalesce(p_has_address, false) or coalesce(p_has_cadastral, false) then
+      v_classification := 'resolved_under_new_contract';
+      v_action := 'close_after_reconciliation';
       v_replacement := null;
-    when 'auto_quality_address' then
-      if coalesce(p_has_address, false) or coalesce(p_has_cadastral, false) then
-        v_classification := 'resolved_under_new_contract';
-        v_action := 'close_after_reconciliation';
-        v_replacement := null;
-      else
-        v_classification := 'replace_object_context';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_object_context';
-      end if;
-    when 'auto_quality_responsible_spn' then
-      if v_rep = 'unknown' or v_rep not in ('seller','buyer','both','one_spn_both','partner_agency') then
-        v_classification := 'replace_representation';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_representation';
-      elsif v_rep = 'partner_agency' then
-        v_classification := 'replace_representation';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_representation';
-      elsif v_rep = 'seller' and not coalesce(p_has_seller_spn, false) then
-        v_classification := 'replace_seller_spn';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_seller_spn';
-      elsif v_rep = 'buyer' and not coalesce(p_has_buyer_spn, false) then
-        v_classification := 'replace_buyer_spn';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_buyer_spn';
-      elsif v_rep = 'both' and not coalesce(p_has_seller_spn, false) and not coalesce(p_has_buyer_spn, false) then
-        v_classification := 'replace_both_spn';
-        v_action := 'close_legacy_then_create_two_bounded_replacements';
-        v_replacement := 'auto_quality_seller_spn,auto_quality_buyer_spn';
-      elsif v_rep = 'both' and not coalesce(p_has_seller_spn, false) then
-        v_classification := 'replace_seller_spn';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_seller_spn';
-      elsif v_rep = 'both' and not coalesce(p_has_buyer_spn, false) then
-        v_classification := 'replace_buyer_spn';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_buyer_spn';
-      elsif v_rep = 'one_spn_both' and not coalesce(p_has_seller_spn, false) and not coalesce(p_has_buyer_spn, false) then
-        v_classification := 'replace_both_spn';
-        v_action := 'close_legacy_then_create_two_bounded_replacements';
-        v_replacement := 'auto_quality_seller_spn,auto_quality_buyer_spn';
-      elsif v_rep = 'one_spn_both' and (not coalesce(p_has_seller_spn, false) or not coalesce(p_has_buyer_spn, false)) then
-        v_classification := 'replace_one_spn_consistency';
-        v_action := 'close_legacy_then_create_bounded_replacement';
-        v_replacement := 'auto_quality_one_spn_consistency';
-      else
-        v_classification := 'resolved_under_new_contract';
-        v_action := 'close_after_reconciliation';
-        v_replacement := null;
-      end if;
     else
-      v_classification := 'manual_review';
-      v_action := 'no_automatic_action';
+      v_classification := 'replace_object_context';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_object_context';
+    end if;
+  elsif p_source = 'auto_quality_responsible_spn' then
+    if v_rep = 'unknown' or v_rep not in ('seller','buyer','both','one_spn_both','partner_agency') then
+      v_classification := 'replace_representation';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_representation';
+    elsif v_rep = 'partner_agency' then
+      v_classification := 'replace_representation';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_representation';
+    elsif v_rep = 'seller' and not coalesce(p_has_seller_spn, false) then
+      v_classification := 'replace_seller_spn';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_seller_spn';
+    elsif v_rep = 'buyer' and not coalesce(p_has_buyer_spn, false) then
+      v_classification := 'replace_buyer_spn';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_buyer_spn';
+    elsif v_rep = 'both' and not coalesce(p_has_seller_spn, false) and not coalesce(p_has_buyer_spn, false) then
+      v_classification := 'replace_both_spn';
+      v_action := 'close_legacy_then_create_two_bounded_replacements';
+      v_replacement := 'auto_quality_seller_spn,auto_quality_buyer_spn';
+    elsif v_rep = 'both' and not coalesce(p_has_seller_spn, false) then
+      v_classification := 'replace_seller_spn';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_seller_spn';
+    elsif v_rep = 'both' and not coalesce(p_has_buyer_spn, false) then
+      v_classification := 'replace_buyer_spn';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_buyer_spn';
+    elsif v_rep = 'one_spn_both' and not coalesce(p_has_seller_spn, false) and not coalesce(p_has_buyer_spn, false) then
+      v_classification := 'replace_both_spn';
+      v_action := 'close_legacy_then_create_two_bounded_replacements';
+      v_replacement := 'auto_quality_seller_spn,auto_quality_buyer_spn';
+    elsif v_rep = 'one_spn_both' and (not coalesce(p_has_seller_spn, false) or not coalesce(p_has_buyer_spn, false)) then
+      v_classification := 'replace_one_spn_consistency';
+      v_action := 'close_legacy_then_create_bounded_replacement';
+      v_replacement := 'auto_quality_one_spn_consistency';
+    else
+      v_classification := 'resolved_under_new_contract';
+      v_action := 'close_after_reconciliation';
       v_replacement := null;
-  end case;
+    end if;
+  else
+    v_classification := 'manual_review';
+    v_action := 'no_automatic_action';
+    v_replacement := null;
+  end if;
 
   return jsonb_build_object(
     'classification', v_classification,
@@ -107,8 +106,8 @@ with candidates as (
     t.source,
     t.status::text as status,
     case
-      when t.created_at >= clock_timestamp() - interval '7 days' then '0_7_days'
-      when t.created_at >= clock_timestamp() - interval '30 days' then '8_30_days'
+      when t.created_at >= statement_timestamp() - interval '7 days' then '0_7_days'
+      when t.created_at >= statement_timestamp() - interval '30 days' then '8_30_days'
       else 'over_30_days'
     end as age_bucket,
     nav_v2_private.nav_v2_classify_legacy_quality_task_v1(
@@ -128,18 +127,21 @@ with candidates as (
   )
     and t.status in ('open'::public.nav_v2_task_status, 'in_progress'::public.nav_v2_task_status)
 ), items as (
-  select jsonb_build_object(
-    'task_id', task_id,
-    'deal_id', deal_id,
-    'source', source,
-    'status', status,
-    'age_bucket', age_bucket,
-    'classification', decision->>'classification',
-    'proposed_action', decision->>'proposed_action',
-    'replacement_source', decision->>'replacement_source'
-  ) as item
+  select
+    source,
+    deal_id,
+    task_id,
+    jsonb_build_object(
+      'task_id', task_id,
+      'deal_id', deal_id,
+      'source', source,
+      'status', status,
+      'age_bucket', age_bucket,
+      'classification', decision->>'classification',
+      'proposed_action', decision->>'proposed_action',
+      'replacement_source', decision->>'replacement_source'
+    ) as item
   from candidates
-  order by source, deal_id, task_id
 ), summary as (
   select
     count(*)::integer as total,
@@ -160,7 +162,7 @@ select jsonb_build_object(
     'total', coalesce((select total from summary), 0),
     'by_classification', coalesce((select by_classification from summary), '{}'::jsonb)
   ),
-  'items', coalesce((select jsonb_agg(item) from items), '[]'::jsonb),
+  'items', coalesce((select jsonb_agg(item order by source, deal_id, task_id) from items), '[]'::jsonb),
   'owner_options', jsonb_build_array(
     jsonb_build_object('id','gradual_on_touch','recommended',true,'requires_deployment',true,'requires_cleanup_approval',true),
     jsonb_build_object('id','one_time_name_only_after_deploy','recommended',false,'requires_deployment',true,'requires_cleanup_approval',true),
