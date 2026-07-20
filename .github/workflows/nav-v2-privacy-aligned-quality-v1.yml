@@ -1,0 +1,116 @@
+name: Navigator v2 privacy-aligned quality v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-privacy-aligned-quality-completeness-v1.json'
+      - 'scripts/check_nav_v2_privacy_aligned_quality_v1.py'
+      - 'scripts/check-nav-v2-privacy-aligned-quality-v1.mjs'
+      - 'supabase/prototypes/nav_v2_privacy_aligned_quality_*.sql'
+      - 'tests/sql/nav_v2_privacy_aligned_quality_*.sql'
+      - 'docs/NAV_V2_PRIVACY_ALIGNED_QUALITY_COMPLETENESS_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-privacy-aligned-quality-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-privacy-aligned-quality-completeness-v1.json'
+      - 'scripts/check_nav_v2_privacy_aligned_quality_v1.py'
+      - 'scripts/check-nav-v2-privacy-aligned-quality-v1.mjs'
+      - 'supabase/prototypes/nav_v2_privacy_aligned_quality_*.sql'
+      - 'tests/sql/nav_v2_privacy_aligned_quality_*.sql'
+      - 'docs/NAV_V2_PRIVACY_ALIGNED_QUALITY_COMPLETENESS_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-privacy-aligned-quality-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate privacy-aligned quality source boundary
+        run: python3 scripts/check_nav_v2_privacy_aligned_quality_v1.py
+      - name: Validate privacy-aligned quality semantics
+        run: node scripts/check-nav-v2-privacy-aligned-quality-v1.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_privacy_aligned_quality_v1.py
+
+  postgres-17-quality-lifecycle:
+    needs: static-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_privacy_quality
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_privacy_quality"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_privacy_quality
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Create exact legacy quality surface and inventory
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql 2>&1 | tee nav-v2-privacy-quality-setup.log
+      - name: Apply detached privacy-aligned replacement
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql
+      - name: Apply deal-creator authorship overlay
+        run: psql -v ON_ERROR_STOP=1 -f supabase/prototypes/nav_v2_privacy_aligned_quality_task_author_v1.sql
+      - name: Run representation, lifecycle, duplicate and no-backfill assertions
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_assertions.sql 2>&1 | tee nav-v2-privacy-quality-assertions.log
+      - name: Rehearse exact production snapshot rollback
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_rollback.sql 2>&1 | tee nav-v2-privacy-quality-rollback.log
+      - name: Upload PostgreSQL 17 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-privacy-aligned-quality-v1
+          path: |
+            config/nav-v2-privacy-aligned-quality-completeness-v1.json
+            supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql
+            supabase/prototypes/nav_v2_privacy_aligned_quality_task_author_v1.sql
+            tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql
+            tests/sql/nav_v2_privacy_aligned_quality_assertions.sql
+            tests/sql/nav_v2_privacy_aligned_quality_rollback.sql
+            docs/NAV_V2_PRIVACY_ALIGNED_QUALITY_COMPLETENESS_V1_2026-07-20.md
+            nav-v2-privacy-quality-*.log
+          if-no-files-found: warn
+          retention-days: 14
