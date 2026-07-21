@@ -35,10 +35,7 @@ def require(condition: bool, message: str) -> None:
 
 
 def executable_sql(text: str) -> str:
-    return "\n".join(
-        line for line in text.splitlines()
-        if not line.strip().startswith("--")
-    )
+    return "\n".join(line for line in text.splitlines() if not line.strip().startswith("--"))
 
 
 def main() -> None:
@@ -58,10 +55,7 @@ def main() -> None:
     require(attestation["project_ref"] == "ofewxuqfjhamgerwzull", "performance project ref drifted")
     require(attestation["captured_at"] == "2026-07-21T13:38:36.766318+00:00", "performance capture timestamp drifted")
     require(attestation["source_main_sha"] == "0aee8cac9032e3cea8c6c89b2942d8570a98ad2f", "performance source main drifted")
-    require(
-        attestation["source"]["readonly_preflight_sql"] == PREFLIGHT.relative_to(ROOT).as_posix(),
-        "performance preflight path drifted",
-    )
+    require(attestation["source"]["readonly_preflight_sql"] == PREFLIGHT.relative_to(ROOT).as_posix(), "performance preflight path drifted")
     require(attestation["source"]["capture_mode"] == "aggregate_only_read_only_transaction", "capture mode drifted")
 
     scope = attestation["scope"]
@@ -96,8 +90,7 @@ def main() -> None:
     require(sum(item["bytes"] for item in indexes) == 212992, "zero-scan index byte total drifted")
     require(sum(1 for item in indexes if item["supports_foreign_key"]) == 12, "zero-scan FK support count drifted")
     non_fk = [item for item in indexes if not item["supports_foreign_key"]]
-    require(len(non_fk) == 1, "zero-scan non-FK inventory drifted")
-    require(non_fk[0]["index"] == "nav_user_profiles_role_idx", "unexpected non-FK zero-scan index")
+    require(len(non_fk) == 1 and non_fk[0]["index"] == "nav_user_profiles_role_idx", "unexpected non-FK zero-scan index")
     for item in indexes:
         require(item["bytes"] > 0, f"invalid index size: {item['index']}")
         require(item["decision"].startswith(("retain_", "review_only_retain_")), f"index removal was authorized: {item['index']}")
@@ -127,14 +120,7 @@ def main() -> None:
 
     safety = attestation["safety"]
     require(safety["transaction_read_only"] is True and safety["aggregate_only"] is True, "performance capture was not read-only aggregate-only")
-    for key in (
-        "data_mutated",
-        "ddl_executed",
-        "index_dropped",
-        "policy_changed",
-        "rls_changed",
-        "production_change_authorized",
-    ):
+    for key in ("data_mutated", "ddl_executed", "index_dropped", "policy_changed", "rls_changed", "production_change_authorized"):
         require(safety[key] is False, f"performance safety flag must remain false: {key}")
 
     stops = set(attestation["active_stops"])
@@ -151,10 +137,7 @@ def main() -> None:
     sql = executable_sql(preflight)
     require("begin transaction read only;" in sql.lower(), "performance preflight lacks read-only transaction")
     require("rollback;" in sql.lower(), "performance preflight lacks rollback")
-    forbidden_sql = re.compile(
-        r"\b(insert|update|delete|merge|create|alter|drop|truncate|grant|revoke|comment|copy|call|do)\b",
-        re.I,
-    )
+    forbidden_sql = re.compile(r"\b(insert|update|delete|merge|create|alter|drop|truncate|grant|revoke|comment|copy|call|do)\b", re.I)
     require(not forbidden_sql.search(sql), "performance preflight contains DDL or DML")
     for marker in (
         "pg_stat_user_indexes",
@@ -173,17 +156,11 @@ def main() -> None:
     for marker in (
         "check_nav_v2_performance_advisor_attestation_v1.py",
         "nav-v2-performance-advisor-attestation-v1.json",
-        "nav-v2-performance-readonly-preflight-v1.sql",
+        "nav_v2_performance_readonly_preflight_v1.sql",
         "actions/upload-artifact@v4",
     ):
         require(marker in workflow, f"performance workflow marker missing: {marker}")
-    for forbidden in (
-        "supabase db push",
-        "supabase functions deploy",
-        "apply_migration",
-        "create_branch",
-        "confirm_cost",
-    ):
+    for forbidden in ("supabase db push", "supabase functions deploy", "apply_migration", "create_branch", "confirm_cost"):
         require(forbidden not in workflow.lower(), f"performance workflow contains cloud mutation marker: {forbidden}")
 
     for marker in (
