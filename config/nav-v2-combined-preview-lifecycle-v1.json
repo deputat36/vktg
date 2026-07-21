@@ -20,7 +20,9 @@
   "shared_setup": [
     "tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql",
     "tests/sql/nav_v2_combined_preview_shared_setup_v1.sql",
-    "tests/sql/nav_v2_intake_save_integration_harness_setup.sql"
+    "tests/sql/nav_v2_intake_save_integration_harness_setup.sql",
+    "tests/sql/nav_v2_combined_preview_intake_marker_facade_enter_v1.sql",
+    "tests/sql/nav_v2_combined_preview_intake_marker_facade_exit_v1.sql"
   ],
   "forward_order": [
     {
