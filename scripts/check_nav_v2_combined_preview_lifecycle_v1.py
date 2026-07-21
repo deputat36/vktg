@@ -69,7 +69,13 @@ def main() -> None:
     conflict = config["conflict_policy"]
     require(conflict["exact_object_inventory_required"] is True, "exact object inventory is not required")
     require(conflict["duplicate_forward_source_paths_allowed"] is False, "duplicate source paths were allowed")
-    require(conflict["expected_exact_function_redefinitions"] == ["public.nav_v2_get_deal_card_lite"], "expected function redefinition drifted")
+    require(
+        conflict["expected_exact_function_redefinitions"] == [
+            "nav_v2_private.nav_v2_quality_sync_task_v1",
+            "public.nav_v2_get_deal_card_lite",
+        ],
+        "expected function redefinition drifted",
+    )
     require(conflict["unexpected_exact_function_redefinitions_allowed"] is False, "unexpected function redefinitions were allowed")
     require(conflict["shared_schema_created_once"] is True, "shared schema is not single-create")
 
