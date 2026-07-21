@@ -12,9 +12,11 @@
 
 - полный structural catalog — 25 supported / 0 unsupported;
 - source inventory собран;
+- CI-only rehearsal assembler доказан;
 - production migration files не созданы;
 - production rollback bundle не подготовлен;
-- Edge identity handler остаётся detached;
+- Edge identity runtime подключён в исходниках за выключенным feature flag;
+- Edge Function с новым source не деплоился;
 - bounded frontend transport выключен;
 - authenticated E2E не выполнен;
 - deployment option и cleanup option не выбраны.
@@ -74,7 +76,7 @@ PostgreSQL 17 rehearsal и exact snapshot rollback существуют в `test
 
 ### 3. Governed intake и full 25-rule mapper
 
-Сборка требует не одного SQL-файла, а dependency chain:
+Сборка требует dependency chain:
 
 1. render canonical adapter из versioned catalog;
 2. base legacy integration preview;
@@ -90,18 +92,36 @@ PostgreSQL 17 rehearsal и exact snapshot rollback существуют в `test
 
 ### 4. Edge identity и action routes
 
-Repository sources существуют:
+Repository sources:
 
 - `task-action-contract-v2.js`;
 - `task-action-edge-identity-v2.js`;
-- текущий `index.ts`.
+- `task-action-edge-runtime-v2.js`;
+- `index.ts`;
+- `config/nav-v2-task-edge-runtime-integration-v1.json`.
 
-Текущий Edge `index.ts` не импортирует detached identity handler и продолжает использовать legacy user-RPC path через bearer token и publishable/anon key.
+`index.ts` импортирует runtime adapter, но содержит:
 
-Поэтому:
+`const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;`
 
-- verified actor injection не интегрирован;
-- actor-aware service-role RPC route не включён;
+Source-level интеграция включает:
+
+- verified Auth user id;
+- active profile lookup;
+- contract-v2 task context lookup;
+- role и assignment preflight;
+- broker mortgage-only policy;
+- exact actor-aware RPC с `p_actor_id`;
+- server-only service-role transport.
+
+При выключенном флаге profile/task/RPC clients не вызываются, legacy user-RPC path остаётся default.
+
+Поэтому остаются STOP:
+
+- actor-aware SQL не развёрнут;
+- Edge feature flag выключен;
+- Edge Function не деплоился;
+- authenticated E2E отсутствует;
 - Edge deployment не готов;
 - service-role key в браузере запрещён;
 - будущий Edge deploy обязан использовать `verify_jwt=true`.
@@ -150,8 +170,10 @@ Bundle нельзя считать deployable, пока существуют:
 - отсутствующий preview branch;
 - отсутствие executable migrations;
 - отсутствие production rollback bundle;
-- detached Edge identity handler;
-- выключенный bounded transport;
+- actor-aware SQL не развёрнут;
+- Edge runtime feature flag выключен;
+- Edge Function не деплоился;
+- выключенный bounded frontend transport;
 - отсутствие authenticated role matrix;
 - отсутствие production deployment approval;
 - отсутствие pilot scope;
@@ -163,6 +185,7 @@ Manifest доказывает только:
 
 - все repository source paths известны;
 - dependency order зафиксирован;
+- Edge identity/action source route интегрирован за выключенным флагом;
 - текущие незакрытые gates видимы;
 - ни один слой не разрешён к применению;
 - production и preview Supabase не изменены.
