@@ -1,0 +1,146 @@
+name: Navigator v2 combined preview lifecycle v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-combined-preview-lifecycle-v1.json'
+      - 'config/nav-v2-combined-preview-intake-rollback-v1.json'
+      - 'config/nav-v2-preview-candidate-package-v2.json'
+      - 'config/nav-v2-preview-bundle-assembler-v1.json'
+      - 'config/nav-v2-bounded-consolidated-candidate-v1.json'
+      - 'scripts/check_nav_v2_combined_preview_lifecycle_v1.py'
+      - 'scripts/check-nav-v2-combined-preview-artifacts-v1.mjs'
+      - 'scripts/run-nav-v2-combined-preview-lifecycle-v1.sh'
+      - 'scripts/assemble-nav-v2-preview-bundle-v1.mjs'
+      - 'scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'supabase/prototypes/nav_v2_*.sql'
+      - 'tests/sql/nav_v2_*.sql'
+      - 'docs/NAV_V2_COMBINED_PREVIEW_LIFECYCLE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-combined-preview-lifecycle-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-combined-preview-lifecycle-v1.json'
+      - 'config/nav-v2-combined-preview-intake-rollback-v1.json'
+      - 'scripts/check_nav_v2_combined_preview_lifecycle_v1.py'
+      - 'scripts/check-nav-v2-combined-preview-artifacts-v1.mjs'
+      - 'scripts/run-nav-v2-combined-preview-lifecycle-v1.sh'
+      - 'tests/sql/nav_v2_combined_preview_*.sql'
+      - 'docs/NAV_V2_COMBINED_PREVIEW_LIFECYCLE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-combined-preview-lifecycle-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate combined lifecycle source contract
+        run: python3 scripts/check_nav_v2_combined_preview_lifecycle_v1.py
+
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_combined_preview_lifecycle_v1.py
+
+      - name: Check JavaScript and shell syntax
+        run: |
+          node --check scripts/check-nav-v2-combined-preview-artifacts-v1.mjs
+          bash -n scripts/run-nav-v2-combined-preview-lifecycle-v1.sh
+
+      - name: Validate upstream assembler contracts
+        run: |
+          python3 scripts/check_nav_v2_preview_bundle_assembler_v1.py
+          python3 scripts/check_nav_v2_bounded_consolidated_candidate_v1.py
+
+      - name: Assemble upstream artifacts and validate conflict inventory
+        run: |
+          node scripts/assemble-nav-v2-preview-bundle-v1.mjs \
+            --output-dir /tmp/nav-v2-combined-source-preview
+          node scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs \
+            --output-dir /tmp/nav-v2-combined-source-bounded
+          node scripts/check-nav-v2-combined-preview-artifacts-v1.mjs \
+            --preview-bundle-dir /tmp/nav-v2-combined-source-preview \
+            --bounded-dir /tmp/nav-v2-combined-source-bounded \
+            --report /tmp/nav-v2-combined-source-report.json
+
+      - name: Prove no generated migration entered repository
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f -iname '*combined*preview*lifecycle*' | grep -q .; then
+            echo 'FAIL: combined lifecycle leaked into supabase/migrations'
+            exit 1
+          fi
+
+      - name: Upload source conflict evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-combined-preview-source-v1
+          path: /tmp/nav-v2-combined-source-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  postgres-17-lifecycle:
+    needs: source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_combined
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_combined"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_combined
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run combined quality bounded intake lifecycle
+        run: bash scripts/run-nav-v2-combined-preview-lifecycle-v1.sh
+
+      - name: Upload PostgreSQL lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-combined-preview-postgres-v1
+          path: |
+            /tmp/nav-v2-combined-preview-lifecycle-v1.log
+            /tmp/nav-v2-combined-preview-artifact-report-v1.json
+          if-no-files-found: warn
+          retention-days: 30

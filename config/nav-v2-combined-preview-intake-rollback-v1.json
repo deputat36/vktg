@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_combined_intake_rollback_not_executable",
+  "generated_at": "2026-07-21",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "cloud_execution_allowed": false,
+  "rollback_sources": [
+    "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
+    "tests/sql/nav_v2_governed_intake_save_rollback.sql",
+    "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+    "tests/sql/nav_v2_preview_bundle_intake_mapper_cleanup.sql",
+    "tests/sql/nav_v2_combined_preview_intake_adapter_rollback_v1.sql"
+  ],
+  "replaced_standalone_source": "tests/sql/nav_v2_intake_adapter_harness_rollback.sql",
+  "replacement_reason": "standalone rollback owns and drops harness/nav_v2_private schemas and browser roles; combined lifecycle shares these schemas with quality and bounded components",
+  "shared_objects_must_survive_until_later_rollbacks": [
+    "harness.quality_snapshot",
+    "nav_v2_private.nav_v2_quality_sync_task_v1",
+    "nav_v2_private.nav_v2_task_contract_catalog",
+    "public.nav_v2_get_deal_card_lite"
+  ],
+  "marker_facade": {
+    "enter": "tests/sql/nav_v2_combined_preview_intake_marker_facade_enter_v1.sql",
+    "exit": "tests/sql/nav_v2_combined_preview_intake_marker_facade_exit_v1.sql",
+    "marker_tables_may_be_removed_by_final_rollback": true,
+    "real_tables_restored_by_oid_preserving_rename": true
+  },
+  "required_checks": [
+    "exact_source_order",
+    "all_sources_exist",
+    "standalone_schema_drop_source_excluded",
+    "shared_schemas_not_dropped",
+    "shared_roles_not_dropped",
+    "intake_adapter_functions_removed",
+    "marker_tables_removed",
+    "real_tables_restored_before_bounded_rollback"
+  ],
+  "forbidden_statements_in_replacement": [
+    "drop schema harness",
+    "drop schema nav_v2_private",
+    "drop role service_role",
+    "drop role authenticated",
+    "drop role anon"
+  ]
+}
