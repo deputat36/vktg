@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_ci_assembler_not_deployable",
+  "generated_at": "2026-07-21",
+  "source_manifest": "config/nav-v2-preview-deployment-bundle-manifest-v1.json",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "cloud_execution_allowed": false,
+  "writes_to_supabase_migrations_allowed": false,
+  "edge_deploy_allowed": false,
+  "deployment_bundle_ready": false,
+  "production_rollback_bundle_ready": false,
+  "artifacts_are_rehearsal_only": true,
+  "output_directory_policy": "caller_supplied_temporary_directory_only",
+  "segments": [
+    {
+      "order": 1,
+      "id": "quality",
+      "forward_file": "01-quality-forward.sql",
+      "rollback_file": "01-quality-rehearsal-rollback.sql",
+      "forward_sources": [
+        "supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql",
+        "supabase/prototypes/nav_v2_privacy_aligned_quality_task_author_v1.sql"
+      ],
+      "rollback_sources": [
+        "tests/sql/nav_v2_privacy_aligned_quality_rollback.sql"
+      ],
+      "postgres_setup": [
+        "tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql"
+      ],
+      "postgres_assertions": [
+        "tests/sql/nav_v2_privacy_aligned_quality_assertions.sql"
+      ],
+      "production_executable": false
+    },
+    {
+      "order": 2,
+      "id": "bounded",
+      "forward_file": "02-bounded-forward.sql",
+      "rollback_file": "02-bounded-rehearsal-rollback.sql",
+      "forward_sources": [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+        "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+      ],
+      "rollback_sources": [
+        "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+      ],
+      "postgres_setup": [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+        "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql"
+      ],
+      "postgres_assertions": [
+        "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
+        "tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql",
+        "tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql"
+      ],
+      "production_executable": false
+    },
+    {
+      "order": 3,
+      "id": "intake",
+      "forward_file": "03-intake-forward.sql",
+      "rollback_file": "03-intake-rehearsal-rollback.sql",
+      "generated_forward_sources": [
+        {
+          "id": "canonical_intake_adapter",
+          "renderer": "scripts/render-nav-v2-intake-server-adapter-v1.mjs",
+          "template": "supabase/prototypes/nav_v2_intake_save_adapter_v1.sql",
+          "catalog": "config/nav-v2-intake-contract-v1.json"
+        }
+      ],
+      "forward_sources": [
+        "supabase/prototypes/nav_v2_intake_save_integration_v1.sql",
+        "supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql",
+        "supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave1_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave2_integration_v1.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql"
+      ],
+      "rollback_sources": [
+        "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
+        "tests/sql/nav_v2_governed_intake_save_rollback.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+        "tests/sql/nav_v2_intake_adapter_harness_rollback.sql"
+      ],
+      "postgres_setup": [
+        "tests/sql/nav_v2_intake_adapter_harness_setup.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_setup.sql",
+        "tests/sql/nav_v2_governed_intake_save_harness_setup.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql",
+        "tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql"
+      ],
+      "postgres_assertions": [
+        "tests/sql/nav_v2_intake_adapter_harness_assertions.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_assertions.sql",
+        "tests/sql/nav_v2_governed_intake_save_assertions.sql",
+        "tests/sql/nav_v2_intake_special_semantics_integration_assertions.sql"
+      ],
+      "production_executable": false
+    }
+  ],
+  "index_file": "bundle-index.json",
+  "index_required_fields": [
+    "schema_version",
+    "assembler_status",
+    "source_manifest_sha256",
+    "artifacts",
+    "combined_source_sha256",
+    "deployment_bundle_ready"
+  ],
+  "required_checks": [
+    "two_assemblies_are_byte_identical",
+    "all_declared_sources_exist",
+    "source_order_matches_contract",
+    "no_unresolved_intake_template_markers",
+    "no_output_under_supabase_migrations",
+    "artifact_sha256_matches_index",
+    "postgres_17_quality_apply_assert_rollback",
+    "postgres_17_bounded_apply_assert_rollback",
+    "postgres_17_intake_apply_assert_rollback"
+  ],
+  "active_stops": [
+    "artifacts_are_rehearsal_only",
+    "production_migrations_not_created",
+    "production_rollback_not_approved",
+    "edge_identity_handler_not_integrated",
+    "authenticated_e2e_not_run",
+    "deployment_option_unselected",
+    "cost_approval_missing"
+  ]
+}
