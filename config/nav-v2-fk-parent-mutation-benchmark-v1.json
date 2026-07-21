@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_synthetic_fk_parent_mutation_benchmark_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_on": "2026-07-21",
+  "source_main_sha": "d55c7646dea7d5d130f1b4571ed15610e2a6395f",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "index_drop_authorized": false,
+  "cloud_execution_allowed": false,
+  "production_data_used": false,
+  "candidate": {
+    "table": "public.nav_deal_answers_v2",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "leading_prefix": "deal_id",
+    "decision_before_benchmark": "review_possible_redundancy_only",
+    "decision_after_benchmark": "review_possible_redundancy_only"
+  },
+  "read_only_production_fk_contract": {
+    "constraint_name": "nav_deal_answers_v2_deal_id_fkey",
+    "definition": "FOREIGN KEY (deal_id) REFERENCES nav_deals_v2(id) ON DELETE CASCADE",
+    "on_delete": "cascade",
+    "on_update": "no_action",
+    "validated": true,
+    "deferrable": false,
+    "initially_deferred": false,
+    "pii_returned": false,
+    "data_mutated": false,
+    "ddl_executed": false
+  },
+  "synthetic_contract": {
+    "postgres_major": 17,
+    "schema": "harness",
+    "synthetic_deals": 5002,
+    "answers_per_referenced_deal": 20,
+    "synthetic_answers": 100000,
+    "comparison_modes": [
+      "single_and_composite_indexes",
+      "composite_unique_index_only"
+    ],
+    "parent_delete_cascade_cases": 2,
+    "unreferenced_parent_update_cases": 2,
+    "referenced_parent_update_rejection_cases": 2,
+    "explain_analyze": true,
+    "explain_format": "json",
+    "buffers": true,
+    "wal": true,
+    "pg_stat_xact_user_indexes": true,
+    "result_equivalence_required": true,
+    "latency_superiority_asserted": false,
+    "full_transaction_rollback": true,
+    "post_rollback_schema_absence_required": true
+  },
+  "required_assertions": [
+    "composite index remains structurally usable for deal_id child lookup",
+    "composite-only parent delete cascade removes exactly the referenced child rows",
+    "composite-only unreferenced parent update succeeds",
+    "composite-only referenced parent update remains blocked by the foreign key",
+    "composite index receives transaction-local scans during composite-only parent mutation cases",
+    "single-column index is absent during composite-only cases",
+    "result and constraint semantics remain equivalent",
+    "synthetic evidence is rolled back completely"
+  ],
+  "repository_evidence_completed": [
+    "synthetic_fk_parent_delete_cascade",
+    "synthetic_fk_parent_update_no_child",
+    "synthetic_fk_parent_update_rejection",
+    "transaction_local_index_scan_attribution",
+    "synthetic_index_size_capture",
+    "full_rollback"
+  ],
+  "active_stops": [
+    "production_statistics_window_missing",
+    "authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_fk_parent_mutation_benchmark_missing",
+    "production_write_cost_benefit_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_claims": [
+    "production_index_removal_ready",
+    "composite_index_is_faster_in_production",
+    "single_column_index_is_safe_to_drop",
+    "synthetic_latency_is_production_latency",
+    "production_ddl_approved"
+  ],
+  "forbidden_actions": [
+    "drop_production_index",
+    "apply_production_migration",
+    "copy_production_data",
+    "create_supabase_branch",
+    "change_production_rls",
+    "change_leader_schema"
+  ]
+}
