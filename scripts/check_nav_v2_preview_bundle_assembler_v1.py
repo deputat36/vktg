@@ -36,10 +36,10 @@ def main() -> None:
     require(manifest["deployment_bundle_ready"] is False, "source manifest claims deployment readiness")
 
     segments = config["segments"]
-    require([segment["order"] for segment in segments] == [1, 2, 3], "segment order changed")
-    require([segment["id"] for segment in segments] == ["quality", "bounded", "intake"], "segment IDs changed")
-    require(len({segment["forward_file"] for segment in segments}) == 3, "forward filenames are not unique")
-    require(len({segment["rollback_file"] for segment in segments}) == 3, "rollback filenames are not unique")
+    require([segment["order"] for segment in segments] == [1, 2, 3, 4], "segment order changed")
+    require([segment["id"] for segment in segments] == ["quality", "bounded_core", "bounded_dto", "intake"], "segment IDs changed")
+    require(len({segment["forward_file"] for segment in segments}) == 4, "forward filenames are not unique")
+    require(len({segment["rollback_file"] for segment in segments}) == 4, "rollback filenames are not unique")
 
     all_sources: list[str] = []
     for segment in segments:
@@ -57,22 +57,40 @@ def main() -> None:
 
     for relative in all_sources:
         require((ROOT / relative).is_file(), f"declared assembler source missing: {relative}")
-    require(len(all_sources) == len(list(all_sources)), "internal source list error")
 
-    intake = segments[2]
+    intake = segments[3]
     require(len(intake.get("generated_forward_sources", [])) == 1, "intake must have exactly one generated source")
     generated = intake["generated_forward_sources"][0]
     require(generated["id"] == "canonical_intake_adapter", "generated intake source changed")
     require(generated["renderer"] == "scripts/render-nav-v2-intake-server-adapter-v1.mjs", "intake renderer changed")
     require(intake["forward_sources"][-1] == "supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql", "final 25-rule mapper is not last")
+    require(intake["rollback_sources"][2:5] == [
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
+    ], "wave2 rollback and cleanup order changed")
 
-    bounded = segments[1]
-    require(bounded["forward_sources"][:3] == [
+    bounded_core = segments[1]
+    require(bounded_core["forward_sources"] == [
         "supabase/prototypes/nav_v2_bounded_task_contract.sql",
         "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
         "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
-    ], "bounded base/mutation/actor order changed")
-    require(bounded["rollback_sources"][-1] == "tests/sql/nav_v2_bounded_task_base_rollback.sql", "bounded base rollback is not last")
+    ], "bounded core order changed")
+    require(bounded_core["postgres_setup"] == ["tests/sql/nav_v2_bounded_task_mutation_setup.sql"], "bounded core harness changed")
+    require(bounded_core["rollback_sources"][-1] == "tests/sql/nav_v2_bounded_task_base_rollback.sql", "bounded core base rollback is not last")
+
+    bounded_dto = segments[2]
+    require(bounded_dto["forward_sources"] == [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql",
+    ], "bounded DTO order changed")
+    require(bounded_dto["postgres_setup"] == [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+        "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql",
+    ], "bounded DTO harness changed")
+    require("supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql" not in bounded_dto["forward_sources"], "DTO segment contains actor overlay")
 
     quality = segments[0]
     require(quality["forward_sources"] == [
@@ -84,7 +102,6 @@ def main() -> None:
         "--output-dir is required",
         "assembler output must be outside the repository",
         "assembler output cannot target supabase/migrations",
-        "two assemblies",
         "unresolved intake adapter marker",
         "unexpected exact function redefinitions",
         "deployment_bundle_ready: false",
@@ -92,11 +109,7 @@ def main() -> None:
         "preview_branch_created: false",
         "production_applied: false",
     ]
-    # The deterministic check itself is executed by CI using two output directories;
-    # require all other hard boundaries to be embedded in the assembler source.
     for marker in required_markers:
-        if marker == "two assemblies":
-            continue
         require(marker in assembler, f"assembler boundary marker missing: {marker}")
     for forbidden in ["Supabase.", "confirm_cost", "create_branch", "apply_migration", "deploy_edge_function", "Deno.env"]:
         require(forbidden not in assembler, f"assembler contains cloud/deploy marker: {forbidden}")
@@ -106,7 +119,9 @@ def main() -> None:
         "two_assemblies_are_byte_identical", "all_declared_sources_exist",
         "source_order_matches_contract", "no_unresolved_intake_template_markers",
         "no_output_under_supabase_migrations", "artifact_sha256_matches_index",
-        "postgres_17_quality_apply_assert_rollback", "postgres_17_bounded_apply_assert_rollback",
+        "postgres_17_quality_apply_assert_rollback",
+        "postgres_17_bounded_core_apply_assert_rollback",
+        "postgres_17_bounded_dto_apply_assert_rollback",
         "postgres_17_intake_apply_assert_rollback",
     ]:
         require(check in required_checks, f"required check missing: {check}")
