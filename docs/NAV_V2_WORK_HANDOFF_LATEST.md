@@ -4,7 +4,7 @@
 
 - Дата: 21 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `be9f9efeac53c9c57bdf7d8ae0666680a683fbdd` — squash merge PR #438.
+- `main`: `3db0b07988805e7c80ae0fecd537ab7a4a02ecc9` — squash merge PR #440.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project status: `ACTIVE_HEALTHY`.
@@ -12,11 +12,11 @@
 - PostgreSQL production: `17.6.1.121`.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
 - Последняя общая remote migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs`.
-- Production Supabase, Auth, Edge Functions, RLS, grants, indexes и рабочие строки в PR #394–#438 не менялись.
+- Production Supabase, Auth, Edge Functions, RLS, grants, indexes и рабочие строки в PR #394–#440 не менялись.
 
 Последняя общая migration относится к `leader_*`. Navigator не должен изменять, переименовывать или нормализовать migration history другого модуля.
 
-Live counts и `idx_scan` могут меняться от реальной работы и сброса статистики. Не откатывать production data, не оценивать сотрудников и не удалять индексы только из-за изменения счётчиков.
+Live counts и `idx_scan` могут меняться от реальной работы, рестарта или сброса статистики. Не откатывать production data, не оценивать сотрудников и не удалять индексы только из-за изменения счётчиков.
 
 ## Цель и продуктовая граница
 
@@ -212,14 +212,43 @@ Fresh aggregate-only evidence:
 - общий размер zero-scan indexes: `212992` bytes;
 - statistics reset timestamp и representative workload window не доказаны.
 
-Добавлены:
+Добавлены Navigator-only Performance Advisor attestation, aggregate-only preflight, strict checker и dedicated workflow.
 
-- `config/nav-v2-performance-advisor-attestation-v1.json`;
-- `tests/sql/nav_v2_performance_readonly_preflight_v1.sql`;
-- strict checker и dedicated workflow;
-- fail-closed policy: `idx_scan=0` не является drop approval.
+Fail-closed policy: `idx_scan=0` не является drop approval. Любое index removal требует observation window, authenticated workload, `EXPLAIN ANALYZE`, FK parent update/delete benchmark, regression tests, exact rollback и отдельное owner production DDL approval.
 
-Любое index removal требует observation window, authenticated workload, `EXPLAIN ANALYZE`, FK parent update/delete benchmark, regression tests, exact rollback и отдельное owner production DDL approval.
+### PR #440 — synthetic index query-plan evidence
+
+Merge: `3db0b07988805e7c80ae0fecd537ab7a4a02ecc9`.
+
+Live read-only consumer inventory:
+
+- 24 Navigator RPC содержат profile role-dependent logic;
+- 2 RPC напрямую упоминают `nav_deal_answers_v2`;
+- PII не возвращалась;
+- DDL/DML не выполнялись.
+
+PostgreSQL 17 synthetic harness:
+
+- `120000` profiles;
+- `5000` deals;
+- `100000` answers;
+- natural и structural JSON `EXPLAIN`;
+- synthetic-only index removal;
+- result hash equivalence;
+- full rollback и post-rollback schema absence.
+
+Результаты:
+
+1. `nav_user_profiles_role_idx` — `retain`. Role имеет 24 operational consumers, индекс структурно обслуживает selective role query, а после synthetic removal остаётся sequential-scan fallback.
+2. `nav_deal_answers_v2_deal_idx` — `review_possible_redundancy_only`. Composite unique `(deal_id, question_key)` обслуживает `deal_id` leading-prefix query и synthetic FK child lookup после отсутствия single-column index; result hash сохранился.
+
+Evidence:
+
+- workflow run `29837121899`;
+- artifact `8497773881`;
+- digest `sha256:78cc9eb4e866d9a321d89c92573c2a0d497e5d23627d6e11c7eb0501c971422b`.
+
+Synthetic plan не является production benchmark и не разрешает index drop.
 
 ## Обязательные gates
 
@@ -236,9 +265,10 @@ Fresh aggregate-only evidence:
 - Edge disabled candidate;
 - execution runbook;
 - technical-account lifecycle;
-- Security Advisor and Performance Advisor scoped read-only contracts.
+- Security Advisor и Performance Advisor scoped read-only contracts;
+- synthetic query-plan evidence для role и answers prefix indexes.
 
-Это repository evidence, а не разрешение на cloud execution или DDL.
+Это repository evidence, а не разрешение на cloud execution или production DDL.
 
 ### Preview branch and Auth E2E gate
 
@@ -269,6 +299,16 @@ Generic команды `продолжай` или `работай по план
 
 Production deployment, index removal, RLS rewrite и cleanup запрещены без отдельных evidence packages и owner approvals.
 
+Для `nav_deal_answers_v2_deal_idx` дополнительно отсутствуют:
+
+- production statistics observation window;
+- authenticated workload;
+- production `EXPLAIN ANALYZE`;
+- FK parent update/delete benchmark;
+- write amplification/storage benefit calculation;
+- exact migration и rollback;
+- owner DDL approval.
+
 Не изменять production `leader_*`. Navigator использует только `nav_*` / `nav_v2_*` и общий Auth.
 
 ## Канонические артефакты
@@ -283,11 +323,13 @@ Production deployment, index removal, RLS rewrite и cleanup запрещены 
 - `config/nav-v2-advisor-live-attestation.json`
 - `config/nav-v2-advisor-scope.json`
 - `config/nav-v2-performance-advisor-attestation-v1.json`
+- `config/nav-v2-index-query-plan-candidate-v1.json`
 - `config/nav-v2-rpc-surface.json`
 - `config/nav-v2-preview-minimal-grants-candidate-v1.json`
 - `config/nav-v2-bounded-consolidated-candidate-v1.json`
 - `tests/sql/nav_v2_advisor_readonly_preflight_v1.sql`
 - `tests/sql/nav_v2_performance_readonly_preflight_v1.sql`
+- `tests/sql/nav_v2_index_query_plan_harness_v1.sql`
 - `tests/sql/nav_v2_preview_readonly_preflight_v1.sql`
 - `supabase/functions/nav-v2-deal-api/index.ts`
 - `supabase/functions/nav-v2-deal-api/index.production-v4.ts`
@@ -295,8 +337,10 @@ Production deployment, index removal, RLS rewrite и cleanup запрещены 
 - `scripts/check_nav_v2_preview_execution_package_v3.py`
 - `scripts/check_nav_v2_advisor_live_attestation.py`
 - `scripts/check_nav_v2_performance_advisor_attestation_v1.py`
+- `scripts/check_nav_v2_index_query_plan_candidate_v1.py`
 - `docs/NAV_V2_ADVISOR_TRIAGE.md`
 - `docs/NAV_V2_PERFORMANCE_ADVISOR_SCOPE_V1_2026-07-21.md`
+- `docs/NAV_V2_INDEX_QUERY_PLAN_CANDIDATE_V1_2026-07-21.md`
 
 ## Следующий безопасный slice без нового approval
 
@@ -306,10 +350,11 @@ Production deployment, index removal, RLS rewrite и cleanup запрещены 
 2. проверять CI/review drift;
 3. повторять aggregate-only production preflight без PII;
 4. фиксировать Navigator migration, Advisor whitelist, index/RLS baseline или Edge drift;
-5. готовить synthetic `EXPLAIN`/benchmark harness без production DDL;
-6. не reconciliate `leader_*` migrations;
-7. не выполнять cost confirmation заранее;
-8. не создавать branch, accounts, secrets или cloud resources.
+5. улучшать synthetic FK parent update/delete benchmark без production DDL;
+6. составлять exact non-PII query-to-index mapping;
+7. не reconciliate `leader_*` migrations;
+8. не выполнять cost confirmation заранее;
+9. не создавать branch, accounts, secrets или cloud resources.
 
 Новый cloud deployment slice отсутствует: оставшиеся шаги требуют explicit owner/cost/Auth approval.
 
