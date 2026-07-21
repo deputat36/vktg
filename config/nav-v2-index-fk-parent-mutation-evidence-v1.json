@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_synthetic_fk_parent_mutation_evidence_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_on": "2026-07-21",
+  "source_main_sha": "27a051d75f36e380715104339f5e9837dfde995e",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "index_drop_authorized": false,
+  "index_create_authorized": false,
+  "cloud_execution_allowed": false,
+  "source_evidence": {
+    "index_query_plan_candidate": "config/nav-v2-index-query-plan-candidate-v1.json",
+    "synthetic_parent_mutation_harness": "tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql",
+    "live_capture_mode": "aggregate_catalog_only_read_only_transaction",
+    "postgres_harness_major": 17
+  },
+  "live_fk_contract": {
+    "child_table": "public.nav_deal_answers_v2",
+    "parent_table": "public.nav_deals_v2",
+    "constraint": "nav_deal_answers_v2_deal_id_fkey",
+    "definition": "FOREIGN KEY (deal_id) REFERENCES nav_deals_v2(id) ON DELETE CASCADE",
+    "update_action": "NO ACTION",
+    "delete_action": "CASCADE",
+    "single_column_index": {
+      "name": "nav_deal_answers_v2_deal_idx",
+      "definition": "CREATE INDEX nav_deal_answers_v2_deal_idx ON public.nav_deal_answers_v2 USING btree (deal_id)",
+      "idx_scan": 0,
+      "size_bytes": 16384
+    },
+    "composite_prefix_index": {
+      "name": "nav_deal_answers_v2_deal_id_question_key_key",
+      "definition": "CREATE UNIQUE INDEX nav_deal_answers_v2_deal_id_question_key_key ON public.nav_deal_answers_v2 USING btree (deal_id, question_key)",
+      "idx_scan": 0,
+      "size_bytes": 16384,
+      "deal_id_is_leading_prefix": true
+    },
+    "row_estimates": {
+      "deals": 23,
+      "answers": 7
+    },
+    "statistics_reset": null,
+    "pii_returned": false,
+    "data_mutated": false,
+    "ddl_executed": false
+  },
+  "synthetic_harness_contract": {
+    "production_schema_used": false,
+    "production_data_copied": false,
+    "synthetic_modes": [
+      "both_indexes",
+      "composite_prefix_only"
+    ],
+    "synthetic_deals_per_mode_before_mutation": 5001,
+    "synthetic_answers_per_deal": 20,
+    "synthetic_answers_per_mode_before_mutation": 100000,
+    "actual_parent_delete_explain_analyze": true,
+    "actual_parent_update_explain_analyze": true,
+    "delete_action_mirrored": "CASCADE",
+    "update_action_mirrored": "NO ACTION",
+    "trigger_evidence_required": true,
+    "mutation_semantics_equivalence_required": true,
+    "unaffected_result_equivalence_required": true,
+    "rollback_required": true,
+    "post_rollback_schema_absence_required": true
+  },
+  "result": {
+    "single_column_index_removed_in_production": false,
+    "synthetic_parent_mutations_supported_with_both_indexes": true,
+    "synthetic_parent_mutations_supported_with_composite_prefix_only": true,
+    "delete_cascade_semantics_equal": true,
+    "update_no_action_semantics_equal": true,
+    "decision": "synthetic_fk_parent_mutation_gap_closed_production_drop_not_ready",
+    "reason": "The composite unique index structurally supports the child lookup and the isolated PostgreSQL 17 harness executes equivalent parent DELETE CASCADE and parent UPDATE NO ACTION semantics without the single-column index. Production cardinality, authenticated workload, statistics window and production-scale timing remain unproven."
+  },
+  "remaining_before_any_production_index_removal": [
+    "known production statistics observation start",
+    "representative authenticated workload window",
+    "production query consumer inventory reviewed",
+    "production EXPLAIN ANALYZE on representative non-PII fixtures",
+    "production-scale foreign-key parent update/delete benchmark",
+    "write amplification and storage benefit estimate",
+    "authenticated regression suite",
+    "exact forward and rollback migration",
+    "separate owner approval for production DDL"
+  ],
+  "active_stops": [
+    "production_statistics_window_missing",
+    "authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_scale_fk_parent_mutation_benchmark_missing",
+    "write_cost_benefit_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_actions": [
+    "drop_production_index",
+    "create_production_index",
+    "apply_production_migration",
+    "change_production_rls",
+    "copy_production_data_to_harness",
+    "treat_ci_timing_as_production_performance",
+    "claim_index_removal_ready"
+  ]
+}
