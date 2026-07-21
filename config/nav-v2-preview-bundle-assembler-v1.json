@@ -90,9 +90,9 @@
       "rollback_sources": [
         "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
         "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
-        "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
         "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
         "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
         "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
         "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
         "tests/sql/nav_v2_governed_intake_save_rollback.sql",
