@@ -49,6 +49,8 @@ technical_identities as (
 select jsonb_build_object(
   'captured_at', clock_timestamp(),
   'project_ref_expected', 'ofewxuqfjhamgerwzull',
+  'advisor_lint_name', 'authenticated_security_definer_function_executable',
+  'advisor_lint_code', '0029',
   'transaction_read_only', current_setting('transaction_read_only')::boolean,
   'aggregate_only', true,
   'data_mutated', false,
