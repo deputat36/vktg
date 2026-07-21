@@ -37,7 +37,7 @@ begin
     select 1 from public.nav_deal_tasks_v2
     where id='20000000-0000-4000-8000-000000000001'
       and task_type='operational_task'
-      and source='manual'
+      and source='legacy_synthetic'
   ) then
     raise exception 'legacy task did not survive bounded bundle rollback';
   end if;
