@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+# Combined lifecycle keeps production-like tables bound by OID and temporarily exposes
+# one-row marker facades only while the existing intake regression pack and rollback run.
 log_file="/tmp/nav-v2-combined-preview-lifecycle-v1.log"
 exec > >(tee "$log_file") 2>&1
 
