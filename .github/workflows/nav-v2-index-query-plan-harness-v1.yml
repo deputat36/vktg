@@ -65,7 +65,20 @@ jobs:
         run: python3 scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py
 
       - name: Check FK parent mutation attribution contract
-        run: python3 scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py 2>&1 \
+            | tee /tmp/nav-v2-index-fk-parent-mutation-attribution-source.log
+
+      - name: Upload attribution source diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-index-fk-parent-mutation-attribution-source
+          path: /tmp/nav-v2-index-fk-parent-mutation-attribution-source.log
+          if-no-files-found: warn
+          retention-days: 14
 
   postgres-17-query-plan:
     needs: source-contract
@@ -221,7 +234,7 @@ jobs:
         run: |
           set -o pipefail
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_index_fk_parent_mutation_attribution_harness_v1.sql \
-            | tee /tmp/nav-v2-index-fk-parent-mutation-attribution-v1.log
+            2>&1 | tee /tmp/nav-v2-index-fk-parent-mutation-attribution-v1.log
 
       - name: Upload synthetic FK mutation attribution evidence
         if: always()
