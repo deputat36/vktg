@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_consolidated_candidate_not_executable",
+  "generated_at": "2026-07-21",
+  "source_main_sha": "e6e31bd7d39d8b1eb89a23de0bd866879c5d7f92",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "cloud_execution_allowed": false,
+  "preview_apply_allowed": false,
+  "writes_to_supabase_migrations_allowed": false,
+  "deployment_bundle_ready": false,
+  "production_rollback_bundle_ready": false,
+  "artifacts_are_temporary_review_candidates": true,
+  "output_directory_policy": "caller_supplied_temporary_directory_only",
+  "forward_file": "01-bounded-consolidated-forward.sql",
+  "rollback_file": "01-bounded-consolidated-rollback.sql",
+  "index_file": "bounded-consolidated-index.json",
+  "forward_sources": [
+    "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+    "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+    "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+    "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+    "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+  ],
+  "rollback_sources": [
+    "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
+    "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
+    "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+    "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+  ],
+  "postgres_setup": [
+    "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+    "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql"
+  ],
+  "post_apply_assertions": [
+    "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
+    "tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql",
+    "tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql",
+    "tests/sql/nav_v2_bounded_consolidated_candidate_assertions.sql"
+  ],
+  "post_rollback_assertions": [
+    "tests/sql/nav_v2_bounded_consolidated_candidate_post_rollback_assertions.sql"
+  ],
+  "required_checks": [
+    "all_declared_sources_exist",
+    "exact_forward_source_order",
+    "exact_rollback_source_order",
+    "no_duplicate_forward_source_paths",
+    "artifact_sha256_matches_index",
+    "no_unexpected_exact_function_redefinitions",
+    "postgres_17_apply_assert_rollback",
+    "actor_aware_overloads_service_role_only",
+    "explicit_lite_dto_survives_overlay",
+    "legacy_task_survives_rollback",
+    "no_output_under_supabase_migrations"
+  ],
+  "active_stops": [
+    "preview_branch_missing",
+    "explicit_cost_approval_missing",
+    "authenticated_role_matrix_not_run",
+    "candidate_not_applied_to_preview",
+    "edge_runtime_feature_flag_disabled",
+    "edge_not_deployed",
+    "frontend_bounded_transport_disabled",
+    "production_deployment_not_approved",
+    "controlled_pilot_not_approved"
+  ],
+  "forbidden_actions": [
+    "commit_generated_forward_or_rollback",
+    "write_generated_sql_to_supabase_migrations",
+    "create_supabase_branch_without_explicit_cost_approval",
+    "apply_database_changes",
+    "deploy_edge_function",
+    "change_auth_rls_or_grants",
+    "mutate_or_cleanup_production_rows",
+    "claim_preview_or_production_readiness"
+  ]
+}
