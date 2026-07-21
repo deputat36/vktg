@@ -6,6 +6,7 @@
   "production_applied": false,
   "production_ready": false,
   "deployment_bundle_ready": false,
+  "repository_bundle_manifest_ready": true,
   "authenticated_e2e_proven": false,
   "branch_cost_rechecked": true,
   "branch_creation_allowed": false,
@@ -37,7 +38,8 @@
     "privacy_quality_replacement_proven": true,
     "legacy_cleanup_plan_proven": true,
     "actor_identity_repository_contract_proven": true,
-    "bounded_task_repository_contract_proven": true
+    "bounded_task_repository_contract_proven": true,
+    "preview_bundle_source_inventory_proven": true
   },
   "owner_options": [
     {"id":"authenticated_e2e_only","recommended_next":true,"current_cost_snapshot_available":true,"requires_execution_time_cost_recheck":true,"requires_explicit_cost_approval":true,"allows_production_merge":false},
@@ -70,6 +72,9 @@
     "explicit_cost_approval_missing",
     "cost_confirmation_id_missing",
     "deployment_bundle_not_ready",
+    "executable_migrations_not_created",
+    "production_rollback_bundle_not_ready",
+    "edge_identity_handler_not_integrated",
     "authenticated_e2e_not_proven",
     "production_deployment_approval_missing",
     "pilot_scope_missing",
@@ -81,6 +86,8 @@
     "config/nav-v2-auth-e2e-readiness.json",
     "config/nav-v2-intake-special-semantics-integration-v1.json",
     "config/nav-v2-legacy-quality-cleanup-decision-v1.json",
+    "config/nav-v2-preview-deployment-bundle-manifest-v1.json",
+    "docs/NAV_V2_PREVIEW_DEPLOYMENT_BUNDLE_MANIFEST_V1_2026-07-21.md",
     "supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql",
     "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
     "supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql",
