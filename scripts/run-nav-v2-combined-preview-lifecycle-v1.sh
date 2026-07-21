@@ -49,6 +49,27 @@ exit_intake_marker_facade() {
   fi
 }
 
+run_combined_intake_rollback() {
+  local rollback_source
+  local sources=(
+    tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql
+    tests/sql/nav_v2_intake_special_semantics_rollback.sql
+    tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql
+    tests/sql/nav_v2_intake_semantics_wave2_rollback.sql
+    tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql
+    tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql
+    tests/sql/nav_v2_intake_semantics_wave1_rollback.sql
+    tests/sql/nav_v2_governed_intake_save_rollback.sql
+    tests/sql/nav_v2_intake_save_integration_harness_rollback.sql
+    tests/sql/nav_v2_preview_bundle_intake_mapper_cleanup.sql
+    tests/sql/nav_v2_combined_preview_intake_adapter_rollback_v1.sql
+  )
+
+  for rollback_source in "${sources[@]}"; do
+    run_sql "$rollback_source" || return $?
+  done
+}
+
 run_forward_and_assertions() {
   run_sql tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql || return $?
 
@@ -98,7 +119,9 @@ if [[ "$intake_applied" -eq 1 ]]; then
   if [[ "$intake_marker_facade_active" -eq 0 ]]; then
     enter_intake_marker_facade || rollback_status=$?
   fi
-  run_sql "$preview_dir/04-intake-rehearsal-rollback.sql" || rollback_status=$?
+  if [[ "$rollback_status" -eq 0 ]]; then
+    run_combined_intake_rollback || rollback_status=$?
+  fi
   exit_intake_marker_facade || rollback_status=$?
 fi
 if [[ "$bounded_applied" -eq 1 ]]; then
