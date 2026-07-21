@@ -35,19 +35,41 @@
     },
     {
       "order": 2,
-      "id": "bounded",
-      "forward_file": "02-bounded-forward.sql",
-      "rollback_file": "02-bounded-rehearsal-rollback.sql",
+      "id": "bounded_core",
+      "forward_file": "02-bounded-core-forward.sql",
+      "rollback_file": "02-bounded-core-rehearsal-rollback.sql",
       "forward_sources": [
         "supabase/prototypes/nav_v2_bounded_task_contract.sql",
         "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
-        "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+        "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql"
+      ],
+      "rollback_sources": [
+        "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+      ],
+      "postgres_setup": [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql"
+      ],
+      "postgres_assertions": [
+        "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
+        "tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql"
+      ],
+      "production_executable": false
+    },
+    {
+      "order": 3,
+      "id": "bounded_dto",
+      "forward_file": "03-bounded-dto-forward.sql",
+      "rollback_file": "03-bounded-dto-rehearsal-rollback.sql",
+      "forward_sources": [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
         "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
         "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
       ],
       "rollback_sources": [
         "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
-        "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
         "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
         "tests/sql/nav_v2_bounded_task_base_rollback.sql"
       ],
@@ -56,17 +78,15 @@
         "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql"
       ],
       "postgres_assertions": [
-        "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
-        "tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql",
         "tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql"
       ],
       "production_executable": false
     },
     {
-      "order": 3,
+      "order": 4,
       "id": "intake",
-      "forward_file": "03-intake-forward.sql",
-      "rollback_file": "03-intake-rehearsal-rollback.sql",
+      "forward_file": "04-intake-forward.sql",
+      "rollback_file": "04-intake-rehearsal-rollback.sql",
       "generated_forward_sources": [
         {
           "id": "canonical_intake_adapter",
@@ -111,7 +131,9 @@
         "tests/sql/nav_v2_intake_adapter_harness_assertions.sql",
         "tests/sql/nav_v2_intake_save_integration_harness_assertions.sql",
         "tests/sql/nav_v2_governed_intake_save_assertions.sql",
-        "tests/sql/nav_v2_intake_special_semantics_integration_assertions.sql"
+        "tests/sql/nav_v2_preview_bundle_intake_final_contract_assertions.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_final_single_rule_assertions.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_final_composite_assertions.sql"
       ],
       "production_executable": false
     }
@@ -133,7 +155,8 @@
     "no_output_under_supabase_migrations",
     "artifact_sha256_matches_index",
     "postgres_17_quality_apply_assert_rollback",
-    "postgres_17_bounded_apply_assert_rollback",
+    "postgres_17_bounded_core_apply_assert_rollback",
+    "postgres_17_bounded_dto_apply_assert_rollback",
     "postgres_17_intake_apply_assert_rollback"
   ],
   "active_stops": [
