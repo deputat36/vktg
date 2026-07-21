@@ -75,6 +75,7 @@ run_forward_and_assertions() {
       run_sql tests/sql/nav_v2_intake_semantics_wave2_integration_rule_assertions.sql || return $?
       run_sql tests/sql/nav_v2_intake_semantics_wave2_integration_negative_assertions.sql || return $?
 
+      run_sql tests/sql/nav_v2_intake_special_semantics_assertions.sql || return $?
       run_sql tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql || return $?
       run_sql tests/sql/nav_v2_preview_bundle_intake_final_contract_assertions.sql || return $?
       run_sql tests/sql/nav_v2_preview_bundle_intake_final_single_rule_assertions.sql || return $?
