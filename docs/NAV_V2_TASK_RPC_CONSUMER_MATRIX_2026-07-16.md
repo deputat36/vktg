@@ -1,35 +1,34 @@
-# Navigator v2 — task RPC consumer matrix v4
+# Navigator v2 — task RPC consumer matrix v5
 
-Дата обновления: 17 июля 2026 года.
+Дата обновления: 21 июля 2026 года.
 
-Статус: frontend authoritative single-source gate v4. Рабочий frontend-handler единственный, bounded transport выключен, production Supabase не меняется.
+Статус: frontend authoritative + Edge candidate integrated, transport disabled. Рабочий frontend-handler остаётся единственным активным источником действий в браузере. Candidate Edge entrypoint содержит governed route за выключенным feature flag. Production Supabase и развёрнутая Edge Function не изменены.
 
 ## Итог
 
 Подготовлены и проверены:
 
 - bounded task taxonomy, mutations и PostgreSQL 17 harness;
-- controlled legacy review pack;
 - contract-aware lite DTO prototype;
-- bounded UI preview;
 - pure dual-path router;
 - authoritative frontend handler;
 - физическое удаление dormant base mutation source;
-- cost-free mocked role matrix;
-- Task action pipeline с exact frontend/Edge RPC parity.
+- task action pipeline с exact frontend/Edge RPC parity;
+- verified actor identity, active-profile и assignment preflight;
+- repository-only Candidate Edge entrypoint;
+- неизменяемый Production Edge snapshot фактически развёрнутой версии v4.
 
-## Authoritative runtime handler
+## Authoritative frontend
 
 `assets/js/nav-v2/task-action-guard-v2.js`:
 
 - владеет task click в capture phase;
 - загружает role-scoped lite DTO;
 - использует `taskActionRoutePreview()` как единственный route selector;
-- преобразует legacy `data-task-status` в `start`, `complete`, `reopen`;
 - вызывает сеть только для legacy route;
 - сохраняет exact legacy payload;
 - блокирует bounded network transport;
-- не импортирует detached Edge validator или parity pipeline.
+- не содержит service-role transport.
 
 Legacy payload:
 
@@ -37,58 +36,97 @@ Legacy payload:
 nav_v2_update_task_status({ p_task_id, p_status })
 ```
 
+`BOUNDED_TRANSPORT_ENABLED = false` остаётся обязательным frontend gate.
+
 ## Source cleanup
 
 В `deal-card-v2.js` отсутствуют:
 
 - base task mutation listener;
-- direct `nav_v2_update_task_status` literal;
+- direct `nav_v2_update_task_status` call;
 - base task success/error mutation path.
 
-Сохранены task rendering и legacy button attributes. Dormant source отсутствует.
+Task rendering и legacy button attributes сохранены. Dormant mutation source отсутствует.
+
+## Production Edge snapshot
+
+`supabase/functions/nav-v2-deal-api/index.production-v4.ts` — точный неизменяемый снимок развёрнутой Edge Function `nav-v2-deal-api` версии 4.
+
+Он:
+
+- остаётся legacy-only;
+- содержит только `update_task_status` для задач;
+- не содержит governed bounded actions;
+- не содержит service-role task context transport;
+- используется release-drift baseline;
+- не является новым deploy artifact.
+
+Release baseline сравнивает production с этим снимком, а не с недеплоенным candidate source.
+
+## Candidate Edge entrypoint
+
+`supabase/functions/nav-v2-deal-api/index.ts` — repository-only Candidate Edge entrypoint.
+
+В нём source-integrated:
+
+- bounded task action inventory;
+- verified Auth user id;
+- active `nav_user_profiles` lookup;
+- contract-v2 task context lookup;
+- role и assignment preflight;
+- broker mortgage-only scope;
+- actor-aware RPC argument `p_actor_id`.
+
+Ограничения:
+
+```text
+BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false
+edge_deployed = false
+actor_aware_sql_deployed = false
+frontend_transport_enabled = false
+```
+
+Candidate source не считается production runtime и не меняет live Edge Function.
 
 ## Runtime consumers
 
-### Активные
+### Фактически активные
 
-1. `assets/js/nav-v2/task-action-guard-v2.js` — authoritative frontend capture-handler;
-2. `supabase/functions/nav-v2-deal-api/index.ts` — deployed legacy Edge action facade.
+1. `assets/js/nav-v2/task-action-guard-v2.js` — authoritative frontend capture-handler.
+2. `supabase/functions/nav-v2-deal-api/index.production-v4.ts` — release snapshot развёрнутого legacy Edge facade.
 
-### Detached contracts/previews
+### Repository candidate
+
+1. `supabase/functions/nav-v2-deal-api/index.ts` — governed actions source-integrated, feature disabled, not deployed.
+2. `supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js` — dependency-injected role/assignment runtime adapter.
+
+### Test and contract sources
 
 - `assets/js/nav-v2/task-action-router-v2.js`;
 - `assets/js/nav-v2/task-action-edge-pipeline-v2.js`;
 - `assets/js/nav-v2/bounded-task-ui-preview-v2.js`;
-- `supabase/functions/nav-v2-deal-api/task-action-contract-v2.js`.
+- `supabase/functions/nav-v2-deal-api/task-action-contract-v2.js`;
+- desktop/mobile synthetic regressions.
 
 Активных runtime consumers `nav_v2_add_task` нет.
 
 ## Task action pipeline
 
-Detached pipeline связывает:
+Pipeline связывает:
 
-`frontend router → canonical Edge action/payload → detached Edge validator → database p_* args`
+`frontend router → canonical action/payload → Edge validator → p_* RPC args`
 
 Он требует:
 
 - один action → один validated RPC preview;
-- exact RPC name parity;
-- exact args parity;
-- contract-v2 guard для governed actions;
+- exact RPC name и args parity;
+- contract-v2 guard;
 - запрет legacy action для bounded row;
 - unknown-field, UUID, reason, date и replacement validation;
 - `network_called=false`;
-- `runtime_integrated=false`;
-- `edge_deployed=false`;
 - `transport_enabled=false`.
 
-Pipeline является test/contract consumer, а не production runtime consumer.
-
-## Bounded transport выключен
-
-Для contract-v2 row frontend может распознать action, проверить DTO permission и UUID/evidence contract, но governed RPC не вызывается.
-
-`BOUNDED_TRANSPORT_ENABLED = false` остаётся source gate.
+Pipeline остаётся test/contract consumer, а не production network path.
 
 ## Browser regression
 
@@ -97,12 +135,11 @@ Desktop/mobile evidence покрывает:
 - cold first click;
 - permission denial/read failure;
 - legacy success/error/complete/reopen;
-- synthetic competing onclick counter = 0;
+- competing onclick counter = 0;
 - bounded no-network и disabled reopen;
 - mocked role matrix;
 - exact pipeline previews;
-- tampered Edge payload rejection;
-- ноль `/rest/v1/rpc/` calls в pipeline rehearsal.
+- tampered actor/payload rejection.
 
 ## Закрытые blockers
 
@@ -114,11 +151,15 @@ Desktop/mobile evidence покрывает:
 - `authoritative_handler_not_integrated`;
 - `duplicate_handler_execution_risk`;
 - `dormant_base_handler_source_not_removed`;
-- `frontend_edge_rpc_parity_missing`.
+- `frontend_edge_rpc_parity_missing`;
+- `edge_actions_not_integrated`.
+
+Последний blocker закрыт только на уровне repository source integration. Это не означает deploy или production readiness.
 
 ## Оставшиеся blockers
 
-- `edge_actions_not_integrated`;
+- `edge_runtime_feature_flag_disabled`;
+- `edge_function_not_deployed`;
 - `database_migrations_not_deployed`;
 - `minimal_grants_not_deployed`;
 - `authenticated_application_e2e_missing`;
@@ -127,36 +168,36 @@ Desktop/mobile evidence покрывает:
 
 ## Production gate
 
-Production Supabase не получает:
+Production Supabase сейчас не содержит:
 
-- bounded columns;
-- mutation event table;
-- governed RPC;
+- `task_contract_version`;
+- actor-aware bounded task RPC overloads;
+- governed task event layer;
 - новые grants/RLS;
-- Edge deployment;
-- task-row changes;
-- mass backfill.
+- candidate Edge deployment;
+- bounded frontend transport.
 
-Issue #282 запрещает платную preview branch без нового explicit approval. Mocked/skipped tests не считаются Auth/RLS/grants proof.
+Live read-only проверка 21 июля 2026 года подтвердила 88 открытых и 10 отменённых legacy-задач, без `in_progress` и `done`.
 
-98 legacy tasks продолжают работать через старый RPC.
+Перед production:
 
-## Следующий safe slice
-
-1. продолжать бесплатные repository/CI checks;
-2. настоящий authenticated E2E — только после нового approval Issue #282;
-3. repository-only database deployment bundle, без применения;
-4. Edge integration только после database deployment approval;
-5. controlled bounded transport switch;
-6. controlled pilot;
-7. security hardening.
+1. отдельное подтверждение стоимости preview branch;
+2. synthetic preview environment без production data;
+3. preview database migrations и минимальные grants;
+4. candidate Edge deploy только в preview;
+5. authenticated role/mutation E2E;
+6. отдельное production approval;
+7. database-first deploy;
+8. Edge deploy с feature flag disabled;
+9. controlled frontend switch и пилот.
 
 ## Rollback
 
 Repository rollback:
 
-- удалить pipeline artifacts;
-- вернуть предыдущий detached Edge validator;
-- вернуть consumer matrix/checkers без pipeline inventory.
+- удалить candidate Edge integration;
+- вернуть consumer matrix v4;
+- удалить `index.production-v4.ts` только одновременно с возвратом release baseline к фактическому live source;
+- сохранить production `index.ts` source snapshot и release-drift evidence.
 
-Production rollback не требуется: production state не меняется.
+Production rollback не требуется: migration, Edge deployment, Auth, RLS, grants и production rows не изменялись.

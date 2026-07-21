@@ -10,6 +10,8 @@ SCENARIOS = ROOT / 'fixtures/nav-v2-task-dual-path-scenarios.json'
 ROUTER = ROOT / 'assets/js/nav-v2/task-action-router-v2.js'
 PIPELINE = ROOT / 'assets/js/nav-v2/task-action-edge-pipeline-v2.js'
 EDGE_CONTRACT = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
+EDGE_RUNTIME = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'
+RUNTIME_CONFIG = ROOT / 'config/nav-v2-task-edge-runtime-integration-v1.json'
 SEMANTIC = ROOT / 'scripts/check-nav-v2-task-dual-path.mjs'
 FIXTURE = ROOT / 'tests/fixtures/nav-v2-task-action-dual-path.html'
 E2E = ROOT / 'tests/e2e/task-action-dual-path.spec.js'
@@ -29,8 +31,8 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 def main() -> int:
     errors: list[str] = []
     paths = (
-        CONTRACT, SCENARIOS, ROUTER, PIPELINE, EDGE_CONTRACT, SEMANTIC, FIXTURE,
-        E2E, DOC, WORKFLOW, DEAL_CARD, GUARD, EDGE_INDEX,
+        CONTRACT, SCENARIOS, ROUTER, PIPELINE, EDGE_CONTRACT, EDGE_RUNTIME, RUNTIME_CONFIG,
+        SEMANTIC, FIXTURE, E2E, DOC, WORKFLOW, DEAL_CARD, GUARD, EDGE_INDEX,
     )
     for path in paths:
         if not path.exists():
@@ -40,10 +42,12 @@ def main() -> int:
         return 1
 
     contract = json.loads(CONTRACT.read_text(encoding='utf-8'))
+    runtime_config = json.loads(RUNTIME_CONFIG.read_text(encoding='utf-8'))
     scenarios = json.loads(SCENARIOS.read_text(encoding='utf-8'))
     router = ROUTER.read_text(encoding='utf-8')
     pipeline = PIPELINE.read_text(encoding='utf-8')
     edge_contract = EDGE_CONTRACT.read_text(encoding='utf-8')
+    edge_runtime = EDGE_RUNTIME.read_text(encoding='utf-8')
     semantic = SEMANTIC.read_text(encoding='utf-8')
     fixture = FIXTURE.read_text(encoding='utf-8')
     e2e = E2E.read_text(encoding='utf-8')
@@ -53,16 +57,25 @@ def main() -> int:
     guard = GUARD.read_text(encoding='utf-8')
     edge_index = EDGE_INDEX.read_text(encoding='utf-8')
 
-    if contract.get('schema_version') != 2:
-        errors.append('dual-path contract schema must be 2')
-    if contract.get('status') != 'frontend_router_integrated_edge_detached':
+    if contract.get('schema_version') != 3:
+        errors.append('dual-path contract schema must be 3')
+    if contract.get('status') != 'frontend_router_and_edge_source_integrated_transport_disabled':
         errors.append('dual-path contract status drifted')
     if contract.get('production_changed') is not False:
         errors.append('dual-path contract must remain non-production')
     if contract.get('frontend_runtime_integrated') is not True:
         errors.append('frontend router integration must remain explicit')
-    if contract.get('edge_runtime_integrated') is not False or contract.get('transport_enabled') is not False:
-        errors.append('Edge integration and bounded transport must remain disabled')
+    if contract.get('edge_runtime_source_integrated') is not True:
+        errors.append('Edge source integration must remain explicit')
+    if contract.get('edge_runtime_enabled') is not False or contract.get('edge_deployed') is not False or contract.get('transport_enabled') is not False:
+        errors.append('Edge route, deploy and bounded transport must remain disabled')
+    flags = contract.get('feature_flags') or {}
+    if flags.get('frontend_bounded_transport') is not False or flags.get('edge_bounded_identity_route') is not False:
+        errors.append('dual-path feature flags must remain false')
+    if runtime_config.get('runtime_source_integrated') is not True or runtime_config.get('feature_flag_default') is not False:
+        errors.append('Edge runtime integration contract drifted')
+    if runtime_config.get('edge_deployed') is not False or runtime_config.get('frontend_transport_enabled') is not False:
+        errors.append('Edge runtime integration claims deployment')
     if scenarios.get('synthetic_only') is not True:
         errors.append('dual-path scenarios must remain synthetic-only')
     if len(scenarios.get('cases') or []) < 10 or len(scenarios.get('edge_cases') or []) < 7:
@@ -91,6 +104,19 @@ def main() -> int:
         if forbidden in edge_contract:
             errors.append(f'edge action contract must remain transport-free: {forbidden}')
 
+    require(edge_runtime, (
+        "from './task-action-edge-identity-v2.js'",
+        'routeBoundedTaskEdgeActionV2',
+        'feature_flag_default: false',
+        'edge_deployed: false',
+        'frontend_transport_enabled: false',
+        "'intake_v1:mortgage'",
+        "'intake_v1:military_mortgage'",
+    ), EDGE_RUNTIME.name, errors)
+    for forbidden in ('Deno.', 'fetch(', 'SUPABASE_SERVICE_ROLE_KEY'):
+        if forbidden in edge_runtime:
+            errors.append(f'Edge runtime adapter must remain dependency-injected: {forbidden}')
+
     require(pipeline, (
         'taskActionEdgePipelinePreview', 'validateTaskEdgeAction',
         'one_action_one_validated_rpc_preview: true', 'network_called: false',
@@ -105,9 +131,18 @@ def main() -> int:
     if 'task-action-router-v2.js' in deal_card or 'task-action-edge-pipeline-v2.js' in deal_card:
         errors.append('deal-card must remain renderer-only')
     if 'task-action-contract-v2.js' in guard or 'task-action-edge-pipeline-v2.js' in guard:
-        errors.append('authoritative frontend guard must not import detached Edge contracts')
-    if 'task-action-router-v2.js' in edge_index or 'task-action-contract-v2.js' in edge_index or 'task-action-edge-pipeline-v2.js' in edge_index:
-        errors.append('detached task contracts were integrated into deployed Edge index prematurely')
+        errors.append('authoritative frontend guard must not import Edge contracts')
+    require(edge_index, (
+        'import { routeBoundedTaskEdgeActionV2 } from "./task-action-edge-runtime-v2.js";',
+        'const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;',
+        'profile_loader: loadActiveNavProfile',
+        'task_loader: loadBoundedTaskContext',
+        'rpc_client: { rpc: callServiceRpc }',
+    ), EDGE_INDEX.name, errors)
+    if 'task-action-router-v2.js' in edge_index or 'task-action-edge-pipeline-v2.js' in edge_index:
+        errors.append('frontend router or rehearsal pipeline was integrated into Edge index')
+    if 'SUPABASE_SERVICE_ROLE_KEY' in guard or 'SUPABASE_SERVICE_ROLE_KEY' in deal_card:
+        errors.append('service role environment name leaked into frontend')
 
     require(semantic, (
         'taskActionRoutePreview', 'validateTaskEdgeAction', 'duplicate_handler_allowed',
@@ -127,14 +162,15 @@ def main() -> int:
     ), E2E.name, errors)
 
     closed = set(contract.get('closed_blockers') or [])
-    for blocker in ('authoritative_router_not_integrated', 'duplicate_frontend_handlers', 'frontend_edge_rpc_parity_missing'):
+    for blocker in ('authoritative_router_not_integrated', 'duplicate_frontend_handlers', 'frontend_edge_rpc_parity_missing', 'edge_action_source_route_not_integrated'):
         if blocker not in closed:
             errors.append(f'closed dual-path blocker missing: {blocker}')
     remaining = set(contract.get('remaining_blockers') or [])
     for blocker in (
-        'edge_actions_not_integrated', 'authenticated_application_e2e_missing',
-        'database_migrations_not_deployed', 'minimal_grants_not_deployed',
-        'frontend_bounded_transport_disabled', 'controlled_pilot_not_approved',
+        'edge_runtime_feature_flag_disabled', 'edge_function_not_deployed',
+        'authenticated_application_e2e_missing', 'database_migrations_not_deployed',
+        'minimal_grants_not_deployed', 'frontend_bounded_transport_disabled',
+        'controlled_pilot_not_approved',
     ):
         if blocker not in remaining:
             errors.append(f'remaining dual-path blocker missing: {blocker}')
@@ -142,9 +178,10 @@ def main() -> int:
         errors.append('all dual-path separation guarantees must remain false')
 
     require(doc, (
-        'frontend router integrated, Edge detached', 'Authoritative frontend',
-        'Legacy path', 'Bounded path', 'Bounded reopen запрещён',
-        'Edge action contract', 'Pipeline rehearsal', 'Synthetic browser regression',
+        'frontend router and Edge source integrated, transport disabled',
+        'Authoritative frontend', 'Legacy path', 'Bounded path',
+        'Bounded reopen запрещён', 'Edge action contract', 'Edge runtime adapter',
+        'Pipeline rehearsal', 'Synthetic browser regression',
         'Что ещё блокирует deployment', 'Production gate', 'Rollback',
     ), DOC.name, errors)
     require(workflow, (
@@ -162,7 +199,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task dual-path contract v2 passed: the pure router is integrated only in the authoritative frontend guard, the Edge validator and parity pipeline remain detached, and bounded transport/deployment stay disabled')
+    print('Navigator v2 task dual-path contract v3 passed: frontend and Edge sources are integrated behind disabled flags, legacy runtime remains default, and deployment/transport stay disabled')
     return 0
 
 

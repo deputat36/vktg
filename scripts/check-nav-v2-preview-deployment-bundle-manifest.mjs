@@ -10,6 +10,7 @@ const decision = readJson('config/nav-v2-deployment-decision-package-v1.json');
 const auth = readJson('config/nav-v2-auth-e2e-readiness.json');
 const final = readJson('config/nav-v2-intake-special-semantics-integration-v1.json');
 const identity = readJson('config/nav-v2-task-edge-identity-contract.json');
+const runtime = readJson('config/nav-v2-task-edge-runtime-integration-v1.json');
 const cleanup = readJson('config/nav-v2-legacy-quality-cleanup-decision-v1.json');
 
 function assert(condition, message) {
@@ -18,11 +19,12 @@ function assert(condition, message) {
 
 assert(manifest.schema_version === 1, 'unexpected manifest version');
 assert(manifest.status === 'repository_only_source_manifest_not_executable', 'manifest escaped repository-only status');
-assert(manifest.source_baseline_main_sha === 'dd33b2ab1de6523604386ddbf3aad8d15fd2cdb3', 'source baseline changed');
+assert(manifest.source_baseline_main_sha === 'df7634bc3be2379c4feec3b5ebc3e78099018e8a', 'source baseline changed');
 assert(manifest.repository_source_inventory_complete === true, 'source inventory is incomplete');
-for (const key of ['production_applied', 'preview_branch_created', 'executable_migrations_created', 'production_rollback_bundle_ready', 'edge_runtime_integrated', 'frontend_transport_enabled', 'authenticated_e2e_proven', 'deployment_bundle_ready']) {
+for (const key of ['production_applied', 'preview_branch_created', 'executable_migrations_created', 'production_rollback_bundle_ready', 'edge_runtime_enabled', 'edge_deployed', 'frontend_transport_enabled', 'authenticated_e2e_proven', 'deployment_bundle_ready']) {
   assert(manifest[key] === false, `${key} must remain false`);
 }
+assert(manifest.edge_runtime_integrated === true, 'Edge runtime source is not integrated');
 assert(manifest.selected_deployment_option === null, 'deployment option selected automatically');
 assert(manifest.selected_cleanup_option === null, 'cleanup option selected automatically');
 
@@ -77,11 +79,27 @@ assert(intake.production_migration_ready === false && intake.production_rollback
 
 const edge = layers[4];
 const edgeIndex = fs.readFileSync(path.join(root, 'supabase/functions/nav-v2-deal-api/index.ts'), 'utf8');
-assert(!edgeIndex.includes('task-action-edge-identity-v2.js'), 'identity handler is imported into Edge runtime');
-assert(edge.current_index_imports_identity_handler === false, 'manifest misstates Edge import status');
-assert(edge.edge_deploy_ready === false && edge.verified_actor_injection_integrated === false, 'Edge layer claims readiness');
+const edgeRuntime = fs.readFileSync(path.join(root, 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'), 'utf8');
+assert(edgeIndex.includes('from "./task-action-edge-runtime-v2.js"'), 'Edge runtime adapter is not imported');
+assert(edgeIndex.includes('const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;'), 'Edge runtime feature flag is not false');
+assert(edgeRuntime.includes("./task-action-edge-identity-v2.js"), 'runtime adapter does not import identity handler');
+assert(!edgeRuntime.includes('Deno.') && !edgeRuntime.includes('fetch('), 'runtime adapter is not pure dependency-injected code');
+assert(edge.mode === 'source_integrated_feature_disabled', 'Edge layer mode changed');
+assert(edge.current_index_imports_identity_handler === true, 'manifest misstates Edge import status');
+for (const key of ['verified_actor_injection_integrated', 'service_side_profile_lookup_integrated', 'service_side_task_lookup_integrated', 'service_side_actor_aware_rpc_integrated']) {
+  assert(edge[key] === true, `Edge integration marker missing: ${key}`);
+}
+assert(edge.feature_flag_default === false && edge.edge_deploy_ready === false && edge.edge_deployed === false, 'Edge layer escaped disabled repository state');
 assert(edge.service_key_exposure_to_browser_allowed === false, 'browser service key exposure allowed');
-assert(identity.runtime_integrated === false && identity.edge_deployed === false, 'identity contract claims runtime deployment');
+assert(identity.runtime_integrated === false && identity.edge_deployed === false, 'base identity rehearsal contract changed');
+assert(runtime.runtime_source_integrated === true && runtime.feature_flag_default === false, 'runtime integration contract drifted');
+assert(runtime.edge_deployed === false && runtime.frontend_transport_enabled === false, 'runtime integration claims deployment');
+assert(runtime.service_role_key_browser_exposure_allowed === false, 'runtime contract allows browser service key exposure');
+for (const file of fs.readdirSync(path.join(root, 'assets'), { recursive: true, withFileTypes: true })) {
+  if (!file.isFile()) continue;
+  const full = path.join(file.parentPath || file.path, file.name);
+  if (fs.readFileSync(full, 'utf8').includes('SUPABASE_SERVICE_ROLE_KEY')) throw new Error(`service role env leaked into frontend: ${full}`);
+}
 
 const frontend = layers[5];
 const guard = fs.readFileSync(path.join(root, 'assets/js/nav-v2/task-action-guard-v2.js'), 'utf8');
@@ -97,9 +115,10 @@ const cleanupLayer = layers[7];
 assert(cleanup.selected_option === null && cleanupLayer.selected_cleanup_option === null, 'cleanup option selected');
 assert(cleanupLayer.cleanup_allowed === false && cleanupLayer.privacy_replacement_live === false, 'cleanup layer claims live replacement');
 
-for (const stop of ['selected_deployment_option_missing', 'explicit_cost_approval_missing', 'cost_confirmation_id_missing', 'preview_branch_missing', 'executable_migrations_not_created', 'production_rollback_bundle_not_ready', 'edge_identity_handler_not_integrated', 'frontend_bounded_transport_disabled', 'authenticated_role_matrix_not_run', 'production_deployment_approval_missing', 'pilot_scope_missing', 'cleanup_option_unselected']) {
+for (const stop of ['selected_deployment_option_missing', 'explicit_cost_approval_missing', 'cost_confirmation_id_missing', 'preview_branch_missing', 'executable_migrations_not_created', 'production_rollback_bundle_not_ready', 'actor_aware_sql_not_deployed', 'edge_runtime_feature_flag_disabled', 'edge_not_deployed', 'frontend_bounded_transport_disabled', 'authenticated_role_matrix_not_run', 'production_deployment_approval_missing', 'pilot_scope_missing', 'cleanup_option_unselected']) {
   assert(manifest.active_stops.includes(stop), `active stop missing: ${stop}`);
 }
+assert(!manifest.active_stops.includes('edge_identity_handler_not_integrated'), 'obsolete Edge integration stop remains');
 for (const action of ['create_supabase_branch_without_explicit_cost_approval', 'create_or_apply_production_migration', 'deploy_edge_function', 'mass_backfill_or_cleanup_legacy_tasks', 'claim_deployment_readiness']) {
   assert(manifest.forbidden_actions.includes(action), `forbidden action missing: ${action}`);
 }

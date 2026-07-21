@@ -8,6 +8,7 @@ on:
       - 'config/nav-v2-auth-e2e-readiness.json'
       - 'config/nav-v2-bounded-task-migration-storyboard.json'
       - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-task-edge-runtime-integration-v1.json'
       - 'config/nav-v2-intake-special-semantics-integration-v1.json'
       - 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'
       - 'scripts/check_nav_v2_preview_deployment_bundle_manifest.py'
@@ -23,9 +24,11 @@ on:
     paths:
       - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
       - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'config/nav-v2-task-edge-runtime-integration-v1.json'
       - 'scripts/check_nav_v2_preview_deployment_bundle_manifest.py'
       - 'scripts/check-nav-v2-preview-deployment-bundle-manifest.mjs'
       - 'docs/NAV_V2_PREVIEW_DEPLOYMENT_BUNDLE_MANIFEST_V1_2026-07-21.md'
+      - 'supabase/functions/nav-v2-deal-api/**'
       - '.github/workflows/nav-v2-preview-deployment-bundle-manifest.yml'
   workflow_dispatch:
 
@@ -57,11 +60,14 @@ jobs:
             echo 'FAIL: preview bundle manifest leaked into migrations'
             exit 1
           fi
-      - name: Prove runtime remains disabled
+      - name: Prove Edge source is integrated but runtime remains disabled
         run: |
+          grep -F 'import { routeBoundedTaskEdgeActionV2 } from "./task-action-edge-runtime-v2.js";' supabase/functions/nav-v2-deal-api/index.ts
+          grep -F 'const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;' supabase/functions/nav-v2-deal-api/index.ts
+          grep -F "from './task-action-edge-identity-v2.js'" supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js
           grep -F 'const BOUNDED_TRANSPORT_ENABLED = false;' assets/js/nav-v2/task-action-guard-v2.js
-          if grep -Fq 'task-action-edge-identity-v2.js' supabase/functions/nav-v2-deal-api/index.ts; then
-            echo 'FAIL: detached identity handler was imported into Edge runtime'
+          if grep -R -Fq 'SUPABASE_SERVICE_ROLE_KEY' assets; then
+            echo 'FAIL: service role env name leaked into frontend assets'
             exit 1
           fi
-          echo 'Edge identity remains detached and bounded transport remains disabled'
+          echo 'Edge identity route is source-integrated behind a disabled flag; frontend transport remains disabled'

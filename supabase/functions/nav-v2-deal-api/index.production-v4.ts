@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { routeBoundedTaskEdgeActionV2 } from "./task-action-edge-runtime-v2.js";
 
-type LegacyNavV2Action =
+type NavV2Action =
   | "get_deal_card"
   | "get_deal_card_lite"
   | "add_comment"
@@ -10,44 +9,10 @@ type LegacyNavV2Action =
   | "update_document_workflow"
   | "update_task_status";
 
-type BoundedNavV2Action =
-  | "bounded_task_start"
-  | "bounded_task_complete"
-  | "bounded_task_active_outcome"
-  | "bounded_task_terminal_proposal"
-  | "bounded_task_terminal_decision";
-
-type NavV2Action = LegacyNavV2Action | BoundedNavV2Action;
-
 type AuthUser = {
   id: string;
   email?: string;
 };
-
-type NavProfile = {
-  id: string;
-  role: string;
-  is_active: boolean;
-};
-
-type BoundedTaskContext = {
-  id: string;
-  assigned_to: string | null;
-  assigned_role: string | null;
-  task_type: string | null;
-  source: string | null;
-  task_contract_version: number | null;
-};
-
-const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;
-
-const boundedActions = new Set<BoundedNavV2Action>([
-  "bounded_task_start",
-  "bounded_task_complete",
-  "bounded_task_active_outcome",
-  "bounded_task_terminal_proposal",
-  "bounded_task_terminal_decision",
-]);
 
 const allowedActions = new Set<NavV2Action>([
   "get_deal_card",
@@ -57,7 +22,6 @@ const allowedActions = new Set<NavV2Action>([
   "update_document_status",
   "update_document_workflow",
   "update_task_status",
-  ...boundedActions,
 ]);
 
 const dealStatuses = new Set([
@@ -238,66 +202,7 @@ async function callUserRpc<T>(req: Request, rpcName: string, payload: Record<str
   return data as T;
 }
 
-function serviceHeaders(): Record<string, string> {
-  const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  return {
-    Authorization: `Bearer ${serviceKey}`,
-    apikey: serviceKey,
-    "Content-Type": "application/json",
-  };
-}
-
-async function callServiceRows<T>(resourceAndQuery: string): Promise<T[]> {
-  const supabaseUrl = requireEnv("SUPABASE_URL");
-  const response = await fetch(`${supabaseUrl}/rest/v1/${resourceAndQuery}`, {
-    headers: serviceHeaders(),
-  });
-  if (!response.ok) throw new Error("Service-side context lookup failed");
-  const data = await response.json();
-  return Array.isArray(data) ? data as T[] : [];
-}
-
-async function loadActiveNavProfile(actorId: string): Promise<NavProfile | null> {
-  const rows = await callServiceRows<NavProfile>(
-    `nav_user_profiles?id=eq.${encodeURIComponent(actorId)}&is_active=eq.true&select=id,role,is_active&limit=1`,
-  );
-  return rows[0] || null;
-}
-
-async function loadBoundedTaskContext(taskId: string): Promise<BoundedTaskContext | null> {
-  const rows = await callServiceRows<BoundedTaskContext>(
-    `nav_deal_tasks_v2?id=eq.${encodeURIComponent(taskId)}&select=id,assigned_to,assigned_role,task_type,source,task_contract_version&limit=1`,
-  );
-  return rows[0] || null;
-}
-
-async function callServiceRpc<T>(rpcName: string, payload: Record<string, unknown>): Promise<T> {
-  const supabaseUrl = requireEnv("SUPABASE_URL");
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
-    method: "POST",
-    headers: serviceHeaders(),
-    body: JSON.stringify(payload),
-  });
-  const text = await response.text();
-  const data = text ? safeJsonParse(text) : null;
-  if (!response.ok) throw new Error(errorMessageFromRpcBody(data, `Actor-aware RPC ${rpcName} failed`));
-  return data as T;
-}
-
-async function handleAction(req: Request, user: AuthUser, action: NavV2Action, body: Record<string, unknown>): Promise<unknown> {
-  if (boundedActions.has(action as BoundedNavV2Action)) {
-    const result = await routeBoundedTaskEdgeActionV2({
-      enabled: BOUNDED_TASK_EDGE_IDENTITY_ENABLED,
-      request_body: body,
-      verified_user: user,
-      profile_loader: loadActiveNavProfile,
-      task_loader: loadBoundedTaskContext,
-      rpc_client: { rpc: callServiceRpc },
-    });
-    if (!result.ok) throw new Error(result.errors?.[0] || "Governed bounded task action rejected");
-    return result;
-  }
-
+async function handleAction(req: Request, action: NavV2Action, body: Record<string, unknown>): Promise<unknown> {
   if (action === "get_deal_card" || action === "get_deal_card_lite") {
     const dealId = parseUuid(body, ["deal_id", "id", "p_deal_id"], "deal_id");
     const wantsLite = action === "get_deal_card_lite" || body.lite === true;
@@ -370,7 +275,7 @@ Deno.serve(async (req: Request) => {
   try {
     const [user, body] = await Promise.all([getAuthUser(req), readBody(req)]);
     const action = parseAction(body);
-    const data = await handleAction(req, user, action, body);
+    const data = await handleAction(req, action, body);
     return jsonResponse({ ok: true, action, user_id: user.id, data });
   } catch (error) {
     return jsonResponse({ ok: false, error: error instanceof Error ? error.message : "Unknown error" }, 400);

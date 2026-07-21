@@ -8,6 +8,7 @@ const config = JSON.parse(fs.readFileSync(path.join(root, 'config/nav-v2-deploym
 const auth = JSON.parse(fs.readFileSync(path.join(root, 'config/nav-v2-auth-e2e-readiness.json'), 'utf8'));
 const final = JSON.parse(fs.readFileSync(path.join(root, 'config/nav-v2-intake-special-semantics-integration-v1.json'), 'utf8'));
 const cleanup = JSON.parse(fs.readFileSync(path.join(root, 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'), 'utf8'));
+const runtime = JSON.parse(fs.readFileSync(path.join(root, 'config/nav-v2-task-edge-runtime-integration-v1.json'), 'utf8'));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -15,9 +16,12 @@ function assert(condition, message) {
 
 assert(config.contract_version === 1, 'unexpected deployment package version');
 assert(config.status === 'repository_only_decision_package', 'package escaped repository-only status');
-for (const key of ['production_applied', 'production_ready', 'deployment_bundle_ready', 'authenticated_e2e_proven', 'branch_creation_allowed', 'technical_accounts_created']) {
+for (const key of ['production_applied', 'production_ready', 'deployment_bundle_ready', 'edge_runtime_enabled', 'edge_deployed', 'authenticated_e2e_proven', 'branch_creation_allowed', 'technical_accounts_created']) {
   assert(config[key] === false, `${key} must remain false`);
 }
+assert(config.repository_bundle_manifest_ready === true, 'repository source manifest is not ready');
+assert(config.rehearsal_bundle_assembler_proven === true, 'rehearsal bundle assembler evidence missing');
+assert(config.edge_runtime_source_integrated === true, 'Edge runtime source integration evidence missing');
 assert(config.branch_cost_rechecked === true, 'current branch cost was not rechecked');
 assert(config.selected_deployment_option === null, 'deployment option selected automatically');
 assert(config.selected_cleanup_option === null, 'cleanup option selected automatically');
@@ -42,6 +46,15 @@ assert(final.production_ready === false, 'final structural package claims deploy
 assert(auth.authenticated_e2e_proven === false, 'auth package claims proof');
 assert(auth.historical_cost_snapshot.stale_for_execution === true, 'historical cost is not marked stale');
 assert(cleanup.selected_option === null, 'cleanup option selected outside owner decision');
+assert(runtime.runtime_source_integrated === true && runtime.feature_flag_default === false, 'runtime source integration contract drifted');
+assert(runtime.edge_deployed === false && runtime.actor_aware_sql_deployed === false, 'runtime contract claims deployment');
+
+const evidence = config.repository_evidence;
+for (const key of ['preview_bundle_rehearsal_assembler_proven', 'edge_identity_runtime_source_integrated']) {
+  assert(evidence[key] === true, `repository evidence missing: ${key}`);
+}
+assert(evidence.edge_identity_runtime_feature_flag_default === false, 'Edge runtime flag default changed');
+assert(evidence.edge_identity_runtime_deployed === false, 'Edge runtime deployment was inferred');
 
 assert(config.owner_options.length === 3, 'owner option count changed');
 assert(config.owner_options.filter((option) => option.recommended_next).length === 1, 'exactly one next option must be recommended');
@@ -62,9 +75,10 @@ const matrix = config.ordered_rollout[5].required_evidence;
 for (const item of ['allowed_deals', 'forbidden_deals', 'broker_mortgage_only', 'viewer_read_only', 'cross_actor_replay_rejected', 'identity_chain']) {
   assert(matrix.includes(item), `matrix evidence missing: ${item}`);
 }
-for (const stop of ['selected_deployment_option_missing', 'current_cost_snapshot_not_execution_authority', 'explicit_cost_approval_missing', 'cost_confirmation_id_missing', 'deployment_bundle_not_ready', 'authenticated_e2e_not_proven', 'production_deployment_approval_missing', 'rollback_attestation_missing', 'cleanup_option_unselected']) {
+for (const stop of ['selected_deployment_option_missing', 'current_cost_snapshot_not_execution_authority', 'explicit_cost_approval_missing', 'cost_confirmation_id_missing', 'deployment_bundle_not_ready', 'executable_migrations_not_created', 'production_rollback_bundle_not_ready', 'actor_aware_sql_not_deployed', 'edge_runtime_feature_flag_disabled', 'edge_not_deployed', 'authenticated_e2e_not_proven', 'production_deployment_approval_missing', 'pilot_scope_missing', 'rollback_attestation_missing', 'cleanup_option_unselected']) {
   assert(config.mandatory_stops.includes(stop), `mandatory stop missing: ${stop}`);
 }
+assert(!config.mandatory_stops.includes('edge_identity_handler_not_integrated'), 'obsolete Edge integration stop remains');
 assert(!config.mandatory_stops.includes('current_branch_cost_missing'), 'current cost is still incorrectly marked missing');
 for (const artifact of config.source_artifacts) assert(fs.existsSync(path.join(root, artifact)), `source artifact missing: ${artifact}`);
 

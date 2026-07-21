@@ -9,6 +9,7 @@ CONFIG = ROOT / "config/nav-v2-deployment-decision-package-v1.json"
 AUTH = ROOT / "config/nav-v2-auth-e2e-readiness.json"
 FINAL = ROOT / "config/nav-v2-intake-special-semantics-integration-v1.json"
 CLEANUP = ROOT / "config/nav-v2-legacy-quality-cleanup-decision-v1.json"
+RUNTIME = ROOT / "config/nav-v2-task-edge-runtime-integration-v1.json"
 MIGRATIONS = ROOT / "supabase/migrations"
 
 
@@ -22,13 +23,18 @@ def main() -> None:
     auth = json.loads(AUTH.read_text(encoding="utf-8"))
     final = json.loads(FINAL.read_text(encoding="utf-8"))
     cleanup = json.loads(CLEANUP.read_text(encoding="utf-8"))
+    runtime = json.loads(RUNTIME.read_text(encoding="utf-8"))
 
     require(config["status"] == "repository_only_decision_package", "package escaped repository-only status")
     for key in [
         "production_applied", "production_ready", "deployment_bundle_ready",
-        "authenticated_e2e_proven", "branch_creation_allowed", "technical_accounts_created",
+        "edge_runtime_enabled", "edge_deployed", "authenticated_e2e_proven",
+        "branch_creation_allowed", "technical_accounts_created",
     ]:
         require(config[key] is False, f"{key} must remain false")
+    require(config["repository_bundle_manifest_ready"] is True, "repository source manifest is not ready")
+    require(config["rehearsal_bundle_assembler_proven"] is True, "rehearsal bundle assembler evidence missing")
+    require(config["edge_runtime_source_integrated"] is True, "Edge runtime source integration evidence missing")
     require(config["branch_cost_rechecked"] is True, "current branch cost was not rechecked")
     require(config["selected_deployment_option"] is None, "deployment option selected automatically")
     require(config["selected_cleanup_option"] is None, "cleanup option selected automatically")
@@ -51,6 +57,10 @@ def main() -> None:
     evidence = config["repository_evidence"]
     require(evidence["catalog_supported_count"] == 25, "catalog support count differs from 25")
     require(evidence["catalog_unsupported_count"] == 0, "catalog unsupported count differs from zero")
+    require(evidence["preview_bundle_rehearsal_assembler_proven"] is True, "assembler evidence missing")
+    require(evidence["edge_identity_runtime_source_integrated"] is True, "Edge runtime source evidence missing")
+    require(evidence["edge_identity_runtime_feature_flag_default"] is False, "Edge runtime flag default changed")
+    require(evidence["edge_identity_runtime_deployed"] is False, "Edge runtime deployment was inferred")
     require(final["effective_supported_count"] == 25, "final integration contract differs from 25")
     require(final["effective_unsupported_count"] == 0, "final integration contract has unsupported rules")
     require(final["production_ready"] is False, "final integration claims production readiness")
@@ -58,6 +68,8 @@ def main() -> None:
     require(auth["supabase_branch_created"] is False, "auth package unexpectedly claims branch creation")
     require(auth["historical_cost_snapshot"]["stale_for_execution"] is True, "historical cost must remain stale")
     require(cleanup["selected_option"] is None, "legacy cleanup option selected outside owner decision")
+    require(runtime["runtime_source_integrated"] is True and runtime["feature_flag_default"] is False, "runtime source integration contract drifted")
+    require(runtime["edge_deployed"] is False and runtime["actor_aware_sql_deployed"] is False, "runtime contract claims deployment")
 
     options = config["owner_options"]
     require(len(options) == 3, "owner option count changed")
@@ -86,11 +98,14 @@ def main() -> None:
     for stop in [
         "selected_deployment_option_missing", "current_cost_snapshot_not_execution_authority",
         "explicit_cost_approval_missing", "cost_confirmation_id_missing",
-        "deployment_bundle_not_ready", "authenticated_e2e_not_proven",
-        "production_deployment_approval_missing", "rollback_attestation_missing",
-        "cleanup_option_unselected",
+        "deployment_bundle_not_ready", "executable_migrations_not_created",
+        "production_rollback_bundle_not_ready", "actor_aware_sql_not_deployed",
+        "edge_runtime_feature_flag_disabled", "edge_not_deployed",
+        "authenticated_e2e_not_proven", "production_deployment_approval_missing",
+        "pilot_scope_missing", "rollback_attestation_missing", "cleanup_option_unselected",
     ]:
         require(stop in stops, f"mandatory stop missing: {stop}")
+    require("edge_identity_handler_not_integrated" not in stops, "obsolete Edge integration stop remains")
     require("current_branch_cost_missing" not in stops, "current cost is still incorrectly marked missing")
 
     for artifact in config["source_artifacts"]:

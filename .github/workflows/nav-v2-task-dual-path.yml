@@ -4,8 +4,13 @@ on:
   pull_request:
     paths:
       - 'assets/js/nav-v2/task-action-router-v2.js'
+      - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
       - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'
       - 'config/nav-v2-task-dual-path-contract.json'
+      - 'config/nav-v2-task-edge-runtime-integration-v1.json'
       - 'fixtures/nav-v2-task-dual-path-scenarios.json'
       - 'scripts/check-nav-v2-task-dual-path.mjs'
       - 'scripts/check_nav_v2_task_dual_path.py'
@@ -35,11 +40,17 @@ jobs:
         run: |
           node --check assets/js/nav-v2/task-action-router-v2.js
           node --check supabase/functions/nav-v2-deal-api/task-action-contract-v2.js
+          node --check supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js
           node --check scripts/check-nav-v2-task-dual-path.mjs
           node --check tests/e2e/task-action-dual-path.spec.js
 
       - name: Run semantic scenarios
         run: node scripts/check-nav-v2-task-dual-path.mjs
+
+      - name: Prove both bounded network feature flags remain disabled
+        run: |
+          grep -F 'const BOUNDED_TRANSPORT_ENABLED = false;' assets/js/nav-v2/task-action-guard-v2.js
+          grep -F 'const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;' supabase/functions/nav-v2-deal-api/index.ts
 
       - name: Install browser dependencies
         run: |
@@ -56,6 +67,7 @@ jobs:
           name: nav-v2-task-dual-path
           path: |
             config/nav-v2-task-dual-path-contract.json
+            config/nav-v2-task-edge-runtime-integration-v1.json
             fixtures/nav-v2-task-dual-path-scenarios.json
             docs/NAV_V2_TASK_DUAL_PATH_CONTRACT_2026-07-16.md
             tests/e2e/task-action-dual-path.spec.js

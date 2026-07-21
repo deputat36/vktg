@@ -13,7 +13,7 @@
       "ezbr_sha256": "14020dac054cadf3ca86d19313cf2bc2b012aca9d634e76e8dd0ffde11b05a5f"
     },
     "nav-v2-deal-api": {
-      "source_path": "supabase/functions/nav-v2-deal-api/index.ts",
+      "source_path": "supabase/functions/nav-v2-deal-api/index.production-v4.ts",
       "source_blob_sha": "071b70584365a52519e8a15a8c8d2c956247d1f4",
       "version": 4,
       "status": "ACTIVE",

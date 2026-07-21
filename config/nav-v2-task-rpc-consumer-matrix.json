@@ -1,14 +1,34 @@
 {
-  "schema_version": 4,
-  "status": "frontend_authoritative_single_source_transport_disabled",
+  "schema_version": 5,
+  "status": "frontend_authoritative_edge_candidate_integrated_transport_disabled",
   "frontend_runtime_changed": true,
+  "edge_runtime_source_integrated": true,
+  "edge_runtime_enabled": false,
+  "edge_deployed": false,
   "production_database_changed": false,
   "deployment_ready": false,
-  "latest_main": "a566871ef180c04c728d45e76bbbfe03e82cb638",
+  "latest_main": "df7634bc56ac931af3724183f51f935a887bbf7c",
+  "edge_sources": {
+    "production_snapshot": {
+      "path": "supabase/functions/nav-v2-deal-api/index.production-v4.ts",
+      "version": 4,
+      "immutable_release_baseline": true,
+      "bounded_actions_present": false
+    },
+    "candidate_entrypoint": {
+      "path": "supabase/functions/nav-v2-deal-api/index.ts",
+      "repository_only": true,
+      "feature_flag_default": false,
+      "deployed": false,
+      "bounded_actions_source_integrated": true
+    }
+  },
   "legacy_rpcs": {
     "nav_v2_add_task": {
       "active_runtime_consumers": [],
-      "inventory_paths": ["config/nav-v2-rpc-surface.json"],
+      "inventory_paths": [
+        "config/nav-v2-rpc-surface.json"
+      ],
       "replacement": "nav_v2_create_bounded_tasks",
       "migration_action": "Remove from frontend_api only after governed create transport is deployed and server-side creators are audited.",
       "deployment_blocker": false
@@ -18,16 +38,43 @@
         {
           "path": "assets/js/nav-v2/task-action-guard-v2.js",
           "surface": "authoritative_capture_handler",
-          "current_actions": ["start", "complete", "reopen"],
+          "current_actions": [
+            "start",
+            "complete",
+            "reopen"
+          ],
           "routing": "Legacy rows are routed through task-action-router-v2.js to nav_v2_update_task_status. Contract-v2 rows are recognized but transport is blocked.",
-          "remaining_blockers": ["frontend_bounded_transport_disabled"]
+          "remaining_blockers": [
+            "frontend_bounded_transport_disabled"
+          ]
         },
         {
+          "path": "supabase/functions/nav-v2-deal-api/index.production-v4.ts",
+          "surface": "deployed_legacy_edge_action_facade_snapshot",
+          "current_actions": [
+            "update_task_status"
+          ],
+          "release_baseline": "Exact immutable repository snapshot of deployed Edge Function v4.",
+          "remaining_blockers": [
+            "production_edge_still_legacy_only"
+          ]
+        }
+      ],
+      "candidate_runtime_consumers": [
+        {
           "path": "supabase/functions/nav-v2-deal-api/index.ts",
-          "surface": "edge_function_legacy_action_facade",
-          "current_actions": ["update_task_status"],
-          "migration": "Keep the legacy action legacy-only and integrate validated governed actions only after database deployment.",
-          "remaining_blockers": ["edge_actions_not_integrated", "database_deployment_order"]
+          "surface": "repository_candidate_edge_entrypoint",
+          "current_actions": [
+            "update_task_status",
+            "bounded_task_start",
+            "bounded_task_complete",
+            "bounded_task_active_outcome",
+            "bounded_task_terminal_proposal",
+            "bounded_task_terminal_decision"
+          ],
+          "feature_flag_default": false,
+          "deployed": false,
+          "routing": "Verified Auth identity, active profile, contract-v2 task context and role/assignment preflight are source-integrated. Bounded route remains disabled and cannot run in production."
         }
       ],
       "dormant_source_handlers": [],
@@ -52,6 +99,7 @@
         "assets/js/nav-v2/task-action-edge-pipeline-v2.js",
         "assets/js/nav-v2/bounded-task-ui-preview-v2.js",
         "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+        "supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js",
         "config/nav-v2-rpc-surface.json"
       ],
       "replacement_rpcs": [
@@ -96,10 +144,12 @@
     "authoritative_handler_not_integrated",
     "duplicate_handler_execution_risk",
     "dormant_base_handler_source_not_removed",
-    "frontend_edge_rpc_parity_missing"
+    "frontend_edge_rpc_parity_missing",
+    "edge_actions_not_integrated"
   ],
   "remaining_blockers": [
-    "edge_actions_not_integrated",
+    "edge_runtime_feature_flag_disabled",
+    "edge_function_not_deployed",
     "database_migrations_not_deployed",
     "minimal_grants_not_deployed",
     "authenticated_application_e2e_missing",
@@ -114,20 +164,28 @@
     "task_action_pipeline": "assets/js/nav-v2/task-action-edge-pipeline-v2.js",
     "authoritative_runtime_handler": "assets/js/nav-v2/task-action-guard-v2.js",
     "edge_action_contract": "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+    "edge_runtime_adapter": "supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js",
+    "edge_candidate_entrypoint": "supabase/functions/nav-v2-deal-api/index.ts",
+    "edge_production_snapshot": "supabase/functions/nav-v2-deal-api/index.production-v4.ts",
     "dual_path_e2e": "tests/e2e/task-action-dual-path.spec.js",
     "pipeline_e2e": "tests/e2e/task-action-pipeline-rehearsal.spec.js",
     "runtime_e2e": "tests/e2e/task-action-feedback.spec.js"
   },
   "deployment_order": [
-    "authenticated_application_e2e",
-    "deploy_database_migrations_and_minimal_grants",
-    "integrate_and_deploy_edge_actions",
+    "explicit_preview_cost_approval",
+    "create_synthetic_preview_environment",
+    "apply_preview_database_migrations_and_minimal_grants",
+    "deploy_candidate_edge_to_preview",
+    "run_authenticated_application_e2e",
+    "obtain_production_deployment_approval",
+    "deploy_database_then_edge_with_flags_disabled",
     "enable_frontend_bounded_transport_for_controlled_pilot",
     "controlled_pilot",
     "remove_legacy_inventory_only_after_zero_runtime_consumers"
   ],
   "separation_guarantees": {
     "edge_function_deployed": false,
+    "edge_feature_flag_enabled": false,
     "database_changed": false,
     "legacy_tasks_changed": false,
     "bounded_network_mutation_enabled": false,

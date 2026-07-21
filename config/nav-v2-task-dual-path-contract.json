@@ -1,17 +1,27 @@
 {
-  "schema_version": 2,
-  "status": "frontend_router_integrated_edge_detached",
+  "schema_version": 3,
+  "status": "frontend_router_and_edge_source_integrated_transport_disabled",
   "production_changed": false,
   "frontend_runtime_integrated": true,
-  "edge_runtime_integrated": false,
+  "edge_runtime_source_integrated": true,
+  "edge_runtime_enabled": false,
+  "edge_deployed": false,
   "transport_enabled": false,
   "authoritative_handler": "assets/js/nav-v2/task-action-guard-v2.js",
   "router": "assets/js/nav-v2/task-action-router-v2.js",
   "edge_action_contract": "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+  "edge_identity_handler": "supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js",
+  "edge_runtime_adapter": "supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js",
+  "edge_entrypoint": "supabase/functions/nav-v2-deal-api/index.ts",
   "pipeline_rehearsal": "assets/js/nav-v2/task-action-edge-pipeline-v2.js",
+  "feature_flags": {
+    "frontend_bounded_transport": false,
+    "edge_bounded_identity_route": false
+  },
   "legacy_path": {
     "rpc": "nav_v2_update_task_status",
-    "actions": ["start", "complete", "reopen"]
+    "actions": ["start", "complete", "reopen"],
+    "default_runtime": true
   },
   "bounded_path": {
     "start": "nav_v2_start_bounded_task",
@@ -19,21 +29,24 @@
     "active_outcome": "nav_v2_set_bounded_task_active_outcome",
     "terminal_proposal": "nav_v2_propose_bounded_task_terminal_outcome",
     "terminal_decision": "nav_v2_decide_bounded_task_terminal_outcome",
-    "reopen": "immutable_create_new_audited_task"
+    "reopen": "immutable_create_new_audited_task",
+    "source_route_integrated": true,
+    "network_route_enabled": false
   },
   "frontend_consumers": ["assets/js/nav-v2/task-action-guard-v2.js"],
   "renderer_only": ["assets/js/nav-v2/deal-card-v2.js"],
-  "detached_contracts": [
-    "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+  "detached_rehearsals": [
     "assets/js/nav-v2/task-action-edge-pipeline-v2.js"
   ],
   "closed_blockers": [
     "authoritative_router_not_integrated",
     "duplicate_frontend_handlers",
-    "frontend_edge_rpc_parity_missing"
+    "frontend_edge_rpc_parity_missing",
+    "edge_action_source_route_not_integrated"
   ],
   "remaining_blockers": [
-    "edge_actions_not_integrated",
+    "edge_runtime_feature_flag_disabled",
+    "edge_function_not_deployed",
     "authenticated_application_e2e_missing",
     "database_migrations_not_deployed",
     "minimal_grants_not_deployed",
