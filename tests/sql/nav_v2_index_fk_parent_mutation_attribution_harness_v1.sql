@@ -32,14 +32,14 @@ begin
 end;
 $function$;
 
-create or replace function harness.xact_index_scans(p_index_name text)
+create or replace function harness.index_scans(p_index_name text)
 returns bigint
 language sql
 stable
 as $function$
   select coalesce((
     select idx_scan
-    from pg_stat_xact_user_indexes
+    from pg_stat_user_indexes
     where schemaname = 'harness'
       and indexrelname = p_index_name
   ), 0)::bigint;
@@ -130,6 +130,16 @@ create table harness.attribution_evidence (
   note text not null
 );
 
+create or replace function harness.refresh_stats_snapshot()
+returns void
+language plpgsql
+as $function$
+begin
+  perform pg_stat_force_next_flush();
+  perform pg_stat_clear_snapshot();
+end;
+$function$;
+
 create or replace function harness.capture_successful_mutation(
   p_order integer,
   p_case_id text,
@@ -151,15 +161,17 @@ declare
   v_answers_before bigint;
   v_answers_after bigint;
 begin
-  v_single_before := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
-  v_composite_before := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  perform pg_stat_clear_snapshot();
+  v_single_before := harness.index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_before := harness.index_scans('nav_deal_answers_v2_deal_id_question_key_key');
   select count(*) into v_deals_before from harness.nav_deals_v2;
   select count(*) into v_answers_before from harness.nav_deal_answers_v2;
 
   execute p_sql;
+  perform harness.refresh_stats_snapshot();
 
-  v_single_after := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
-  v_composite_after := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  v_single_after := harness.index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_after := harness.index_scans('nav_deal_answers_v2_deal_id_question_key_key');
   select count(*) into v_deals_after from harness.nav_deals_v2;
   select count(*) into v_answers_after from harness.nav_deal_answers_v2;
 
@@ -204,8 +216,9 @@ declare
   v_answers_before bigint;
   v_answers_after bigint;
 begin
-  v_single_before := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
-  v_composite_before := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  perform pg_stat_clear_snapshot();
+  v_single_before := harness.index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_before := harness.index_scans('nav_deal_answers_v2_deal_id_question_key_key');
   select count(*) into v_deals_before from harness.nav_deals_v2;
   select count(*) into v_answers_before from harness.nav_deal_answers_v2;
 
@@ -216,9 +229,10 @@ begin
       v_blocked := true;
       get stacked diagnostics v_state = returned_sqlstate;
   end;
+  perform harness.refresh_stats_snapshot();
 
-  v_single_after := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
-  v_composite_after := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  v_single_after := harness.index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_after := harness.index_scans('nav_deal_answers_v2_deal_id_question_key_key');
   select count(*) into v_deals_after from harness.nav_deals_v2;
   select count(*) into v_answers_after from harness.nav_deal_answers_v2;
 
@@ -411,6 +425,9 @@ select jsonb_pretty(jsonb_build_object(
   'production_data_copied', false,
   'production_ddl_authorized', false,
   'index_drop_authorized', false,
+  'statistics_source', 'pg_stat_user_indexes',
+  'statistics_snapshot_reset_between_reads', true,
+  'statistics_flush_requested_after_mutation', true,
   'latency_superiority_asserted', false,
   'index_sizes', (select jsonb_agg(to_jsonb(s) order by evidence_id) from harness.index_size_evidence s),
   'structural_plan', (select jsonb_agg(to_jsonb(p) order by evidence_id) from harness.plan_evidence p),
