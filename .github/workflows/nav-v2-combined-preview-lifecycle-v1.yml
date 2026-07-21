@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'config/nav-v2-combined-preview-lifecycle-v1.json'
+      - 'config/nav-v2-combined-preview-intake-rollback-v1.json'
       - 'config/nav-v2-preview-candidate-package-v2.json'
       - 'config/nav-v2-preview-bundle-assembler-v1.json'
       - 'config/nav-v2-bounded-consolidated-candidate-v1.json'
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - 'config/nav-v2-combined-preview-lifecycle-v1.json'
+      - 'config/nav-v2-combined-preview-intake-rollback-v1.json'
       - 'scripts/check_nav_v2_combined_preview_lifecycle_v1.py'
       - 'scripts/check-nav-v2-combined-preview-artifacts-v1.mjs'
       - 'scripts/run-nav-v2-combined-preview-lifecycle-v1.sh'
