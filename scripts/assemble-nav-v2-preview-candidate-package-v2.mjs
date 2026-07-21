@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packagePath = path.join(root, 'config/nav-v2-preview-candidate-package-v2.json');
 const attestationPath = path.join(root, 'config/nav-v2-preview-readonly-attestation-v1.json');
+const expectedIndexFile = 'preview-candidate-package-v2-index.json';
 
 function flagValue(name) {
   const index = process.argv.indexOf(name);
@@ -55,6 +56,7 @@ const boundedIndex = boundedIndexSource.value;
 
 assert(packageConfig.schema_version === 2, 'package v2 schema drifted');
 assert(packageConfig.status === 'repository_only_preview_candidate_package_v2_not_executable', 'package v2 status drifted');
+assert(packageConfig.package_index_file === expectedIndexFile, 'package v2 index filename drifted');
 for (const key of [
   'production_applied', 'preview_branch_created', 'cloud_execution_allowed',
   'cost_confirmation_performed', 'preview_apply_allowed', 'edge_deploy_allowed',
@@ -206,7 +208,7 @@ const index = {
 
 await mkdir(outputDir, { recursive: true });
 const indexText = `${JSON.stringify(index, null, 2)}\n`;
-await writeFile(path.join(outputDir, packageConfig.package_index_file), indexText, 'utf8');
+await writeFile(path.join(outputDir, expectedIndexFile), indexText, 'utf8');
 process.stdout.write(`${JSON.stringify({
   output_dir: outputDir,
   index_sha256: sha256(indexText),
