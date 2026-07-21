@@ -82,7 +82,9 @@ def main() -> None:
     require(synthetic["parent_delete_cases"] == 2, "delete case count drifted")
     require(synthetic["unreferenced_parent_update_cases"] == 2, "unreferenced update case count drifted")
     require(synthetic["referenced_parent_update_rejection_cases"] == 2, "blocked update case count drifted")
-    require(synthetic["transaction_local_index_stats"] == "pg_stat_xact_user_indexes", "scan attribution source drifted")
+    require(synthetic["isolated_backend_index_stats"] == "pg_stat_user_indexes", "scan attribution source drifted")
+    require(synthetic["statistics_snapshot_reset_between_reads"] is True, "statistics snapshot reset missing")
+    require(synthetic["statistics_flush_requested_after_mutation"] is True, "statistics flush request missing")
     for key in (
         "synthetic_index_sizes_captured",
         "structural_composite_prefix_plan_required",
@@ -150,7 +152,10 @@ def main() -> None:
     require("generate_series(1, 5002)" in sql, "synthetic parent generator drifted")
     require("generate_series(1, 5000)" in sql, "synthetic referenced parent generator drifted")
     require("generate_series(1, 20)" in sql, "synthetic child generator drifted")
-    require("pg_stat_xact_user_indexes" in lower, "transaction-local index attribution missing")
+    require("pg_stat_user_indexes" in lower, "isolated backend index attribution missing")
+    require("pg_stat_xact_user_indexes" not in lower, "nonexistent transaction index view remains")
+    require("pg_stat_force_next_flush" in lower, "statistics flush request missing")
+    require("pg_stat_clear_snapshot" in lower, "statistics snapshot reset missing")
     require("pg_relation_size" in lower, "synthetic index size capture missing")
     require("drop index harness.nav_deal_answers_v2_deal_idx" in lower, "synthetic single index removal missing")
     require("set local enable_seqscan = off" in lower, "structural prefix plan control missing")
@@ -186,7 +191,7 @@ def main() -> None:
     for marker in (
         "FK parent mutation attribution",
         "Canonical evidence extended, not duplicated",
-        "Transaction-local index scans",
+        "Isolated-backend index scan deltas",
         "Synthetic index sizes",
         "Referenced parent update rejection",
         "Composite-only result",
@@ -201,7 +206,7 @@ def main() -> None:
 
     print(
         "Navigator v2 FK parent-mutation attribution source contract passed: "
-        "transaction-local scans, synthetic sizes and blocked updates only; production decision remains review-only."
+        "isolated scan deltas, synthetic sizes and blocked updates only; production decision remains review-only."
     )
 
 
