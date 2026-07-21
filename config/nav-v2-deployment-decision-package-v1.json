@@ -1,17 +1,34 @@
 {
   "contract_version": 1,
   "status": "repository_only_decision_package",
-  "generated_at": "2026-07-20",
+  "generated_at": "2026-07-21",
   "production_project_id": "ofewxuqfjhamgerwzull",
   "production_applied": false,
   "production_ready": false,
   "deployment_bundle_ready": false,
   "authenticated_e2e_proven": false,
-  "branch_cost_rechecked": false,
+  "branch_cost_rechecked": true,
   "branch_creation_allowed": false,
   "technical_accounts_created": false,
   "selected_deployment_option": null,
   "selected_cleanup_option": null,
+  "current_branch_cost_snapshot": {
+    "source": "supabase_get_cost",
+    "checked_at": "2026-07-21",
+    "organization_id": "tcbupmmcojrcxfqjuwsm",
+    "organization_name": "Lider",
+    "organization_plan": "free",
+    "type": "branch",
+    "amount": 0.01344,
+    "recurrence": "hourly",
+    "six_hour_ceiling": 0.08064,
+    "currency": null,
+    "valid_for_owner_decision": true,
+    "valid_for_branch_creation": false,
+    "must_recheck_immediately_before_confirm_cost": true,
+    "explicit_owner_cost_approval": false,
+    "cost_confirmation_id": null
+  },
   "repository_evidence": {
     "catalog_supported_count": 25,
     "catalog_unsupported_count": 0,
@@ -23,13 +40,13 @@
     "bounded_task_repository_contract_proven": true
   },
   "owner_options": [
-    {"id":"authenticated_e2e_only","recommended_next":true,"requires_current_cost_lookup":true,"requires_explicit_cost_approval":true,"allows_production_merge":false},
+    {"id":"authenticated_e2e_only","recommended_next":true,"current_cost_snapshot_available":true,"requires_execution_time_cost_recheck":true,"requires_explicit_cost_approval":true,"allows_production_merge":false},
     {"id":"staged_production_pilot_after_e2e","recommended_next":false,"requires_authenticated_e2e":true,"requires_separate_deployment_approval":true,"allows_automatic_cleanup":false},
     {"id":"remain_repository_only","recommended_next":false,"requires_cost":false,"keeps_production_unchanged":true}
   ],
   "ordered_rollout": [
     {"order":0,"id":"read_only_preflight","writes_allowed":false,"required_evidence":["main_sha","production_counts","production_object_absence","migration_head"]},
-    {"order":1,"id":"cost_and_owner_gate","writes_allowed":false,"required_evidence":["current_branch_cost","explicit_cost_approval","six_hour_ceiling"]},
+    {"order":1,"id":"cost_and_owner_gate","writes_allowed":false,"required_evidence":["current_branch_cost","six_hour_ceiling","explicit_cost_approval","execution_time_cost_recheck","cost_confirmation_id"]},
     {"order":2,"id":"disposable_preview_branch","writes_allowed":true,"target":"non_production_only","required_evidence":["new_project_ref","no_production_data","automatic_delete_plan"]},
     {"order":3,"id":"branch_deployment_bundle","writes_allowed":true,"target":"preview_branch_only","required_evidence":["ordered_migrations","edge_bundle","transport_flag_false","rollback_scripts"]},
     {"order":4,"id":"synthetic_auth_and_data","writes_allowed":true,"target":"preview_branch_only","required_roles":["admin","manager","spn","lawyer","broker","viewer"],"owner_role":"optional_opt_in"},
@@ -49,8 +66,9 @@
   ],
   "mandatory_stops": [
     "selected_deployment_option_missing",
-    "current_branch_cost_missing",
+    "current_cost_snapshot_not_execution_authority",
     "explicit_cost_approval_missing",
+    "cost_confirmation_id_missing",
     "deployment_bundle_not_ready",
     "authenticated_e2e_not_proven",
     "production_deployment_approval_missing",
