@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "repository_only_combined_preview_lifecycle_not_executable",
+  "status": "repository_only_combined_preview_lifecycle_proven_not_executable",
   "generated_at": "2026-07-21",
   "source_main_sha": "e88b1c3ceb356a9d083c9bc4545b29c93b7ee41a",
   "production_project_ref": "ofewxuqfjhamgerwzull",
@@ -12,11 +12,27 @@
   "edge_deployed": false,
   "deployment_bundle_ready": false,
   "production_rollback_bundle_ready": false,
-  "combined_apply_proven": false,
-  "combined_rollback_proven": false,
+  "combined_apply_proven": true,
+  "combined_rollback_proven": true,
+  "proof": {
+    "workflow": "Navigator v2 combined preview lifecycle v1",
+    "workflow_run_id": 29831435000,
+    "head_sha": "8add63300206550fa77049f550847cb2273e2e8b",
+    "postgres_major": 17,
+    "source_contract_success": true,
+    "conflict_inventory_success": true,
+    "quality_apply_assert_success": true,
+    "bounded_apply_assert_success": true,
+    "intake_25_rule_apply_assert_success": true,
+    "cross_component_assertions_success": true,
+    "always_rollback_success": true,
+    "post_rollback_assertions_success": true,
+    "cloud_calls_performed": false
+  },
   "preview_bundle_assembler": "config/nav-v2-preview-bundle-assembler-v1.json",
   "bounded_consolidated_candidate": "config/nav-v2-bounded-consolidated-candidate-v1.json",
   "package_v2": "config/nav-v2-preview-candidate-package-v2.json",
+  "combined_intake_rollback": "config/nav-v2-combined-preview-intake-rollback-v1.json",
   "shared_setup": [
     "tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql",
     "tests/sql/nav_v2_combined_preview_shared_setup_v1.sql",
@@ -68,8 +84,8 @@
     {
       "order": 1,
       "id": "intake",
-      "source": "preview_bundle",
-      "file": "04-intake-rehearsal-rollback.sql"
+      "source": "combined_safe_sources",
+      "contract": "config/nav-v2-combined-preview-intake-rollback-v1.json"
     },
     {
       "order": 2,
