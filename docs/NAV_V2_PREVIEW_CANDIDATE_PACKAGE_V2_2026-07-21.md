@@ -1,6 +1,6 @@
 # Navigator v2 — Preview Candidate Package v2
 
-Дата: 21 июля 2026 года.
+Дата исходного package: 21 июля 2026 года. Последняя read-only attestation refresh: 21 июля 2026 года, `13:19:29 UTC`.
 
 ## Package v2
 
@@ -23,7 +23,7 @@ Production remains unchanged.
 
 Package v1 хранил `bounded_core` и `bounded_dto` как независимые rehearsal-сегменты. PR #430 доказал единый consolidated bounded candidate без повторного применения базовых sources.
 
-Package v2 использует только:
+Package v2 использует:
 
 - `01-bounded-consolidated-forward.sql`;
 - `01-bounded-consolidated-rollback.sql`;
@@ -44,39 +44,31 @@ Package v2 использует только:
 3. mutation rollback;
 4. base contract rollback.
 
-Consolidated PostgreSQL 17 lifecycle уже доказал apply, canonical assertions, actor identity, replay protection, DTO permissions, ALWAYS ROLLBACK и post-rollback cleanup.
+Позднее PR #433 отдельно доказал общий lifecycle `quality → bounded → intake`. Package v2 сохраняет своё исходное fail-closed состояние, а актуальная execution orchestration находится в package v3.
 
 ## Component inventory
 
-Package v2 связывает три SQL-компонента и Edge candidate:
+Package v2 связывает:
 
-1. privacy-aligned quality — existing deterministic rehearsal artifacts;
-2. consolidated bounded tasks — validated consolidated artifacts;
-3. governed intake с полным 25-rule mapper — existing deterministic rehearsal artifacts;
-4. Edge candidate file set с feature flag `false`.
+1. privacy-aligned quality;
+2. consolidated bounded tasks;
+3. governed intake с полным 25-rule mapper;
+4. Edge candidate с feature flag `false`.
 
-Каждый SQL artifact сохраняет:
-
-- точный SHA-256;
-- byte size;
-- exact source order;
-- ссылку на исходный upstream index;
-- `production_executable=false`.
-
-Последовательное применение quality → bounded → intake одной транзакционной цепочкой пока не доказано. Поэтому component inventory остаётся review-only.
+Каждый SQL artifact сохраняет SHA-256, byte size, exact source order и `production_executable=false`.
 
 ## Read-only preflight
 
-`tests/sql/nav_v2_preview_readonly_preflight_v1.sql` выполняет только aggregate-only чтение внутри `begin transaction read only`.
+`tests/sql/nav_v2_preview_readonly_preflight_v1.sql` выполняет aggregate-only чтение внутри `begin transaction read only` и заканчивается `rollback`.
 
-Он проверяет:
+Проверяются:
 
 - PostgreSQL version;
-- общую remote migration boundary;
-- последнюю Navigator migration;
+- overall remote migration boundary;
+- Navigator migration boundary;
 - отсутствие bounded task columns;
 - отсутствие mutation event table;
-- отсутствие governed intake ledger;
+- отсутствие governed intake ledger и mapper;
 - отсутствие actor-aware RPC;
 - отсутствие `nav-e2e` Auth users и profiles;
 - агрегированные статусы legacy tasks.
@@ -87,7 +79,7 @@ Captured snapshot:
 
 - project: `ofewxuqfjhamgerwzull`;
 - status: `ACTIVE_HEALTHY`;
-- PostgreSQL: `17.6`;
+- PostgreSQL: `17.6.1.121`;
 - branches: только production `main`;
 - preview branches: `0`;
 - technical Auth users: `0`;
@@ -95,28 +87,28 @@ Captured snapshot:
 - candidate DB objects: `0`;
 - tasks: `88 open`, `10 cancelled`, `0 in_progress`, `0 done`;
 - Edge `nav-v2-deal-api`: v4, ACTIVE, JWT required;
-- live Edge hash: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
+- Edge hash: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 
-Snapshot не является execution authorization. Его нужно повторить непосредственно перед любым gated cloud action.
+Snapshot не является execution authorization и повторяется непосредственно перед любым gated cloud action.
 
 ## Migration boundary drift
 
-Read-only Supabase evidence показывает две разные границы:
+Read-only evidence разделяет две границы:
 
 - latest Navigator migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`;
-- latest overall remote migration: `20260720201701_leader_public_lead_health_view_v1`.
+- latest overall remote migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs`.
 
-`config/nav-v2-release-baseline.json` пока содержит `20260715203158`.
+`config/nav-v2-release-baseline.json` содержит `20260715203158`.
 
-Package v2 не маскирует расхождение и не обновляет baseline автоматически, потому что более поздние migrations относятся к `leader_*`, а как минимум один remote source отсутствует в Navigator repository inventory.
+Новая overall migration относится к `leader_*`. Package v2 не обновляет release baseline автоматически и не получает права изменять или нормализовать историю другого модуля.
 
 Зафиксировано:
 
-- Navigator boundary подтверждена;
+- Navigator boundary подтверждена и не изменилась;
 - overall release baseline drift существует;
+- latest remote migration явно non-Navigator;
 - `release_baseline_refresh_allowed=false`;
-- Navigator не получает права изменять или нормализовать историю `leader_*`;
-- drift остаётся active stop до отдельного source reconciliation владельцем соответствующего модуля.
+- drift остаётся active stop до source reconciliation владельцем соответствующего модуля.
 
 ## Temporary package index
 
@@ -124,30 +116,20 @@ Assembler:
 
 `scripts/assemble-nav-v2-preview-candidate-package-v2.mjs`
 
-Входы:
-
-- deterministic preview bundle directory;
-- consolidated bounded directory;
-- caller-supplied output directory вне репозитория.
-
-Выход:
-
-`preview-candidate-package-v2-index.json`
+Он принимает deterministic preview bundle и consolidated bounded directory, а создаёт во временном каталоге только `preview-candidate-package-v2-index.json`.
 
 Index содержит:
 
-- hashes обоих upstream indexes;
+- hashes upstream indexes;
 - exact SQL artifact hashes и source order;
 - Edge file set hashes;
 - read-only preflight hash;
 - captured attestation hash;
 - migration boundary state;
 - active stops;
-- все fail-closed readiness flags.
+- fail-closed readiness flags.
 
-Generated SQL не копируется в package output. В output находится только один JSON index.
-
-CI собирает index дважды и требует побайтного совпадения.
+Generated SQL не копируется в package output или `supabase/migrations`. CI собирает index дважды и требует побайтного совпадения.
 
 ## Edge boundary
 
@@ -163,20 +145,13 @@ Production snapshot:
 
 `supabase/functions/nav-v2-deal-api/index.production-v4.ts`
 
-Проверяется:
-
-- candidate route присутствует только в candidate entrypoint;
-- production snapshot не содержит candidate route;
-- JWT остаётся обязательным;
-- live v4 hash соответствует read-only attestation;
-- deploy запрещён.
+Проверяется неизменность live v4 hash, JWT requirement и отсутствие candidate route в production snapshot. Deploy запрещён.
 
 ## Active stops
 
-После merge package v2 остаются:
+Package v2 остаётся fail-closed:
 
 - release baseline migration drift не reconciled;
-- combined quality → bounded → intake lifecycle не доказан;
 - preview branch отсутствует;
 - explicit cost approval отсутствует;
 - cost confirmation id отсутствует;
@@ -190,26 +165,20 @@ Production snapshot:
 - controlled pilot не approved;
 - cleanup option не выбран.
 
+Исторический флаг `cross_component_sequential_apply_not_proven` в package v2 закрыт отдельным package v3 evidence, но не переписывается как разрешение на cloud execution.
+
 ## Rollback
 
-Repository rollback:
-
-- удалить package v2 config;
-- удалить read-only attestation snapshot;
-- удалить read-only SQL preflight;
-- удалить package assembler и validator;
-- удалить package v2 workflow;
-- удалить этот документ.
+Repository rollback этой attestation refresh означает возврат package v2 config, snapshot, validator и документа к предыдущей captured boundary.
 
 Production rollback не требуется: production Supabase, Auth, RLS, grants, Edge Functions и rows не менялись.
 
-## Следующий безопасный шаг
+## Текущая точка продолжения
 
-После зелёного CI разрешено repository-only:
+Актуальная orchestration описана в:
 
-1. подготовить combined quality → bounded → intake PostgreSQL 17 lifecycle;
-2. проверить общие object/function redefinitions между компонентами;
-3. доказать единый ALWAYS ROLLBACK;
-4. сохранить `preview_apply_allowed=false`;
-5. не создавать Supabase branch без отдельного cost approval;
-6. не исправлять `leader_*` migration drift в рамках Navigator.
+- `config/nav-v2-preview-candidate-package-v3.json`;
+- `config/nav-v2-preview-execution-runbook-v1.json`;
+- `docs/NAV_V2_WORK_HANDOFF_LATEST.md`.
+
+Следующий cloud шаг всё ещё запрещён без отдельного owner/cost/Auth approval по issue #282.
