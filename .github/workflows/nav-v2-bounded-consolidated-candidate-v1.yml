@@ -1,0 +1,130 @@
+name: Navigator v2 bounded consolidated candidate v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-bounded-consolidated-candidate-v1.json'
+      - 'scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'scripts/check_nav_v2_bounded_consolidated_candidate_v1.py'
+      - 'scripts/check-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh'
+      - 'supabase/prototypes/nav_v2_bounded_task_*.sql'
+      - 'supabase/prototypes/nav_v2_get_deal_card_lite_*.sql'
+      - 'tests/sql/nav_v2_bounded_task_*.sql'
+      - 'tests/sql/nav_v2_deal_card_lite_bounded_*.sql'
+      - 'tests/sql/nav_v2_bounded_consolidated_candidate_*.sql'
+      - 'docs/NAV_V2_BOUNDED_CONSOLIDATED_CANDIDATE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-bounded-consolidated-candidate-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-bounded-consolidated-candidate-v1.json'
+      - 'scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'scripts/check_nav_v2_bounded_consolidated_candidate_v1.py'
+      - 'scripts/check-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh'
+      - 'tests/sql/nav_v2_bounded_consolidated_candidate_*.sql'
+      - 'docs/NAV_V2_BOUNDED_CONSOLIDATED_CANDIDATE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-bounded-consolidated-candidate-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate consolidated candidate source contract
+        run: python3 scripts/check_nav_v2_bounded_consolidated_candidate_v1.py
+      - name: Compile Python checker
+        run: python3 -m py_compile scripts/check_nav_v2_bounded_consolidated_candidate_v1.py
+      - name: Check JavaScript and shell syntax
+        run: |
+          node --check scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs
+          node --check scripts/check-nav-v2-bounded-consolidated-candidate-v1.mjs
+          bash -n scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh
+      - name: Assemble twice and prove deterministic output
+        run: |
+          node scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs --output-dir /tmp/nav-v2-bounded-consolidated-a
+          node scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs --output-dir /tmp/nav-v2-bounded-consolidated-b
+          diff -ru /tmp/nav-v2-bounded-consolidated-a /tmp/nav-v2-bounded-consolidated-b
+      - name: Validate artifact hashes and exact source order
+        run: |
+          node scripts/check-nav-v2-bounded-consolidated-candidate-v1.mjs \
+            --candidate-dir /tmp/nav-v2-bounded-consolidated-a \
+            --report /tmp/bounded-consolidated-report.json
+      - name: Prove no generated output entered migrations
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f -iname '*bounded*consolidated*candidate*' | grep -q .; then
+            echo 'FAIL: bounded consolidated candidate leaked into supabase/migrations'
+            exit 1
+          fi
+      - name: Upload source evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-consolidated-candidate-source-v1
+          path: |
+            /tmp/nav-v2-bounded-consolidated-a/bounded-consolidated-index.json
+            /tmp/bounded-consolidated-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+  postgres-17-lifecycle:
+    needs: source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_bounded_consolidated
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_bounded_consolidated"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_bounded_consolidated
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Run consolidated apply, assertions and rollback
+        run: bash scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh
+      - name: Upload PostgreSQL lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-bounded-consolidated-candidate-postgres-v1
+          path: |
+            /tmp/nav-v2-bounded-consolidated-candidate-v1.log
+            /tmp/bounded-consolidated-report.json
+            /tmp/nav-v2-bounded-consolidated-candidate-v1/bounded-consolidated-index.json
+          if-no-files-found: warn
+          retention-days: 30
