@@ -1,0 +1,93 @@
+name: Navigator v2 FK parent mutation benchmark v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-fk-parent-mutation-benchmark-v1.json'
+      - 'tests/sql/nav_v2_fk_parent_mutation_benchmark_v1.sql'
+      - 'scripts/check_nav_v2_fk_parent_mutation_benchmark_v1.py'
+      - 'docs/NAV_V2_FK_PARENT_MUTATION_BENCHMARK_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-fk-parent-mutation-benchmark-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-fk-parent-mutation-benchmark-v1.json'
+      - 'tests/sql/nav_v2_fk_parent_mutation_benchmark_v1.sql'
+      - 'scripts/check_nav_v2_fk_parent_mutation_benchmark_v1.py'
+      - 'docs/NAV_V2_FK_PARENT_MUTATION_BENCHMARK_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-fk-parent-mutation-benchmark-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate benchmark JSON
+        run: python3 -m json.tool config/nav-v2-fk-parent-mutation-benchmark-v1.json > /dev/null
+
+      - name: Compile benchmark checker
+        run: python3 -m py_compile scripts/check_nav_v2_fk_parent_mutation_benchmark_v1.py
+
+      - name: Check benchmark source contract
+        run: python3 scripts/check_nav_v2_fk_parent_mutation_benchmark_v1.py
+
+  postgres-17-fk-parent-mutation:
+    needs: source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_fk_parent_benchmark
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_fk_parent_benchmark"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_fk_parent_benchmark
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run synthetic FK parent mutation benchmark and rollback
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_fk_parent_mutation_benchmark_v1.sql \
+            | tee /tmp/nav-v2-fk-parent-mutation-benchmark-v1.log
+
+      - name: Upload synthetic benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-fk-parent-mutation-benchmark-v1
+          path: /tmp/nav-v2-fk-parent-mutation-benchmark-v1.log
+          if-no-files-found: warn
+          retention-days: 30
