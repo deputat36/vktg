@@ -4,13 +4,13 @@
 
 - Дата: 21 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `507065a56eba5cf3aee8dfce1e62ea8b45b0ec9d` — squash merge PR #427.
+- `main`: `b86266713a28014e68354a4a5d60aa0d7b1e85d9` — squash merge PR #430.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project status: `ACTIVE_HEALTHY`.
-- PostgreSQL: 17.6.
+- PostgreSQL production: 17.6.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#427 не менялись.
+- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#430 не менялись.
 
 Live counts могут меняться от реальной работы пользователей. Не откатывать production data только из-за изменения counts.
 
@@ -38,7 +38,7 @@ Navigator не является CRM, файловым архивом, банко
 
 ## Текущий production baseline
 
-Read-only проверка после PR #427:
+Последняя read-only сверка production перед PR #429–#430:
 
 - 23 сделки;
 - 24 участника;
@@ -65,10 +65,12 @@ Read-only проверка после PR #427:
 - bounded task lifecycle RPC;
 - final 25-rule mapper;
 - governed intake ledger;
-- privacy-aligned quality helper;
+- privacy-aligned quality replacement;
 - legacy cleanup planner;
 - bounded frontend transport;
 - candidate Edge deployment.
+
+PR #429 и #430 были repository-only, поэтому сами по себе этот production baseline не меняли.
 
 Production Edge Function:
 
@@ -95,7 +97,7 @@ Production task actions по-прежнему используют:
 - legacy RPC `public.nav_v2_update_task_status(uuid, nav_v2_task_status)`;
 - deployed Edge facade v4.
 
-Новый intake, bounded task contract и actor-aware маршруты остаются repository-only.
+Новый intake, bounded task contract, actor-aware маршруты и consolidated candidates остаются repository-only.
 
 ## Завершённая repository-only цепочка
 
@@ -235,13 +237,79 @@ Release boundary:
 - `config/nav-v2-release-baseline.json` сравнивает live v4 с этим snapshot;
 - candidate `index.ts` не выдаётся за production source.
 
-Consumer matrix v5 разделяет:
+### PR #429 — review-only preview candidate package
 
-1. authoritative frontend runtime;
-2. deployed legacy Edge v4 snapshot;
-3. repository candidate Edge entrypoint.
+Merge: `e6e31bd7d39d8b1eb89a23de0bd866879c5d7f92`.
 
-Закрыт только source blocker `edge_actions_not_integrated`.
+Добавлены:
+
+- package manifest;
+- exact artifact hash/source-order validator;
+- minimal-grants candidate;
+- Edge candidate file set;
+- fail-closed active stops;
+- review evidence artifact.
+
+Найден обязательный blocker:
+
+- `bounded_core` и `bounded_dto` нельзя применять последовательно;
+- оба содержали contract и base mutations;
+- package v1 блокировал preview apply до consolidated bounded forward/rollback.
+
+Состояние осталось:
+
+- `preview_apply_allowed=false`;
+- `deployment_bundle_ready=false`;
+- `production_rollback_bundle_ready=false`;
+- `preview_branch_created=false`;
+- `edge_deployed=false`.
+
+### PR #430 — consolidated bounded forward/rollback candidate
+
+Merge: `b86266713a28014e68354a4a5d60aa0d7b1e85d9`.
+
+Собран единый temporary forward без duplicate sources:
+
+1. bounded task contract;
+2. governed mutations;
+3. actor-aware overloads;
+4. explicit privacy lite DTO;
+5. bounded DTO overlay.
+
+Rollback:
+
+1. DTO overlay rollback;
+2. actor-aware rollback;
+3. mutation rollback;
+4. base contract rollback.
+
+Первый совместный lifecycle обнаружил fixture contamination: прежний DTO setup заранее создавал document и risk, из-за чего canonical mutation assertions не могли доказать отсутствие побочных сущностей.
+
+Исправление:
+
+- добавлен schema-only consolidated setup;
+- необходимые DTO columns/helpers сохранены;
+- document/risk fixtures не вставляются;
+- нулевой baseline для mutation assertions восстановлен.
+
+PostgreSQL 17 доказал единым lifecycle:
+
+- deterministic forward/rollback;
+- exact source order и SHA-256;
+- отсутствие duplicate source paths;
+- только ожидаемое последовательное переопределение `nav_v2_get_deal_card_lite(uuid)`;
+- canonical bounded mutations;
+- actor identity и replay protection;
+- service-role-only actor overloads;
+- role-aware DTO;
+- отсутствие PII/free text в DTO;
+- отсутствие создания documents/risks task mutations;
+- ALWAYS ROLLBACK;
+- полное удаление bounded layer;
+- восстановление explicit DTO baseline;
+- сохранность legacy task.
+
+Это закрывает `bounded_full_candidate_not_consolidated` как repository evidence, но не разрешает Supabase apply.
 
 ## Обязательные gates
 
@@ -263,15 +331,15 @@ Generic команда `продолжай` не является cost approval.
 
 Даже после cost approval применять что-либо в branch запрещено, пока отсутствуют:
 
-- reviewable preview migration candidates;
+- package v2, связывающий validated consolidated bounded candidate;
+- exact preview preflight/attestation;
+- reviewable quality/intake/bounded candidate inventory;
 - exact preview rollback package;
-- package index с source hashes и order;
 - approved minimal grants;
-- cleanup verification plan;
 - technical account lifecycle;
 - explicit preview execution runbook.
 
-CI rehearsal artifacts сами по себе не являются migration candidates.
+CI candidates сами по себе не являются разрешением на apply.
 
 ### Production gate
 
@@ -316,6 +384,9 @@ Generic команда `продолжай` не является:
 - `config/nav-v2-deployment-decision-package-v1.json`
 - `config/nav-v2-preview-deployment-bundle-manifest-v1.json`
 - `config/nav-v2-preview-bundle-assembler-v1.json`
+- `config/nav-v2-preview-candidate-package-v1.json`
+- `config/nav-v2-preview-minimal-grants-candidate-v1.json`
+- `config/nav-v2-bounded-consolidated-candidate-v1.json`
 - `config/nav-v2-task-edge-runtime-integration-v1.json`
 - `config/nav-v2-task-rpc-consumer-matrix.json`
 - `config/nav-v2-auth-e2e-readiness.json`
@@ -324,30 +395,38 @@ Generic команда `продолжай` не является:
 - `supabase/functions/nav-v2-deal-api/index.production-v4.ts`
 - `supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js`
 - `scripts/assemble-nav-v2-preview-bundle-v1.mjs`
+- `scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs`
 - `scripts/run-nav-v2-preview-bundle-segment-v1.sh`
+- `scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh`
+- `docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V1_2026-07-21.md`
+- `docs/NAV_V2_BOUNDED_CONSOLIDATED_CANDIDATE_V1_2026-07-21.md`
 - `docs/NAV_V2_TASK_EDGE_RUNTIME_INTEGRATION_V1_2026-07-21.md`
 - `docs/NAV_V2_TASK_RPC_CONSUMER_MATRIX_2026-07-16.md`
 
 ## Следующий безопасный slice
 
-Без Supabase branch, без deploy и без production writes разрешена repository-only подготовка reviewable preview deployment candidate package:
+Без Supabase branch, deploy и production writes разрешено:
 
-1. Не коммитить generated SQL как production migrations.
-2. Создать package manifest, который ссылается на deterministic assembler output и exact source hashes.
-3. Разделить preview forward и preview rollback по сегментам.
-4. Добавить preflight, post-apply и post-rollback assertions.
-5. Зафиксировать minimal grants как отдельный review-only candidate.
-6. Зафиксировать Edge candidate file set и entrypoint без deploy.
-7. Добавить fail-closed package validator.
-8. Сохранить:
+1. Создать preview candidate package v2.
+2. Связать в нём validated consolidated bounded candidate с package inventory.
+3. Добавить read-only preflight/attestation contract:
+   - expected production project ref;
+   - expected live migration boundary;
+   - expected Edge v4 hash/version;
+   - отсутствие candidate DB objects;
+   - отсутствие branch/technical accounts.
+4. Подготовить exact temporary preview package index с hashes и source order.
+5. Сохранить:
    - `preview_branch_created=false`;
    - `production_applied=false`;
+   - `preview_apply_allowed=false`;
    - `edge_deployed=false`;
    - `deployment_bundle_ready=false`;
    - `production_rollback_bundle_ready=false`.
-9. Не создавать technical users, secrets или cloud resources.
-10. Не менять `leader_*`, Auth, RLS, grants или production rows.
+6. Не выполнять cost confirmation.
+7. Не создавать technical users, secrets или cloud resources.
+8. Не менять `leader_*`, Auth, RLS, grants или production rows.
 
 ## Команда следующего запуска
 
-`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #427. Следующий slice — repository-only reviewable preview deployment candidate package: exact manifest, forward/rollback segment inventory, pre/post assertions, minimal-grants candidate and Edge file set; no branch, no deploy, no production migration, no Auth/RLS/grants changes, no production writes or cleanup.`
+`@GitHub @Supabase продолжай Navigator v2 с docs/NAV_V2_WORK_HANDOFF_LATEST.md после PR #430. Следующий slice — repository-only preview candidate package v2 и read-only preflight/attestation: link validated consolidated bounded candidate, exact hashes/source order, expected live migration and Edge v4 baseline; no branch, no cost confirmation, no deploy, no production migration, no Auth/RLS/grants changes, no production writes or cleanup.`
