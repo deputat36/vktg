@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_source_manifest_not_executable",
+  "generated_at": "2026-07-21",
+  "source_baseline_main_sha": "dd33b2ab1de6523604386ddbf3aad8d15fd2cdb3",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "repository_source_inventory_complete": true,
+  "executable_migrations_created": false,
+  "production_rollback_bundle_ready": false,
+  "edge_runtime_integrated": false,
+  "frontend_transport_enabled": false,
+  "authenticated_e2e_proven": false,
+  "deployment_bundle_ready": false,
+  "selected_deployment_option": null,
+  "selected_cleanup_option": null,
+  "cost_gate": {
+    "snapshot_checked_at": "2026-07-21",
+    "amount": 0.01344,
+    "recurrence": "hourly",
+    "six_hour_ceiling": 0.08064,
+    "currency": null,
+    "explicit_owner_cost_approval": false,
+    "cost_confirmation_id": null,
+    "branch_creation_allowed": false,
+    "must_recheck_immediately_before_confirm_cost": true
+  },
+  "layers": [
+    {
+      "order": 0,
+      "id": "read_only_preflight",
+      "mode": "read_only",
+      "apply_allowed": false,
+      "source_paths": [
+        "docs/NAV_V2_WORK_HANDOFF_LATEST.md",
+        "config/nav-v2-deployment-decision-package-v1.json",
+        "config/nav-v2-auth-e2e-readiness.json"
+      ],
+      "required_evidence": [
+        "main_sha",
+        "postgres_major_17",
+        "production_counts",
+        "prototype_object_absence",
+        "latest_navigator_migration",
+        "current_branch_cost"
+      ]
+    },
+    {
+      "order": 1,
+      "id": "privacy_aligned_quality_replacement",
+      "mode": "ordered_sql_sources",
+      "apply_allowed": false,
+      "source_paths": [
+        "supabase/prototypes/nav_v2_privacy_aligned_quality_completeness_v1.sql",
+        "supabase/prototypes/nav_v2_privacy_aligned_quality_task_author_v1.sql"
+      ],
+      "rehearsal_paths": [
+        "tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql",
+        "tests/sql/nav_v2_privacy_aligned_quality_assertions.sql",
+        "tests/sql/nav_v2_privacy_aligned_quality_rollback.sql"
+      ],
+      "production_migration_ready": false,
+      "production_rollback_ready": false,
+      "backfill_allowed": false,
+      "legacy_cleanup_allowed": false
+    },
+    {
+      "order": 2,
+      "id": "bounded_tasks_and_actor_identity",
+      "mode": "storyboard_ordered_sql_sources",
+      "apply_allowed": false,
+      "storyboard_path": "config/nav-v2-bounded-task-migration-storyboard.json",
+      "source_paths": [
+        "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+        "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+        "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+        "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+      ],
+      "identity_contract_path": "config/nav-v2-task-edge-identity-contract.json",
+      "production_migration_ready": false,
+      "production_rollback_ready": false,
+      "legacy_rpc_cutover_approved": false,
+      "final_grant_policy_approved": false,
+      "bounded_transport_enabled": false
+    },
+    {
+      "order": 3,
+      "id": "governed_intake_full_25_rule_mapper",
+      "mode": "render_then_ordered_sql_sources",
+      "apply_allowed": false,
+      "render_step": {
+        "script": "scripts/render-nav-v2-intake-server-adapter-v1.mjs",
+        "output_placeholder": "generated/nav_v2_intake_save_adapter_v1.sql",
+        "generated_file_committed": false
+      },
+      "source_paths": [
+        "config/nav-v2-intake-contract-v1.json",
+        "supabase/prototypes/nav_v2_intake_save_integration_v1.sql",
+        "supabase/prototypes/nav_v2_governed_intake_save_boundary_v1.sql",
+        "supabase/prototypes/nav_v2_intake_production_schema_mapping_v1.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave1_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave1_integration_v1.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave2_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_semantics_wave2_integration_v1.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_qualification.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_integration_preview_v1.sql",
+        "supabase/prototypes/nav_v2_intake_special_semantics_mapping_v1.sql"
+      ],
+      "rehearsal_rollback_paths": [
+        "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
+        "tests/sql/nav_v2_governed_intake_save_rollback.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+        "tests/sql/nav_v2_intake_adapter_harness_rollback.sql"
+      ],
+      "effective_supported_count": 25,
+      "effective_unsupported_count": 0,
+      "production_migration_ready": false,
+      "production_rollback_ready": false,
+      "governed_ledger_deployed": false
+    },
+    {
+      "order": 4,
+      "id": "edge_identity_and_action_routes",
+      "mode": "detached_sources_require_integration",
+      "apply_allowed": false,
+      "source_paths": [
+        "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+        "supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js",
+        "supabase/functions/nav-v2-deal-api/index.ts"
+      ],
+      "current_index_imports_identity_handler": false,
+      "verified_actor_injection_integrated": false,
+      "service_key_exposure_to_browser_allowed": false,
+      "edge_deploy_ready": false,
+      "verify_jwt_required": true
+    },
+    {
+      "order": 5,
+      "id": "frontend_flagged_transport_pilot",
+      "mode": "disabled_dual_path_sources",
+      "apply_allowed": false,
+      "source_paths": [
+        "assets/js/nav-v2/task-action-guard-v2.js",
+        "assets/js/nav-v2/task-action-router-v2.js",
+        "assets/js/nav-v2/deal-card-v2.js"
+      ],
+      "bounded_transport_enabled": false,
+      "default_path": "legacy_runtime",
+      "pilot_scope_approved": false
+    },
+    {
+      "order": 6,
+      "id": "authenticated_preview_e2e",
+      "mode": "owner_and_cost_gated",
+      "apply_allowed": false,
+      "source_paths": [
+        "config/nav-v2-auth-e2e-readiness.json",
+        "fixtures/nav-v2-auth-e2e-role-matrix.json"
+      ],
+      "required_roles": ["admin", "manager", "spn", "lawyer", "broker", "viewer"],
+      "owner_role": "optional_opt_in",
+      "production_data_copy_allowed": false,
+      "explicit_cost_approval": false,
+      "branch_created": false,
+      "technical_accounts_created": false,
+      "role_matrix_run": false,
+      "cleanup_proven": false
+    },
+    {
+      "order": 7,
+      "id": "optional_legacy_quality_cleanup",
+      "mode": "separate_owner_decision_after_live_replacement",
+      "apply_allowed": false,
+      "source_paths": [
+        "config/nav-v2-legacy-quality-cleanup-decision-v1.json",
+        "supabase/prototypes/nav_v2_legacy_quality_cleanup_plan_v1.sql"
+      ],
+      "selected_cleanup_option": null,
+      "privacy_replacement_live": false,
+      "owner_cleanup_approval": false,
+      "cleanup_allowed": false
+    }
+  ],
+  "active_stops": [
+    "selected_deployment_option_missing",
+    "explicit_cost_approval_missing",
+    "cost_confirmation_id_missing",
+    "preview_branch_missing",
+    "executable_migrations_not_created",
+    "production_rollback_bundle_not_ready",
+    "edge_identity_handler_not_integrated",
+    "frontend_bounded_transport_disabled",
+    "authenticated_role_matrix_not_run",
+    "production_deployment_approval_missing",
+    "pilot_scope_missing",
+    "cleanup_option_unselected"
+  ],
+  "forbidden_actions": [
+    "create_supabase_branch_without_explicit_cost_approval",
+    "create_or_apply_production_migration",
+    "deploy_edge_function",
+    "change_production_auth_rls_or_grants",
+    "enable_frontend_bounded_transport",
+    "copy_production_data_to_preview",
+    "create_real_employee_test_accounts",
+    "mass_backfill_or_cleanup_legacy_tasks",
+    "claim_deployment_readiness"
+  ]
+}
