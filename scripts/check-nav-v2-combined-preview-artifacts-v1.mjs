@@ -76,8 +76,9 @@ for (const artifact of forwardArtifacts) {
     forwardSourcePaths.push(key);
   }
 }
-const duplicateSourcePaths = [...new Set(forwardSourcePaths.filter((item, index) => forwardSourcePaths.indexOf(item) !== index))];
-assert(duplicateSourcePaths.length === 0, `duplicate forward source paths: ${duplicateSourcePaths.join(', ')}`);
+const duplicateSourcePaths = [...new Set(
+  forwardSourcePaths.filter((item, index) => forwardSourcePaths.indexOf(item) !== index)
+)];
 
 const combinedForward = forwardArtifacts.map((item) => item.text).join('\n');
 
@@ -114,7 +115,6 @@ const functionRedefinitions = [...functionCounts.entries()]
   .sort((a, b) => a.signature.localeCompare(b.signature));
 const expectedNames = new Set(config.conflict_policy.expected_exact_function_redefinitions);
 const unexpectedFunctions = functionRedefinitions.filter((item) => !expectedNames.has(item.function_name));
-assert(unexpectedFunctions.length === 0, `unexpected exact function redefinitions: ${unexpectedFunctions.map((item) => item.signature).join(', ')}`);
 
 const objects = [
   ...namedObjects(combinedForward, /create\s+table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_.]+)/gi, 'table'),
@@ -130,11 +130,14 @@ for (const item of objects) {
 const duplicateObjects = [...objectCounts.entries()]
   .filter(([, count]) => count > 1)
   .map(([key, count]) => ({ key, count }));
-assert(duplicateObjects.length === 0, `duplicate created objects: ${duplicateObjects.map((item) => item.key).join(', ')}`);
 
 const report = {
   schema_version: 1,
   status: 'repository_only_combined_preview_artifact_report',
+  validation_passed:
+    duplicateSourcePaths.length === 0 &&
+    unexpectedFunctions.length === 0 &&
+    duplicateObjects.length === 0,
   preview_index_sha256: sha256(previewIndexText),
   bounded_index_sha256: sha256(boundedIndexText),
   forward_order: forwardArtifacts.map((item, index) => ({
@@ -153,10 +156,10 @@ const report = {
     sha256: sha256(item.text),
     source_count: (item.indexItem.source_order || []).length,
   })),
-  duplicate_forward_source_paths: [],
+  duplicate_forward_source_paths: duplicateSourcePaths,
   exact_function_redefinitions: functionRedefinitions,
-  unexpected_exact_function_redefinitions: [],
-  duplicate_created_objects: [],
+  unexpected_exact_function_redefinitions: unexpectedFunctions,
+  duplicate_created_objects: duplicateObjects,
   preview_branch_created: false,
   production_applied: false,
   preview_apply_allowed: false,
@@ -165,4 +168,15 @@ const report = {
 };
 
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+
+if (duplicateSourcePaths.length > 0) {
+  throw new Error(`duplicate forward source paths: ${duplicateSourcePaths.join(', ')}`);
+}
+if (unexpectedFunctions.length > 0) {
+  throw new Error(`unexpected exact function redefinitions: ${unexpectedFunctions.map((item) => item.signature).join(', ')}`);
+}
+if (duplicateObjects.length > 0) {
+  throw new Error(`duplicate created objects: ${duplicateObjects.map((item) => item.key).join(', ')}`);
+}
+
 process.stdout.write('Navigator v2 combined preview artifact conflict validation passed\n');
