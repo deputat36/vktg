@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_preview_execution_runbook_not_authorized",
+  "generated_at": "2026-07-21",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "execution_authorized": false,
+  "cost_confirmation_performed": false,
+  "preview_branch_created": false,
+  "database_applied": false,
+  "edge_deployed": false,
+  "technical_accounts_created": false,
+  "authenticated_e2e_run": false,
+  "production_applied": false,
+  "maximum_branch_lifetime_hours": 6,
+  "data_policy": "synthetic_only_no_production_copy",
+  "ordered_phases": [
+    {
+      "order": 0,
+      "id": "execution_time_preflight",
+      "mode": "read_only",
+      "required": [
+        "explicit_deployment_option_authenticated_e2e_only",
+        "fresh_branch_cost_lookup",
+        "explicit_owner_cost_approval",
+        "cost_confirmation_id",
+        "production_project_active_healthy",
+        "postgres_major_17",
+        "latest_navigator_migration_20260716063401",
+        "edge_v4_hash_matches_attestation",
+        "zero_preview_branches",
+        "zero_nav_e2e_accounts",
+        "candidate_db_objects_absent"
+      ],
+      "rollback": "none_read_only"
+    },
+    {
+      "order": 1,
+      "id": "create_preview_branch",
+      "mode": "cost_and_owner_gated",
+      "required": [
+        "confirm_cost_id",
+        "branch_name_navigator_e2e",
+        "automatic_delete_deadline_recorded"
+      ],
+      "rollback": "delete_preview_branch"
+    },
+    {
+      "order": 2,
+      "id": "database_apply",
+      "mode": "preview_only_database_first",
+      "forward_order": [
+        "privacy_aligned_quality",
+        "bounded_consolidated",
+        "governed_intake_25_rule"
+      ],
+      "rollback_order": [
+        "combined_safe_intake",
+        "bounded_consolidated",
+        "quality_exact_restore"
+      ],
+      "required": [
+        "combined_lifecycle_proof",
+        "exact_artifact_hashes",
+        "minimal_grants_review",
+        "post_apply_attestation"
+      ],
+      "rollback": "reverse_database_rollback_then_delete_branch"
+    },
+    {
+      "order": 3,
+      "id": "edge_deploy_disabled",
+      "mode": "preview_only",
+      "required": [
+        "verify_jwt_true",
+        "bounded_task_edge_identity_enabled_false",
+        "exact_candidate_file_hashes",
+        "database_objects_attested_before_edge"
+      ],
+      "rollback": "restore_preview_legacy_edge_or_delete_branch"
+    },
+    {
+      "order": 4,
+      "id": "technical_accounts",
+      "mode": "preview_only_synthetic",
+      "contract": "config/nav-v2-preview-technical-account-lifecycle-v1.json",
+      "required": [
+        "no_real_employee_identity",
+        "execution_time_credentials_only",
+        "role_matrix_profiles",
+        "cleanup_plan_armed"
+      ],
+      "rollback": "delete_profiles_then_auth_users"
+    },
+    {
+      "order": 5,
+      "id": "authenticated_e2e",
+      "mode": "preview_only",
+      "required_scenarios": [
+        "admin_read_and_manage",
+        "manager_supervision",
+        "assigned_seller_spn",
+        "assigned_buyer_spn",
+        "assigned_lawyer",
+        "mortgage_broker_scope",
+        "viewer_or_inactive_rejection",
+        "cross_actor_replay_rejection",
+        "legacy_task_path_unchanged",
+        "bounded_task_start_complete_outcome",
+        "governed_intake_save_and_replay",
+        "privacy_dto_no_client_pii"
+      ],
+      "rollback": "cleanup_accounts_and_synthetic_rows"
+    },
+    {
+      "order": 6,
+      "id": "cleanup_and_attestation",
+      "mode": "mandatory",
+      "required": [
+        "zero_synthetic_deals",
+        "zero_nav_e2e_profiles",
+        "zero_nav_e2e_auth_users",
+        "evidence_artifacts_saved_without_secrets",
+        "preview_branch_deleted_before_deadline"
+      ],
+      "rollback": "escalate_until_branch_deleted"
+    }
+  ],
+  "stop_on_failure": [
+    "preflight_drift",
+    "migration_hash_mismatch",
+    "unexpected_database_object",
+    "grant_mismatch",
+    "edge_hash_or_jwt_mismatch",
+    "role_matrix_failure",
+    "privacy_exposure",
+    "rollback_failure",
+    "cleanup_attestation_failure",
+    "branch_lifetime_deadline_approaching"
+  ],
+  "evidence_required": [
+    "fresh_cost_snapshot",
+    "cost_confirmation_id",
+    "branch_ref_and_created_at",
+    "database_apply_hashes",
+    "post_apply_schema_attestation",
+    "edge_version_and_hash",
+    "authenticated_role_matrix_results",
+    "rollback_or_cleanup_logs",
+    "zero_account_attestation",
+    "branch_deleted_at"
+  ],
+  "production_decision_separate": true,
+  "active_stops": [
+    "execution_not_authorized",
+    "explicit_cost_approval_missing",
+    "cost_confirmation_id_missing",
+    "preview_branch_missing",
+    "technical_accounts_missing",
+    "authenticated_e2e_not_run",
+    "production_deployment_not_approved"
+  ],
+  "forbidden_actions": [
+    "apply_to_production",
+    "copy_production_data",
+    "create_real_employee_accounts",
+    "enable_frontend_transport",
+    "enable_edge_feature_flag_before_database_and_auth_e2e",
+    "skip_rollback_or_cleanup",
+    "retain_preview_branch_beyond_deadline",
+    "treat_preview_success_as_production_approval"
+  ]
+}
