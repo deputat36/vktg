@@ -165,7 +165,10 @@
     "artifacts_are_rehearsal_only",
     "production_migrations_not_created",
     "production_rollback_not_approved",
-    "edge_identity_handler_not_integrated",
+    "bounded_full_candidate_not_consolidated",
+    "reviewable_preview_package_not_approved",
+    "edge_runtime_feature_flag_disabled",
+    "edge_not_deployed",
     "authenticated_e2e_not_run",
     "deployment_option_unselected",
     "cost_approval_missing"
