@@ -1,0 +1,67 @@
+name: Navigator v2 preview deployment bundle manifest
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'config/nav-v2-auth-e2e-readiness.json'
+      - 'config/nav-v2-bounded-task-migration-storyboard.json'
+      - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-intake-special-semantics-integration-v1.json'
+      - 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'
+      - 'scripts/check_nav_v2_preview_deployment_bundle_manifest.py'
+      - 'scripts/check-nav-v2-preview-deployment-bundle-manifest.mjs'
+      - 'docs/NAV_V2_PREVIEW_DEPLOYMENT_BUNDLE_MANIFEST_V1_2026-07-21.md'
+      - 'supabase/prototypes/nav_v2_*.sql'
+      - 'supabase/functions/nav-v2-deal-api/**'
+      - 'assets/js/nav-v2/task-action-guard-v2.js'
+      - 'assets/js/nav-v2/task-action-router-v2.js'
+      - '.github/workflows/nav-v2-preview-deployment-bundle-manifest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'scripts/check_nav_v2_preview_deployment_bundle_manifest.py'
+      - 'scripts/check-nav-v2-preview-deployment-bundle-manifest.mjs'
+      - 'docs/NAV_V2_PREVIEW_DEPLOYMENT_BUNDLE_MANIFEST_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-deployment-bundle-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate preview bundle source boundary
+        run: python3 scripts/check_nav_v2_preview_deployment_bundle_manifest.py
+      - name: Validate preview bundle semantics
+        run: node scripts/check-nav-v2-preview-deployment-bundle-manifest.mjs
+      - name: Preserve deployment decision contract
+        run: |
+          python3 scripts/check_nav_v2_deployment_decision_package.py
+          node scripts/check-nav-v2-deployment-decision-package.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_preview_deployment_bundle_manifest.py
+      - name: Prove manifest did not create executable migrations
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f \( -iname '*preview*deployment*bundle*' -o -iname '*full*25*mapper*' \) | grep -q .; then
+            echo 'FAIL: preview bundle manifest leaked into migrations'
+            exit 1
+          fi
+      - name: Prove runtime remains disabled
+        run: |
+          grep -F 'const BOUNDED_TRANSPORT_ENABLED = false;' assets/js/nav-v2/task-action-guard-v2.js
+          if grep -Fq 'task-action-edge-identity-v2.js' supabase/functions/nav-v2-deal-api/index.ts; then
+            echo 'FAIL: detached identity handler was imported into Edge runtime'
+            exit 1
+          fi
+          echo 'Edge identity remains detached and bounded transport remains disabled'
