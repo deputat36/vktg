@@ -92,7 +92,7 @@ def main() -> None:
         "explain_analyze",
         "buffers",
         "wal",
-        "pg_stat_xact_user_indexes",
+        "pg_stat_get_xact_numscans",
         "result_equivalence_required",
         "full_transaction_rollback",
         "post_rollback_schema_absence_required",
@@ -164,8 +164,9 @@ def main() -> None:
     require("generate_series(1, 5002)" in sql, "synthetic parent generator drifted")
     require("generate_series(1, 5000)" in sql, "synthetic referenced parent generator drifted")
     require("generate_series(1, 20)" in sql, "synthetic child generator drifted")
-    require("on delete cascade" in lower, "synthetic FK cascade action missing")
-    require("pg_stat_xact_user_indexes" in lower, "transaction-local index scan attribution missing")
+    require("on update no action" in lower and "on delete cascade" in lower, "synthetic FK actions missing")
+    require("pg_stat_get_xact_numscans" in lower, "transaction-local index scan function missing")
+    require("pg_stat_xact_user_indexes" not in lower, "nonexistent transaction-local index view remains")
     require("explain (analyze true, buffers true, wal true, format json)" in lower, "EXPLAIN ANALYZE evidence missing")
     require("drop index harness.nav_deal_answers_v2_deal_idx" in lower, "synthetic single index removal missing")
     require("nav_deal_answers_v2_deal_id_question_key_key" in sql, "composite index evidence missing")
