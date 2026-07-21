@@ -20,6 +20,18 @@ begin
 end;
 $function$;
 
+create or replace function harness.explain_json(p_sql text)
+returns jsonb
+language plpgsql
+as $function$
+declare
+  v_plan jsonb;
+begin
+  execute 'explain (format json, costs true, verbose false) ' || p_sql into v_plan;
+  return v_plan;
+end;
+$function$;
+
 create or replace function harness.xact_index_scans(p_index_name text)
 returns bigint
 language sql
@@ -87,6 +99,13 @@ values
     pg_relation_size('harness.nav_deal_answers_v2_deal_id_question_key_key'::regclass),
     'Composite unique index retained in both comparison modes.'
   );
+
+create table harness.plan_evidence (
+  evidence_id text primary key,
+  plan jsonb not null,
+  composite_index_observed boolean not null,
+  note text not null
+);
 
 create table harness.attribution_evidence (
   evidence_order integer primary key,
@@ -279,44 +298,7 @@ select harness.assert_true(
   'composite unique index is absent before composite-only cases'
 );
 
-create table harness.plan_evidence (
-  evidence_id text primary key,
-  plan jsonb not null,
-  composite_index_observed boolean not null,
-  note text not null
-);
-
 set local enable_seqscan = off;
-
-insert into harness.plan_evidence (evidence_id, plan, composite_index_observed, note)
-select
-  'composite_only_child_lookup',
-  plan,
-  plan::text like '%nav_deal_answers_v2_deal_id_question_key_key%',
-  'Structural deal_id lookup after synthetic single-column index removal.'
-from (
-  select harness_query.plan
-  from (
-    select (xpath('/explain', xmlparse(document '<explain/>')) is not null) as placeholder
-  ) ignored
-  cross join lateral (
-    select null::jsonb as plan
-  ) harness_query
-) impossible
-where false;
-
--- Replace the intentionally empty insert above with a real JSON EXPLAIN through a local helper.
-create or replace function harness.explain_json(p_sql text)
-returns jsonb
-language plpgsql
-as $function$
-declare
-  v_plan jsonb;
-begin
-  execute 'explain (format json, costs true, verbose false) ' || p_sql into v_plan;
-  return v_plan;
-end;
-$function$;
 
 insert into harness.plan_evidence (evidence_id, plan, composite_index_observed, note)
 select
