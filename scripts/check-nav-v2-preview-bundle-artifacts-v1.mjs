@@ -24,10 +24,11 @@ assert(index.artifacts_are_rehearsal_only === true, 'bundle artifacts are not re
 for (const key of ['deployment_bundle_ready', 'production_rollback_bundle_ready', 'preview_branch_created', 'production_applied']) {
   assert(index[key] === false, `${key} must remain false`);
 }
-assert(Array.isArray(index.artifacts) && index.artifacts.length === 6, 'bundle index must contain six artifacts');
+assert(Array.isArray(index.artifacts) && index.artifacts.length === 8, 'bundle index must contain eight artifacts');
 assert(index.artifacts.map((item) => `${item.segment_id}:${item.artifact_kind}`).join(',') === [
   'quality:forward', 'quality:rollback',
-  'bounded:forward', 'bounded:rollback',
+  'bounded_core:forward', 'bounded_core:rollback',
+  'bounded_dto:forward', 'bounded_dto:rollback',
   'intake:forward', 'intake:rollback',
 ].join(','), 'artifact order changed');
 
@@ -67,8 +68,10 @@ assert(/^[0-9a-f]{64}$/.test(index.combined_source_sha256), 'combined source has
 
 const qualityForward = index.artifacts.find((item) => item.segment_id === 'quality' && item.artifact_kind === 'forward');
 assert((qualityForward.exact_function_redefinitions || []).some((item) => item.function_name === 'nav_v2_private.nav_v2_quality_sync_task_v1' && item.count === 2), 'quality authorship redefinition was not recorded');
-const boundedForward = index.artifacts.find((item) => item.segment_id === 'bounded' && item.artifact_kind === 'forward');
-assert((boundedForward.exact_function_redefinitions || []).some((item) => item.function_name === 'public.nav_v2_get_deal_card_lite' && item.count === 2), 'bounded DTO redefinition was not recorded');
+const boundedCoreForward = index.artifacts.find((item) => item.segment_id === 'bounded_core' && item.artifact_kind === 'forward');
+assert((boundedCoreForward.exact_function_redefinitions || []).length === 0, 'bounded core contains an exact redefinition');
+const boundedDtoForward = index.artifacts.find((item) => item.segment_id === 'bounded_dto' && item.artifact_kind === 'forward');
+assert((boundedDtoForward.exact_function_redefinitions || []).some((item) => item.function_name === 'public.nav_v2_get_deal_card_lite' && item.count === 2), 'bounded DTO redefinition was not recorded');
 const intakeForward = index.artifacts.find((item) => item.segment_id === 'intake' && item.artifact_kind === 'forward');
 assert((intakeForward.exact_function_redefinitions || []).length === 0, 'intake bundle contains unexpected exact redefinitions');
 
