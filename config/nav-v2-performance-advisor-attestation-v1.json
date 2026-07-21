@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_performance_advisor_attestation_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_at": "2026-07-21T13:38:36.766318+00:00",
+  "source_main_sha": "0aee8cac9032e3cea8c6c89b2942d8570a98ad2f",
+  "source": {
+    "advisor": "Supabase Performance Advisor",
+    "database_check": "pg_stat_user_indexes + pg_index + pg_constraint + pg_policies",
+    "readonly_preflight_sql": "tests/sql/nav_v2_performance_readonly_preflight_v1.sql",
+    "capture_mode": "aggregate_only_read_only_transaction"
+  },
+  "scope": {
+    "schema": "public",
+    "included_tables": "nav_user_profiles plus tables matching ^nav_.*_v2$",
+    "table_count": 11,
+    "excluded_prefixes": [
+      "leader_",
+      "parket_",
+      "broker_"
+    ],
+    "legacy_nav_tables_included": false
+  },
+  "summary": {
+    "index_count": 53,
+    "foreign_key_count": 29,
+    "foreign_keys_without_covering_index": 0,
+    "policy_count": 32,
+    "policies_with_select_wrapped_auth": 32,
+    "policies_with_direct_auth_call": 0,
+    "zero_scan_nonconstraint_indexes": 13,
+    "zero_scan_fk_support_indexes": 12,
+    "zero_scan_non_fk_indexes": 1,
+    "zero_scan_total_bytes": 212992,
+    "database_stats_reset": null,
+    "observation_window_proven": false
+  },
+  "zero_scan_indexes": [
+    {
+      "table": "nav_deal_answers_v2",
+      "index": "nav_deal_answers_v2_created_by_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_workload_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_answers_v2",
+      "index": "nav_deal_answers_v2_deal_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_redundancy_query_plan_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_comments_v2",
+      "index": "nav_deal_comments_v2_author_id_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_workload_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_comments_v2",
+      "index": "nav_deal_comments_v2_deal_created_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_ordered_comment_query_plan_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_events_v2",
+      "index": "nav_deal_events_v2_actor_id_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_audit_query_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_participants_v2",
+      "index": "nav_deal_participants_v2_edit_lookup_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_for_permission_lookup_pending_authenticated_workload_evidence"
+    },
+    {
+      "table": "nav_deal_participants_v2",
+      "index": "nav_deal_participants_v2_view_lookup_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_for_permission_lookup_pending_authenticated_workload_evidence"
+    },
+    {
+      "table": "nav_deal_reviews_v2",
+      "index": "nav_deal_reviews_v2_reviewer_id_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_workload_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_risks_v2",
+      "index": "nav_deal_risks_v2_resolved_by_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_audit_query_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_deal_tasks_v2",
+      "index": "nav_deal_tasks_v2_created_by_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_audit_query_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_user_profiles",
+      "index": "idx_nav_user_profiles_invited_by",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_pending_invitation_audit_and_fk_impact_evidence"
+    },
+    {
+      "table": "nav_user_profiles",
+      "index": "nav_user_profiles_manager_idx",
+      "bytes": 16384,
+      "supports_foreign_key": true,
+      "decision": "retain_for_manager_team_lookup_and_fk_support"
+    },
+    {
+      "table": "nav_user_profiles",
+      "index": "nav_user_profiles_role_idx",
+      "bytes": 16384,
+      "supports_foreign_key": false,
+      "decision": "review_only_retain_until_role_filter_query_plan_and_observation_window_exist"
+    }
+  ],
+  "rls_policy_evidence": {
+    "all_scope_tables_have_rls": true,
+    "policy_count": 32,
+    "select_wrapped_auth_count": 32,
+    "direct_auth_call_count": 0,
+    "automatic_policy_rewrite_allowed": false
+  },
+  "decision_policy": {
+    "never_auto_drop_index_from_idx_scan_zero": true,
+    "never_auto_rewrite_rls_from_project_wide_advisor": true,
+    "never_treat_other_subsystem_warnings_as_navigator_work": true,
+    "required_before_index_removal": [
+      "known statistics reset timestamp or controlled observation start",
+      "representative authenticated workload observation",
+      "EXPLAIN ANALYZE before and after on affected queries",
+      "foreign-key parent update/delete impact review",
+      "write amplification and storage benefit estimate",
+      "authenticated regression test",
+      "exact rollback SQL",
+      "separate owner approval for production DDL"
+    ]
+  },
+  "safety": {
+    "transaction_read_only": true,
+    "aggregate_only": true,
+    "data_mutated": false,
+    "ddl_executed": false,
+    "index_dropped": false,
+    "policy_changed": false,
+    "rls_changed": false,
+    "production_change_authorized": false
+  },
+  "active_stops": [
+    "statistics_reset_timestamp_unknown",
+    "representative_workload_window_missing",
+    "authenticated_query_plan_evidence_missing",
+    "fk_parent_update_delete_benchmark_missing",
+    "index_removal_owner_approval_missing",
+    "production_ddl_not_approved"
+  ]
+}
