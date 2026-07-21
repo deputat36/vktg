@@ -41,10 +41,7 @@ create table harness.plan_evidence (
   note text not null
 );
 
--- ---------------------------------------------------------------------------
 -- Candidate A: nav_user_profiles_role_idx.
--- ---------------------------------------------------------------------------
-
 create table harness.nav_user_profiles (
   id bigint primary key,
   role text not null,
@@ -157,10 +154,7 @@ select harness.assert_true(
   'role query did not expose the expected sequential-scan fallback after synthetic removal'
 );
 
--- ---------------------------------------------------------------------------
 -- Candidate B: nav_deal_answers_v2_deal_idx overlapping a unique leading prefix.
--- ---------------------------------------------------------------------------
-
 create table harness.nav_deals_v2 (
   id bigint primary key
 );
@@ -170,11 +164,8 @@ create table harness.nav_deal_answers_v2 (
   deal_id bigint not null references harness.nav_deals_v2(id),
   question_key text not null,
   answer_value text,
-  unique (deal_id, question_key)
+  constraint nav_deal_answers_v2_deal_id_question_key_key unique (deal_id, question_key)
 );
-
-alter index harness.nav_deal_answers_v2_deal_id_question_key_key
-  rename to nav_deal_answers_v2_deal_id_question_key_key;
 
 create index nav_deal_answers_v2_deal_idx
   on harness.nav_deal_answers_v2 (deal_id);
