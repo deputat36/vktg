@@ -46,7 +46,7 @@
     "explain_format": "json",
     "buffers": true,
     "wal": true,
-    "pg_stat_xact_user_indexes": true,
+    "pg_stat_get_xact_numscans": true,
     "result_equivalence_required": true,
     "latency_superiority_asserted": false,
     "full_transaction_rollback": true,
