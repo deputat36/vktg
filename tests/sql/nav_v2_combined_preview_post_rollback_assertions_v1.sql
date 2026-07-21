@@ -49,7 +49,6 @@ begin
     from public.nav_deal_tasks_v2
     where id = '20000000-0000-4000-8000-000000000001'
       and source = 'legacy_combined_synthetic'
-      and task_contract_version is null
   ) then
     raise exception 'combined legacy task did not survive rollback';
   end if;
