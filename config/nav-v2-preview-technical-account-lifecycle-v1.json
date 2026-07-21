@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_technical_account_lifecycle_not_executed",
+  "generated_at": "2026-07-21",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "production_accounts_allowed": false,
+  "preview_accounts_created": false,
+  "real_employee_accounts_allowed": false,
+  "production_data_copy_allowed": false,
+  "credentials_committed_allowed": false,
+  "account_creation_allowed": false,
+  "account_deletion_required": true,
+  "scope": "future_authenticated_preview_e2e_only",
+  "identity_policy": {
+    "email_prefix": "nav-e2e",
+    "profile_name_prefix": "[NAV E2E]",
+    "synthetic_only": true,
+    "must_not_match_real_employee_email": true,
+    "must_not_reuse_existing_auth_user": true,
+    "must_not_invite_external_recipient": true,
+    "password_source": "execution_time_secret_not_repository",
+    "mfa_required": false,
+    "email_delivery_required": false
+  },
+  "role_matrix": [
+    {
+      "role": "admin",
+      "account_key": "nav-e2e-admin",
+      "required": true,
+      "profile_active": true,
+      "manager_link": null
+    },
+    {
+      "role": "manager",
+      "account_key": "nav-e2e-manager",
+      "required": true,
+      "profile_active": true,
+      "manager_link": null
+    },
+    {
+      "role": "spn",
+      "account_key": "nav-e2e-spn-seller",
+      "required": true,
+      "profile_active": true,
+      "manager_link": "nav-e2e-manager"
+    },
+    {
+      "role": "spn",
+      "account_key": "nav-e2e-spn-buyer",
+      "required": true,
+      "profile_active": true,
+      "manager_link": "nav-e2e-manager"
+    },
+    {
+      "role": "lawyer",
+      "account_key": "nav-e2e-lawyer",
+      "required": true,
+      "profile_active": true,
+      "manager_link": null
+    },
+    {
+      "role": "broker",
+      "account_key": "nav-e2e-broker",
+      "required": true,
+      "profile_active": true,
+      "manager_link": null
+    },
+    {
+      "role": "viewer",
+      "account_key": "nav-e2e-viewer",
+      "required": true,
+      "profile_active": false,
+      "manager_link": null,
+      "purpose": "prove viewer retirement and inactive-profile rejection"
+    },
+    {
+      "role": "owner",
+      "account_key": "nav-e2e-owner",
+      "required": false,
+      "profile_active": true,
+      "manager_link": null,
+      "purpose": "optional explicit owner opt-in only"
+    }
+  ],
+  "creation_preconditions": [
+    "explicit_owner_cost_approval",
+    "cost_confirmation_id",
+    "preview_branch_active_healthy",
+    "synthetic_schema_applied",
+    "edge_candidate_deployed_with_feature_flag_false",
+    "execution_time_credentials_available",
+    "production_project_ref_rejection_guard"
+  ],
+  "creation_order": [
+    "auth_users_in_preview_only",
+    "nav_user_profiles_in_preview_only",
+    "manager_spn_links",
+    "synthetic_deal_assignments",
+    "role_matrix_preflight"
+  ],
+  "cleanup_order": [
+    "delete_synthetic_deals_and_related_rows",
+    "delete_nav_user_profiles",
+    "delete_preview_auth_users",
+    "prove_zero_nav_e2e_auth_users",
+    "prove_zero_nav_e2e_profiles",
+    "delete_preview_branch"
+  ],
+  "cleanup_attestation": {
+    "technical_auth_users_expected": 0,
+    "technical_profiles_expected": 0,
+    "synthetic_deals_expected": 0,
+    "credentials_destroyed": true,
+    "branch_delete_allowed_only_after_attestation": true
+  },
+  "active_stops": [
+    "explicit_cost_approval_missing",
+    "cost_confirmation_id_missing",
+    "preview_branch_missing",
+    "technical_accounts_not_created",
+    "authenticated_e2e_not_run"
+  ],
+  "forbidden_actions": [
+    "create_accounts_in_production",
+    "reuse_real_employee_identity",
+    "send_invitation_to_real_or_external_email",
+    "commit_password_or_token",
+    "copy_production_auth_users",
+    "leave_technical_accounts_after_preview_cleanup",
+    "evaluate_employee_performance_from_synthetic_tests"
+  ]
+}
