@@ -6,7 +6,7 @@ import {
   shouldInvalidateSessionAfterRefreshFailure
 } from './auth-session-recovery-v2.js?v=20260721-01';
 
-export const NAV_V2_BUILD_ID = '20260721-02';
+export const NAV_V2_BUILD_ID = '20260711-01';
 if (typeof document !== 'undefined') {
   document.documentElement.dataset.navV2Build = NAV_V2_BUILD_ID;
 }
