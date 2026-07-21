@@ -78,7 +78,8 @@ async function renderCanonicalAdapter(generated) {
 
 const allowedRedefinitions = Object.freeze({
   quality: ['nav_v2_private.nav_v2_quality_sync_task_v1'],
-  bounded: ['public.nav_v2_get_deal_card_lite'],
+  bounded_core: [],
+  bounded_dto: ['public.nav_v2_get_deal_card_lite'],
   intake: [],
 });
 
@@ -88,8 +89,8 @@ if (config.status !== 'repository_only_ci_assembler_not_deployable') throw new E
 if (config.deployment_bundle_ready !== false || config.production_rollback_bundle_ready !== false) {
   throw new Error('assembler contract claims deployment readiness');
 }
-if (!Array.isArray(config.segments) || config.segments.map((item) => item.order).join(',') !== '1,2,3') {
-  throw new Error('assembler segment order must remain 1,2,3');
+if (!Array.isArray(config.segments) || config.segments.map((item) => item.order).join(',') !== '1,2,3,4') {
+  throw new Error('assembler segment order must remain 1,2,3,4');
 }
 
 await mkdir(outputDir, { recursive: true });
