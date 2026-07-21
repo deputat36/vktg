@@ -1,0 +1,122 @@
+name: Navigator v2 preview candidate package v2
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v2.json'
+      - 'config/nav-v2-preview-readonly-attestation-v1.json'
+      - 'config/nav-v2-preview-candidate-package-v1.json'
+      - 'config/nav-v2-preview-bundle-assembler-v1.json'
+      - 'config/nav-v2-bounded-consolidated-candidate-v1.json'
+      - 'config/nav-v2-preview-minimal-grants-candidate-v1.json'
+      - 'config/nav-v2-release-baseline.json'
+      - 'scripts/assemble-nav-v2-preview-candidate-package-v2.mjs'
+      - 'scripts/check-nav-v2-preview-candidate-package-v2.mjs'
+      - 'scripts/check_nav_v2_preview_candidate_package_v2.py'
+      - 'scripts/assemble-nav-v2-preview-bundle-v1.mjs'
+      - 'scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs'
+      - 'tests/sql/nav_v2_preview_readonly_preflight_v1.sql'
+      - 'supabase/functions/nav-v2-deal-api/**'
+      - 'supabase/prototypes/nav_v2_*.sql'
+      - 'docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V2_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-candidate-package-v2.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v2.json'
+      - 'config/nav-v2-preview-readonly-attestation-v1.json'
+      - 'scripts/assemble-nav-v2-preview-candidate-package-v2.mjs'
+      - 'scripts/check-nav-v2-preview-candidate-package-v2.mjs'
+      - 'scripts/check_nav_v2_preview_candidate_package_v2.py'
+      - 'tests/sql/nav_v2_preview_readonly_preflight_v1.sql'
+      - 'docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V2_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-candidate-package-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-v2-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate package v2 source contract
+        run: python3 scripts/check_nav_v2_preview_candidate_package_v2.py
+
+      - name: Compile Python source checker
+        run: python3 -m py_compile scripts/check_nav_v2_preview_candidate_package_v2.py
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check scripts/assemble-nav-v2-preview-candidate-package-v2.mjs
+          node --check scripts/check-nav-v2-preview-candidate-package-v2.mjs
+
+      - name: Validate upstream source contracts
+        run: |
+          python3 scripts/check_nav_v2_preview_bundle_assembler_v1.py
+          python3 scripts/check_nav_v2_bounded_consolidated_candidate_v1.py
+
+      - name: Assemble upstream temporary review artifacts
+        run: |
+          node scripts/assemble-nav-v2-preview-bundle-v1.mjs \
+            --output-dir /tmp/nav-v2-preview-package-v2-bundle
+          node scripts/assemble-nav-v2-bounded-consolidated-candidate-v1.mjs \
+            --output-dir /tmp/nav-v2-preview-package-v2-bounded
+
+      - name: Assemble package v2 index twice
+        run: |
+          node scripts/assemble-nav-v2-preview-candidate-package-v2.mjs \
+            --preview-bundle-dir /tmp/nav-v2-preview-package-v2-bundle \
+            --bounded-dir /tmp/nav-v2-preview-package-v2-bounded \
+            --output-dir /tmp/nav-v2-preview-package-v2-a
+          node scripts/assemble-nav-v2-preview-candidate-package-v2.mjs \
+            --preview-bundle-dir /tmp/nav-v2-preview-package-v2-bundle \
+            --bounded-dir /tmp/nav-v2-preview-package-v2-bounded \
+            --output-dir /tmp/nav-v2-preview-package-v2-b
+
+      - name: Prove byte-identical deterministic package index
+        run: diff -ru /tmp/nav-v2-preview-package-v2-a /tmp/nav-v2-preview-package-v2-b
+
+      - name: Validate hashes, source order, attestation and active stops
+        run: |
+          node scripts/check-nav-v2-preview-candidate-package-v2.mjs \
+            --package-dir /tmp/nav-v2-preview-package-v2-a \
+            --preview-bundle-dir /tmp/nav-v2-preview-package-v2-bundle \
+            --bounded-dir /tmp/nav-v2-preview-package-v2-bounded \
+            --report /tmp/nav-v2-preview-package-v2-report-a.json
+          node scripts/check-nav-v2-preview-candidate-package-v2.mjs \
+            --package-dir /tmp/nav-v2-preview-package-v2-b \
+            --preview-bundle-dir /tmp/nav-v2-preview-package-v2-bundle \
+            --bounded-dir /tmp/nav-v2-preview-package-v2-bounded \
+            --report /tmp/nav-v2-preview-package-v2-report-b.json
+          diff -u /tmp/nav-v2-preview-package-v2-report-a.json /tmp/nav-v2-preview-package-v2-report-b.json
+
+      - name: Prove no generated migration or cloud action
+        run: |
+          test ! -e generated/nav_v2_intake_save_adapter_v1.sql
+          if find supabase/migrations -maxdepth 1 -type f -iname '*preview*candidate*package*v2*' | grep -q .; then
+            echo 'FAIL: package v2 leaked into supabase/migrations'
+            exit 1
+          fi
+          test "$(find /tmp/nav-v2-preview-package-v2-a -maxdepth 1 -type f | wc -l)" -eq 1
+
+      - name: Upload package v2 review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-preview-candidate-package-v2
+          path: |
+            /tmp/nav-v2-preview-package-v2-a/preview-candidate-package-v2-index.json
+            /tmp/nav-v2-preview-package-v2-report-a.json
+            /tmp/nav-v2-preview-package-v2-bundle/bundle-index.json
+            /tmp/nav-v2-preview-package-v2-bounded/bounded-consolidated-index.json
+            config/nav-v2-preview-readonly-attestation-v1.json
+            tests/sql/nav_v2_preview_readonly_preflight_v1.sql
+          if-no-files-found: error
+          retention-days: 30
