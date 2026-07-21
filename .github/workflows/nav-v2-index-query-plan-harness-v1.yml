@@ -5,26 +5,34 @@ on:
     paths:
       - 'config/nav-v2-index-query-plan-candidate-v1.json'
       - 'config/nav-v2-index-fk-parent-mutation-evidence-v1.json'
+      - 'config/nav-v2-index-fk-parent-mutation-attribution-v1.json'
       - 'config/nav-v2-performance-advisor-attestation-v1.json'
       - 'tests/sql/nav_v2_index_query_plan_harness_v1.sql'
       - 'tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql'
+      - 'tests/sql/nav_v2_index_fk_parent_mutation_attribution_harness_v1.sql'
       - 'scripts/check_nav_v2_index_query_plan_candidate_v1.py'
       - 'scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py'
+      - 'scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py'
       - 'docs/NAV_V2_INDEX_QUERY_PLAN_CANDIDATE_V1_2026-07-21.md'
       - 'docs/NAV_V2_INDEX_FK_PARENT_MUTATION_EVIDENCE_V1_2026-07-21.md'
+      - 'docs/NAV_V2_INDEX_FK_PARENT_MUTATION_ATTRIBUTION_V1_2026-07-21.md'
       - '.github/workflows/nav-v2-index-query-plan-harness-v1.yml'
   push:
     branches: [main]
     paths:
       - 'config/nav-v2-index-query-plan-candidate-v1.json'
       - 'config/nav-v2-index-fk-parent-mutation-evidence-v1.json'
+      - 'config/nav-v2-index-fk-parent-mutation-attribution-v1.json'
       - 'config/nav-v2-performance-advisor-attestation-v1.json'
       - 'tests/sql/nav_v2_index_query_plan_harness_v1.sql'
       - 'tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql'
+      - 'tests/sql/nav_v2_index_fk_parent_mutation_attribution_harness_v1.sql'
       - 'scripts/check_nav_v2_index_query_plan_candidate_v1.py'
       - 'scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py'
+      - 'scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py'
       - 'docs/NAV_V2_INDEX_QUERY_PLAN_CANDIDATE_V1_2026-07-21.md'
       - 'docs/NAV_V2_INDEX_FK_PARENT_MUTATION_EVIDENCE_V1_2026-07-21.md'
+      - 'docs/NAV_V2_INDEX_FK_PARENT_MUTATION_ATTRIBUTION_V1_2026-07-21.md'
       - '.github/workflows/nav-v2-index-query-plan-harness-v1.yml'
   workflow_dispatch:
 
@@ -42,17 +50,22 @@ jobs:
         run: |
           python3 -m json.tool config/nav-v2-index-query-plan-candidate-v1.json > /dev/null
           python3 -m json.tool config/nav-v2-index-fk-parent-mutation-evidence-v1.json > /dev/null
+          python3 -m json.tool config/nav-v2-index-fk-parent-mutation-attribution-v1.json > /dev/null
 
       - name: Compile candidate validators
         run: |
           python3 -m py_compile scripts/check_nav_v2_index_query_plan_candidate_v1.py
           python3 -m py_compile scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py
+          python3 -m py_compile scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py
 
       - name: Check index query-plan source contract
         run: python3 scripts/check_nav_v2_index_query_plan_candidate_v1.py
 
       - name: Check FK parent mutation evidence contract
         run: python3 scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py
+
+      - name: Check FK parent mutation attribution contract
+        run: python3 scripts/check_nav_v2_index_fk_parent_mutation_attribution_v1.py
 
   postgres-17-query-plan:
     needs: source-contract
@@ -161,5 +174,60 @@ jobs:
         with:
           name: nav-v2-index-fk-parent-mutation-harness-v1
           path: /tmp/nav-v2-index-fk-parent-mutation-harness-v1.log
+          if-no-files-found: warn
+          retention-days: 30
+
+  postgres-17-fk-parent-mutation-attribution:
+    needs: source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: navigator_fk_parent_attribution
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navigator_fk_parent_attribution"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: navigator_fk_parent_attribution
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL 17
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run synthetic FK parent mutation attribution and rollback harness
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_index_fk_parent_mutation_attribution_harness_v1.sql \
+            | tee /tmp/nav-v2-index-fk-parent-mutation-attribution-v1.log
+
+      - name: Upload synthetic FK mutation attribution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-index-fk-parent-mutation-attribution-v1
+          path: /tmp/nav-v2-index-fk-parent-mutation-attribution-v1.log
           if-no-files-found: warn
           retention-days: 30
