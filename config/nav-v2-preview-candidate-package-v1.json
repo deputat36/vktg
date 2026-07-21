@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_review_candidate_not_executable",
+  "generated_at": "2026-07-21",
+  "source_main_sha": "6b0714cb2a713f8413004eff5627c1d83c3e6625",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "assembler_config": "config/nav-v2-preview-bundle-assembler-v1.json",
+  "source_manifest": "config/nav-v2-preview-deployment-bundle-manifest-v1.json",
+  "minimal_grants_candidate": "config/nav-v2-preview-minimal-grants-candidate-v1.json",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "cloud_execution_allowed": false,
+  "preview_apply_allowed": false,
+  "edge_deploy_allowed": false,
+  "technical_accounts_allowed": false,
+  "deployment_bundle_ready": false,
+  "production_rollback_bundle_ready": false,
+  "review_candidate_ready": true,
+  "execution_model": "independent_segment_review_not_sequential_deployment",
+  "artifact_hash_policy": "read_exact_sha256_and_source_order_from_deterministic_bundle_index_at_validation",
+  "segments": [
+    {
+      "order": 1,
+      "id": "quality",
+      "review_state": "independently_rehearsed",
+      "forward_artifact": "01-quality-forward.sql",
+      "rollback_artifact": "01-quality-rehearsal-rollback.sql",
+      "preflight_sources": [
+        "tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql"
+      ],
+      "post_apply_assertions": [
+        "tests/sql/nav_v2_privacy_aligned_quality_assertions.sql"
+      ],
+      "post_rollback_contract": [
+        "tests/sql/nav_v2_privacy_aligned_quality_rollback.sql"
+      ],
+      "can_apply_in_preview": false
+    },
+    {
+      "order": 2,
+      "id": "bounded_core",
+      "review_state": "independently_rehearsed_not_sequential_with_bounded_dto",
+      "forward_artifact": "02-bounded-core-forward.sql",
+      "rollback_artifact": "02-bounded-core-rehearsal-rollback.sql",
+      "preflight_sources": [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql"
+      ],
+      "post_apply_assertions": [
+        "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
+        "tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql"
+      ],
+      "post_rollback_contract": [
+        "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+      ],
+      "can_apply_in_preview": false
+    },
+    {
+      "order": 3,
+      "id": "bounded_dto",
+      "review_state": "independently_rehearsed_not_sequential_with_bounded_core",
+      "forward_artifact": "03-bounded-dto-forward.sql",
+      "rollback_artifact": "03-bounded-dto-rehearsal-rollback.sql",
+      "preflight_sources": [
+        "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
+        "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql"
+      ],
+      "post_apply_assertions": [
+        "tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql"
+      ],
+      "post_rollback_contract": [
+        "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+        "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+      ],
+      "can_apply_in_preview": false
+    },
+    {
+      "order": 4,
+      "id": "intake",
+      "review_state": "independently_rehearsed",
+      "forward_artifact": "04-intake-forward.sql",
+      "rollback_artifact": "04-intake-rehearsal-rollback.sql",
+      "preflight_sources": [
+        "tests/sql/nav_v2_intake_adapter_harness_setup.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_setup.sql",
+        "tests/sql/nav_v2_governed_intake_save_harness_setup.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql",
+        "tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql"
+      ],
+      "post_apply_assertions": [
+        "tests/sql/nav_v2_intake_adapter_harness_assertions.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_assertions.sql",
+        "tests/sql/nav_v2_governed_intake_save_assertions.sql",
+        "tests/sql/nav_v2_intake_special_semantics_assertions.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_final_contract_assertions.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_final_single_rule_assertions.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_final_composite_assertions.sql"
+      ],
+      "post_rollback_contract": [
+        "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
+        "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
+        "tests/sql/nav_v2_governed_intake_save_rollback.sql",
+        "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_mapper_cleanup.sql",
+        "tests/sql/nav_v2_intake_adapter_harness_rollback.sql"
+      ],
+      "can_apply_in_preview": false
+    }
+  ],
+  "bounded_consolidation": {
+    "required": true,
+    "reason": "bounded_core and bounded_dto repeat contract and mutation sources and are independent harness artifacts",
+    "shared_forward_sources": [
+      "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+      "supabase/prototypes/nav_v2_bounded_task_mutations.sql"
+    ],
+    "required_consolidated_forward_order": [
+      "supabase/prototypes/nav_v2_bounded_task_contract.sql",
+      "supabase/prototypes/nav_v2_bounded_task_mutations.sql",
+      "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+      "supabase/prototypes/nav_v2_get_deal_card_lite_explicit_dto.sql",
+      "supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql"
+    ],
+    "required_consolidated_rollback_order": [
+      "tests/sql/nav_v2_deal_card_lite_bounded_rollback.sql",
+      "tests/sql/nav_v2_bounded_task_actor_aware_rollback.sql",
+      "tests/sql/nav_v2_bounded_task_mutation_rollback.sql",
+      "tests/sql/nav_v2_bounded_task_base_rollback.sql"
+    ],
+    "consolidated_forward_artifact_created": false,
+    "consolidated_rollback_artifact_created": false,
+    "preview_apply_blocked": true
+  },
+  "edge_candidate": {
+    "entrypoint": "supabase/functions/nav-v2-deal-api/index.ts",
+    "support_files": [
+      "supabase/functions/nav-v2-deal-api/task-action-contract-v2.js",
+      "supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js",
+      "supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js"
+    ],
+    "production_snapshot": "supabase/functions/nav-v2-deal-api/index.production-v4.ts",
+    "feature_flag_default": false,
+    "verify_jwt_required": true,
+    "deployed": false,
+    "deploy_allowed": false
+  },
+  "preflight_requirements": [
+    "main_sha_attestation",
+    "postgres_major_17",
+    "all_sources_exist",
+    "deterministic_bundle_index_valid",
+    "exact_artifact_sha256",
+    "exact_source_order",
+    "production_prototype_objects_absent",
+    "preview_cost_rechecked_after_owner_approval",
+    "synthetic_only_data_plan"
+  ],
+  "active_stops": [
+    "bounded_full_forward_not_consolidated",
+    "bounded_full_rollback_not_consolidated",
+    "preview_branch_missing",
+    "explicit_cost_approval_missing",
+    "technical_account_plan_not_executed",
+    "authenticated_role_matrix_not_run",
+    "edge_runtime_feature_flag_disabled",
+    "edge_not_deployed",
+    "minimal_grants_not_applied",
+    "preview_apply_not_approved",
+    "production_deployment_not_approved",
+    "cleanup_option_unselected"
+  ],
+  "forbidden_actions": [
+    "apply_rehearsal_artifacts_sequentially_as_deployment",
+    "write_generated_sql_to_supabase_migrations",
+    "create_supabase_branch_without_explicit_cost_approval",
+    "create_technical_accounts",
+    "apply_database_changes",
+    "deploy_edge_function",
+    "change_auth_rls_or_grants",
+    "copy_production_data",
+    "mutate_or_cleanup_production_rows",
+    "claim_preview_or_production_readiness"
+  ]
+}

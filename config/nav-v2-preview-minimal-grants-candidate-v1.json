@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_minimal_grants_candidate_not_applied",
+  "generated_at": "2026-07-21",
+  "source_path": "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql",
+  "production_applied": false,
+  "preview_applied": false,
+  "grant_change_allowed": false,
+  "private_helpers": [
+    {
+      "signature": "nav_v2_private.nav_v2_require_verified_actor(uuid)",
+      "allowed_execute_roles": [],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "nav_v2_private.nav_v2_assert_actor_replay(uuid, text, uuid)",
+      "allowed_execute_roles": [],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "nav_v2_private.nav_v2_actor_claim_restore(text)",
+      "allowed_execute_roles": [],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    }
+  ],
+  "actor_aware_rpcs": [
+    {
+      "signature": "public.nav_v2_create_bounded_tasks(uuid, jsonb, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "public.nav_v2_start_bounded_task(uuid, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "public.nav_v2_complete_bounded_task(uuid, uuid, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "public.nav_v2_set_bounded_task_active_outcome(uuid, text, text, date, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "public.nav_v2_propose_bounded_task_terminal_outcome(uuid, text, text, uuid, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    },
+    {
+      "signature": "public.nav_v2_decide_bounded_task_terminal_outcome(uuid, text, uuid, uuid)",
+      "allowed_execute_roles": ["service_role"],
+      "must_revoke_from": ["public", "anon", "authenticated"]
+    }
+  ],
+  "preserved_existing_surfaces": [
+    {
+      "signature": "public.nav_v2_update_task_status(uuid, nav_v2_task_status)",
+      "change_allowed": false,
+      "reason": "legacy runtime remains default"
+    },
+    {
+      "signature": "public.nav_v2_get_deal_card_lite(uuid)",
+      "change_allowed": false,
+      "reason": "CREATE OR REPLACE DTO overlay must preserve reviewed caller surface until authenticated E2E"
+    }
+  ],
+  "security_rules": {
+    "actor_id_from_client_payload_allowed": false,
+    "service_role_key_in_frontend_allowed": false,
+    "authenticated_execute_on_actor_aware_overloads_allowed": false,
+    "anon_execute_allowed": false,
+    "public_execute_allowed": false,
+    "private_helper_execute_allowed": false
+  },
+  "required_evidence": [
+    "exact_signature_match",
+    "revoke_public_anon_authenticated",
+    "service_role_only_actor_overloads",
+    "no_frontend_service_key",
+    "authenticated_role_matrix_before_any_surface_change"
+  ]
+}

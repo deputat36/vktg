@@ -1,0 +1,79 @@
+name: Navigator v2 preview candidate package v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v1.json'
+      - 'config/nav-v2-preview-minimal-grants-candidate-v1.json'
+      - 'config/nav-v2-preview-bundle-assembler-v1.json'
+      - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
+      - 'config/nav-v2-release-baseline.json'
+      - 'scripts/check_nav_v2_preview_candidate_package_v1.py'
+      - 'scripts/check-nav-v2-preview-candidate-package-v1.mjs'
+      - 'scripts/assemble-nav-v2-preview-bundle-v1.mjs'
+      - 'supabase/functions/nav-v2-deal-api/**'
+      - 'supabase/prototypes/nav_v2_*.sql'
+      - 'tests/sql/nav_v2_*.sql'
+      - 'docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-candidate-package-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v1.json'
+      - 'config/nav-v2-preview-minimal-grants-candidate-v1.json'
+      - 'config/nav-v2-preview-bundle-assembler-v1.json'
+      - 'scripts/check_nav_v2_preview_candidate_package_v1.py'
+      - 'scripts/check-nav-v2-preview-candidate-package-v1.mjs'
+      - 'docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-candidate-package-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate review candidate source contract
+        run: python3 scripts/check_nav_v2_preview_candidate_package_v1.py
+
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_preview_candidate_package_v1.py
+
+      - name: Check semantic validator syntax
+        run: node --check scripts/check-nav-v2-preview-candidate-package-v1.mjs
+
+      - name: Assemble deterministic rehearsal bundle
+        run: node scripts/assemble-nav-v2-preview-bundle-v1.mjs --output-dir /tmp/nav-v2-preview-candidate-bundle
+
+      - name: Validate exact hashes, exact source order, bounded overlap and Edge file set
+        run: |
+          node scripts/check-nav-v2-preview-candidate-package-v1.mjs \
+            --bundle-dir /tmp/nav-v2-preview-candidate-bundle \
+            --report /tmp/candidate-package-report.json
+
+      - name: Prove no generated migration entered repository
+        run: |
+          test ! -e generated/nav_v2_intake_save_adapter_v1.sql
+          if find supabase/migrations -maxdepth 1 -type f -iname '*preview*candidate*package*' | grep -q .; then
+            echo 'FAIL: review candidate leaked into supabase/migrations'
+            exit 1
+          fi
+
+      - name: Upload review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-preview-candidate-package-v1
+          path: |
+            /tmp/nav-v2-preview-candidate-bundle/bundle-index.json
+            /tmp/candidate-package-report.json
+          if-no-files-found: error
+          retention-days: 30
