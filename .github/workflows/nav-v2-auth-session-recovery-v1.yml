@@ -1,0 +1,55 @@
+name: Navigator v2 auth session recovery v1
+
+on:
+  pull_request:
+    paths:
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'nav-v2.html'
+      - 'dashboard-v2.html'
+      - 'docs/NAV_V2_AUTH_SESSION_RECOVERY_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-auth-session-recovery-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'nav-v2.html'
+      - 'dashboard-v2.html'
+      - 'docs/NAV_V2_AUTH_SESSION_RECOVERY_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-auth-session-recovery-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth-session-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/auth-session-recovery-v2.js
+          node --check assets/js/nav-v2/supabase-v2.js
+          node --check tests/unit/nav-v2-auth-session-recovery.test.mjs
+
+      - name: Reject service-role material
+        run: |
+          if grep -RniE 'service_role|sb_secret_|SUPABASE_SERVICE' \
+            assets/js/nav-v2/auth-session-recovery-v2.js \
+            tests/unit/nav-v2-auth-session-recovery.test.mjs; then
+            echo 'Secret or service-role marker found in browser/test files.' >&2
+            exit 1
+          fi
+
+      - name: Run invalid refresh-token recovery tests
+        run: node tests/unit/nav-v2-auth-session-recovery.test.mjs

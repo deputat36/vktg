@@ -1,5 +1,10 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';
+import {
+  createAuthSessionExpiredError,
+  isAuthSessionExpiredError,
+  shouldInvalidateSessionAfterRefreshFailure
+} from './auth-session-recovery-v2.js?v=20260721-01';
 
 export const NAV_V2_BUILD_ID = '20260711-01';
 if (typeof document !== 'undefined') {
@@ -60,6 +65,15 @@ function decodeJwt(token) {
   } catch (_) { return null; }
 }
 
+function sessionEmail(session) {
+  return session?.user?.email || decodeJwt(session?.access_token)?.email || '';
+}
+
+function invalidateStoredSession(session) {
+  rememberEmail(sessionEmail(session));
+  writeSession(null);
+}
+
 export function getCachedUser() {
   const session = readSession();
   if (!session?.access_token) return null;
@@ -96,6 +110,7 @@ function headers() {
 }
 
 function authErrorText(error) {
+  if (isAuthSessionExpiredError(error)) return error.message;
   const message = String(error?.message || error || '').trim();
   const normalized = message.toLowerCase();
   if (
@@ -129,7 +144,13 @@ async function parse(response) {
   const text = await response.text();
   let payload = null;
   try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = text; }
-  if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.error_description || payload?.error || `Ошибка Supabase ${response.status}: ${response.statusText || 'запрос не выполнен'}`);
+  if (!response.ok) {
+    const error = new Error(payload?.message || payload?.msg || payload?.hint || payload?.error_description || payload?.error || `Ошибка Supabase ${response.status}: ${response.statusText || 'запрос не выполнен'}`);
+    error.status = response.status;
+    error.code = payload?.error_code || payload?.code || payload?.error || null;
+    error.payload = payload;
+    throw error;
+  }
   return payload;
 }
 
@@ -144,15 +165,26 @@ async function refreshSession() {
   }
   refreshRequest = (async () => {
     const session = readSession();
-    if (!session?.refresh_token) { writeSession(null); return null; }
-    const response = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: session.refresh_token })
-    }, 12000);
-    const payload = await parse(response);
-    writeSession(payload);
-    return payload;
+    if (!session?.refresh_token) {
+      invalidateStoredSession(session);
+      throw createAuthSessionExpiredError();
+    }
+    try {
+      const response = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      }, 12000);
+      const payload = await parse(response);
+      writeSession(payload);
+      return payload;
+    } catch (error) {
+      if (shouldInvalidateSessionAfterRefreshFailure(error)) {
+        invalidateStoredSession(session);
+        throw createAuthSessionExpiredError(error);
+      }
+      throw error;
+    }
   })().finally(() => { refreshRequest = null; });
   return refreshRequest;
 }
