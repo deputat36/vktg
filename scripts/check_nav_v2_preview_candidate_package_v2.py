@@ -21,6 +21,9 @@ DOC = ROOT / "docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V2_2026-07-21.md"
 EDGE_CANDIDATE = ROOT / "supabase/functions/nav-v2-deal-api/index.ts"
 EDGE_SNAPSHOT = ROOT / "supabase/functions/nav-v2-deal-api/index.production-v4.ts"
 MIGRATIONS = ROOT / "supabase/migrations"
+EXPECTED_REMOTE_MIGRATION = "20260721122333"
+EXPECTED_REMOTE_MIGRATION_NAME = "revoke_anon_execute_leader_internal_rpcs"
+EXPECTED_NAVIGATOR_MIGRATION = "20260716063401"
 
 
 def require(condition: bool, message: str) -> None:
@@ -136,6 +139,8 @@ def main() -> None:
         "attestation status drifted",
     )
     require(attestation["production_project_ref"] == package["production_project_ref"], "attestation project ref drifted")
+    require(attestation["source_main_sha"] == "746a806aaa2f6be572754e076fcfd359288f2abf", "attestation source main drifted")
+    require(attestation["captured_at"] == "2026-07-21T13:19:29.070311+00:00", "attestation capture timestamp drifted")
     require(attestation["project_status"] == "ACTIVE_HEALTHY", "production project is not attested healthy")
     require(attestation["postgres_major"] == 17, "PostgreSQL major attestation drifted")
     require(attestation["data_mutated"] is False and attestation["ddl_executed"] is False, "attestation claims mutation")
@@ -143,8 +148,11 @@ def main() -> None:
     require(attestation["technical_identity_absence"]["auth_users"] == 0, "technical Auth users unexpectedly attested")
     require(attestation["technical_identity_absence"]["profiles"] == 0, "technical profiles unexpectedly attested")
     require(attestation["candidate_database_absence"]["candidate_objects_present"] == 0, "candidate DB objects unexpectedly attested")
-    require(attestation["migration_boundary"]["latest_navigator_migration"] == "20260716063401", "Navigator migration boundary drifted")
-    require(attestation["migration_boundary"]["latest_remote_migration"] == "20260720201701", "overall remote migration snapshot drifted")
+    require(attestation["migration_boundary"]["latest_navigator_migration"] == EXPECTED_NAVIGATOR_MIGRATION, "Navigator migration boundary drifted")
+    require(attestation["migration_boundary"]["latest_remote_migration"] == EXPECTED_REMOTE_MIGRATION, "overall remote migration snapshot drifted")
+    require(attestation["migration_boundary"]["latest_remote_migration_name"] == EXPECTED_REMOTE_MIGRATION_NAME, "overall remote migration name drifted")
+    require(attestation["migration_boundary"]["latest_remote_migration_is_non_navigator"] is True, "overall remote migration scope is not explicit")
+    require(attestation["migration_boundary"]["navigator_may_modify_leader_history"] is False, "Navigator was allowed to modify leader history")
     require(attestation["edge_function"]["version"] == 4, "Edge live version drifted")
     require(attestation["edge_function"]["verify_jwt"] is True, "Edge JWT attestation drifted")
     require(
@@ -152,10 +160,15 @@ def main() -> None:
         "Edge live bundle hash drifted",
     )
 
+    preflight_contract = package["preflight_contract"]
+    require(preflight_contract["observed_latest_remote_migration"] == EXPECTED_REMOTE_MIGRATION, "preflight remote boundary drifted")
+    require(preflight_contract["observed_latest_remote_migration_name"] == EXPECTED_REMOTE_MIGRATION_NAME, "preflight remote migration name drifted")
+
     migration = package["migration_boundary"]
     require(migration["navigator_boundary_verified"] is True, "Navigator boundary is not verified")
-    require(migration["latest_navigator_migration"] == "20260716063401", "package Navigator boundary drifted")
-    require(migration["latest_remote_migration"] == "20260720201701", "package remote boundary drifted")
+    require(migration["latest_navigator_migration"] == EXPECTED_NAVIGATOR_MIGRATION, "package Navigator boundary drifted")
+    require(migration["latest_remote_migration"] == EXPECTED_REMOTE_MIGRATION, "package remote boundary drifted")
+    require(migration["latest_remote_migration_name"] == EXPECTED_REMOTE_MIGRATION_NAME, "package remote migration name drifted")
     require(release["latest_live_migration"] == "20260715203158", "release baseline changed without reconciliation")
     require(migration["release_baseline_latest_live_migration"] == release["latest_live_migration"], "release baseline snapshot mismatch")
     require(migration["release_baseline_drift_detected"] is True, "release baseline drift is not explicit")
@@ -247,7 +260,11 @@ def main() -> None:
     leaked = [path.name for path in MIGRATIONS.glob("*preview*candidate*package*v2*")]
     require(not leaked, f"package v2 leaked into migrations: {leaked}")
 
-    print("Navigator v2 preview candidate package v2 source contract passed")
+    print(
+        "Navigator v2 preview candidate package v2 source contract passed: "
+        f"Navigator boundary {EXPECTED_NAVIGATOR_MIGRATION} unchanged; "
+        f"remote shared-project boundary {EXPECTED_REMOTE_MIGRATION} is explicitly non-Navigator."
+    )
 
 
 if __name__ == "__main__":
