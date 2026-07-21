@@ -1,0 +1,89 @@
+{
+  "contract_version": 1,
+  "status": "repository_only_runtime_integration_disabled",
+  "production_applied": false,
+  "edge_deployed": false,
+  "runtime_source_integrated": true,
+  "feature_flag_default": false,
+  "frontend_transport_enabled": false,
+  "actor_aware_sql_deployed": false,
+  "service_role_key_browser_exposure_allowed": false,
+  "verify_jwt_required": true,
+  "bounded_actions": [
+    "bounded_task_start",
+    "bounded_task_complete",
+    "bounded_task_active_outcome",
+    "bounded_task_terminal_proposal",
+    "bounded_task_terminal_decision"
+  ],
+  "identity_chain": [
+    "authorization_bearer_user_jwt",
+    "auth_v1_user_lookup",
+    "verified_auth_user_id",
+    "active_nav_user_profile_lookup",
+    "contract_v2_task_context_lookup",
+    "role_and_assignment_preflight",
+    "actor_aware_rpc_with_p_actor_id"
+  ],
+  "service_side_sources": {
+    "profile": {
+      "table": "public.nav_user_profiles",
+      "filter": "id=verified_actor_id and is_active=true",
+      "fields": ["id", "role", "is_active"]
+    },
+    "task": {
+      "table": "public.nav_deal_tasks_v2",
+      "filter": "id=validated_payload_task_id",
+      "fields": ["id", "assigned_to", "assigned_role", "task_type", "source", "task_contract_version"]
+    }
+  },
+  "role_policy": {
+    "supervisors": ["owner", "admin", "manager"],
+    "specialists": ["spn", "lawyer", "broker"],
+    "viewer_mutations_allowed": false,
+    "specialist_requires_assigned_role_match": true,
+    "specialist_requires_assigned_user_match_when_present": true,
+    "broker": {
+      "assigned_role": "broker",
+      "task_type": "broker_task",
+      "allowed_sources": ["intake_v1:mortgage", "intake_v1:military_mortgage"]
+    }
+  },
+  "required_negative_scenarios": [
+    "feature_disabled",
+    "missing_or_invalid_verified_user",
+    "forbidden_client_actor_field",
+    "inactive_profile",
+    "unsupported_profile_role",
+    "viewer_mutation",
+    "specialist_role_mismatch",
+    "task_assigned_to_other_actor",
+    "broker_non_mortgage_scope",
+    "contract_v1_task",
+    "cross_actor_rpc_rejection"
+  ],
+  "required_positive_scenarios": [
+    "spn_assigned_task",
+    "lawyer_assigned_task",
+    "broker_mortgage_task",
+    "manager_supervisor_task"
+  ],
+  "active_stops": [
+    "feature_flag_disabled",
+    "actor_aware_sql_not_deployed",
+    "edge_not_deployed",
+    "frontend_transport_disabled",
+    "authenticated_e2e_not_proven",
+    "deployment_approval_missing"
+  ],
+  "forbidden": [
+    "service_role_key_in_frontend",
+    "service_role_key_in_response",
+    "service_role_key_in_log",
+    "client_supplied_actor_id",
+    "client_supplied_role",
+    "broker_non_mortgage_task",
+    "edge_deploy_from_repository_only_pr",
+    "enable_frontend_transport"
+  ]
+}
