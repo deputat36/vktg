@@ -11,6 +11,7 @@ AUTH = ROOT / "config/nav-v2-auth-e2e-readiness.json"
 FINAL = ROOT / "config/nav-v2-intake-special-semantics-integration-v1.json"
 BOUNDED = ROOT / "config/nav-v2-bounded-task-migration-storyboard.json"
 IDENTITY = ROOT / "config/nav-v2-task-edge-identity-contract.json"
+RUNTIME = ROOT / "config/nav-v2-task-edge-runtime-integration-v1.json"
 CLEANUP = ROOT / "config/nav-v2-legacy-quality-cleanup-decision-v1.json"
 MIGRATIONS = ROOT / "supabase/migrations"
 
@@ -41,18 +42,20 @@ def main() -> None:
     final = json.loads(FINAL.read_text(encoding="utf-8"))
     bounded = json.loads(BOUNDED.read_text(encoding="utf-8"))
     identity = json.loads(IDENTITY.read_text(encoding="utf-8"))
+    runtime = json.loads(RUNTIME.read_text(encoding="utf-8"))
     cleanup = json.loads(CLEANUP.read_text(encoding="utf-8"))
 
     require(manifest["schema_version"] == 1, "unexpected manifest version")
     require(manifest["status"] == "repository_only_source_manifest_not_executable", "manifest escaped repository-only status")
-    require(manifest["source_baseline_main_sha"] == "dd33b2ab1de6523604386ddbf3aad8d15fd2cdb3", "source baseline changed")
+    require(manifest["source_baseline_main_sha"] == "df7634bc3be2379c4feec3b5ebc3e78099018e8a", "source baseline changed")
     require(manifest["repository_source_inventory_complete"] is True, "source inventory is incomplete")
     for key in [
         "production_applied", "preview_branch_created", "executable_migrations_created",
-        "production_rollback_bundle_ready", "edge_runtime_integrated", "frontend_transport_enabled",
-        "authenticated_e2e_proven", "deployment_bundle_ready",
+        "production_rollback_bundle_ready", "edge_runtime_enabled", "edge_deployed",
+        "frontend_transport_enabled", "authenticated_e2e_proven", "deployment_bundle_ready",
     ]:
         require(manifest[key] is False, f"{key} must remain false")
+    require(manifest["edge_runtime_integrated"] is True, "Edge runtime source is not marked integrated")
     require(manifest["selected_deployment_option"] is None, "deployment option selected automatically")
     require(manifest["selected_cleanup_option"] is None, "cleanup option selected automatically")
 
@@ -100,11 +103,26 @@ def main() -> None:
 
     edge = layers[4]
     edge_index = (ROOT / "supabase/functions/nav-v2-deal-api/index.ts").read_text(encoding="utf-8")
-    require("task-action-edge-identity-v2.js" not in edge_index, "detached identity handler is already imported into Edge runtime")
-    require(edge["current_index_imports_identity_handler"] is False, "manifest misstates Edge import status")
-    require(edge["edge_deploy_ready"] is False and edge["verified_actor_injection_integrated"] is False, "Edge layer claims readiness")
+    edge_runtime = (ROOT / "supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js").read_text(encoding="utf-8")
+    require('from "./task-action-edge-runtime-v2.js"' in edge_index, "Edge runtime adapter is not imported")
+    require("const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;" in edge_index, "Edge runtime feature flag is not false")
+    require("./task-action-edge-identity-v2.js" in edge_runtime, "runtime adapter does not import identity handler")
+    require("Deno." not in edge_runtime and "fetch(" not in edge_runtime, "runtime adapter is not dependency-injected pure code")
+    require(edge["mode"] == "source_integrated_feature_disabled", "Edge layer mode changed")
+    require(edge["current_index_imports_identity_handler"] is True, "manifest misstates Edge import status")
+    require(edge["verified_actor_injection_integrated"] is True, "verified actor injection is not integrated")
+    require(edge["service_side_profile_lookup_integrated"] is True, "profile lookup is not integrated")
+    require(edge["service_side_task_lookup_integrated"] is True, "task lookup is not integrated")
+    require(edge["service_side_actor_aware_rpc_integrated"] is True, "actor-aware RPC client is not integrated")
+    require(edge["feature_flag_default"] is False and edge["edge_deploy_ready"] is False and edge["edge_deployed"] is False, "Edge layer escaped disabled repository state")
     require(edge["service_key_exposure_to_browser_allowed"] is False, "service key exposure was allowed")
-    require(identity["runtime_integrated"] is False and identity["edge_deployed"] is False, "identity contract claims runtime deployment")
+    require(identity["runtime_integrated"] is False and identity["edge_deployed"] is False, "base rehearsal identity contract changed")
+    require(runtime["runtime_source_integrated"] is True and runtime["feature_flag_default"] is False, "runtime integration contract drifted")
+    require(runtime["edge_deployed"] is False and runtime["frontend_transport_enabled"] is False, "runtime integration claims deployment")
+    require(runtime["service_role_key_browser_exposure_allowed"] is False, "runtime contract allows service key exposure")
+    for path in (ROOT / "assets").rglob("*"):
+        if path.is_file():
+            require("SUPABASE_SERVICE_ROLE_KEY" not in path.read_text(encoding="utf-8", errors="ignore"), f"service role env leaked into frontend: {path}")
 
     frontend = layers[5]
     guard = (ROOT / "assets/js/nav-v2/task-action-guard-v2.js").read_text(encoding="utf-8")
@@ -123,11 +141,12 @@ def main() -> None:
     for stop in [
         "selected_deployment_option_missing", "explicit_cost_approval_missing", "cost_confirmation_id_missing",
         "preview_branch_missing", "executable_migrations_not_created", "production_rollback_bundle_not_ready",
-        "edge_identity_handler_not_integrated", "frontend_bounded_transport_disabled",
-        "authenticated_role_matrix_not_run", "production_deployment_approval_missing",
-        "pilot_scope_missing", "cleanup_option_unselected",
+        "actor_aware_sql_not_deployed", "edge_runtime_feature_flag_disabled", "edge_not_deployed",
+        "frontend_bounded_transport_disabled", "authenticated_role_matrix_not_run",
+        "production_deployment_approval_missing", "pilot_scope_missing", "cleanup_option_unselected",
     ]:
         require(stop in manifest["active_stops"], f"active stop missing: {stop}")
+    require("edge_identity_handler_not_integrated" not in manifest["active_stops"], "obsolete Edge integration stop remains")
 
     forbidden = set(manifest["forbidden_actions"])
     for action in [
