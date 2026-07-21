@@ -97,12 +97,30 @@ Private actor helpers не получают внешнего EXECUTE.
 
 Legacy `nav_v2_update_task_status` не меняется.
 
+## Fixture isolation
+
+Первый совместный CI-run выявил не конфликт SQL-контрактов, а загрязнение synthetic fixture:
+
+- старый DTO setup заранее вставлял один документ;
+- старый DTO setup заранее вставлял один риск;
+- canonical mutation assertions требуют, чтобы bounded task RPC не создавали ни документов, ни рисков.
+
+Для consolidated lifecycle создан schema-only setup:
+
+`tests/sql/nav_v2_bounded_consolidated_candidate_setup.sql`
+
+Он добавляет необходимые DTO columns и permission helpers, но не вставляет документы и риски. Поэтому:
+
+- mutation assertions проверяют чистый нулевой baseline;
+- DTO assertions используют те же schema contracts;
+- fixture data не маскирует побочные эффекты task mutations.
+
 ## PostgreSQL 17 lifecycle
 
 Workflow создаёт synthetic environment и выполняет:
 
 1. task mutation setup;
-2. lite DTO setup;
+2. schema-only consolidated DTO setup;
 3. consolidated forward;
 4. canonical bounded mutation assertions;
 5. actor-aware identity/replay assertions;
@@ -119,6 +137,7 @@ Workflow создаёт synthetic environment и выполняет:
 - role-aware DTO;
 - legacy task compatibility;
 - отсутствие client PII/free text в DTO;
+- нулевое создание документов и рисков task mutations;
 - удаление bounded columns, events и functions после rollback;
 - восстановление explicit lite DTO baseline;
 - сохранность legacy synthetic task.
@@ -144,7 +163,7 @@ Workflow создаёт synthetic environment и выполняет:
 Repository rollback:
 
 - удалить config, assembler, validators, runner, workflow и этот документ;
-- удалить две consolidated assertion files;
+- удалить schema-only setup и две consolidated assertion files;
 - вернуть preview package в состояние `consolidated_*_created=false`.
 
 Production rollback не требуется: production database, Auth, RLS, grants, Edge Functions и rows не меняются.
