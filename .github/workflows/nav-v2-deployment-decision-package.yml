@@ -1,0 +1,58 @@
+name: Navigator v2 deployment decision package
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'config/nav-v2-auth-e2e-readiness.json'
+      - 'config/nav-v2-intake-special-semantics-integration-v1.json'
+      - 'config/nav-v2-legacy-quality-cleanup-decision-v1.json'
+      - 'scripts/check_nav_v2_deployment_decision_package.py'
+      - 'scripts/check-nav-v2-deployment-decision-package.mjs'
+      - 'docs/NAV_V2_DEPLOYMENT_DECISION_PACKAGE_V1_2026-07-20.md'
+      - 'docs/NAV_V2_WORK_HANDOFF_LATEST.md'
+      - 'supabase/prototypes/nav_v2_*.sql'
+      - '.github/workflows/nav-v2-deployment-decision-package.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'scripts/check_nav_v2_deployment_decision_package.py'
+      - 'scripts/check-nav-v2-deployment-decision-package.mjs'
+      - 'docs/NAV_V2_DEPLOYMENT_DECISION_PACKAGE_V1_2026-07-20.md'
+      - '.github/workflows/nav-v2-deployment-decision-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate deployment package source boundary
+        run: python3 scripts/check_nav_v2_deployment_decision_package.py
+      - name: Validate deployment package semantics
+        run: node scripts/check-nav-v2-deployment-decision-package.mjs
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_deployment_decision_package.py
+      - name: Prove no deployment decision migration exists
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f -iname '*deployment*decision*' | grep -q .; then
+            echo 'FAIL: deployment decision package leaked into migrations'
+            exit 1
+          fi
+      - name: Prove selected options remain null
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const c = JSON.parse(fs.readFileSync('config/nav-v2-deployment-decision-package-v1.json','utf8'));
+          if (c.selected_deployment_option !== null || c.selected_cleanup_option !== null) process.exit(1);
+          if (c.production_ready || c.production_applied || c.branch_creation_allowed) process.exit(1);
+          console.log('Deployment and cleanup options remain owner-unselected');
+          NODE
