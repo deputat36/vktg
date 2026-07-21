@@ -45,6 +45,49 @@ begin
 end;
 $function$;
 
+-- PostgreSQL may initialize scalar subqueries before evaluating another SELECT
+-- expression. This helper enforces the evidence order explicitly:
+-- execute mutation first, then inspect the post-mutation state.
+create or replace function harness.capture_mutation(
+  p_mutation_sql text,
+  p_old_parent_sql text,
+  p_new_parent_sql text,
+  p_child_old_sql text,
+  p_child_new_sql text
+)
+returns jsonb
+language plpgsql
+as $function$
+declare
+  v_plan jsonb;
+  v_old_parent boolean;
+  v_new_parent boolean;
+  v_child_old bigint;
+  v_child_new bigint;
+begin
+  v_plan := harness.explain_analyze_json(p_mutation_sql);
+
+  execute p_old_parent_sql into v_old_parent;
+  if coalesce(p_new_parent_sql, '') <> '' then
+    execute p_new_parent_sql into v_new_parent;
+  end if;
+  execute p_child_old_sql into v_child_old;
+  if coalesce(p_child_new_sql, '') <> '' then
+    execute p_child_new_sql into v_child_new;
+  end if;
+
+  return jsonb_build_object(
+    'plan', v_plan,
+    'execution_time_ms', coalesce((v_plan->0->>'Execution Time')::numeric, 0),
+    'trigger_count', jsonb_array_length(coalesce(v_plan->0->'Triggers', '[]'::jsonb)),
+    'old_parent_exists', coalesce(v_old_parent, false),
+    'new_parent_exists', v_new_parent,
+    'child_rows_old', coalesce(v_child_old, 0),
+    'child_rows_new', v_child_new
+  );
+end;
+$function$;
+
 create table harness.plan_evidence (
   evidence_order integer primary key,
   evidence_id text not null unique,
@@ -76,8 +119,7 @@ create table harness.result_equivalence (
   equivalent boolean not null
 );
 
--- Mode A mirrors production index overlap: a single-column deal_id index plus
--- the unique composite (deal_id, question_key) index.
+-- Mode A mirrors production overlap: single-column deal_id plus unique composite.
 create table harness.nav_deals_both (
   id bigint primary key
 );
@@ -98,7 +140,7 @@ create table harness.nav_deal_answers_both (
 create index nav_deal_answers_both_deal_idx
   on harness.nav_deal_answers_both (deal_id);
 
--- Mode B keeps only the composite unique index whose leading column is deal_id.
+-- Mode B keeps only the unique composite prefix index.
 create table harness.nav_deals_prefix (
   id bigint primary key
 );
@@ -159,7 +201,7 @@ select harness.assert_true(
   'synthetic child cardinality drifted before mutation benchmark'
 );
 
--- Prove the prefix-only child lookup is structurally served by the composite index.
+-- Prove prefix-only child lookup structural applicability.
 set local enable_seqscan = off;
 
 insert into harness.plan_evidence (
@@ -171,7 +213,7 @@ select
   plan,
   'nav_deal_answers_prefix_deal_question_key_key',
   plan::text like '%nav_deal_answers_prefix_deal_question_key_key%',
-  'Structural child lookup used by parent FK checks when no single-column deal_id index exists.'
+  'Structural child lookup used by parent FK checks without a single-column index.'
 from (
   select harness.explain_json(
     $query$select 1
@@ -188,147 +230,110 @@ select harness.assert_true(
 
 set local enable_seqscan = on;
 
--- Actual ON DELETE CASCADE benchmark with both indexes.
+-- Actual ON DELETE CASCADE with both indexes.
 with captured as (
-  select harness.explain_analyze_json(
-    $sql$delete from harness.nav_deals_both where id = 4000$sql$
-  ) as plan
+  select harness.capture_mutation(
+    $sql$delete from harness.nav_deals_both where id = 4000$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_both where id = 4000)$sql$,
+    null,
+    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 4000$sql$,
+    null
+  ) as data
 )
-insert into harness.mutation_evidence (
-  evidence_order,
-  evidence_id,
-  index_mode,
-  mutation_kind,
-  plan,
-  execution_time_ms,
-  trigger_count,
-  old_parent_exists,
-  new_parent_exists,
-  child_rows_old,
-  child_rows_new,
-  note
-)
+insert into harness.mutation_evidence
 select
   1,
   'delete_cascade_both_indexes',
   'both_indexes',
   'delete_cascade',
-  plan,
-  coalesce((plan->0->>'Execution Time')::numeric, 0),
-  jsonb_array_length(coalesce(plan->0->'Triggers', '[]'::jsonb)),
-  exists(select 1 from harness.nav_deals_both where id = 4000),
+  data->'plan',
+  (data->>'execution_time_ms')::numeric,
+  (data->>'trigger_count')::integer,
+  (data->>'old_parent_exists')::boolean,
   null,
-  (select count(*) from harness.nav_deal_answers_both where deal_id = 4000),
+  (data->>'child_rows_old')::bigint,
   null,
-  'Actual parent DELETE executed ON DELETE CASCADE against 100000 synthetic child rows.'
+  'Actual parent DELETE CASCADE against 100000 synthetic child rows.'
 from captured;
 
--- Actual ON UPDATE NO ACTION benchmark on a parent with no child rows.
+-- Actual ON UPDATE NO ACTION on a parent without child rows.
 with captured as (
-  select harness.explain_analyze_json(
-    $sql$update harness.nav_deals_both set id = 6001 where id = 6000$sql$
-  ) as plan
+  select harness.capture_mutation(
+    $sql$update harness.nav_deals_both set id = 6001 where id = 6000$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_both where id = 6000)$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_both where id = 6001)$sql$,
+    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 6000$sql$,
+    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 6001$sql$
+  ) as data
 )
-insert into harness.mutation_evidence (
-  evidence_order,
-  evidence_id,
-  index_mode,
-  mutation_kind,
-  plan,
-  execution_time_ms,
-  trigger_count,
-  old_parent_exists,
-  new_parent_exists,
-  child_rows_old,
-  child_rows_new,
-  note
-)
+insert into harness.mutation_evidence
 select
   2,
   'update_no_action_both_indexes',
   'both_indexes',
   'update_no_action',
-  plan,
-  coalesce((plan->0->>'Execution Time')::numeric, 0),
-  jsonb_array_length(coalesce(plan->0->'Triggers', '[]'::jsonb)),
-  exists(select 1 from harness.nav_deals_both where id = 6000),
-  exists(select 1 from harness.nav_deals_both where id = 6001),
-  (select count(*) from harness.nav_deal_answers_both where deal_id = 6000),
-  (select count(*) from harness.nav_deal_answers_both where deal_id = 6001),
-  'Actual parent key UPDATE executed the NO ACTION child-reference check with no matching children.'
+  data->'plan',
+  (data->>'execution_time_ms')::numeric,
+  (data->>'trigger_count')::integer,
+  (data->>'old_parent_exists')::boolean,
+  (data->>'new_parent_exists')::boolean,
+  (data->>'child_rows_old')::bigint,
+  (data->>'child_rows_new')::bigint,
+  'Actual parent key UPDATE executed the NO ACTION child-reference check.'
 from captured;
 
--- Actual ON DELETE CASCADE benchmark with only the composite prefix index.
+-- Actual ON DELETE CASCADE with composite prefix only.
 with captured as (
-  select harness.explain_analyze_json(
-    $sql$delete from harness.nav_deals_prefix where id = 4000$sql$
-  ) as plan
+  select harness.capture_mutation(
+    $sql$delete from harness.nav_deals_prefix where id = 4000$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 4000)$sql$,
+    null,
+    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 4000$sql$,
+    null
+  ) as data
 )
-insert into harness.mutation_evidence (
-  evidence_order,
-  evidence_id,
-  index_mode,
-  mutation_kind,
-  plan,
-  execution_time_ms,
-  trigger_count,
-  old_parent_exists,
-  new_parent_exists,
-  child_rows_old,
-  child_rows_new,
-  note
-)
+insert into harness.mutation_evidence
 select
   3,
   'delete_cascade_prefix_only',
   'composite_prefix_only',
   'delete_cascade',
-  plan,
-  coalesce((plan->0->>'Execution Time')::numeric, 0),
-  jsonb_array_length(coalesce(plan->0->'Triggers', '[]'::jsonb)),
-  exists(select 1 from harness.nav_deals_prefix where id = 4000),
+  data->'plan',
+  (data->>'execution_time_ms')::numeric,
+  (data->>'trigger_count')::integer,
+  (data->>'old_parent_exists')::boolean,
   null,
-  (select count(*) from harness.nav_deal_answers_prefix where deal_id = 4000),
+  (data->>'child_rows_old')::bigint,
   null,
-  'Actual parent DELETE executed ON DELETE CASCADE without a single-column child index.'
+  'Actual parent DELETE CASCADE without the single-column child index.'
 from captured;
 
--- Actual ON UPDATE NO ACTION benchmark with only the composite prefix index.
+-- Actual ON UPDATE NO ACTION with composite prefix only.
 with captured as (
-  select harness.explain_analyze_json(
-    $sql$update harness.nav_deals_prefix set id = 6001 where id = 6000$sql$
-  ) as plan
+  select harness.capture_mutation(
+    $sql$update harness.nav_deals_prefix set id = 6001 where id = 6000$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 6000)$sql$,
+    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 6001)$sql$,
+    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 6000$sql$,
+    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 6001$sql$
+  ) as data
 )
-insert into harness.mutation_evidence (
-  evidence_order,
-  evidence_id,
-  index_mode,
-  mutation_kind,
-  plan,
-  execution_time_ms,
-  trigger_count,
-  old_parent_exists,
-  new_parent_exists,
-  child_rows_old,
-  child_rows_new,
-  note
-)
+insert into harness.mutation_evidence
 select
   4,
   'update_no_action_prefix_only',
   'composite_prefix_only',
   'update_no_action',
-  plan,
-  coalesce((plan->0->>'Execution Time')::numeric, 0),
-  jsonb_array_length(coalesce(plan->0->'Triggers', '[]'::jsonb)),
-  exists(select 1 from harness.nav_deals_prefix where id = 6000),
-  exists(select 1 from harness.nav_deals_prefix where id = 6001),
-  (select count(*) from harness.nav_deal_answers_prefix where deal_id = 6000),
-  (select count(*) from harness.nav_deal_answers_prefix where deal_id = 6001),
-  'Actual parent key UPDATE executed the NO ACTION child-reference check with only composite prefix coverage.'
+  data->'plan',
+  (data->>'execution_time_ms')::numeric,
+  (data->>'trigger_count')::integer,
+  (data->>'old_parent_exists')::boolean,
+  (data->>'new_parent_exists')::boolean,
+  (data->>'child_rows_old')::bigint,
+  (data->>'child_rows_new')::bigint,
+  'Actual parent key UPDATE executed NO ACTION with composite prefix coverage.'
 from captured;
 
--- The mutation semantics must be identical in both index modes.
 select harness.assert_true(
   not (select old_parent_exists from harness.mutation_evidence where evidence_id = 'delete_cascade_both_indexes')
   and (select child_rows_old from harness.mutation_evidence where evidence_id = 'delete_cascade_both_indexes') = 0,
