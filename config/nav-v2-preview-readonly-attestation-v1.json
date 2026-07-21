@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "captured_read_only_production_attestation_not_execution_approval",
+  "checked_at": "2026-07-21",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "project_status": "ACTIVE_HEALTHY",
+  "region": "eu-west-1",
+  "postgres_version": "17.6",
+  "postgres_major": 17,
+  "data_mutated": false,
+  "ddl_executed": false,
+  "cost_confirmation_performed": false,
+  "branch_created": false,
+  "edge_deployed": false,
+  "branches": {
+    "total": 1,
+    "production_main": 1,
+    "preview": 0,
+    "technical_branch_present": false
+  },
+  "migration_boundary": {
+    "latest_remote_migration": "20260720201701",
+    "latest_navigator_migration": "20260716063401",
+    "expected_latest_navigator_migration": "20260716063401",
+    "navigator_boundary_matches": true,
+    "release_baseline_latest_live_migration": "20260715203158",
+    "release_baseline_matches_latest_remote": false,
+    "later_remote_migrations_are_non_navigator": true,
+    "baseline_reconciliation_required": true,
+    "navigator_may_modify_leader_history": false
+  },
+  "edge_function": {
+    "slug": "nav-v2-deal-api",
+    "version": 4,
+    "status": "ACTIVE",
+    "verify_jwt": true,
+    "ezbr_sha256": "b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095",
+    "candidate_deployed": false,
+    "repository_production_snapshot": "supabase/functions/nav-v2-deal-api/index.production-v4.ts"
+  },
+  "candidate_database_absence": {
+    "task_candidate_columns_present": 0,
+    "mutation_event_table_present": false,
+    "intake_ledger_present": false,
+    "actor_create_rpc_present": false,
+    "actor_start_rpc_present": false,
+    "candidate_objects_present": 0
+  },
+  "technical_identity_absence": {
+    "email_prefix": "nav-e2e",
+    "profile_name_prefix": "[NAV E2E]",
+    "auth_users": 0,
+    "profiles": 0
+  },
+  "legacy_task_baseline": {
+    "open": 88,
+    "cancelled": 10,
+    "in_progress": 0,
+    "done": 0,
+    "total": 98,
+    "employee_performance_inference_allowed": false
+  },
+  "evidence_sources": [
+    "Supabase.get_project",
+    "Supabase.list_branches",
+    "Supabase.list_migrations",
+    "Supabase.list_edge_functions",
+    "Supabase.get_edge_function",
+    "Supabase.execute_sql aggregate-only read-only query"
+  ],
+  "freshness_policy": {
+    "snapshot_is_execution_authorization": false,
+    "must_recheck_before_preview_branch_creation": true,
+    "must_recheck_before_any_preview_apply": true,
+    "must_recheck_before_edge_deploy": true,
+    "must_recheck_before_production_decision": true
+  }
+}
