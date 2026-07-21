@@ -1,10 +1,21 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "status": "captured_read_only_navigator_advisor_attestation_not_change_approval",
   "project_ref": "ofewxuqfjhamgerwzull",
-  "observed_at": "2026-07-14T15:45:32.020318+00:00",
+  "observed_at": "2026-07-21T13:19:29.070311+00:00",
+  "source_main_sha": "746a806aaa2f6be572754e076fcfd359288f2abf",
   "source": {
     "advisor": "Supabase Security Advisor",
     "database_check": "pg_proc + has_function_privilege(authenticated, EXECUTE)",
+    "readonly_preflight_sql": "tests/sql/nav_v2_advisor_readonly_preflight_v1.sql",
+    "management_checks": [
+      "Supabase.get_project",
+      "Supabase.list_branches",
+      "Supabase.list_migrations",
+      "Supabase.list_edge_functions",
+      "Supabase.get_advisors security",
+      "Supabase.execute_sql read-only aggregate preflight"
+    ],
     "lint_name": "authenticated_security_definer_function_executable",
     "lint_code": "0029"
   },
@@ -12,7 +23,37 @@
     "schema": "public",
     "function_prefix": "nav_v2_",
     "registry": "config/nav-v2-rpc-surface.json",
-    "policy": "config/nav-v2-advisor-scope.json"
+    "policy": "config/nav-v2-advisor-scope.json",
+    "excluded_prefixes": [
+      "leader_",
+      "parket_",
+      "broker_",
+      "nav_legacy"
+    ]
+  },
+  "environment": {
+    "project_status": "ACTIVE_HEALTHY",
+    "region": "eu-west-1",
+    "postgres_version": "17.6.1.121",
+    "postgres_major": 17,
+    "branch_total": 1,
+    "preview_branch_count": 0,
+    "edge_function": {
+      "slug": "nav-v2-deal-api",
+      "version": 4,
+      "status": "ACTIVE",
+      "verify_jwt": true,
+      "ezbr_sha256": "b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095"
+    }
+  },
+  "migration_boundary": {
+    "latest_remote_version": "20260721122333",
+    "latest_remote_name": "revoke_anon_execute_leader_internal_rpcs",
+    "latest_navigator_version": "20260716063401",
+    "latest_navigator_name": "nav_v2_correct_mortgage_broker_scope",
+    "navigator_boundary_changed": false,
+    "later_remote_migration_is_non_navigator": true,
+    "navigator_may_modify_leader_history": false
   },
   "result": {
     "status": "match",
@@ -71,15 +112,47 @@
       "nav_v2_update_user_profile"
     ]
   },
+  "candidate_database_absence": {
+    "task_contract_version_column": false,
+    "mutation_events_table": false,
+    "bounded_create_rpc": false,
+    "intake_ledger": false,
+    "intake_mapper": false,
+    "candidate_objects_present": 0
+  },
+  "technical_identity_absence": {
+    "email_prefix": "nav-e2e",
+    "profile_name_prefix": "[NAV E2E]",
+    "auth_users": 0,
+    "profiles": 0
+  },
   "auth_leaked_password_protection": {
     "advisor_warning_present": true,
     "status": "blocked",
-    "blocked_by_issues": [16, 159]
+    "blocked_by_issues": [
+      16,
+      159,
+      282
+    ],
+    "production_setting_changed": false
+  },
+  "safety": {
+    "transaction_read_only": true,
+    "aggregate_only": true,
+    "data_mutated": false,
+    "ddl_executed": false,
+    "grants_changed": false,
+    "auth_changed": false,
+    "edge_deployed": false,
+    "branch_created": false,
+    "cost_confirmation_performed": false
   },
   "limitations": {
     "does_not_replace_authenticated_e2e": true,
     "does_not_authorize_grant_changes": true,
+    "does_not_authorize_auth_changes": true,
     "does_not_mark_unrelated_shared_project_warnings_fixed": true,
-    "refresh_after_rpc_registry_or_grant_change": true
+    "refresh_after_rpc_registry_or_grant_change": true,
+    "refresh_after_remote_migration_or_edge_change": true
   }
 }
