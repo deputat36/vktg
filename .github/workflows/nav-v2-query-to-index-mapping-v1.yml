@@ -1,0 +1,56 @@
+name: Navigator v2 exact query-to-index mapping v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-index-query-plan-candidate-v1.json'
+      - 'config/nav-v2-index-fk-parent-mutation-evidence-v1.json'
+      - 'config/nav-v2-query-to-index-mapping-v1.json'
+      - 'scripts/check_nav_v2_query_to_index_mapping_v1.py'
+      - 'docs/NAV_V2_QUERY_TO_INDEX_MAPPING_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-query-to-index-mapping-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-index-query-plan-candidate-v1.json'
+      - 'config/nav-v2-index-fk-parent-mutation-evidence-v1.json'
+      - 'config/nav-v2-query-to-index-mapping-v1.json'
+      - 'scripts/check_nav_v2_query_to_index_mapping_v1.py'
+      - 'docs/NAV_V2_QUERY_TO_INDEX_MAPPING_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-query-to-index-mapping-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-mapping-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate mapping JSON
+        run: python3 -m json.tool config/nav-v2-query-to-index-mapping-v1.json > /dev/null
+
+      - name: Compile mapping validator
+        run: python3 -m py_compile scripts/check_nav_v2_query_to_index_mapping_v1.py
+
+      - name: Check exact non-PII query-to-index mapping
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_nav_v2_query_to_index_mapping_v1.py 2>&1 \
+            | tee /tmp/nav-v2-query-to-index-mapping-v1.log
+
+      - name: Upload mapping evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-query-to-index-mapping-v1
+          path: |
+            config/nav-v2-query-to-index-mapping-v1.json
+            docs/NAV_V2_QUERY_TO_INDEX_MAPPING_V1_2026-07-21.md
+            /tmp/nav-v2-query-to-index-mapping-v1.log
+          if-no-files-found: warn
+          retention-days: 30

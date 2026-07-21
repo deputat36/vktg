@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_exact_non_pii_query_to_index_mapping_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_on": "2026-07-21",
+  "source_main_sha": "a165833adebf0357031223cab8f49d8881d6a4a9",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "index_drop_authorized": false,
+  "index_create_authorized": false,
+  "cloud_execution_allowed": false,
+  "function_definitions_read": true,
+  "business_rows_read": false,
+  "pii_returned": false,
+  "source_evidence": {
+    "candidate_inventory": "config/nav-v2-index-query-plan-candidate-v1.json",
+    "capture_mode": "aggregate_catalog_and_function_definition_only_read_only_transactions",
+    "role_reference_inventory_count": 24,
+    "answers_function_consumer_count": 2,
+    "canonical_fk_evidence": "config/nav-v2-index-fk-parent-mutation-evidence-v1.json"
+  },
+  "role_index_mapping": {
+    "table": "public.nav_user_profiles",
+    "index": "nav_user_profiles_role_idx",
+    "column": "role",
+    "reference_consumer_count": 24,
+    "direct_role_filter_count": 2,
+    "non_demo_direct_role_filter_count": 1,
+    "categories": [
+      {
+        "id": "direct_role_filter_runtime",
+        "count": 1,
+        "index_relevance": "direct_selective_predicate_candidate",
+        "consumers": [
+          "nav_v2_get_team_profile_quality_health()"
+        ],
+        "notes": [
+          "Contains direct active-profile role predicates such as active SPN without manager and active owner/admin existence checks.",
+          "The same function also contains full-table role aggregates, so not every role reference is index-selective."
+        ]
+      },
+      {
+        "id": "direct_role_filter_demo",
+        "count": 1,
+        "index_relevance": "direct_selective_predicate_demo_only",
+        "consumers": [
+          "nav_v2_seed_demo_data_unchecked_20260622()"
+        ],
+        "notes": [
+          "Selects an active owner/admin ordered by preferred role and creation time.",
+          "Legacy demo-only path is not representative authenticated production workload."
+        ]
+      },
+      {
+        "id": "whole_table_role_aggregate",
+        "count": 1,
+        "index_relevance": "aggregate_scan_not_selective_lookup",
+        "consumers": [
+          "nav_v2_get_access_audit()"
+        ],
+        "notes": [
+          "Builds whole-profile audit and filtered role counts.",
+          "Role appears in aggregates and per-user calculations rather than a bounded role-first lookup."
+        ]
+      },
+      {
+        "id": "role_write_path",
+        "count": 2,
+        "index_relevance": "write_maintenance_cost_only",
+        "consumers": [
+          "nav_v2_link_user_by_email(text,text,nav_v2_user_role,uuid,text)",
+          "nav_v2_update_user_profile(uuid,text,nav_v2_user_role,uuid,text,boolean)"
+        ],
+        "notes": [
+          "Insert or update role values and therefore maintain the role index.",
+          "These paths do not prove read benefit from the role index."
+        ]
+      },
+      {
+        "id": "profile_pk_lookup_id_join_projection_or_loaded_variable",
+        "count": 19,
+        "index_relevance": "role_index_not_primary_access_path",
+        "consumers": [
+          "nav_v2_check_deal_access(text,uuid)",
+          "nav_v2_get_broker_queue_preview(integer)",
+          "nav_v2_get_dashboard()",
+          "nav_v2_get_data_quality_dashboard(integer)",
+          "nav_v2_get_deal_card(uuid)",
+          "nav_v2_get_deal_responsibility_snapshot(uuid)",
+          "nav_v2_get_deals_list(integer)",
+          "nav_v2_get_internal_rpc_lockdown_health()",
+          "nav_v2_get_lawyer_queue(integer)",
+          "nav_v2_get_lawyer_review_summary()",
+          "nav_v2_get_my_profile()",
+          "nav_v2_get_operational_adoption_report(integer,integer)",
+          "nav_v2_get_operational_readiness_preview(integer)",
+          "nav_v2_get_rpc_grant_health()",
+          "nav_v2_get_task_taxonomy_preview(integer)",
+          "nav_v2_guard_profile_self_escalation()",
+          "nav_v2_list_users()",
+          "nav_v2_return_spn_rework(uuid,text)",
+          "nav_v2_submit_spn_rework(uuid,text)"
+        ],
+        "notes": [
+          "Role is projected after profile lookup, checked on an already loaded variable, or belongs to another table alias.",
+          "Profile access is primarily by id, auth user, manager relation, or id join rather than role-first filtering."
+        ]
+      }
+    ],
+    "decision": "retain",
+    "decision_reason": "Only one non-demo function has direct role-first predicates, but role remains part of access and profile-health semantics. The production statistics window and representative authenticated workload are unknown, so the mapping does not justify removal."
+  },
+  "answers_index_mapping": {
+    "table": "public.nav_deal_answers_v2",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "leading_prefix": "deal_id",
+    "function_consumer_count": 2,
+    "direct_filter_or_delete_consumer_count": 1,
+    "insert_only_consumer_count": 1,
+    "consumers": [
+      {
+        "signature": "nav_v2_clear_demo_data_unchecked_20260622()",
+        "query_shape": "delete_filter_by_deal_id",
+        "single_index_read_relevance": true,
+        "composite_prefix_read_relevance": true,
+        "write_maintenance_relevance": true,
+        "representative_production_workload": false,
+        "note": "Deletes answer rows whose deal_id belongs to the bounded demo-deal set."
+      },
+      {
+        "signature": "nav_v2_seed_demo_data_unchecked_20260622()",
+        "query_shape": "insert_only",
+        "single_index_read_relevance": false,
+        "composite_prefix_read_relevance": false,
+        "write_maintenance_relevance": true,
+        "representative_production_workload": false,
+        "note": "Inserts answer rows and maintains both indexes; it does not prove read benefit."
+      }
+    ],
+    "internal_fk_consumer": {
+      "query_shape": "parent_fk_child_lookup",
+      "constraint": "nav_deal_answers_v2_deal_id_fkey",
+      "delete_action": "CASCADE",
+      "update_action": "NO ACTION",
+      "canonical_evidence_status": "synthetic_fk_parent_mutation_gap_hardened_production_drop_not_ready",
+      "rpc_consumer": false
+    },
+    "decision": "review_possible_redundancy_only",
+    "decision_reason": "The only direct RPC filter is legacy demo cleanup, while demo seed is insert-only. Synthetic FK evidence proves composite-prefix semantics and scan attribution, but production workload, production-scale performance, write cost and owner DDL approval remain missing."
+  },
+  "corrections_to_prior_inventory": [
+    {
+      "prior_claim": "24 direct role consumers",
+      "corrected_claim": "24 function definitions reference nav_user_profiles and role; only 2 contain direct role-first filters, and only 1 is non-demo runtime."
+    },
+    {
+      "prior_claim": "2 direct answers consumers",
+      "corrected_claim": "2 function definitions touch nav_deal_answers_v2; 1 filters/deletes by deal_id and 1 is insert-only."
+    }
+  ],
+  "active_stops": [
+    "production_statistics_window_missing",
+    "authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_scale_fk_parent_mutation_benchmark_missing",
+    "write_cost_benefit_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_actions": [
+    "drop_production_index",
+    "create_production_index",
+    "apply_production_migration",
+    "change_production_rls",
+    "copy_production_data_to_harness",
+    "create_supabase_branch",
+    "change_leader_schema",
+    "claim_index_removal_ready"
+  ]
+}
