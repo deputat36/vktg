@@ -7,6 +7,7 @@ on:
       - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
       - 'config/nav-v2-intake-contract-v1.json'
       - 'scripts/assemble-nav-v2-preview-bundle-v1.mjs'
+      - 'scripts/run-nav-v2-preview-bundle-segment-v1.sh'
       - 'scripts/check_nav_v2_preview_bundle_assembler_v1.py'
       - 'scripts/check-nav-v2-preview-bundle-artifacts-v1.mjs'
       - 'supabase/prototypes/nav_v2_*.sql'
@@ -22,6 +23,7 @@ on:
     paths:
       - 'config/nav-v2-preview-bundle-assembler-v1.json'
       - 'scripts/assemble-nav-v2-preview-bundle-v1.mjs'
+      - 'scripts/run-nav-v2-preview-bundle-segment-v1.sh'
       - 'scripts/check_nav_v2_preview_bundle_assembler_v1.py'
       - 'scripts/check-nav-v2-preview-bundle-artifacts-v1.mjs'
       - 'tests/sql/nav_v2_preview_bundle_*.sql'
@@ -44,6 +46,8 @@ jobs:
         run: python3 scripts/check_nav_v2_preview_bundle_assembler_v1.py
       - name: Compile source checker
         run: python3 -m py_compile scripts/check_nav_v2_preview_bundle_assembler_v1.py
+      - name: Check segment runner syntax
+        run: bash -n scripts/run-nav-v2-preview-bundle-segment-v1.sh
       - name: Assemble twice into temporary directories
         run: |
           node scripts/assemble-nav-v2-preview-bundle-v1.mjs --output-dir /tmp/nav-v2-bundle-a
@@ -69,28 +73,32 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  postgres-17-quality-segment:
+  postgres-17-segment-lifecycle:
     needs: deterministic-assembly
+    strategy:
+      fail-fast: false
+      matrix:
+        segment: [quality, bounded_core, bounded_dto, intake]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: navigator_bundle_quality
+          POSTGRES_DB: navigator_bundle
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d navigator_bundle_quality"
+          --health-cmd "pg_isready -U postgres -d navigator_bundle"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
       PGHOST: 127.0.0.1
       PGPORT: 5432
-      PGDATABASE: navigator_bundle_quality
+      PGDATABASE: navigator_bundle
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
@@ -109,149 +117,13 @@ jobs:
             sleep 2
           done
           exit 1
-      - name: Assemble quality rehearsal artifact
-        run: node scripts/assemble-nav-v2-preview-bundle-v1.mjs --output-dir /tmp/nav-v2-bundle
-      - name: Create exact legacy quality surface
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_harness_setup.sql
-      - name: Apply assembled quality forward artifact
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/01-quality-forward.sql
-      - name: Run quality lifecycle, duplicate and no-backfill assertions
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_assertions.sql
-      - name: Apply assembled quality rehearsal rollback
+      - name: Run isolated assembled segment lifecycle
+        run: bash scripts/run-nav-v2-preview-bundle-segment-v1.sh '${{ matrix.segment }}'
+      - name: Upload segment diagnostic log
         if: always()
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/01-quality-rehearsal-rollback.sql
-
-  postgres-17-bounded-segment:
-    needs: deterministic-assembly
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: navigator_bundle_bounded
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d navigator_bundle_bounded"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      PGHOST: 127.0.0.1
-      PGPORT: 5432
-      PGDATABASE: navigator_bundle_bounded
-      PGUSER: postgres
-      PGPASSWORD: postgres
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 22
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-      - name: Wait for PostgreSQL 17
-        run: |
-          for attempt in $(seq 1 30); do
-            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
-            sleep 2
-          done
-          exit 1
-      - name: Assemble bounded rehearsal artifact
-        run: node scripts/assemble-nav-v2-preview-bundle-v1.mjs --output-dir /tmp/nav-v2-bundle
-      - name: Create bounded-task and lite DTO synthetic environment
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_deal_card_lite_bounded_setup.sql
-      - name: Apply assembled bounded forward artifact
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/02-bounded-forward.sql
-      - name: Run canonical bounded lifecycle assertions
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_mutation_assertions.sql
-      - name: Run actor-aware identity and replay assertions
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_bounded_task_actor_aware_assertions.sql
-      - name: Run bounded DTO role and privacy assertions
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql
-      - name: Apply assembled bounded rehearsal rollback
-        if: always()
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/02-bounded-rehearsal-rollback.sql
-      - name: Assert full bounded overlay removal and legacy survival
-        if: always()
-        run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_preview_bundle_bounded_post_rollback_assertions.sql
-
-  postgres-17-intake-segment:
-    needs: deterministic-assembly
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: navigator_bundle_intake
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d navigator_bundle_intake"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      PGHOST: 127.0.0.1
-      PGPORT: 5432
-      PGDATABASE: navigator_bundle_intake
-      PGUSER: postgres
-      PGPASSWORD: postgres
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-      - name: Wait for PostgreSQL 17
-        run: |
-          for attempt in $(seq 1 30); do
-            if pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; then exit 0; fi
-            sleep 2
-          done
-          exit 1
-      - name: Assemble intake rehearsal artifact
-        run: node scripts/assemble-nav-v2-preview-bundle-v1.mjs --output-dir /tmp/nav-v2-bundle
-      - name: Create base adapter and legacy integration harness
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_setup.sql
-      - name: Apply assembled full intake forward artifact
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/03-intake-forward.sql
-      - name: Preserve adapter and base integration regressions
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_assertions.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_assertions.sql
-      - name: Create governed harness and preserve base regression
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_assertions.sql
-      - name: Create wave1 harness and run wave1 assertions
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_rule_assertions.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_negative_assertions.sql
-      - name: Create wave2 harness and run wave2 assertions
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_rule_assertions.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_negative_assertions.sql
-      - name: Create final harness and run full 25-rule assertions
-        run: |
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_assertions.sql
-      - name: Apply assembled intake rehearsal rollback
-        if: always()
-        run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/03-intake-rehearsal-rollback.sql
+          name: nav-v2-preview-bundle-${{ matrix.segment }}-log
+          path: /tmp/nav-v2-preview-bundle-${{ matrix.segment }}.log
+          if-no-files-found: warn
+          retention-days: 14
