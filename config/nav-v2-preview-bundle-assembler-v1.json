@@ -117,6 +117,7 @@
         "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
         "tests/sql/nav_v2_governed_intake_save_rollback.sql",
         "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+        "tests/sql/nav_v2_preview_bundle_intake_mapper_cleanup.sql",
         "tests/sql/nav_v2_intake_adapter_harness_rollback.sql"
       ],
       "postgres_setup": [
@@ -131,6 +132,7 @@
         "tests/sql/nav_v2_intake_adapter_harness_assertions.sql",
         "tests/sql/nav_v2_intake_save_integration_harness_assertions.sql",
         "tests/sql/nav_v2_governed_intake_save_assertions.sql",
+        "tests/sql/nav_v2_intake_special_semantics_assertions.sql",
         "tests/sql/nav_v2_preview_bundle_intake_final_contract_assertions.sql",
         "tests/sql/nav_v2_preview_bundle_intake_final_single_rule_assertions.sql",
         "tests/sql/nav_v2_preview_bundle_intake_final_composite_assertions.sql"
