@@ -4,7 +4,7 @@
 
 ## FK parent mutation evidence
 
-Этот срез закрывает только repository-level synthetic gap для индекса:
+Этот repository-only срез уменьшает неопределённость вокруг индекса:
 
 `nav_deal_answers_v2_deal_idx (deal_id)`
 
@@ -25,131 +25,140 @@ Production remains unchanged.
 
 Aggregate catalog-only transaction без PII зафиксировала:
 
-- child table: `public.nav_deal_answers_v2`;
-- parent table: `public.nav_deals_v2`;
+- child: `public.nav_deal_answers_v2`;
+- parent: `public.nav_deals_v2`;
 - constraint: `nav_deal_answers_v2_deal_id_fkey`;
 - definition: `FOREIGN KEY (deal_id) REFERENCES nav_deals_v2(id) ON DELETE CASCADE`;
-- parent key update action: `NO ACTION`;
-- parent delete action: `CASCADE`.
+- parent update: `NO ACTION`;
+- parent delete: `CASCADE`;
+- `validated=true`;
+- `deferrable=false`;
+- `initially_deferred=false`.
 
 Live index overlap:
 
 1. `nav_deal_answers_v2_deal_idx (deal_id)`;
 2. unique `nav_deal_answers_v2_deal_id_question_key_key (deal_id, question_key)`.
 
-Для обоих индексов в captured snapshot:
+Captured snapshot:
 
-- `idx_scan=0`;
-- size `16384` bytes;
-- `deal_id` является leading prefix composite unique index.
+- оба индекса по `16384` bytes;
+- `idx_scan=0` для обоих;
+- row estimates: `23 deals / 7 answers`;
+- `pg_stat_database.stats_reset=null`.
 
-Aggregate row estimates на момент capture:
-
-- deals: `23`;
-- answers: `7`;
-- `pg_stat_database.stats_reset = null`.
-
-Небольшая текущая cardinality и неизвестное начало statistics window не позволяют делать вывод о production performance.
+Небольшая cardinality и неизвестное начало statistics window не позволяют делать production performance выводы.
 
 ## Synthetic PostgreSQL 17 mutation harness
 
-Файл:
+Canonical file:
 
 `tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql`
 
-Harness создаёт две независимые synthetic модели в schema `harness`:
+Один isolated transaction создаёт:
 
-### Mode A — both indexes
+- `5002` synthetic parent deals;
+- `5000` referenced deals;
+- `20` answers на referenced deal;
+- `100000` answer rows;
+- single `(deal_id)` index;
+- unique composite `(deal_id, question_key)` index.
 
-Child table имеет:
+Последовательно сравниваются режимы:
 
-- single-column index `(deal_id)`;
-- unique composite index `(deal_id, question_key)`.
+1. `single_and_composite_indexes`;
+2. `composite_unique_index_only` после удаления только synthetic single index.
 
-### Mode B — composite prefix only
+В каждом режиме выполняются три cases:
 
-Child table имеет только:
+1. referenced parent `DELETE` с `ON DELETE CASCADE`;
+2. unreferenced parent key `UPDATE`, который должен пройти;
+3. referenced parent key `UPDATE`, который должен быть отклонён FK с SQLSTATE `23503`.
 
-- unique composite index `(deal_id, question_key)`.
+Итого harness сохраняет шесть mutation evidence rows.
 
-В каждой модели:
+## Transaction-local index attribution
 
-- `5001` parent rows до mutation;
-- `100000` child rows;
-- `20` answers на каждую из `5000` рабочих сделок;
-- отдельный parent `6000` без child rows для UPDATE test.
+PostgreSQL 17 transaction-local scan count читается через catalog function:
 
-Harness выполняет реальные statements через:
+`pg_stat_get_xact_numscans(index_oid)`
 
-`EXPLAIN (ANALYZE, FORMAT JSON, TIMING FALSE, SUMMARY TRUE)`
+View `pg_stat_xact_user_indexes` не существует и не используется.
 
-Проверяются:
+Для каждой mutation сохраняются:
 
-1. parent `DELETE` для deal `4000` с фактическим `ON DELETE CASCADE`;
-2. parent key `UPDATE 6000 → 6001` с фактическим `ON UPDATE NO ACTION` child-reference check;
-3. наличие trigger evidence в EXPLAIN JSON;
-4. одинаковые mutation semantics в двух index modes;
-5. одинаковый hash unaffected deal `3000`;
-6. полный transaction rollback;
-7. отсутствие schema `harness` после rollback.
+- scan counts до и после;
+- delta single-column index;
+- delta composite unique index;
+- наличие single index;
+- parent/child counts;
+- affected child rows;
+- SQLSTATE для blocked mutation;
+- diagnostic elapsed time.
 
-## DELETE CASCADE result
+После synthetic removal single index harness требует `composite_scan_delta > 0` для successful parent delete и unreferenced update.
 
-В обоих index modes:
+## Referenced parent update rejection
 
-- parent `4000` удалён;
-- все `20` child rows deal `4000` удалены каскадно;
-- итоговая child cardinality уменьшилась с `100000` до `99980`;
-- actual trigger execution captured в JSON plan.
+Live FK использует `ON UPDATE NO ACTION`.
 
-Это доказывает корректность synthetic delete semantics без single-column index.
+Поэтому изменение ключа referenced parent должно завершаться:
 
-Это не доказывает production latency под реальной нагрузкой.
+`23503 foreign_key_violation`
 
-## UPDATE NO ACTION result
+Harness проверяет это в обоих режимах и подтверждает:
 
-В обоих index modes:
+- старый parent key остаётся;
+- новый parent key не создаётся;
+- child rows сохраняются;
+- constraint semantics не ослабляются без single index.
 
-- parent `6000` успешно изменён на `6001`;
-- child rows для `6000` и `6001` отсутствовали;
-- actual FK child-reference check captured в JSON plan;
-- mutation semantics совпали.
+## BUFFERS and WAL evidence
 
-Update test выбран на parent без child rows, потому что live FK использует `NO ACTION`: изменение ключа parent с существующими children должно блокироваться самой ссылочной целостностью и не подходит для успешного benchmark path.
+Successful parent DELETE и UPDATE выполняются через:
 
-## CI timing is not production performance
+`EXPLAIN (ANALYZE, BUFFERS, WAL, FORMAT JSON)`
 
-Workflow сохраняет `Execution Time` и trigger list из isolated GitHub Actions PostgreSQL 17.
+JSON plan сохраняется как CI evidence. Timing, buffers и WAL нельзя трактовать как production latency или production cost.
 
-Эти числа нельзя использовать как:
+Synthetic index sizes также сохраняются только как CI diagnostics, не как production storage estimate.
 
-- production latency estimate;
-- доказательство отсутствия regression;
-- основание для экономии ресурсов;
-- автоматическое разрешение на index removal.
+## Семантические результаты
 
-CI timing зависит от runner, cold cache, container I/O и synthetic distribution. Допустимо сравнивать только успешность и semantics внутри одного воспроизводимого harness.
+В обоих index modes подтверждаются:
 
-## Что закрыто
-
-Закрыт repository-only вопрос:
-
-`может ли composite unique (deal_id, question_key) поддержать synthetic FK parent mutation semantics без отдельного (deal_id) index?`
-
-Ответ:
-
-`да, в isolated PostgreSQL 17 harness для DELETE CASCADE и UPDATE NO ACTION semantics`.
+- ровно `20` child rows удаляются cascade;
+- unreferenced parent update проходит;
+- referenced parent update блокируется `23503`;
+- composite leading-prefix lookup остаётся структурно применимым;
+- после двух cascade deletes остаётся `99960` answers;
+- после двух deletes и двух successful updates остаётся `5000` deals;
+- synthetic FK остаётся validated, non-deferrable и initially-immediate;
+- полный transaction rollback проходит;
+- schema `harness` после rollback отсутствует.
 
 Decision:
 
-`synthetic_fk_parent_mutation_gap_closed_production_drop_not_ready`
+`synthetic_fk_parent_mutation_gap_hardened_production_drop_not_ready`
+
+## CI timing is not production performance
+
+CI runner, cold cache, container I/O и generated distribution отличаются от production.
+
+Запрещено использовать evidence как:
+
+- production latency estimate;
+- доказательство, что composite быстрее;
+- автоматическое разрешение на index removal;
+- замену authenticated regression;
+- замену production-scale benchmark.
 
 ## Production index drop remains blocked
 
-Перед любым production removal всё ещё обязательны:
+Перед любым production removal обязательны:
 
 1. известное начало production statistics window;
-2. representative authenticated workload window;
+2. representative authenticated workload;
 3. review production query consumers;
 4. production `EXPLAIN ANALYZE` на representative non-PII fixtures;
 5. production-scale FK parent UPDATE/DELETE benchmark;
@@ -170,17 +179,17 @@ Active stops:
 
 ## CI
 
-Existing workflow расширен:
+Canonical workflow:
 
 `.github/workflows/nav-v2-index-query-plan-harness-v1.yml`
 
-Добавлены:
+Проверяются:
 
-- JSON validation нового evidence contract;
-- Python source validator;
-- отдельный job `postgres-17-fk-parent-mutation`;
-- отдельный artifact с JSON EXPLAIN evidence;
-- запрет cloud actions;
-- проверка отсутствия generated migration.
+- JSON/source contract;
+- PostgreSQL 17 query-plan evidence;
+- hardened PostgreSQL 17 FK parent mutation evidence;
+- artifact upload;
+- отсутствие cloud actions;
+- отсутствие generated migration.
 
 Production remains unchanged.
