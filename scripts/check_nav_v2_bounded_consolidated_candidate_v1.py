@@ -12,6 +12,7 @@ RUNNER = ROOT / "scripts/run-nav-v2-bounded-consolidated-candidate-v1.sh"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-bounded-consolidated-candidate-v1.yml"
 DOC = ROOT / "docs/NAV_V2_BOUNDED_CONSOLIDATED_CANDIDATE_V1_2026-07-21.md"
 ACTOR_SQL = ROOT / "supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql"
+SCHEMA_SETUP = ROOT / "tests/sql/nav_v2_bounded_consolidated_candidate_setup.sql"
 MIGRATIONS = ROOT / "supabase/migrations"
 
 EXPECTED_FORWARD = [
@@ -29,7 +30,7 @@ EXPECTED_ROLLBACK = [
 ]
 EXPECTED_SETUP = [
     "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
-    "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql",
+    "tests/sql/nav_v2_bounded_consolidated_candidate_setup.sql",
 ]
 EXPECTED_ASSERTIONS = [
     "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
@@ -48,7 +49,7 @@ def require(condition: bool, message: str) -> None:
 
 
 def main() -> None:
-    for path in [CONFIG, ASSEMBLER, ARTIFACT_CHECKER, RUNNER, WORKFLOW, DOC, ACTOR_SQL]:
+    for path in [CONFIG, ASSEMBLER, ARTIFACT_CHECKER, RUNNER, WORKFLOW, DOC, ACTOR_SQL, SCHEMA_SETUP]:
         require(path.is_file(), f"missing source: {path.relative_to(ROOT)}")
 
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
@@ -58,6 +59,7 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
     actor_sql = " ".join(ACTOR_SQL.read_text(encoding="utf-8").lower().split())
+    schema_setup = SCHEMA_SETUP.read_text(encoding="utf-8").lower()
 
     require(config["schema_version"] == 1, "unexpected candidate version")
     require(config["status"] == "repository_only_consolidated_candidate_not_executable", "candidate escaped repository-only state")
@@ -82,6 +84,23 @@ def main() -> None:
     require(config["post_rollback_assertions"] == EXPECTED_POST_ROLLBACK, "post-rollback assertion order drifted")
     require(len(set(config["forward_sources"])) == len(config["forward_sources"]), "duplicate forward path")
     require(len(set(config["rollback_sources"])) == len(config["rollback_sources"]), "duplicate rollback path")
+
+    fixture_policy = config.get("fixture_policy") or {}
+    require(fixture_policy.get("schema_and_fixture_data_separated") is True, "schema/fixture separation is not explicit")
+    require(fixture_policy.get("documents_inserted_before_mutation_assertions") == 0, "document fixture contaminates mutation assertions")
+    require(fixture_policy.get("risks_inserted_before_mutation_assertions") == 0, "risk fixture contaminates mutation assertions")
+    for forbidden_sql in [
+        "insert into public.nav_deal_documents_v2",
+        "insert into public.nav_deal_risks_v2",
+    ]:
+        require(forbidden_sql not in schema_setup, f"schema-only setup contains fixture data: {forbidden_sql}")
+    for required_marker in [
+        "alter table public.nav_deal_documents_v2",
+        "alter table public.nav_deal_risks_v2",
+        "create or replace function public.nav_v2_can_change_document_status",
+        "create or replace function public.nav_v2_can_change_task_status",
+    ]:
+        require(required_marker in schema_setup, f"schema-only setup marker missing: {required_marker}")
 
     for relative in (
         config["forward_sources"] + config["rollback_sources"] + config["postgres_setup"]
@@ -118,12 +137,13 @@ def main() -> None:
 
     for marker in [
         "ALWAYS ROLLBACK", "nav_v2_bounded_task_mutation_setup.sql",
-        "nav_v2_deal_card_lite_bounded_setup.sql",
+        "nav_v2_bounded_consolidated_candidate_setup.sql",
         "nav_v2_bounded_task_actor_aware_assertions.sql",
         "nav_v2_deal_card_lite_bounded_assertions.sql",
         "nav_v2_bounded_consolidated_candidate_post_rollback_assertions.sql",
     ]:
         require(marker in runner, f"runner marker missing: {marker}")
+    require("nav_v2_deal_card_lite_bounded_setup.sql" not in runner, "fixture-bearing DTO setup leaked into consolidated runner")
     require("set -uo pipefail" in runner, "runner fail-closed shell mode missing")
 
     for marker in [
@@ -140,7 +160,7 @@ def main() -> None:
 
     for marker in [
         "Consolidated order", "PostgreSQL 17 lifecycle", "Service-role boundary",
-        "Active stops", "Rollback", "Production remains unchanged",
+        "Fixture isolation", "Active stops", "Rollback", "Production remains unchanged",
     ]:
         require(marker in doc, f"documentation marker missing: {marker}")
 
