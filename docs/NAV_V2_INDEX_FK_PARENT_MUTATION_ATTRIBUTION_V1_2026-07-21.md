@@ -8,7 +8,7 @@
 
 `nav_deal_answers_v2_deal_idx (deal_id)`
 
-Он не повторяет полный benchmark и не меняет его решение. Цель — показать, какой child index получает transaction-local scans во время реальных FK mutations, зафиксировать synthetic index sizes и отдельно проверить запрещённое изменение referenced parent key.
+Он не повторяет полный benchmark и не меняет его решение. Цель — показать, какой child index получает isolated-backend scan deltas во время реальных FK mutations, зафиксировать synthetic index sizes и отдельно проверить запрещённое изменение referenced parent key.
 
 ## Canonical evidence extended, not duplicated
 
@@ -29,13 +29,20 @@
 
 Новый companion harness добавляет только отсутствующее evidence и не создаёт параллельный production decision package.
 
-## Transaction-local index scans
+## Isolated-backend index scan deltas
 
-Harness использует:
+PostgreSQL не предоставляет view `pg_stat_xact_user_indexes`. Harness использует корректный cumulative view:
 
-`pg_stat_xact_user_indexes`
+`pg_stat_user_indexes`
 
-Это позволяет сравнить index scan counters внутри текущей synthetic transaction без зависимости от глобальной статистики runner.
+Чтобы получить воспроизводимые deltas внутри одного изолированного backend:
+
+- перед чтением сбрасывается cached statistics snapshot через `pg_stat_clear_snapshot()`;
+- после mutation запрашивается flush локальной статистики через `pg_stat_force_next_flush()`;
+- snapshot снова очищается;
+- сохраняются значения до и после.
+
+Это isolated CI attribution, а не production observation window и не transaction-local system view.
 
 Для каждого successful mutation сохраняются:
 
@@ -96,7 +103,7 @@ Production FK contract использует:
 - unreferenced parent update проходит;
 - referenced parent update блокируется;
 - single-column index отсутствует;
-- composite transaction-local scan delta положителен для successful FK checks.
+- composite isolated-backend scan delta положителен для successful FK checks.
 
 ## Decision remains review-only
 
