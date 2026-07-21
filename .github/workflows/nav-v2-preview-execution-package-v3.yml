@@ -1,0 +1,115 @@
+name: Navigator v2 preview execution package v3
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v3.json'
+      - 'config/nav-v2-preview-execution-runbook-v1.json'
+      - 'config/nav-v2-preview-technical-account-lifecycle-v1.json'
+      - 'config/nav-v2-preview-candidate-package-v2.json'
+      - 'config/nav-v2-combined-preview-lifecycle-v1.json'
+      - 'config/nav-v2-combined-preview-intake-rollback-v1.json'
+      - 'config/nav-v2-preview-minimal-grants-candidate-v1.json'
+      - 'config/nav-v2-auth-e2e-readiness.json'
+      - 'config/nav-v2-preview-readonly-attestation-v1.json'
+      - 'scripts/check_nav_v2_preview_execution_package_v3.py'
+      - 'scripts/check_nav_v2_preview_candidate_package_v2.py'
+      - 'scripts/check_nav_v2_combined_preview_lifecycle_v1.py'
+      - 'docs/NAV_V2_PREVIEW_EXECUTION_PACKAGE_V3_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-execution-package-v3.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-preview-candidate-package-v3.json'
+      - 'config/nav-v2-preview-execution-runbook-v1.json'
+      - 'config/nav-v2-preview-technical-account-lifecycle-v1.json'
+      - 'scripts/check_nav_v2_preview_execution_package_v3.py'
+      - 'docs/NAV_V2_PREVIEW_EXECUTION_PACKAGE_V3_2026-07-21.md'
+      - '.github/workflows/nav-v2-preview-execution-package-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate preview execution package v3
+        run: python3 scripts/check_nav_v2_preview_execution_package_v3.py
+
+      - name: Compile package v3 checker
+        run: python3 -m py_compile scripts/check_nav_v2_preview_execution_package_v3.py
+
+      - name: Revalidate package v2 and combined lifecycle sources
+        run: |
+          python3 scripts/check_nav_v2_preview_candidate_package_v2.py
+          python3 scripts/check_nav_v2_combined_preview_lifecycle_v1.py
+
+      - name: Produce deterministic review report
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          paths = [
+              'config/nav-v2-preview-candidate-package-v3.json',
+              'config/nav-v2-preview-execution-runbook-v1.json',
+              'config/nav-v2-preview-technical-account-lifecycle-v1.json',
+              'config/nav-v2-combined-preview-lifecycle-v1.json',
+              'config/nav-v2-combined-preview-intake-rollback-v1.json',
+              'config/nav-v2-preview-minimal-grants-candidate-v1.json',
+              'config/nav-v2-preview-readonly-attestation-v1.json',
+          ]
+          files = []
+          for value in paths:
+              data = Path(value).read_bytes()
+              files.append({
+                  'path': value,
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              })
+          report = {
+              'schema_version': 3,
+              'status': 'repository_only_preview_execution_package_v3_review_report',
+              'files': files,
+              'combined_apply_proven': True,
+              'combined_rollback_proven': True,
+              'execution_authorized': False,
+              'preview_branch_created': False,
+              'cost_confirmation_performed': False,
+              'technical_accounts_created': False,
+              'production_applied': False,
+              'deployment_bundle_ready': False,
+          }
+          Path('/tmp/nav-v2-preview-execution-package-v3-report.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          cp /tmp/nav-v2-preview-execution-package-v3-report.json /tmp/nav-v2-preview-execution-package-v3-report-copy.json
+          diff -u /tmp/nav-v2-preview-execution-package-v3-report.json /tmp/nav-v2-preview-execution-package-v3-report-copy.json
+
+      - name: Prove no migrations or cloud execution
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f -iname '*preview*execution*package*v3*' | grep -q .; then
+            echo 'FAIL: package v3 leaked into supabase/migrations'
+            exit 1
+          fi
+          ! grep -Eiq 'supabase db push|supabase functions deploy|confirm_cost|apply_migration|deploy_edge_function' .github/workflows/nav-v2-preview-execution-package-v3.yml
+
+      - name: Upload package v3 review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-preview-execution-package-v3
+          path: |
+            /tmp/nav-v2-preview-execution-package-v3-report.json
+            config/nav-v2-preview-candidate-package-v3.json
+            config/nav-v2-preview-execution-runbook-v1.json
+            config/nav-v2-preview-technical-account-lifecycle-v1.json
+          if-no-files-found: error
+          retention-days: 30
