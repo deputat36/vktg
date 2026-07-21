@@ -1,0 +1,93 @@
+name: Navigator v2 Performance Advisor scope v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-performance-advisor-attestation-v1.json'
+      - 'tests/sql/nav_v2_performance_readonly_preflight_v1.sql'
+      - 'scripts/check_nav_v2_performance_advisor_attestation_v1.py'
+      - 'docs/NAV_V2_PERFORMANCE_ADVISOR_SCOPE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-performance-advisor-scope-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-performance-advisor-attestation-v1.json'
+      - 'tests/sql/nav_v2_performance_readonly_preflight_v1.sql'
+      - 'scripts/check_nav_v2_performance_advisor_attestation_v1.py'
+      - 'docs/NAV_V2_PERFORMANCE_ADVISOR_SCOPE_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-performance-advisor-scope-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  performance-advisor-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate performance Advisor attestation JSON
+        run: python3 -m json.tool config/nav-v2-performance-advisor-attestation-v1.json > /dev/null
+
+      - name: Compile performance Advisor validator
+        run: python3 -m py_compile scripts/check_nav_v2_performance_advisor_attestation_v1.py
+
+      - name: Check performance Advisor scope and fail-closed policy
+        run: python3 scripts/check_nav_v2_performance_advisor_attestation_v1.py
+
+      - name: Produce deterministic performance review evidence
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          paths = [
+              'config/nav-v2-performance-advisor-attestation-v1.json',
+              'tests/sql/nav_v2_performance_readonly_preflight_v1.sql',
+              'scripts/check_nav_v2_performance_advisor_attestation_v1.py',
+              'docs/NAV_V2_PERFORMANCE_ADVISOR_SCOPE_V1_2026-07-21.md',
+          ]
+          files = []
+          for value in paths:
+              data = Path(value).read_bytes()
+              files.append({
+                  'path': value,
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              })
+          attestation = json.loads(Path(paths[0]).read_text(encoding='utf-8'))
+          report = {
+              'schema_version': 1,
+              'status': 'repository_only_navigator_performance_advisor_review_evidence',
+              'files': files,
+              'captured_at': attestation['captured_at'],
+              'table_count': attestation['scope']['table_count'],
+              'index_count': attestation['summary']['index_count'],
+              'foreign_key_count': attestation['summary']['foreign_key_count'],
+              'foreign_keys_without_covering_index': attestation['summary']['foreign_keys_without_covering_index'],
+              'policy_count': attestation['summary']['policy_count'],
+              'select_wrapped_auth_count': attestation['summary']['policies_with_select_wrapped_auth'],
+              'direct_auth_call_count': attestation['summary']['policies_with_direct_auth_call'],
+              'zero_scan_count': attestation['summary']['zero_scan_nonconstraint_indexes'],
+              'zero_scan_fk_support_count': attestation['summary']['zero_scan_fk_support_indexes'],
+              'zero_scan_non_fk_count': attestation['summary']['zero_scan_non_fk_indexes'],
+              'index_removal_authorized': False,
+              'rls_change_authorized': False,
+              'production_ddl_authorized': False,
+          }
+          output = Path('/tmp/nav-v2-performance-advisor-scope-v1.json')
+          output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          cp /tmp/nav-v2-performance-advisor-scope-v1.json /tmp/nav-v2-performance-advisor-scope-v1-copy.json
+          diff -u /tmp/nav-v2-performance-advisor-scope-v1.json /tmp/nav-v2-performance-advisor-scope-v1-copy.json
+
+      - name: Upload performance Advisor evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-performance-advisor-scope-v1
+          path: /tmp/nav-v2-performance-advisor-scope-v1.json
+          if-no-files-found: error
+          retention-days: 30
