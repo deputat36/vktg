@@ -4,7 +4,7 @@
 
 - Дата: 21 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `64e2a7a8d471525410e5adf1c73214aa05e160fa` — squash merge PR #442.
+- `main`: `1076b70a23c89d0058beee29847f092cdc5dabb9` — squash merge PR #445.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project status: `ACTIVE_HEALTHY`.
@@ -66,10 +66,19 @@ Read-only snapshot от 21 июля 2026 года:
 - 0 задач `in_progress`;
 - 0 задач `done`.
 
+Fresh aggregate-only FK capture после PR #443:
+
+- `nav_deal_answers_v2.deal_id → nav_deals_v2.id`;
+- `ON DELETE CASCADE`;
+- `ON UPDATE NO ACTION`;
+- row estimates: `23 deals / 7 answers`;
+- `pg_stat_database.stats_reset = null`;
+- PII не возвращалась;
+- DDL/DML не выполнялись.
+
 В production отсутствуют:
 
-- bounded task columns;
-- bounded mutation event table;
+- bounded task columns и mutation event table;
 - actor-aware bounded task RPC;
 - governed bounded lifecycle RPC;
 - final 25-rule mapper;
@@ -102,16 +111,7 @@ Production task actions используют:
 
 ### PR #394–#419 — intake, trust boundary и catalog
 
-Подготовлены:
-
-- трёхэтапный intake;
-- versioned facts, evidence, rules, documents и decisions;
-- legal passport и side-aware work plan;
-- server recomputation и privacy allowlist;
-- verified actor и trusted owner context;
-- private request ledger, replay protection и atomic rollback;
-- production-like mapping;
-- legal semantics wave 1, wave 2 и special.
+Подготовлены трёхэтапный intake, versioned facts/evidence/rules/documents/decisions, legal passport, side-aware work plan, server recomputation, privacy allowlist, verified actor context, private ledger, replay protection, atomic rollback и production-like mapping.
 
 Effective repository coverage: `25 supported / 0 unsupported`.
 
@@ -126,8 +126,6 @@ Effective repository coverage: `25 supported / 0 unsupported`.
 - Production cleanup не выполнялся.
 
 ### PR #421–#423 — deployment decision, cost и source manifest
-
-Зафиксированы owner deployment options, отдельный authenticated E2E, отдельное production decision и ordered source inventory.
 
 Исторический branch cost snapshot:
 
@@ -147,79 +145,21 @@ Issue #282 остаётся binding cost gate.
 
 ### PR #425–#430 — deterministic artifacts, Edge candidate и bounded consolidation
 
-Доказаны:
+Доказаны exact source order/SHA-256, PostgreSQL 17 apply/assert/rollback, отсутствие generated SQL в migrations, consolidated bounded forward/rollback, actor identity, DTO permissions, отсутствие documents/risks side effects и `ALWAYS ROLLBACK`.
 
-- deterministic temporary assembly;
-- exact source order и SHA-256;
-- независимые PostgreSQL 17 apply/assert/rollback;
-- отсутствие generated SQL в `supabase/migrations`;
-- consolidated bounded forward/rollback;
-- actor identity;
-- DTO permissions;
-- отсутствие побочных documents/risks;
-- `ALWAYS ROLLBACK`.
+Edge actor identity candidate находится за `BOUNDED_TASK_EDGE_IDENTITY_ENABLED=false` и не развёрнут.
 
-Edge actor identity candidate находится за:
+### PR #432–#434 — preview packages и combined lifecycle
 
-`BOUNDED_TASK_EDGE_IDENTITY_ENABLED=false`
+Package v2 добавил aggregate-only production preflight и deterministic package index.
 
-Candidate Edge не развёрнут.
-
-### PR #432 — preview package v2 и read-only attestation
-
-Добавлены:
-
-- aggregate-only production preflight;
-- captured production snapshot;
-- deterministic temporary package index;
-- exact links на quality, bounded, intake и Edge candidates.
-
-Package v2 остаётся fail-closed и не разрешает branch, apply или deploy.
-
-### PR #433 — combined quality → bounded → intake lifecycle
-
-Merge: `00125d63601b2064164bf01828d7244acf6ca773`.
-
-В одной PostgreSQL 17 базе доказан lifecycle:
+PR #433 доказал в одной PostgreSQL 17 базе:
 
 `privacy quality → consolidated bounded → governed intake 25-rule mapper → reverse rollback`
 
-Устранены:
+PR #434 связал package v2, combined lifecycle, exact rollback, minimal grants, execution runbook, synthetic technical-account lifecycle и Auth E2E readiness.
 
-- независимые harness schema collisions;
-- intake marker-table mismatch;
-- unsafe standalone intake rollback;
-- false-positive parser для `CREATE INDEX IF NOT EXISTS`.
-
-Подтверждены:
-
-- полный 25-rule chain;
-- actor-aware bounded lifecycle;
-- отсутствие cross-component side effects;
-- exact quality restoration;
-- сохранность legacy task.
-
-### PR #434 — preview execution package v3
-
-Merge: `fb0a5ad9161efc35732049c3a38a96ebc6f0de12`.
-
-Package v3 связывает:
-
-- package v2 и live attestation;
-- combined lifecycle proof;
-- exact combined-safe rollback inventory;
-- minimal-grants candidate;
-- preview execution runbook;
-- synthetic technical-account lifecycle;
-- authenticated E2E readiness.
-
-Закрыты как repository evidence:
-
-- bounded candidate consolidation;
-- cross-component sequential apply proof;
-- exact preview rollback inventory;
-- preview execution runbook;
-- technical account lifecycle plan.
+Все execution и production-readiness flags остаются `false`.
 
 Будущий gated execution order:
 
@@ -231,109 +171,112 @@ Package v3 связывает:
 5. authenticated role/mutation E2E;
 6. cleanup и branch deletion не позднее шести часов.
 
-Все execution и production-readiness flags остаются `false`.
-
 ### PR #436 — Security Advisor whitelist и drift attestation
-
-Merge: `abf83a36111cd8909ae60b2c250bed2898df3610`.
 
 Fresh read-only evidence:
 
 - 50 curated external RPC;
 - 48 expected callable `SECURITY DEFINER` warnings;
-- observed `48/48`;
-- missing `0`;
-- unexpected `0`;
+- observed `48/48`, missing `0`, unexpected `0`;
 - две допустимые `SECURITY INVOKER` exceptions;
 - Navigator migration boundary не изменилась;
 - latest overall migration относится к `leader_*`;
 - Edge v4/JWT/hash не изменились;
 - preview branch, candidate DB objects и technical identities отсутствуют.
 
-Добавлен воспроизводимый aggregate-only preflight внутри read-only transaction и deterministic Advisor drift CI.
-
-Issue #161 остаётся открытой из-за leaked-password/Auth E2E prerequisites, а не из-за whitelist drift.
+Issue #161 остаётся открытой из-за leaked-password/Auth E2E prerequisites, а не whitelist drift.
 
 ### PR #438 — Performance Advisor scope и no-auto-DDL contract
 
-Merge: `be9f9efeac53c9c57bdf7d8ae0666680a683fbdd`.
+Navigator v2 scope:
 
-Fresh aggregate-only evidence:
-
-- scope tables: `11`;
+- tables: `11`;
 - indexes: `53`;
 - foreign keys: `29/29` имеют covering index;
 - RLS policies: `32`;
 - SELECT-wrapped Auth policies: `32/32`;
 - direct per-row Auth calls: `0`;
 - zero-scan non-constraint indexes: `13`;
-- 12 из 13 покрывают FK или его leading columns;
-- единственный non-FK zero-scan index: `nav_user_profiles_role_idx`;
-- общий размер zero-scan indexes: `212992` bytes;
 - representative workload window не доказан.
 
 Fail-closed policy:
 
 `idx_scan=0` не является drop approval.
 
-Любое index removal требует observation window, authenticated workload, `EXPLAIN ANALYZE`, FK parent update/delete benchmark, regression tests, exact rollback и отдельное owner production DDL approval.
-
 ### PR #440 — synthetic index query-plan evidence
 
-Merge: `3db0b07988805e7c80ae0fecd537ab7a4a02ecc9`.
-
-Live read-only consumer inventory:
-
-- 24 Navigator RPC содержат profile role-dependent logic;
-- 2 RPC напрямую упоминают `nav_deal_answers_v2`;
-- PII не возвращалась;
-- DDL/DML не выполнялись.
-
-PostgreSQL 17 synthetic harness:
-
-- `120000` profiles;
+- `120000` synthetic profiles;
 - `5000` deals;
 - `100000` answers;
 - natural и structural JSON `EXPLAIN`;
 - synthetic-only index removal;
 - result hash equivalence;
-- full rollback;
-- post-rollback schema absence.
+- full rollback и schema absence.
 
 Решения:
 
 1. `nav_user_profiles_role_idx` — `retain`.
 2. `nav_deal_answers_v2_deal_idx` — `review_possible_redundancy_only`.
 
-Composite unique `(deal_id, question_key)` структурно обслуживает `deal_id` leading-prefix query и synthetic FK child lookup. Synthetic evidence не является production benchmark и не разрешает index drop.
+Composite unique `(deal_id, question_key)` структурно обслуживает `deal_id` leading-prefix query и synthetic FK child lookup. Это не production benchmark.
 
 ### PR #442 — browser Auth session recovery
 
 Merge: `64e2a7a8d471525410e5adf1c73214aa05e160fa`.
 
-Read-only Supabase Auth logs за 21 июля 2026 года показали несколько `refresh_token_not_found` с GitHub Pages origin. Browser ранее оставлял недействительную `nav_session_v2` в `localStorage`, поэтому последующие страницы повторяли тот же refresh.
-
 Исправлено:
 
-- Auth error сохраняет структурированные `status`, `code` и payload;
-- invalid, not-found и already-used refresh token классифицируются отдельно;
+- invalid/not-found/already-used refresh token классифицируется отдельно;
 - недействительная session и profile cache очищаются однократно;
-- последний email сохраняется для нового входа;
-- пользователь получает понятное сообщение о завершении сессии;
+- последний email сохраняется;
+- пользователь получает понятное сообщение;
 - следующий RPC без нового входа останавливается до сети;
-- действующий refresh token по-прежнему обновляет session и повторяет RPC ровно один раз.
+- действующий refresh token обновляет session и повторяет RPC ровно один раз.
+
+CI: Auth recovery, static, JavaScript, desktop/mobile Playwright и read-layer browser regression — success.
+
+### PR #445 — synthetic FK parent mutation evidence
+
+Merge: `1076b70a23c89d0058beee29847f092cdc5dabb9`.
+
+Live read-only FK contract:
+
+- child: `public.nav_deal_answers_v2`;
+- parent: `public.nav_deals_v2`;
+- `ON DELETE CASCADE`;
+- `ON UPDATE NO ACTION`;
+- single `(deal_id)` и unique composite `(deal_id, question_key)` по `16384` bytes;
+- row estimates `23 / 7`;
+- `stats_reset=null`.
+
+PostgreSQL 17 harness создаёт два независимых режима по `100000` synthetic answers:
+
+1. оба индекса;
+2. только composite-prefix.
+
+Actual `EXPLAIN ANALYZE` подтвердил в обоих режимах:
+
+- parent `DELETE CASCADE` удаляет parent и 20 children;
+- parent key `UPDATE` выполняет `NO ACTION` child-reference check;
+- FK trigger evidence присутствует;
+- mutation post-state semantics совпадают;
+- unaffected answer hash совпадает;
+- full rollback и schema absence проходят.
+
+Decision:
+
+`synthetic_fk_parent_mutation_gap_closed_production_drop_not_ready`
 
 CI evidence:
 
-- dedicated auth recovery run `29840446957` — success;
-- Navigator static checks run `29840446976` — 49/49 success;
-- JavaScript syntax run `29840446989` — success;
-- public desktop/mobile Playwright run `29840447071` — success;
-- read-layer semantic/browser run `29840447082` — success.
+- workflow run `29859873682` — success;
+- FK artifact `8506837684`;
+- digest `sha256:68a05799d046efc973befbd6c8a4cdffa8f67d575cfcc95fe03a3d99d39a2f7a`;
+- static `29859873720` — success;
+- preview package `29859873663` — success;
+- combined lifecycle `29859873600` — success.
 
-Authenticated smoke корректно пропущен, потому что preview environment и technical secrets не создавались.
-
-Supabase Auth settings, users, passwords, database, migrations, RLS, grants, Edge и `leader_*` не менялись.
+Это repository-only evidence. Production index не удалялся.
 
 ## Обязательные gates
 
@@ -353,6 +296,7 @@ Supabase Auth settings, users, passwords, database, migrations, RLS, grants, Edg
 - Security Advisor scoped contract;
 - Performance Advisor scoped contract;
 - synthetic query-plan evidence;
+- synthetic FK parent mutation semantics evidence;
 - browser invalid-refresh recovery и unit/browser CI.
 
 Это repository evidence, а не разрешение на cloud execution или production DDL.
@@ -391,15 +335,16 @@ PR #442 устранил browser refresh-loop, но не заменяет пол
 
 Production deployment, index removal, RLS rewrite и cleanup запрещены без отдельных evidence packages и owner approvals.
 
-Для `nav_deal_answers_v2_deal_idx` отсутствуют:
+Для `nav_deal_answers_v2_deal_idx` synthetic structural и FK mutation semantics evidence теперь закрыты, но отсутствуют:
 
-- production statistics observation window;
-- authenticated workload;
-- production `EXPLAIN ANALYZE`;
-- FK parent update/delete benchmark;
+- известное начало production statistics observation window;
+- representative authenticated workload;
+- production `EXPLAIN ANALYZE` на representative non-PII fixtures;
+- production-scale FK parent update/delete benchmark;
 - write amplification/storage benefit calculation;
-- exact migration и rollback;
-- owner DDL approval.
+- authenticated regression suite;
+- exact forward и rollback migration;
+- отдельное owner DDL approval.
 
 Не изменять production `leader_*`. Navigator использует только `nav_*`, `nav_v2_*` и общий Auth.
 
@@ -417,17 +362,23 @@ Preview и database contracts:
 - `config/nav-v2-preview-minimal-grants-candidate-v1.json`
 - `config/nav-v2-bounded-consolidated-candidate-v1.json`
 
-Advisor и performance contracts:
+Advisor, performance и index evidence:
 
 - `config/nav-v2-advisor-live-attestation.json`
 - `config/nav-v2-advisor-scope.json`
 - `config/nav-v2-performance-advisor-attestation-v1.json`
 - `config/nav-v2-index-query-plan-candidate-v1.json`
+- `config/nav-v2-index-fk-parent-mutation-evidence-v1.json`
 - `config/nav-v2-rpc-surface.json`
 - `tests/sql/nav_v2_advisor_readonly_preflight_v1.sql`
 - `tests/sql/nav_v2_performance_readonly_preflight_v1.sql`
 - `tests/sql/nav_v2_index_query_plan_harness_v1.sql`
+- `tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql`
 - `tests/sql/nav_v2_preview_readonly_preflight_v1.sql`
+- `scripts/check_nav_v2_index_query_plan_candidate_v1.py`
+- `scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py`
+- `docs/NAV_V2_INDEX_QUERY_PLAN_CANDIDATE_V1_2026-07-21.md`
+- `docs/NAV_V2_INDEX_FK_PARENT_MUTATION_EVIDENCE_V1_2026-07-21.md`
 
 Runtime and Auth recovery:
 
@@ -445,7 +396,6 @@ Edge and lifecycle:
 - `scripts/check_nav_v2_preview_execution_package_v3.py`
 - `scripts/check_nav_v2_advisor_live_attestation.py`
 - `scripts/check_nav_v2_performance_advisor_attestation_v1.py`
-- `scripts/check_nav_v2_index_query_plan_candidate_v1.py`
 
 ## Следующий безопасный slice без нового approval
 
@@ -456,9 +406,9 @@ Edge and lifecycle:
 3. повторять aggregate-only production preflight без PII;
 4. фиксировать Navigator migration, Advisor, index/RLS или Edge drift;
 5. анализировать Auth/Edge/API logs без изменения settings и без раскрытия токенов;
-6. улучшать synthetic FK parent update/delete benchmark без production DDL;
+6. составлять exact non-PII query-to-index mapping;
 7. расширять browser recovery tests без real accounts;
-8. готовить exact non-PII query-to-index mapping;
+8. готовить production-scale benchmark contract только как fail-closed план, без production DDL;
 9. не reconciliate `leader_*` migrations;
 10. не выполнять cost confirmation заранее;
 11. не создавать branch, accounts, secrets или cloud resources.
