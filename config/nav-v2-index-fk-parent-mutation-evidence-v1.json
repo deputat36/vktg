@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "repository_only_synthetic_fk_parent_mutation_evidence_not_ddl_approval",
   "project_ref": "ofewxuqfjhamgerwzull",
   "captured_on": "2026-07-21",
-  "source_main_sha": "27a051d75f36e380715104339f5e9837dfde995e",
+  "source_main_sha": "08df8575242397f81b5d46a306afbd4eafaa1fe2",
   "production_applied": false,
   "production_ddl_authorized": false,
   "index_drop_authorized": false,
@@ -13,7 +13,8 @@
     "index_query_plan_candidate": "config/nav-v2-index-query-plan-candidate-v1.json",
     "synthetic_parent_mutation_harness": "tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql",
     "live_capture_mode": "aggregate_catalog_only_read_only_transaction",
-    "postgres_harness_major": 17
+    "postgres_harness_major": 17,
+    "transaction_local_scan_function": "pg_stat_get_xact_numscans(oid)"
   },
   "live_fk_contract": {
     "child_table": "public.nav_deal_answers_v2",
@@ -22,6 +23,9 @@
     "definition": "FOREIGN KEY (deal_id) REFERENCES nav_deals_v2(id) ON DELETE CASCADE",
     "update_action": "NO ACTION",
     "delete_action": "CASCADE",
+    "validated": true,
+    "deferrable": false,
+    "initially_deferred": false,
     "single_column_index": {
       "name": "nav_deal_answers_v2_deal_idx",
       "definition": "CREATE INDEX nav_deal_answers_v2_deal_idx ON public.nav_deal_answers_v2 USING btree (deal_id)",
@@ -48,30 +52,42 @@
     "production_schema_used": false,
     "production_data_copied": false,
     "synthetic_modes": [
-      "both_indexes",
-      "composite_prefix_only"
+      "single_and_composite_indexes",
+      "composite_unique_index_only"
     ],
-    "synthetic_deals_per_mode_before_mutation": 5001,
+    "synthetic_deals_before_mutation": 5002,
     "synthetic_answers_per_deal": 20,
-    "synthetic_answers_per_mode_before_mutation": 100000,
+    "synthetic_answers_before_mutation": 100000,
+    "parent_delete_cascade_cases": 2,
+    "unreferenced_parent_update_cases": 2,
+    "referenced_parent_update_rejection_cases": 2,
     "actual_parent_delete_explain_analyze": true,
     "actual_parent_update_explain_analyze": true,
+    "explain_buffers": true,
+    "explain_wal": true,
+    "transaction_local_index_scan_attribution": true,
+    "synthetic_index_size_capture": true,
     "delete_action_mirrored": "CASCADE",
     "update_action_mirrored": "NO ACTION",
-    "trigger_evidence_required": true,
+    "validated_state_mirrored": true,
+    "deferrable_state_mirrored": true,
     "mutation_semantics_equivalence_required": true,
-    "unaffected_result_equivalence_required": true,
+    "blocked_update_sqlstate_required": "23503",
     "rollback_required": true,
-    "post_rollback_schema_absence_required": true
+    "post_rollback_schema_absence_required": true,
+    "latency_superiority_asserted": false
   },
   "result": {
     "single_column_index_removed_in_production": false,
     "synthetic_parent_mutations_supported_with_both_indexes": true,
     "synthetic_parent_mutations_supported_with_composite_prefix_only": true,
     "delete_cascade_semantics_equal": true,
-    "update_no_action_semantics_equal": true,
-    "decision": "synthetic_fk_parent_mutation_gap_closed_production_drop_not_ready",
-    "reason": "The composite unique index structurally supports the child lookup and the isolated PostgreSQL 17 harness executes equivalent parent DELETE CASCADE and parent UPDATE NO ACTION semantics without the single-column index. Production cardinality, authenticated workload, statistics window and production-scale timing remain unproven."
+    "unreferenced_update_semantics_equal": true,
+    "referenced_update_rejected_in_both_modes": true,
+    "referenced_update_sqlstate": "23503",
+    "composite_prefix_transaction_local_scans_observed": true,
+    "decision": "synthetic_fk_parent_mutation_gap_hardened_production_drop_not_ready",
+    "reason": "The composite unique index structurally supports deal_id lookup, receives transaction-local scans after synthetic single-index removal, preserves DELETE CASCADE and successful unreferenced UPDATE semantics, and continues to reject referenced parent key updates with SQLSTATE 23503. Production workload and production-scale performance remain unproven."
   },
   "remaining_before_any_production_index_removal": [
     "known production statistics observation start",

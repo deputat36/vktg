@@ -1,8 +1,6 @@
--- Navigator v2 synthetic foreign-key parent mutation harness v1.
--- Runs only in an isolated PostgreSQL 17 CI database with generated data.
--- It compares actual parent DELETE/UPDATE behavior with both answer indexes
--- and with only the composite (deal_id, question_key) prefix index.
--- It is repository evidence, not production performance or DDL approval.
+-- Navigator v2 canonical synthetic foreign-key parent mutation harness v1.
+-- Isolated PostgreSQL 17 only. No production schema, data, credentials or DDL.
+-- Timing is diagnostic CI evidence and is never asserted as production performance.
 
 \set ON_ERROR_STOP on
 
@@ -21,18 +19,6 @@ begin
 end;
 $function$;
 
-create or replace function harness.explain_json(p_sql text)
-returns jsonb
-language plpgsql
-as $function$
-declare
-  v_plan jsonb;
-begin
-  execute 'explain (format json, costs true, verbose false) ' || p_sql into v_plan;
-  return v_plan;
-end;
-$function$;
-
 create or replace function harness.explain_analyze_json(p_sql text)
 returns jsonb
 language plpgsql
@@ -40,392 +26,430 @@ as $function$
 declare
   v_plan jsonb;
 begin
-  execute 'explain (analyze, format json, costs true, timing false, summary true) ' || p_sql into v_plan;
+  execute 'explain (analyze true, buffers true, wal true, format json) ' || p_sql into v_plan;
   return v_plan;
 end;
 $function$;
 
--- PostgreSQL may initialize scalar subqueries before evaluating another SELECT
--- expression. This helper enforces the evidence order explicitly:
--- execute mutation first, then inspect the post-mutation state.
-create or replace function harness.capture_mutation(
-  p_mutation_sql text,
-  p_old_parent_sql text,
-  p_new_parent_sql text,
-  p_child_old_sql text,
-  p_child_new_sql text
+-- PostgreSQL 17 exposes transaction-local index scans through the catalog
+-- function pg_stat_get_xact_numscans(oid); there is no pg_stat_xact_user_indexes view.
+create or replace function harness.xact_index_scans(p_index_name text)
+returns bigint
+language sql
+volatile
+as $function$
+  select coalesce(
+    pg_catalog.pg_stat_get_xact_numscans(
+      to_regclass(format('harness.%I', p_index_name))
+    ),
+    0
+  )::bigint;
+$function$;
+
+create table harness.nav_deals_v2 (
+  id bigint primary key,
+  marker text not null default 'synthetic'
+);
+
+create table harness.nav_deal_answers_v2 (
+  id bigserial primary key,
+  deal_id bigint not null,
+  question_key text not null,
+  answer_value text,
+  constraint nav_deal_answers_v2_deal_id_fkey
+    foreign key (deal_id)
+    references harness.nav_deals_v2(id)
+    on update no action
+    on delete cascade,
+  constraint nav_deal_answers_v2_deal_id_question_key_key
+    unique (deal_id, question_key)
+);
+
+create index nav_deal_answers_v2_deal_idx
+  on harness.nav_deal_answers_v2 (deal_id);
+
+insert into harness.nav_deals_v2 (id)
+select g from generate_series(1, 5002) as series(g);
+
+insert into harness.nav_deal_answers_v2 (deal_id, question_key, answer_value)
+select
+  deal_id,
+  format('question_%s', question_no),
+  format('synthetic_%s_%s', deal_id, question_no)
+from generate_series(1, 5000) as deals(deal_id)
+cross join generate_series(1, 20) as questions(question_no);
+
+analyze harness.nav_deals_v2;
+analyze harness.nav_deal_answers_v2;
+
+create table harness.index_size_evidence (
+  evidence_id text primary key,
+  relation_bytes bigint not null,
+  note text not null
+);
+
+insert into harness.index_size_evidence (evidence_id, relation_bytes, note)
+values
+  (
+    'single_deal_id_index_before_drop',
+    pg_relation_size('harness.nav_deal_answers_v2_deal_idx'::regclass),
+    'Synthetic size only; not a production storage estimate.'
+  ),
+  (
+    'composite_unique_index',
+    pg_relation_size('harness.nav_deal_answers_v2_deal_id_question_key_key'::regclass),
+    'Composite unique index retained in both benchmark modes.'
+  );
+
+create table harness.mutation_evidence (
+  evidence_order integer primary key,
+  case_id text not null unique,
+  comparison_mode text not null,
+  operation text not null,
+  plan jsonb,
+  success boolean not null,
+  foreign_key_blocked boolean not null,
+  single_index_present boolean not null,
+  single_scan_before bigint not null,
+  single_scan_after bigint not null,
+  single_scan_delta bigint not null,
+  composite_scan_before bigint not null,
+  composite_scan_after bigint not null,
+  composite_scan_delta bigint not null,
+  deal_count_before bigint not null,
+  deal_count_after bigint not null,
+  answer_count_before bigint not null,
+  answer_count_after bigint not null,
+  affected_children bigint not null,
+  elapsed_ms numeric,
+  sqlstate text,
+  note text not null
+);
+
+create or replace function harness.run_explained_mutation(
+  p_order integer,
+  p_case_id text,
+  p_mode text,
+  p_operation text,
+  p_sql text,
+  p_note text
 )
-returns jsonb
+returns void
 language plpgsql
 as $function$
 declare
   v_plan jsonb;
-  v_old_parent boolean;
-  v_new_parent boolean;
-  v_child_old bigint;
-  v_child_new bigint;
+  v_single_before bigint;
+  v_single_after bigint;
+  v_composite_before bigint;
+  v_composite_after bigint;
+  v_deals_before bigint;
+  v_deals_after bigint;
+  v_answers_before bigint;
+  v_answers_after bigint;
 begin
-  v_plan := harness.explain_analyze_json(p_mutation_sql);
+  v_single_before := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_before := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  select count(*) into v_deals_before from harness.nav_deals_v2;
+  select count(*) into v_answers_before from harness.nav_deal_answers_v2;
 
-  execute p_old_parent_sql into v_old_parent;
-  if coalesce(p_new_parent_sql, '') <> '' then
-    execute p_new_parent_sql into v_new_parent;
-  end if;
-  execute p_child_old_sql into v_child_old;
-  if coalesce(p_child_new_sql, '') <> '' then
-    execute p_child_new_sql into v_child_new;
-  end if;
+  v_plan := harness.explain_analyze_json(p_sql);
 
-  return jsonb_build_object(
-    'plan', v_plan,
-    'execution_time_ms', coalesce((v_plan->0->>'Execution Time')::numeric, 0),
-    'trigger_count', jsonb_array_length(coalesce(v_plan->0->'Triggers', '[]'::jsonb)),
-    'old_parent_exists', coalesce(v_old_parent, false),
-    'new_parent_exists', v_new_parent,
-    'child_rows_old', coalesce(v_child_old, 0),
-    'child_rows_new', v_child_new
+  v_single_after := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_after := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  select count(*) into v_deals_after from harness.nav_deals_v2;
+  select count(*) into v_answers_after from harness.nav_deal_answers_v2;
+
+  insert into harness.mutation_evidence (
+    evidence_order, case_id, comparison_mode, operation, plan,
+    success, foreign_key_blocked, single_index_present,
+    single_scan_before, single_scan_after, single_scan_delta,
+    composite_scan_before, composite_scan_after, composite_scan_delta,
+    deal_count_before, deal_count_after, answer_count_before, answer_count_after,
+    affected_children, elapsed_ms, sqlstate, note
+  ) values (
+    p_order, p_case_id, p_mode, p_operation, v_plan,
+    true, false, to_regclass('harness.nav_deal_answers_v2_deal_idx') is not null,
+    v_single_before, v_single_after, greatest(v_single_after - v_single_before, 0),
+    v_composite_before, v_composite_after, greatest(v_composite_after - v_composite_before, 0),
+    v_deals_before, v_deals_after, v_answers_before, v_answers_after,
+    greatest(v_answers_before - v_answers_after, 0),
+    nullif(v_plan #>> '{0,Execution Time}', '')::numeric,
+    null,
+    p_note
   );
 end;
 $function$;
 
+create or replace function harness.run_blocked_parent_update(
+  p_order integer,
+  p_case_id text,
+  p_mode text,
+  p_old_id bigint,
+  p_new_id bigint,
+  p_note text
+)
+returns void
+language plpgsql
+as $function$
+declare
+  v_started timestamptz := clock_timestamp();
+  v_blocked boolean := false;
+  v_state text := null;
+  v_single_before bigint;
+  v_single_after bigint;
+  v_composite_before bigint;
+  v_composite_after bigint;
+  v_deals_before bigint;
+  v_deals_after bigint;
+  v_answers_before bigint;
+  v_answers_after bigint;
+begin
+  v_single_before := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_before := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  select count(*) into v_deals_before from harness.nav_deals_v2;
+  select count(*) into v_answers_before from harness.nav_deal_answers_v2;
+
+  begin
+    update harness.nav_deals_v2 set id = p_new_id where id = p_old_id;
+  exception
+    when foreign_key_violation then
+      v_blocked := true;
+      get stacked diagnostics v_state = returned_sqlstate;
+  end;
+
+  v_single_after := harness.xact_index_scans('nav_deal_answers_v2_deal_idx');
+  v_composite_after := harness.xact_index_scans('nav_deal_answers_v2_deal_id_question_key_key');
+  select count(*) into v_deals_after from harness.nav_deals_v2;
+  select count(*) into v_answers_after from harness.nav_deal_answers_v2;
+
+  insert into harness.mutation_evidence (
+    evidence_order, case_id, comparison_mode, operation, plan,
+    success, foreign_key_blocked, single_index_present,
+    single_scan_before, single_scan_after, single_scan_delta,
+    composite_scan_before, composite_scan_after, composite_scan_delta,
+    deal_count_before, deal_count_after, answer_count_before, answer_count_after,
+    affected_children, elapsed_ms, sqlstate, note
+  ) values (
+    p_order, p_case_id, p_mode, 'parent_update_referenced', null,
+    not v_blocked, v_blocked, to_regclass('harness.nav_deal_answers_v2_deal_idx') is not null,
+    v_single_before, v_single_after, greatest(v_single_after - v_single_before, 0),
+    v_composite_before, v_composite_after, greatest(v_composite_after - v_composite_before, 0),
+    v_deals_before, v_deals_after, v_answers_before, v_answers_after,
+    0,
+    extract(epoch from (clock_timestamp() - v_started)) * 1000,
+    v_state,
+    p_note
+  );
+end;
+$function$;
+
+-- Mode A: both single-column and composite unique indexes exist.
+select harness.run_explained_mutation(
+  1,
+  'delete_cascade_with_both_indexes',
+  'single_and_composite_indexes',
+  'parent_delete_cascade',
+  'delete from harness.nav_deals_v2 where id = 4000',
+  'Referenced parent delete with ON DELETE CASCADE while both child indexes exist.'
+);
+
+select harness.run_explained_mutation(
+  2,
+  'update_unreferenced_with_both_indexes',
+  'single_and_composite_indexes',
+  'parent_update_unreferenced',
+  'update harness.nav_deals_v2 set id = 6001 where id = 5001',
+  'Parent key update with no child rows while both child indexes exist.'
+);
+
+select harness.run_blocked_parent_update(
+  3,
+  'update_referenced_blocked_with_both_indexes',
+  'single_and_composite_indexes',
+  4001,
+  7001,
+  'ON UPDATE NO ACTION must reject a referenced parent key change.'
+);
+
+select harness.assert_true(
+  (select affected_children = 20 from harness.mutation_evidence where case_id = 'delete_cascade_with_both_indexes'),
+  'both-index cascade delete did not remove exactly 20 answer rows'
+);
+select harness.assert_true(
+  (select single_scan_delta + composite_scan_delta > 0 from harness.mutation_evidence where case_id = 'delete_cascade_with_both_indexes'),
+  'both-index cascade delete did not attribute a child index scan'
+);
+select harness.assert_true(
+  (select success and not foreign_key_blocked from harness.mutation_evidence where case_id = 'update_unreferenced_with_both_indexes'),
+  'both-index unreferenced parent update failed'
+);
+select harness.assert_true(
+  (select foreign_key_blocked and sqlstate = '23503' from harness.mutation_evidence where case_id = 'update_referenced_blocked_with_both_indexes'),
+  'both-index referenced parent update was not blocked by the FK'
+);
+
+-- Remove only the synthetic single-column index.
+drop index harness.nav_deal_answers_v2_deal_idx;
+analyze harness.nav_deal_answers_v2;
+
+select harness.assert_true(
+  to_regclass('harness.nav_deal_answers_v2_deal_idx') is null,
+  'synthetic single-column index survived removal'
+);
+select harness.assert_true(
+  to_regclass('harness.nav_deal_answers_v2_deal_id_question_key_key') is not null,
+  'composite unique index is missing before composite-only cases'
+);
+
 create table harness.plan_evidence (
-  evidence_order integer primary key,
-  evidence_id text not null unique,
+  evidence_id text primary key,
   plan jsonb not null,
-  index_expected text not null,
-  index_observed boolean not null,
+  composite_index_observed boolean not null,
   note text not null
 );
 
-create table harness.mutation_evidence (
-  evidence_order integer primary key,
-  evidence_id text not null unique,
-  index_mode text not null,
-  mutation_kind text not null,
-  plan jsonb not null,
-  execution_time_ms numeric not null,
-  trigger_count integer not null,
-  old_parent_exists boolean not null,
-  new_parent_exists boolean,
-  child_rows_old bigint not null,
-  child_rows_new bigint,
-  note text not null
-);
-
-create table harness.result_equivalence (
-  check_id text primary key,
-  both_hash text not null,
-  prefix_hash text not null,
-  equivalent boolean not null
-);
-
--- Mode A mirrors production overlap: single-column deal_id plus unique composite.
-create table harness.nav_deals_both (
-  id bigint primary key
-);
-
-create table harness.nav_deal_answers_both (
-  id bigserial primary key,
-  deal_id bigint not null,
-  question_key text not null,
-  answer_value text,
-  constraint nav_deal_answers_both_deal_question_key_key unique (deal_id, question_key),
-  constraint nav_deal_answers_both_deal_id_fkey
-    foreign key (deal_id)
-    references harness.nav_deals_both(id)
-    on update no action
-    on delete cascade
-);
-
-create index nav_deal_answers_both_deal_idx
-  on harness.nav_deal_answers_both (deal_id);
-
--- Mode B keeps only the unique composite prefix index.
-create table harness.nav_deals_prefix (
-  id bigint primary key
-);
-
-create table harness.nav_deal_answers_prefix (
-  id bigserial primary key,
-  deal_id bigint not null,
-  question_key text not null,
-  answer_value text,
-  constraint nav_deal_answers_prefix_deal_question_key_key unique (deal_id, question_key),
-  constraint nav_deal_answers_prefix_deal_id_fkey
-    foreign key (deal_id)
-    references harness.nav_deals_prefix(id)
-    on update no action
-    on delete cascade
-);
-
-insert into harness.nav_deals_both (id)
-select g from generate_series(1, 5000) as series(g)
-union all
-select 6000;
-
-insert into harness.nav_deals_prefix (id)
-select g from generate_series(1, 5000) as series(g)
-union all
-select 6000;
-
-insert into harness.nav_deal_answers_both (deal_id, question_key, answer_value)
-select
-  deal_id,
-  format('question_%s', question_no),
-  format('synthetic_%s_%s', deal_id, question_no)
-from generate_series(1, 5000) as deals(deal_id)
-cross join generate_series(1, 20) as questions(question_no);
-
-insert into harness.nav_deal_answers_prefix (deal_id, question_key, answer_value)
-select
-  deal_id,
-  format('question_%s', question_no),
-  format('synthetic_%s_%s', deal_id, question_no)
-from generate_series(1, 5000) as deals(deal_id)
-cross join generate_series(1, 20) as questions(question_no);
-
-analyze harness.nav_deals_both;
-analyze harness.nav_deal_answers_both;
-analyze harness.nav_deals_prefix;
-analyze harness.nav_deal_answers_prefix;
-
-select harness.assert_true(
-  (select count(*) from harness.nav_deals_both) = 5001
-  and (select count(*) from harness.nav_deals_prefix) = 5001,
-  'synthetic parent cardinality drifted before mutation benchmark'
-);
-
-select harness.assert_true(
-  (select count(*) from harness.nav_deal_answers_both) = 100000
-  and (select count(*) from harness.nav_deal_answers_prefix) = 100000,
-  'synthetic child cardinality drifted before mutation benchmark'
-);
-
--- Prove prefix-only child lookup structural applicability.
 set local enable_seqscan = off;
 
-insert into harness.plan_evidence (
-  evidence_order, evidence_id, plan, index_expected, index_observed, note
-)
+insert into harness.plan_evidence (evidence_id, plan, composite_index_observed, note)
 select
-  1,
-  'prefix_only_fk_child_lookup',
+  'composite_only_child_lookup',
   plan,
-  'nav_deal_answers_prefix_deal_question_key_key',
-  plan::text like '%nav_deal_answers_prefix_deal_question_key_key%',
-  'Structural child lookup used by parent FK checks without a single-column index.'
+  plan::text like '%nav_deal_answers_v2_deal_id_question_key_key%',
+  'Structural child lookup by deal_id after synthetic removal of the single-column index.'
 from (
-  select harness.explain_json(
-    $query$select 1
-      from harness.nav_deal_answers_prefix
-      where deal_id = 4000
-      limit 1$query$
+  select harness.explain_analyze_json(
+    'select 1 from harness.nav_deal_answers_v2 where deal_id = 4500 limit 1'
   ) as plan
 ) captured;
 
-select harness.assert_true(
-  (select index_observed from harness.plan_evidence where evidence_id = 'prefix_only_fk_child_lookup'),
-  'composite prefix index did not support the FK child lookup'
-);
-
 set local enable_seqscan = on;
 
--- Actual ON DELETE CASCADE with both indexes.
-with captured as (
-  select harness.capture_mutation(
-    $sql$delete from harness.nav_deals_both where id = 4000$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_both where id = 4000)$sql$,
-    null,
-    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 4000$sql$,
-    null
-  ) as data
-)
-insert into harness.mutation_evidence
-select
-  1,
-  'delete_cascade_both_indexes',
-  'both_indexes',
-  'delete_cascade',
-  data->'plan',
-  (data->>'execution_time_ms')::numeric,
-  (data->>'trigger_count')::integer,
-  (data->>'old_parent_exists')::boolean,
-  null,
-  (data->>'child_rows_old')::bigint,
-  null,
-  'Actual parent DELETE CASCADE against 100000 synthetic child rows.'
-from captured;
+select harness.assert_true(
+  (select composite_index_observed from harness.plan_evidence where evidence_id = 'composite_only_child_lookup'),
+  'composite unique index did not serve the deal_id leading-prefix lookup'
+);
 
--- Actual ON UPDATE NO ACTION on a parent without child rows.
-with captured as (
-  select harness.capture_mutation(
-    $sql$update harness.nav_deals_both set id = 6001 where id = 6000$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_both where id = 6000)$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_both where id = 6001)$sql$,
-    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 6000$sql$,
-    $sql$select count(*) from harness.nav_deal_answers_both where deal_id = 6001$sql$
-  ) as data
-)
-insert into harness.mutation_evidence
-select
-  2,
-  'update_no_action_both_indexes',
-  'both_indexes',
-  'update_no_action',
-  data->'plan',
-  (data->>'execution_time_ms')::numeric,
-  (data->>'trigger_count')::integer,
-  (data->>'old_parent_exists')::boolean,
-  (data->>'new_parent_exists')::boolean,
-  (data->>'child_rows_old')::bigint,
-  (data->>'child_rows_new')::bigint,
-  'Actual parent key UPDATE executed the NO ACTION child-reference check.'
-from captured;
-
--- Actual ON DELETE CASCADE with composite prefix only.
-with captured as (
-  select harness.capture_mutation(
-    $sql$delete from harness.nav_deals_prefix where id = 4000$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 4000)$sql$,
-    null,
-    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 4000$sql$,
-    null
-  ) as data
-)
-insert into harness.mutation_evidence
-select
-  3,
-  'delete_cascade_prefix_only',
-  'composite_prefix_only',
-  'delete_cascade',
-  data->'plan',
-  (data->>'execution_time_ms')::numeric,
-  (data->>'trigger_count')::integer,
-  (data->>'old_parent_exists')::boolean,
-  null,
-  (data->>'child_rows_old')::bigint,
-  null,
-  'Actual parent DELETE CASCADE without the single-column child index.'
-from captured;
-
--- Actual ON UPDATE NO ACTION with composite prefix only.
-with captured as (
-  select harness.capture_mutation(
-    $sql$update harness.nav_deals_prefix set id = 6001 where id = 6000$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 6000)$sql$,
-    $sql$select exists(select 1 from harness.nav_deals_prefix where id = 6001)$sql$,
-    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 6000$sql$,
-    $sql$select count(*) from harness.nav_deal_answers_prefix where deal_id = 6001$sql$
-  ) as data
-)
-insert into harness.mutation_evidence
-select
+-- Mode B: only composite unique index remains.
+select harness.run_explained_mutation(
   4,
-  'update_no_action_prefix_only',
-  'composite_prefix_only',
-  'update_no_action',
-  data->'plan',
-  (data->>'execution_time_ms')::numeric,
-  (data->>'trigger_count')::integer,
-  (data->>'old_parent_exists')::boolean,
-  (data->>'new_parent_exists')::boolean,
-  (data->>'child_rows_old')::bigint,
-  (data->>'child_rows_new')::bigint,
-  'Actual parent key UPDATE executed NO ACTION with composite prefix coverage.'
-from captured;
+  'delete_cascade_composite_only',
+  'composite_unique_index_only',
+  'parent_delete_cascade',
+  'delete from harness.nav_deals_v2 where id = 4500',
+  'Referenced parent delete with ON DELETE CASCADE after single-column index removal.'
+);
 
-select harness.assert_true(
-  not (select old_parent_exists from harness.mutation_evidence where evidence_id = 'delete_cascade_both_indexes')
-  and (select child_rows_old from harness.mutation_evidence where evidence_id = 'delete_cascade_both_indexes') = 0,
-  'delete cascade semantics failed with both indexes'
+select harness.run_explained_mutation(
+  5,
+  'update_unreferenced_composite_only',
+  'composite_unique_index_only',
+  'parent_update_unreferenced',
+  'update harness.nav_deals_v2 set id = 6002 where id = 5002',
+  'Parent key update with no child rows after single-column index removal.'
+);
+
+select harness.run_blocked_parent_update(
+  6,
+  'update_referenced_blocked_composite_only',
+  'composite_unique_index_only',
+  4501,
+  7501,
+  'ON UPDATE NO ACTION remains enforced with only the composite unique index.'
 );
 
 select harness.assert_true(
-  not (select old_parent_exists from harness.mutation_evidence where evidence_id = 'delete_cascade_prefix_only')
-  and (select child_rows_old from harness.mutation_evidence where evidence_id = 'delete_cascade_prefix_only') = 0,
-  'delete cascade semantics failed with composite prefix only'
+  (select affected_children = 20 from harness.mutation_evidence where case_id = 'delete_cascade_composite_only'),
+  'composite-only cascade delete did not remove exactly 20 answer rows'
+);
+select harness.assert_true(
+  (select not single_index_present from harness.mutation_evidence where case_id = 'delete_cascade_composite_only'),
+  'composite-only cascade evidence still reports the single-column index'
+);
+select harness.assert_true(
+  (select composite_scan_delta > 0 from harness.mutation_evidence where case_id = 'delete_cascade_composite_only'),
+  'composite-only cascade delete did not attribute a composite index scan'
+);
+select harness.assert_true(
+  (select success and not foreign_key_blocked from harness.mutation_evidence where case_id = 'update_unreferenced_composite_only'),
+  'composite-only unreferenced parent update failed'
+);
+select harness.assert_true(
+  (select composite_scan_delta > 0 from harness.mutation_evidence where case_id = 'update_unreferenced_composite_only'),
+  'composite-only unreferenced parent update did not attribute a composite index scan'
+);
+select harness.assert_true(
+  (select foreign_key_blocked and sqlstate = '23503' from harness.mutation_evidence where case_id = 'update_referenced_blocked_composite_only'),
+  'composite-only referenced parent update was not blocked by the FK'
 );
 
+-- Result and FK contract equivalence.
 select harness.assert_true(
-  not (select old_parent_exists from harness.mutation_evidence where evidence_id = 'update_no_action_both_indexes')
-  and (select new_parent_exists from harness.mutation_evidence where evidence_id = 'update_no_action_both_indexes')
-  and (select child_rows_old from harness.mutation_evidence where evidence_id = 'update_no_action_both_indexes') = 0
-  and (select child_rows_new from harness.mutation_evidence where evidence_id = 'update_no_action_both_indexes') = 0,
-  'update no-action semantics failed with both indexes'
+  (select count(*) from harness.nav_deals_v2) = 5000,
+  'final synthetic deal count differs after two deletes and two key updates'
 );
-
 select harness.assert_true(
-  not (select old_parent_exists from harness.mutation_evidence where evidence_id = 'update_no_action_prefix_only')
-  and (select new_parent_exists from harness.mutation_evidence where evidence_id = 'update_no_action_prefix_only')
-  and (select child_rows_old from harness.mutation_evidence where evidence_id = 'update_no_action_prefix_only') = 0
-  and (select child_rows_new from harness.mutation_evidence where evidence_id = 'update_no_action_prefix_only') = 0,
-  'update no-action semantics failed with composite prefix only'
+  (select count(*) from harness.nav_deal_answers_v2) = 99960,
+  'final synthetic answer count differs after two 20-row cascades'
 );
-
 select harness.assert_true(
-  (select count(*) from harness.mutation_evidence) = 4,
-  'expected four actual parent mutation evidence rows'
+  not exists (select 1 from harness.nav_deal_answers_v2 where deal_id in (4000, 4500)),
+  'cascaded child rows survived parent deletion'
 );
-
 select harness.assert_true(
-  not exists (
-    select 1
-    from harness.mutation_evidence
-    where execution_time_ms < 0 or trigger_count < 1
-  ),
-  'actual mutation plan lacks execution or trigger evidence'
+  exists (select 1 from harness.nav_deals_v2 where id = 6001)
+    and exists (select 1 from harness.nav_deals_v2 where id = 6002),
+  'unreferenced parent updates did not persist inside the synthetic transaction'
 );
-
 select harness.assert_true(
-  (select count(*) from harness.nav_deals_both) = 5000
-  and (select count(*) from harness.nav_deals_prefix) = 5000,
-  'post-mutation parent cardinality mismatch'
+  exists (select 1 from harness.nav_deals_v2 where id = 4001)
+    and not exists (select 1 from harness.nav_deals_v2 where id = 7001)
+    and exists (select 1 from harness.nav_deals_v2 where id = 4501)
+    and not exists (select 1 from harness.nav_deals_v2 where id = 7501),
+  'referenced parent update rejection changed parent keys'
 );
-
 select harness.assert_true(
-  (select count(*) from harness.nav_deal_answers_both) = 99980
-  and (select count(*) from harness.nav_deal_answers_prefix) = 99980,
-  'post-delete child cardinality mismatch'
+  (select confdeltype = 'c' and confupdtype = 'a' and convalidated and not condeferrable and not condeferred
+   from pg_constraint
+   where conrelid = 'harness.nav_deal_answers_v2'::regclass
+     and conname = 'nav_deal_answers_v2_deal_id_fkey'),
+  'synthetic FK contract differs from production read-only capture'
 );
-
-insert into harness.result_equivalence (check_id, both_hash, prefix_hash, equivalent)
-select
-  'unaffected_deal_3000',
-  both_hash,
-  prefix_hash,
-  both_hash = prefix_hash
-from (
-  select
-    (select md5(string_agg(question_key || '=' || answer_value, '|' order by question_key))
-       from harness.nav_deal_answers_both
-       where deal_id = 3000) as both_hash,
-    (select md5(string_agg(question_key || '=' || answer_value, '|' order by question_key))
-       from harness.nav_deal_answers_prefix
-       where deal_id = 3000) as prefix_hash
-) hashes;
-
 select harness.assert_true(
-  (select equivalent from harness.result_equivalence where check_id = 'unaffected_deal_3000'),
-  'unaffected answer results differ between index modes'
+  (select count(*) = 6 from harness.mutation_evidence),
+  'mutation evidence case count drifted'
 );
 
 select jsonb_pretty(jsonb_build_object(
-  'schema_version', 1,
-  'status', 'repository_only_synthetic_fk_parent_mutation_evidence',
+  'schema_version', 2,
+  'status', 'repository_only_synthetic_fk_parent_mutation_evidence_not_ddl_approval',
   'postgres_version', current_setting('server_version'),
   'production_schema_used', false,
   'production_data_copied', false,
   'production_ddl_authorized', false,
-  'index_drop_authorized', false,
-  'live_fk_shape_mirrored', jsonb_build_object(
-    'update_action', 'NO ACTION',
-    'delete_action', 'CASCADE'
+  'latency_superiority_asserted', false,
+  'xact_scan_source', 'pg_stat_get_xact_numscans(oid)',
+  'fk_contract', (
+    select jsonb_build_object(
+      'delete_action', confdeltype,
+      'update_action', confupdtype,
+      'validated', convalidated,
+      'deferrable', condeferrable,
+      'initially_deferred', condeferred
+    )
+    from pg_constraint
+    where conrelid = 'harness.nav_deal_answers_v2'::regclass
+      and conname = 'nav_deal_answers_v2_deal_id_fkey'
   ),
-  'synthetic_deals_per_mode_before_mutation', 5001,
-  'synthetic_answers_per_mode_before_mutation', 100000,
-  'plans', (select jsonb_agg(to_jsonb(e) order by evidence_order) from harness.plan_evidence e),
+  'index_sizes', (select jsonb_agg(to_jsonb(s) order by evidence_id) from harness.index_size_evidence s),
+  'structural_plan', (select jsonb_agg(to_jsonb(p) order by evidence_id) from harness.plan_evidence p),
   'mutations', (select jsonb_agg(to_jsonb(e) order by evidence_order) from harness.mutation_evidence e),
-  'result_equivalence', (select jsonb_agg(to_jsonb(r) order by check_id) from harness.result_equivalence r)
+  'final_counts_inside_transaction', jsonb_build_object(
+    'deals', (select count(*) from harness.nav_deals_v2),
+    'answers', (select count(*) from harness.nav_deal_answers_v2)
+  ),
+  'decision', 'review_possible_redundancy_only',
+  'active_stop', 'production_scale_fk_parent_mutation_benchmark_missing'
 )) as synthetic_fk_parent_mutation_evidence;
 
 rollback;
@@ -438,4 +462,4 @@ begin
 end;
 $post_rollback$;
 
-select 'Navigator v2 synthetic FK parent mutation harness passed with full rollback' as result;
+select 'Navigator v2 canonical synthetic FK parent mutation harness passed with full rollback' as result;
