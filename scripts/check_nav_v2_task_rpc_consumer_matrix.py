@@ -8,7 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / 'config/nav-v2-task-rpc-consumer-matrix.json'
 DEAL_CARD = ROOT / 'assets/js/nav-v2/deal-card-v2.js'
 GUARD = ROOT / 'assets/js/nav-v2/task-action-guard-v2.js'
-EDGE = ROOT / 'supabase/functions/nav-v2-deal-api/index.ts'
+EDGE_CANDIDATE = ROOT / 'supabase/functions/nav-v2-deal-api/index.ts'
+EDGE_SNAPSHOT = ROOT / 'supabase/functions/nav-v2-deal-api/index.production-v4.ts'
+EDGE_RUNTIME = ROOT / 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'
 LITE = ROOT / 'supabase/prototypes/nav_v2_get_deal_card_lite_bounded_tasks.sql'
 UI_PREVIEW = ROOT / 'assets/js/nav-v2/bounded-task-ui-preview-v2.js'
 ROUTER = ROOT / 'assets/js/nav-v2/task-action-router-v2.js'
@@ -40,8 +42,9 @@ def occurrence_paths(needle: str) -> set[str]:
 def main() -> int:
     errors: list[str] = []
     paths = (
-        MATRIX, DEAL_CARD, GUARD, EDGE, LITE, UI_PREVIEW, ROUTER, PIPELINE,
-        EDGE_CONTRACT, DUAL_E2E, PIPELINE_E2E, RUNTIME_E2E, RPC_SURFACE, DOC, WORKFLOW,
+        MATRIX, DEAL_CARD, GUARD, EDGE_CANDIDATE, EDGE_SNAPSHOT, EDGE_RUNTIME,
+        LITE, UI_PREVIEW, ROUTER, PIPELINE, EDGE_CONTRACT, DUAL_E2E,
+        PIPELINE_E2E, RUNTIME_E2E, RPC_SURFACE, DOC, WORKFLOW,
     )
     for path in paths:
         if not path.exists():
@@ -52,28 +55,52 @@ def main() -> int:
 
     matrix = json.loads(MATRIX.read_text(encoding='utf-8'))
     read = lambda path: path.read_text(encoding='utf-8')
-    deal_card, guard, edge = read(DEAL_CARD), read(GUARD), read(EDGE)
+    deal_card, guard = read(DEAL_CARD), read(GUARD)
+    edge_candidate, edge_snapshot, edge_runtime = read(EDGE_CANDIDATE), read(EDGE_SNAPSHOT), read(EDGE_RUNTIME)
     lite, ui_preview, router = read(LITE), read(UI_PREVIEW), read(ROUTER)
     pipeline, edge_contract = read(PIPELINE), read(EDGE_CONTRACT)
     dual_e2e, pipeline_e2e, runtime_e2e = read(DUAL_E2E), read(PIPELINE_E2E), read(RUNTIME_E2E)
     rpc_surface, doc, workflow = read(RPC_SURFACE), read(DOC), read(WORKFLOW)
 
-    if matrix.get('schema_version') != 4:
-        errors.append('consumer matrix must use schema version 4')
-    if matrix.get('status') != 'frontend_authoritative_single_source_transport_disabled':
+    if matrix.get('schema_version') != 5:
+        errors.append('consumer matrix must use schema version 5')
+    if matrix.get('status') != 'frontend_authoritative_edge_candidate_integrated_transport_disabled':
         errors.append('consumer matrix status drifted')
     if matrix.get('frontend_runtime_changed') is not True:
         errors.append('frontend runtime integration must remain explicit')
+    if matrix.get('edge_runtime_source_integrated') is not True:
+        errors.append('candidate Edge source integration must remain explicit')
+    if matrix.get('edge_runtime_enabled') is not False or matrix.get('edge_deployed') is not False:
+        errors.append('candidate Edge runtime must remain disabled and undeployed')
     if matrix.get('production_database_changed') is not False or matrix.get('deployment_ready') is not False:
         errors.append('database must remain unchanged and deployment must remain blocked')
+
+    edge_sources = matrix.get('edge_sources') or {}
+    production_source = edge_sources.get('production_snapshot') or {}
+    candidate_source = edge_sources.get('candidate_entrypoint') or {}
+    if production_source.get('path') != EDGE_SNAPSHOT.relative_to(ROOT).as_posix():
+        errors.append('production Edge snapshot path drifted')
+    if production_source.get('version') != 4 or production_source.get('immutable_release_baseline') is not True:
+        errors.append('production Edge snapshot contract drifted')
+    if production_source.get('bounded_actions_present') is not False:
+        errors.append('production Edge snapshot must remain legacy-only')
+    if candidate_source.get('path') != EDGE_CANDIDATE.relative_to(ROOT).as_posix():
+        errors.append('candidate Edge entrypoint path drifted')
+    if candidate_source.get('repository_only') is not True or candidate_source.get('feature_flag_default') is not False:
+        errors.append('candidate Edge entrypoint escaped repository-only disabled state')
+    if candidate_source.get('deployed') is not False or candidate_source.get('bounded_actions_source_integrated') is not True:
+        errors.append('candidate Edge source/deployment markers drifted')
 
     legacy = matrix.get('legacy_rpcs') or {}
     update = legacy.get('nav_v2_update_task_status') or {}
     add = legacy.get('nav_v2_add_task') or {}
     active = {item['path'] for item in update.get('active_runtime_consumers') or []}
-    expected_active = {GUARD.relative_to(ROOT).as_posix(), EDGE.relative_to(ROOT).as_posix()}
+    expected_active = {GUARD.relative_to(ROOT).as_posix(), EDGE_SNAPSHOT.relative_to(ROOT).as_posix()}
     if active != expected_active:
         errors.append(f'active runtime consumer inventory drifted: {sorted(active)}')
+    candidate_consumers = {item['path'] for item in update.get('candidate_runtime_consumers') or []}
+    if candidate_consumers != {EDGE_CANDIDATE.relative_to(ROOT).as_posix()}:
+        errors.append(f'candidate runtime consumer inventory drifted: {sorted(candidate_consumers)}')
     if update.get('dormant_source_handlers') != []:
         errors.append('dormant source handler inventory must remain empty')
     cleanup = update.get('source_cleanup') or {}
@@ -81,8 +108,11 @@ def main() -> int:
         errors.append('deal-card source cleanup evidence drifted')
 
     expected_literals = {
-        EDGE.relative_to(ROOT).as_posix(), UI_PREVIEW.relative_to(ROOT).as_posix(),
-        ROUTER.relative_to(ROOT).as_posix(), PIPELINE.relative_to(ROOT).as_posix(),
+        EDGE_CANDIDATE.relative_to(ROOT).as_posix(),
+        EDGE_SNAPSHOT.relative_to(ROOT).as_posix(),
+        UI_PREVIEW.relative_to(ROOT).as_posix(),
+        ROUTER.relative_to(ROOT).as_posix(),
+        PIPELINE.relative_to(ROOT).as_posix(),
         EDGE_CONTRACT.relative_to(ROOT).as_posix(),
     }
     actual_literals = occurrence_paths('nav_v2_update_task_status')
@@ -96,7 +126,7 @@ def main() -> int:
         errors.append('legacy status RPC must remain a deployment blocker')
 
     inventory = set(update.get('test_and_contract_consumers') or [])
-    for path in (ROUTER, PIPELINE, UI_PREVIEW, EDGE_CONTRACT, DUAL_E2E, PIPELINE_E2E, RUNTIME_E2E):
+    for path in (ROUTER, PIPELINE, UI_PREVIEW, EDGE_CONTRACT, EDGE_RUNTIME, DUAL_E2E, PIPELINE_E2E, RUNTIME_E2E):
         if path.relative_to(ROOT).as_posix() not in inventory:
             errors.append(f'detached/test consumer missing from matrix: {path.relative_to(ROOT)}')
 
@@ -110,7 +140,33 @@ def main() -> int:
         'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
         'const BOUNDED_TRANSPORT_ENABLED = false;', 'event.stopImmediatePropagation()',
     ), GUARD.name, errors)
-    require(edge, ('if (action === "update_task_status")', 'nav_v2_update_task_status'), EDGE.name, errors)
+
+    require(edge_snapshot, ('if (action === "update_task_status")', 'nav_v2_update_task_status'), EDGE_SNAPSHOT.name, errors)
+    for forbidden in ('bounded_task_start', 'routeBoundedTaskEdgeActionV2', 'SUPABASE_SERVICE_ROLE_KEY'):
+        if forbidden in edge_snapshot:
+            errors.append(f'production Edge snapshot must remain exact legacy v4 source: {forbidden}')
+
+    require(edge_candidate, (
+        'import { routeBoundedTaskEdgeActionV2 } from "./task-action-edge-runtime-v2.js";',
+        'const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;',
+        'if (action === "update_task_status")', 'nav_v2_update_task_status',
+        'profile_loader: loadActiveNavProfile', 'task_loader: loadBoundedTaskContext',
+        'rpc_client: { rpc: callServiceRpc }',
+    ), EDGE_CANDIDATE.name, errors)
+    if 'BOUNDED_TASK_EDGE_IDENTITY_ENABLED = true' in edge_candidate:
+        errors.append('candidate Edge feature flag was enabled')
+    if 'task-action-router-v2.js' in edge_candidate or 'task-action-edge-pipeline-v2.js' in edge_candidate:
+        errors.append('frontend router or rehearsal pipeline leaked into candidate Edge entrypoint')
+
+    require(edge_runtime, (
+        "from './task-action-edge-identity-v2.js'", 'routeBoundedTaskEdgeActionV2',
+        'feature_flag_default: false', 'edge_deployed: false',
+        'frontend_transport_enabled: false',
+    ), EDGE_RUNTIME.name, errors)
+    for forbidden in ('Deno.', 'fetch(', 'SUPABASE_SERVICE_ROLE_KEY'):
+        if forbidden in edge_runtime:
+            errors.append(f'Edge runtime adapter must remain dependency-injected: {forbidden}')
+
     for field in (matrix.get('lite_dto') or {}).get('required_fields_present_in_prototype') or []:
         if f"'{field}'" not in lite:
             errors.append(f'bounded lite DTO field missing: {field}')
@@ -127,11 +183,11 @@ def main() -> int:
         'runtime_integrated: false', 'transport_enabled: false',
     ), EDGE_CONTRACT.name, errors)
 
-    for text, label in ((deal_card, DEAL_CARD.name), (guard, GUARD.name), (edge, EDGE.name)):
+    for text, label in ((deal_card, DEAL_CARD.name), (guard, GUARD.name), (edge_snapshot, EDGE_SNAPSHOT.name)):
         if 'task-action-edge-pipeline-v2.js' in text:
-            errors.append(f'detached pipeline was integrated prematurely: {label}')
-    if 'task-action-contract-v2.js' in guard or 'task-action-router-v2.js' in edge:
-        errors.append('Edge contract must stay detached until deployment')
+            errors.append(f'rehearsal pipeline was integrated into active production path: {label}')
+    if 'task-action-contract-v2.js' in guard or 'SUPABASE_SERVICE_ROLE_KEY' in guard or 'SUPABASE_SERVICE_ROLE_KEY' in deal_card:
+        errors.append('Edge contract or service-role transport leaked into frontend runtime')
 
     require(dual_e2e, ('legacy and bounded actions select exactly one transport-free route', 'toEqual([])'), DUAL_E2E.name, errors)
     require(pipeline_e2e, ('one browser action produces one exact validated RPC preview without network', 'expect(networkCalls).toEqual([])'), PIPELINE_E2E.name, errors)
@@ -141,22 +197,34 @@ def main() -> int:
     for blocker in (
         'authoritative_handler_not_integrated', 'duplicate_handler_execution_risk',
         'dormant_base_handler_source_not_removed', 'frontend_edge_rpc_parity_missing',
+        'edge_actions_not_integrated',
     ):
         if blocker not in closed:
             errors.append(f'closed blocker missing: {blocker}')
     remaining = set(matrix.get('remaining_blockers') or [])
     for blocker in (
-        'edge_actions_not_integrated', 'database_migrations_not_deployed', 'minimal_grants_not_deployed',
-        'authenticated_application_e2e_missing', 'frontend_bounded_transport_disabled', 'controlled_pilot_not_approved',
+        'edge_runtime_feature_flag_disabled', 'edge_function_not_deployed',
+        'database_migrations_not_deployed', 'minimal_grants_not_deployed',
+        'authenticated_application_e2e_missing', 'frontend_bounded_transport_disabled',
+        'controlled_pilot_not_approved',
     ):
         if blocker not in remaining:
             errors.append(f'remaining blocker missing: {blocker}')
+    if 'edge_actions_not_integrated' in remaining:
+        errors.append('obsolete Edge source integration blocker remains open')
 
     require(rpc_surface, ('"nav_v2_add_task"', '"nav_v2_update_task_status"'), RPC_SURFACE.name, errors)
     if any(value is not False for value in (matrix.get('separation_guarantees') or {}).values()):
         errors.append('all separation guarantees must remain false')
-    require(doc, ('frontend authoritative single-source gate v4', 'Task action pipeline', 'Production gate', 'Rollback'), DOC.name, errors)
-    require(workflow, ('task-action-edge-pipeline-v2.js', 'task-action-pipeline-rehearsal.spec.js', 'nav-v2-task-rpc-consumer-matrix'), WORKFLOW.name, errors)
+    require(doc, (
+        'frontend authoritative + Edge candidate integrated, transport disabled',
+        'Production Edge snapshot', 'Candidate Edge entrypoint', 'Task action pipeline',
+        'Production gate', 'Rollback',
+    ), DOC.name, errors)
+    require(workflow, (
+        'task-action-edge-pipeline-v2.js', 'task-action-pipeline-rehearsal.spec.js',
+        'nav-v2-task-rpc-consumer-matrix',
+    ), WORKFLOW.name, errors)
 
     if errors:
         print('Navigator v2 task RPC consumer matrix errors:')
@@ -164,7 +232,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v4 passed: the authoritative guard remains the single frontend action source, the detached pipeline is inventoried, bounded transport stays disabled and production deployment remains blocked')
+    print('Navigator v2 task RPC consumer matrix v5 passed: the frontend handler remains authoritative, deployed Edge v4 is pinned as an immutable legacy snapshot, the candidate Edge route is source-integrated behind a disabled flag, and database/deployment/transport remain blocked')
     return 0
 
 
