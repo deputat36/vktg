@@ -1,0 +1,128 @@
+{
+  "schema_version": 3,
+  "status": "repository_only_preview_execution_candidate_v3_not_authorized",
+  "generated_at": "2026-07-21",
+  "source_main_sha": "00125d63601b2064164bf01828d7244acf6ca773",
+  "production_project_ref": "ofewxuqfjhamgerwzull",
+  "package_v2": "config/nav-v2-preview-candidate-package-v2.json",
+  "combined_lifecycle": "config/nav-v2-combined-preview-lifecycle-v1.json",
+  "combined_intake_rollback": "config/nav-v2-combined-preview-intake-rollback-v1.json",
+  "minimal_grants_candidate": "config/nav-v2-preview-minimal-grants-candidate-v1.json",
+  "technical_account_lifecycle": "config/nav-v2-preview-technical-account-lifecycle-v1.json",
+  "execution_runbook": "config/nav-v2-preview-execution-runbook-v1.json",
+  "auth_e2e_readiness": "config/nav-v2-auth-e2e-readiness.json",
+  "readonly_attestation": "config/nav-v2-preview-readonly-attestation-v1.json",
+  "production_applied": false,
+  "preview_branch_created": false,
+  "execution_authorized": false,
+  "cloud_execution_allowed": false,
+  "cost_confirmation_performed": false,
+  "technical_accounts_created": false,
+  "edge_deployed": false,
+  "frontend_transport_enabled": false,
+  "authenticated_e2e_proven": false,
+  "preview_apply_allowed": false,
+  "production_ready": false,
+  "deployment_bundle_ready": false,
+  "production_rollback_bundle_ready": false,
+  "repository_review_package_ready": true,
+  "combined_apply_proven": true,
+  "combined_rollback_proven": true,
+  "exact_preview_rollback_inventory_complete": true,
+  "preview_execution_runbook_ready": true,
+  "technical_account_lifecycle_plan_ready": true,
+  "closed_repository_blockers": [
+    "bounded_full_candidate_not_consolidated",
+    "cross_component_sequential_apply_not_proven",
+    "exact_preview_rollback_inventory_missing",
+    "preview_execution_runbook_missing",
+    "technical_account_lifecycle_plan_missing"
+  ],
+  "database_forward_order": [
+    {
+      "order": 1,
+      "id": "privacy_aligned_quality",
+      "source": "package_v2_preview_bundle_quality"
+    },
+    {
+      "order": 2,
+      "id": "bounded_consolidated",
+      "source": "config/nav-v2-bounded-consolidated-candidate-v1.json"
+    },
+    {
+      "order": 3,
+      "id": "governed_intake_25_rule",
+      "source": "package_v2_preview_bundle_intake"
+    }
+  ],
+  "database_rollback_order": [
+    {
+      "order": 1,
+      "id": "combined_safe_intake",
+      "source": "config/nav-v2-combined-preview-intake-rollback-v1.json"
+    },
+    {
+      "order": 2,
+      "id": "bounded_consolidated",
+      "source": "config/nav-v2-bounded-consolidated-candidate-v1.json"
+    },
+    {
+      "order": 3,
+      "id": "quality_exact_restore",
+      "source": "package_v2_preview_bundle_quality"
+    }
+  ],
+  "repository_evidence": {
+    "package_v2_review_ready": true,
+    "combined_lifecycle_status": "repository_only_combined_preview_lifecycle_proven_not_executable",
+    "combined_lifecycle_proof_run_id": 29831435000,
+    "combined_lifecycle_final_head_run_id": 29831895791,
+    "postgres_major": 17,
+    "quality_bounded_intake_apply_success": true,
+    "full_25_rule_assertions_success": true,
+    "always_rollback_success": true,
+    "post_rollback_success": true,
+    "production_changed": false
+  },
+  "preview_execution_dependencies": {
+    "fresh_cost_lookup_required": true,
+    "explicit_owner_cost_approval_required": true,
+    "cost_confirmation_id_required": true,
+    "fresh_readonly_attestation_required": true,
+    "branch_lifetime_ceiling_hours": 6,
+    "synthetic_only": true,
+    "database_first": true,
+    "edge_feature_flag_default_false": true,
+    "technical_accounts_preview_only": true,
+    "cleanup_attestation_required": true
+  },
+  "active_stops": [
+    "execution_not_authorized",
+    "explicit_cost_approval_missing",
+    "cost_confirmation_id_missing",
+    "preview_branch_missing",
+    "fresh_execution_time_attestation_missing",
+    "technical_accounts_missing",
+    "authenticated_role_matrix_not_run",
+    "edge_not_deployed",
+    "frontend_bounded_transport_disabled",
+    "release_baseline_migration_drift_unreconciled",
+    "production_deployment_not_approved",
+    "controlled_pilot_not_approved",
+    "cleanup_option_unselected"
+  ],
+  "forbidden_actions": [
+    "create_supabase_branch_without_explicit_cost_approval",
+    "perform_cost_confirmation_without_owner_approval",
+    "apply_database_changes_to_production",
+    "deploy_edge_to_production",
+    "create_accounts_in_production",
+    "create_or_reuse_real_employee_accounts",
+    "copy_production_data",
+    "enable_frontend_transport",
+    "change_production_auth_rls_or_grants",
+    "modify_or_reconcile_leader_migrations",
+    "mutate_or_cleanup_production_rows",
+    "claim_preview_or_production_readiness"
+  ]
+}
