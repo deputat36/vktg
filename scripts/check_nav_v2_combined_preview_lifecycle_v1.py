@@ -46,8 +46,8 @@ def main() -> None:
 
     require(config["schema_version"] == 1, "unexpected combined lifecycle version")
     require(
-        config["status"] == "repository_only_combined_preview_lifecycle_not_executable",
-        "combined lifecycle escaped repository-only state",
+        config["status"] == "repository_only_combined_preview_lifecycle_proven_not_executable",
+        "combined lifecycle proof status drifted",
     )
     require(
         config["source_main_sha"] == "e88b1c3ceb356a9d083c9bc4545b29c93b7ee41a",
@@ -58,9 +58,24 @@ def main() -> None:
         "production_applied", "preview_branch_created", "cloud_execution_allowed",
         "cost_confirmation_performed", "preview_apply_allowed", "edge_deployed",
         "deployment_bundle_ready", "production_rollback_bundle_ready",
-        "combined_apply_proven", "combined_rollback_proven",
     ]:
         require(config[key] is False, f"{key} must remain false")
+    require(config["combined_apply_proven"] is True, "combined apply proof is missing")
+    require(config["combined_rollback_proven"] is True, "combined rollback proof is missing")
+
+    proof = config["proof"]
+    require(proof["workflow"] == "Navigator v2 combined preview lifecycle v1", "proof workflow drifted")
+    require(proof["workflow_run_id"] == 29831435000, "proof workflow run drifted")
+    require(proof["head_sha"] == "8add63300206550fa77049f550847cb2273e2e8b", "proof head SHA drifted")
+    require(proof["postgres_major"] == 17, "proof PostgreSQL major drifted")
+    for key in [
+        "source_contract_success", "conflict_inventory_success",
+        "quality_apply_assert_success", "bounded_apply_assert_success",
+        "intake_25_rule_apply_assert_success", "cross_component_assertions_success",
+        "always_rollback_success", "post_rollback_assertions_success",
+    ]:
+        require(proof[key] is True, f"proof evidence missing: {key}")
+    require(proof["cloud_calls_performed"] is False, "proof claims cloud calls")
 
     require([item["order"] for item in config["forward_order"]] == [1, 2, 3], "forward order drifted")
     require(
@@ -72,13 +87,16 @@ def main() -> None:
         [item["id"] for item in config["rollback_order"]] == ["intake", "bounded_consolidated", "quality"],
         "rollback component IDs drifted",
     )
+    require(config["rollback_order"][0]["source"] == "combined_safe_sources", "intake rollback source is not combined-safe")
+    require(config["rollback_order"][0]["contract"] == config["combined_intake_rollback"], "intake rollback contract link drifted")
+    require(config["combined_intake_rollback"] == INTAKE_ROLLBACK.relative_to(ROOT).as_posix(), "combined intake rollback path drifted")
 
     declared = list(config["shared_setup"]) + list(config["assertion_order"]) + list(config["post_rollback_assertions"])
     declared += [
         config["preview_bundle_assembler"],
         config["bounded_consolidated_candidate"],
         config["package_v2"],
-        INTAKE_ROLLBACK.relative_to(ROOT).as_posix(),
+        config["combined_intake_rollback"],
     ]
     for relative in declared:
         require((ROOT / relative).is_file(), f"declared source missing: {relative}")
@@ -154,6 +172,7 @@ def main() -> None:
         "--preview-bundle-dir", "--bounded-dir", "--report",
         "duplicate forward source paths", "unexpected exact function redefinitions",
         "duplicate created objects", "deployment_bundle_ready",
+        "combined_apply_proven", "combined_rollback_proven",
     ]:
         require(marker.lower() in checker.lower(), f"artifact checker marker missing: {marker}")
 
@@ -171,6 +190,7 @@ def main() -> None:
     for marker in [
         "Combined lifecycle", "Shared synthetic schema", "Conflict inventory",
         "PostgreSQL 17", "ALWAYS ROLLBACK", "Active stops", "Production remains unchanged",
+        "workflow_run_id: `29831435000`", "combined-safe",
     ]:
         require(marker in doc, f"documentation marker missing: {marker}")
 
