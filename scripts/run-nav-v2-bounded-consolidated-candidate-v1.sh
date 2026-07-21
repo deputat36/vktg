@@ -29,7 +29,7 @@ post_status=0
 
 run_forward_and_assertions() {
   run_sql tests/sql/nav_v2_bounded_task_mutation_setup.sql || return $?
-  run_sql tests/sql/nav_v2_deal_card_lite_bounded_setup.sql || return $?
+  run_sql tests/sql/nav_v2_bounded_consolidated_candidate_setup.sql || return $?
   rollback_ready=1
 
   run_sql "$candidate_dir/01-bounded-consolidated-forward.sql" || return $?
