@@ -119,7 +119,7 @@ const unexpectedFunctions = functionRedefinitions.filter((item) => !expectedName
 const objects = [
   ...namedObjects(combinedForward, /create\s+table\s+(?:if\s+not\s+exists\s+)?([a-z0-9_.]+)/gi, 'table'),
   ...namedObjects(combinedForward, /create\s+type\s+([a-z0-9_.]+)/gi, 'type'),
-  ...namedObjects(combinedForward, /create\s+(?:unique\s+)?index\s+([a-z0-9_.]+)/gi, 'index'),
+  ...namedObjects(combinedForward, /create\s+(?:unique\s+)?index\s+(?:if\s+not\s+exists\s+)?([a-z0-9_.]+)/gi, 'index'),
   ...namedObjects(combinedForward, /create\s+(?:constraint\s+)?trigger\s+([a-z0-9_.]+)/gi, 'trigger'),
 ];
 const objectCounts = new Map();
