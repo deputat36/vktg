@@ -118,6 +118,7 @@ jobs:
       - name: Run quality lifecycle, duplicate and no-backfill assertions
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_privacy_aligned_quality_assertions.sql
       - name: Apply assembled quality rehearsal rollback
+        if: always()
         run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/01-quality-rehearsal-rollback.sql
 
   postgres-17-bounded-segment:
@@ -175,8 +176,10 @@ jobs:
       - name: Run bounded DTO role and privacy assertions
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_deal_card_lite_bounded_assertions.sql
       - name: Apply assembled bounded rehearsal rollback
+        if: always()
         run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/02-bounded-rehearsal-rollback.sql
       - name: Assert full bounded overlay removal and legacy survival
+        if: always()
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_preview_bundle_bounded_post_rollback_assertions.sql
 
   postgres-17-intake-segment:
@@ -231,19 +234,24 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_adapter_harness_assertions.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_save_integration_harness_assertions.sql
-      - name: Create governed, wave and final harnesses
+      - name: Create governed harness and preserve base regression
         run: |
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql
-          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql
-      - name: Run governed base, wave1, wave2 and final 25-rule assertions
-        run: |
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_governed_intake_save_assertions.sql
+      - name: Create wave1 harness and run wave1 assertions
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_harness_setup.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_rule_assertions.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave1_integration_negative_assertions.sql
+      - name: Create wave2 harness and run wave2 assertions
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_harness_setup.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_rule_assertions.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_semantics_wave2_integration_negative_assertions.sql
+      - name: Create final harness and run full 25-rule assertions
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_harness_setup.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/nav_v2_intake_special_semantics_integration_assertions.sql
       - name: Apply assembled intake rehearsal rollback
+        if: always()
         run: psql -v ON_ERROR_STOP=1 -f /tmp/nav-v2-bundle/03-intake-rehearsal-rollback.sql
