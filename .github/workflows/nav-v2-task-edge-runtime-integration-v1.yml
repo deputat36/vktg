@@ -1,0 +1,80 @@
+name: Navigator v2 task Edge runtime integration v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-task-edge-runtime-integration-v1.json'
+      - 'config/nav-v2-task-edge-identity-contract.json'
+      - 'config/nav-v2-task-dual-path-contract.json'
+      - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
+      - 'supabase/functions/nav-v2-deal-api/task-action-contract-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js'
+      - 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'
+      - 'supabase/prototypes/nav_v2_bounded_task_actor_aware_mutations.sql'
+      - 'scripts/check_nav_v2_task_edge_runtime_integration.py'
+      - 'scripts/check-nav-v2-task-edge-runtime-integration.mjs'
+      - 'scripts/check-nav-v2-task-edge-identity.mjs'
+      - 'scripts/check-nav-v2-task-edge-sql-parity.mjs'
+      - 'docs/NAV_V2_TASK_EDGE_RUNTIME_INTEGRATION_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-task-edge-runtime-integration-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-task-edge-runtime-integration-v1.json'
+      - 'config/nav-v2-preview-deployment-bundle-manifest-v1.json'
+      - 'config/nav-v2-deployment-decision-package-v1.json'
+      - 'supabase/functions/nav-v2-deal-api/index.ts'
+      - 'supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js'
+      - 'scripts/check_nav_v2_task_edge_runtime_integration.py'
+      - 'scripts/check-nav-v2-task-edge-runtime-integration.mjs'
+      - 'docs/NAV_V2_TASK_EDGE_RUNTIME_INTEGRATION_V1_2026-07-21.md'
+      - '.github/workflows/nav-v2-task-edge-runtime-integration-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-semantic-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Edge runtime integration source boundary
+        run: python3 scripts/check_nav_v2_task_edge_runtime_integration.py
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_task_edge_runtime_integration.py
+      - name: Check pure Edge modules and semantic runner syntax
+        run: |
+          node --check supabase/functions/nav-v2-deal-api/task-action-contract-v2.js
+          node --check supabase/functions/nav-v2-deal-api/task-action-edge-identity-v2.js
+          node --check supabase/functions/nav-v2-deal-api/task-action-edge-runtime-v2.js
+          node --check scripts/check-nav-v2-task-edge-runtime-integration.mjs
+      - name: Run disabled runtime role and rejection matrix
+        run: node scripts/check-nav-v2-task-edge-runtime-integration.mjs
+      - name: Preserve detached identity validation matrix
+        run: node scripts/check-nav-v2-task-edge-identity.mjs
+      - name: Preserve exact actor-aware Edge-to-SQL parity
+        run: node scripts/check-nav-v2-task-edge-sql-parity.mjs
+      - name: Prove source is integrated but runtime remains disabled
+        run: |
+          grep -F 'import { routeBoundedTaskEdgeActionV2 } from "./task-action-edge-runtime-v2.js";' supabase/functions/nav-v2-deal-api/index.ts
+          grep -F 'const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;' supabase/functions/nav-v2-deal-api/index.ts
+          grep -F 'const BOUNDED_TRANSPORT_ENABLED = false;' assets/js/nav-v2/task-action-guard-v2.js
+          if grep -R -Fq 'SUPABASE_SERVICE_ROLE_KEY' assets; then
+            echo 'FAIL: service role environment name leaked into frontend assets'
+            exit 1
+          fi
+      - name: Prove no migration or deployment artifact was created
+        run: |
+          if find supabase/migrations -maxdepth 1 -type f -iname '*edge*runtime*integration*' | grep -q .; then
+            echo 'FAIL: repository-only Edge runtime integration leaked into migrations'
+            exit 1
+          fi
+          test ! -e supabase/functions/nav-v2-deal-api/.deployed
+          echo 'No migration or Edge deployment marker created'
