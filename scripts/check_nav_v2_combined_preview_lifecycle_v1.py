@@ -6,11 +6,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/nav-v2-combined-preview-lifecycle-v1.json"
+INTAKE_ROLLBACK = ROOT / "config/nav-v2-combined-preview-intake-rollback-v1.json"
 RUNNER = ROOT / "scripts/run-nav-v2-combined-preview-lifecycle-v1.sh"
 ARTIFACT_CHECKER = ROOT / "scripts/check-nav-v2-combined-preview-artifacts-v1.mjs"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-combined-preview-lifecycle-v1.yml"
 DOC = ROOT / "docs/NAV_V2_COMBINED_PREVIEW_LIFECYCLE_V1_2026-07-21.md"
 MIGRATIONS = ROOT / "supabase/migrations"
+
+EXPECTED_INTAKE_ROLLBACK = [
+    "tests/sql/nav_v2_intake_special_semantics_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_special_semantics_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave2_governed_cleanup_for_base_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave1_integration_rollback.sql",
+    "tests/sql/nav_v2_intake_semantics_wave1_rollback.sql",
+    "tests/sql/nav_v2_governed_intake_save_rollback.sql",
+    "tests/sql/nav_v2_intake_save_integration_harness_rollback.sql",
+    "tests/sql/nav_v2_preview_bundle_intake_mapper_cleanup.sql",
+    "tests/sql/nav_v2_combined_preview_intake_adapter_rollback_v1.sql",
+]
 
 
 def require(condition: bool, message: str) -> None:
@@ -19,10 +34,11 @@ def require(condition: bool, message: str) -> None:
 
 
 def main() -> None:
-    for path in [CONFIG, RUNNER, ARTIFACT_CHECKER, WORKFLOW, DOC]:
+    for path in [CONFIG, INTAKE_ROLLBACK, RUNNER, ARTIFACT_CHECKER, WORKFLOW, DOC]:
         require(path.is_file(), f"missing source: {path.relative_to(ROOT)}")
 
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    intake_rollback = json.loads(INTAKE_ROLLBACK.read_text(encoding="utf-8"))
     runner = RUNNER.read_text(encoding="utf-8")
     checker = ARTIFACT_CHECKER.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
@@ -62,6 +78,7 @@ def main() -> None:
         config["preview_bundle_assembler"],
         config["bounded_consolidated_candidate"],
         config["package_v2"],
+        INTAKE_ROLLBACK.relative_to(ROOT).as_posix(),
     ]
     for relative in declared:
         require((ROOT / relative).is_file(), f"declared source missing: {relative}")
@@ -78,6 +95,35 @@ def main() -> None:
     )
     require(conflict["unexpected_exact_function_redefinitions_allowed"] is False, "unexpected function redefinitions were allowed")
     require(conflict["shared_schema_created_once"] is True, "shared schema is not single-create")
+
+    require(intake_rollback["schema_version"] == 1, "unexpected combined intake rollback version")
+    require(
+        intake_rollback["status"] == "repository_only_combined_intake_rollback_not_executable",
+        "combined intake rollback escaped repository-only state",
+    )
+    require(intake_rollback["production_applied"] is False, "combined intake rollback claims production apply")
+    require(intake_rollback["preview_branch_created"] is False, "combined intake rollback claims preview branch")
+    require(intake_rollback["cloud_execution_allowed"] is False, "combined intake rollback permits cloud execution")
+    require(intake_rollback["rollback_sources"] == EXPECTED_INTAKE_ROLLBACK, "combined intake rollback order drifted")
+    require(
+        intake_rollback["replaced_standalone_source"] == "tests/sql/nav_v2_intake_adapter_harness_rollback.sql",
+        "standalone intake rollback replacement drifted",
+    )
+    require(intake_rollback["replaced_standalone_source"] not in intake_rollback["rollback_sources"], "standalone schema-owning rollback is still included")
+    for relative in intake_rollback["rollback_sources"]:
+        require((ROOT / relative).is_file(), f"combined intake rollback source missing: {relative}")
+        require(relative in runner, f"runner does not execute combined intake rollback source: {relative}")
+
+    replacement = (ROOT / intake_rollback["rollback_sources"][-1]).read_text(encoding="utf-8").lower()
+    for forbidden in intake_rollback["forbidden_statements_in_replacement"]:
+        require(forbidden not in replacement, f"combined intake replacement contains forbidden ownership statement: {forbidden}")
+    for marker in [
+        "harness.quality_snapshot",
+        "nav_v2_private.nav_v2_quality_sync_task_v1",
+        "nav_v2_private.nav_v2_task_contract_catalog",
+        "combined-safe intake adapter rollback",
+    ]:
+        require(marker.lower() in replacement, f"combined intake replacement marker missing: {marker}")
 
     required_checks = set(config["required_checks"])
     for check in [
@@ -99,6 +145,8 @@ def main() -> None:
         "nav_v2_combined_preview_bounded_coexistence_assertions_v1.sql",
         "nav_v2_preview_bundle_intake_final_composite_assertions.sql",
         "nav_v2_combined_preview_post_rollback_assertions_v1.sql",
+        "run_combined_intake_rollback",
+        "nav_v2_combined_preview_intake_adapter_rollback_v1.sql",
     ]:
         require(marker in runner, f"runner marker missing: {marker}")
 
