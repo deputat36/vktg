@@ -28,20 +28,26 @@ const assert = (condition, message) => {
 };
 
 const config = JSON.parse(await readFile(path.join(root, 'config/nav-v2-combined-preview-lifecycle-v1.json'), 'utf8'));
+const intakeRollbackConfig = JSON.parse(await readFile(path.join(root, config.combined_intake_rollback), 'utf8'));
 const previewIndexText = normalize(await readFile(path.join(previewDir, 'bundle-index.json'), 'utf8'));
 const boundedIndexText = normalize(await readFile(path.join(boundedDir, 'bounded-consolidated-index.json'), 'utf8'));
 const previewIndex = JSON.parse(previewIndexText);
 const boundedIndex = JSON.parse(boundedIndexText);
 
-assert(config.status === 'repository_only_combined_preview_lifecycle_not_executable', 'combined lifecycle status drifted');
+assert(config.status === 'repository_only_combined_preview_lifecycle_proven_not_executable', 'combined lifecycle status drifted');
 for (const key of [
   'production_applied', 'preview_branch_created', 'cloud_execution_allowed',
   'cost_confirmation_performed', 'preview_apply_allowed', 'edge_deployed',
   'deployment_bundle_ready', 'production_rollback_bundle_ready',
-  'combined_apply_proven', 'combined_rollback_proven',
 ]) {
   assert(config[key] === false, `${key} escaped fail-closed state`);
 }
+assert(config.combined_apply_proven === true, 'combined apply proof is not recorded');
+assert(config.combined_rollback_proven === true, 'combined rollback proof is not recorded');
+assert(config.proof?.workflow_run_id === 29831435000, 'combined workflow proof run drifted');
+assert(config.proof?.postgres_major === 17, 'combined PostgreSQL proof major drifted');
+assert(config.proof?.cloud_calls_performed === false, 'combined proof claims cloud calls');
+assert(intakeRollbackConfig.status === 'repository_only_combined_intake_rollback_not_executable', 'combined intake rollback status drifted');
 assert(previewIndex.assembler_status === 'repository_only_ci_assembler_not_deployable', 'preview bundle status drifted');
 assert(boundedIndex.status === 'repository_only_consolidated_candidate_not_executable', 'bounded index status drifted');
 
@@ -60,13 +66,40 @@ async function loadArtifact(source, file) {
   return { source, file, text, indexItem };
 }
 
+async function loadCombinedSafeIntakeRollback() {
+  const sourceOrder = [];
+  const contents = [];
+  for (const relative of intakeRollbackConfig.rollback_sources) {
+    const content = normalize(await readFile(path.join(root, relative), 'utf8'));
+    sourceOrder.push({ path: relative, bytes: Buffer.byteLength(content), sha256: sha256(content) });
+    contents.push(content);
+  }
+  const text = contents.join('\n');
+  return {
+    source: 'combined_safe_sources',
+    file: 'combined-safe-intake-rollback-chain',
+    text,
+    indexItem: {
+      file: 'combined-safe-intake-rollback-chain',
+      bytes: Buffer.byteLength(text),
+      sha256: sha256(text),
+      source_order: sourceOrder,
+      production_executable: false,
+    },
+  };
+}
+
 const forwardArtifacts = [];
 for (const item of config.forward_order) {
   forwardArtifacts.push(await loadArtifact(item.source, item.file));
 }
 const rollbackArtifacts = [];
 for (const item of config.rollback_order) {
-  rollbackArtifacts.push(await loadArtifact(item.source, item.file));
+  if (item.source === 'combined_safe_sources') {
+    rollbackArtifacts.push(await loadCombinedSafeIntakeRollback());
+  } else {
+    rollbackArtifacts.push(await loadArtifact(item.source, item.file));
+  }
 }
 
 const forwardSourcePaths = [];
@@ -138,6 +171,9 @@ const report = {
     duplicateSourcePaths.length === 0 &&
     unexpectedFunctions.length === 0 &&
     duplicateObjects.length === 0,
+  lifecycle_proof: config.proof,
+  combined_apply_proven: true,
+  combined_rollback_proven: true,
   preview_index_sha256: sha256(previewIndexText),
   bounded_index_sha256: sha256(boundedIndexText),
   forward_order: forwardArtifacts.map((item, index) => ({
