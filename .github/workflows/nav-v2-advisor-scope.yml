@@ -8,6 +8,7 @@ on:
       - 'config/nav-v2-advisor-live-attestation.json'
       - 'scripts/check_nav_v2_advisor_scope.py'
       - 'scripts/check_nav_v2_advisor_live_attestation.py'
+      - 'tests/sql/nav_v2_advisor_readonly_preflight_v1.sql'
       - 'docs/NAV_V2_ADVISOR_TRIAGE.md'
       - 'docs/NAV_V2_AUTONOMOUS_AUDIT_PLAN_20260713.md'
       - '.github/workflows/nav-v2-advisor-scope.yml'
@@ -20,6 +21,8 @@ on:
       - 'config/nav-v2-advisor-live-attestation.json'
       - 'scripts/check_nav_v2_advisor_scope.py'
       - 'scripts/check_nav_v2_advisor_live_attestation.py'
+      - 'tests/sql/nav_v2_advisor_readonly_preflight_v1.sql'
+      - 'docs/NAV_V2_ADVISOR_TRIAGE.md'
       - '.github/workflows/nav-v2-advisor-scope.yml'
   workflow_dispatch:
 
@@ -29,19 +32,83 @@ permissions:
 jobs:
   advisor-scope:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Advisor policy JSON
-        run: python3 -m json.tool config/nav-v2-advisor-scope.json > /dev/null
-      - name: Validate Advisor live attestation JSON
-        run: python3 -m json.tool config/nav-v2-advisor-live-attestation.json > /dev/null
+
+      - name: Validate Advisor policy and attestation JSON
+        run: |
+          python3 -m json.tool config/nav-v2-advisor-scope.json > /dev/null
+          python3 -m json.tool config/nav-v2-advisor-live-attestation.json > /dev/null
+
       - name: Compile Advisor validators
         run: |
           python3 -m py_compile scripts/check_nav_v2_advisor_scope.py
           python3 -m py_compile scripts/check_nav_v2_advisor_live_attestation.py
+
       - name: Check Navigator-only Advisor baseline
         run: python3 scripts/check_nav_v2_advisor_scope.py
+
       - name: Test Advisor drift detection
         run: python3 scripts/check_nav_v2_advisor_scope.py --self-test
-      - name: Check live Advisor attestation against the RPC registry
+
+      - name: Check live Advisor and environment attestation
         run: python3 scripts/check_nav_v2_advisor_live_attestation.py
+
+      - name: Produce deterministic Advisor review evidence
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          paths = [
+              'config/nav-v2-rpc-surface.json',
+              'config/nav-v2-advisor-scope.json',
+              'config/nav-v2-advisor-live-attestation.json',
+              'tests/sql/nav_v2_advisor_readonly_preflight_v1.sql',
+          ]
+          files = []
+          for value in paths:
+              data = Path(value).read_bytes()
+              files.append({
+                  'path': value,
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              })
+          attestation = json.loads(Path(paths[2]).read_text(encoding='utf-8'))
+          report = {
+              'schema_version': 2,
+              'status': 'repository_only_navigator_advisor_drift_review_evidence',
+              'files': files,
+              'observed_at': attestation['observed_at'],
+              'expected_warning_count': attestation['result']['expected_count'],
+              'observed_warning_count': attestation['result']['observed_count'],
+              'missing': attestation['result']['missing'],
+              'unexpected': attestation['result']['unexpected'],
+              'latest_remote_migration': attestation['migration_boundary']['latest_remote_version'],
+              'latest_navigator_migration': attestation['migration_boundary']['latest_navigator_version'],
+              'preview_branch_count': attestation['environment']['preview_branch_count'],
+              'candidate_objects_present': attestation['candidate_database_absence']['candidate_objects_present'],
+              'technical_auth_users': attestation['technical_identity_absence']['auth_users'],
+              'technical_profiles': attestation['technical_identity_absence']['profiles'],
+              'transaction_read_only': attestation['safety']['transaction_read_only'],
+              'data_mutated': attestation['safety']['data_mutated'],
+              'ddl_executed': attestation['safety']['ddl_executed'],
+              'grant_changes_authorized': False,
+              'auth_changes_authorized': False,
+              'cloud_execution_authorized': False,
+          }
+          output = Path('/tmp/nav-v2-advisor-drift-attestation-v2.json')
+          output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          cp /tmp/nav-v2-advisor-drift-attestation-v2.json /tmp/nav-v2-advisor-drift-attestation-v2-copy.json
+          diff -u /tmp/nav-v2-advisor-drift-attestation-v2.json /tmp/nav-v2-advisor-drift-attestation-v2-copy.json
+
+      - name: Upload Advisor drift evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-advisor-drift-attestation-v2
+          path: /tmp/nav-v2-advisor-drift-attestation-v2.json
+          if-no-files-found: error
+          retention-days: 30
