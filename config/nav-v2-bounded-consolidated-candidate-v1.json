@@ -31,7 +31,7 @@
   ],
   "postgres_setup": [
     "tests/sql/nav_v2_bounded_task_mutation_setup.sql",
-    "tests/sql/nav_v2_deal_card_lite_bounded_setup.sql"
+    "tests/sql/nav_v2_bounded_consolidated_candidate_setup.sql"
   ],
   "post_apply_assertions": [
     "tests/sql/nav_v2_bounded_task_mutation_assertions.sql",
@@ -42,6 +42,12 @@
   "post_rollback_assertions": [
     "tests/sql/nav_v2_bounded_consolidated_candidate_post_rollback_assertions.sql"
   ],
+  "fixture_policy": {
+    "schema_and_fixture_data_separated": true,
+    "documents_inserted_before_mutation_assertions": 0,
+    "risks_inserted_before_mutation_assertions": 0,
+    "reason": "canonical task mutation assertions must prove bounded RPCs do not create documents or risks"
+  },
   "required_checks": [
     "all_declared_sources_exist",
     "exact_forward_source_order",
