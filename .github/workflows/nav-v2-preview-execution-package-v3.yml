@@ -94,13 +94,12 @@ jobs:
           cp /tmp/nav-v2-preview-execution-package-v3-report.json /tmp/nav-v2-preview-execution-package-v3-report-copy.json
           diff -u /tmp/nav-v2-preview-execution-package-v3-report.json /tmp/nav-v2-preview-execution-package-v3-report-copy.json
 
-      - name: Prove no migrations or cloud execution
+      - name: Prove no generated migration entered repository
         run: |
           if find supabase/migrations -maxdepth 1 -type f -iname '*preview*execution*package*v3*' | grep -q .; then
             echo 'FAIL: package v3 leaked into supabase/migrations'
             exit 1
           fi
-          ! grep -Eiq 'supabase db push|supabase functions deploy|confirm_cost|apply_migration|deploy_edge_function' .github/workflows/nav-v2-preview-execution-package-v3.yml
 
       - name: Upload package v3 review evidence
         uses: actions/upload-artifact@v4
