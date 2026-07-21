@@ -4,17 +4,19 @@
 
 - Дата: 21 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `fb0a5ad9161efc35732049c3a38a96ebc6f0de12` — squash merge PR #434.
+- `main`: `abf83a36111cd8909ae60b2c250bed2898df3610` — squash merge PR #436.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project status: `ACTIVE_HEALTHY`.
 - Region: `eu-west-1`.
-- PostgreSQL production: `17.6`.
+- PostgreSQL production: `17.6.1.121`.
 - Последняя Navigator production migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
-- Последняя общая remote migration: `20260720201701_leader_public_lead_health_view_v1`.
-- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#434 не менялись.
+- Последняя общая remote migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs`.
+- Production Supabase, Auth, Edge Functions, RLS, grants и рабочие строки в PR #394–#436 не менялись.
 
-Live counts могут меняться от реальной работы пользователей. Не откатывать production data только из-за изменения counts.
+Последняя общая migration относится к `leader_*`. Navigator не должен изменять, переименовывать или нормализовать migration history другого модуля.
+
+Live counts могут меняться от реальной работы пользователей. Не откатывать production data только из-за изменения counts и не трактовать counts как оценку сотрудников.
 
 ## Цель и продуктовая граница
 
@@ -32,7 +34,7 @@ Navigator не является CRM, файловым архивом, банко
 - Файлы остаются во внешнем утверждённом хранилище.
 - Navigator минимизирует прямые идентификаторы клиентов и не должен дублировать CRM.
 
-Каждый создаваемый пункт обязан иметь:
+Каждый автоматически создаваемый пункт обязан иметь:
 
 `trigger → owner → deadline → action → evidence → outcome → confirmation → gate impact`
 
@@ -40,7 +42,7 @@ Navigator не является CRM, файловым архивом, банко
 
 ## Production baseline
 
-Read-only snapshot от 21 июля 2026 года:
+Read-only snapshot от `2026-07-21T13:19:29.070311+00:00`:
 
 - 23 сделки;
 - 24 участника;
@@ -60,7 +62,7 @@ Read-only snapshot от 21 июля 2026 года:
 - actor-aware bounded task RPC overloads;
 - governed bounded task lifecycle RPC;
 - final 25-rule mapper;
-- governed intake ledger;
+- governed intake ledger и mapper;
 - privacy-aligned quality replacement;
 - bounded frontend transport;
 - candidate Edge deployment;
@@ -122,15 +124,15 @@ Production task actions используют:
 
 ### PR #421–#423 — deployment decision, cost и source manifest
 
-Зафиксированы:
+Зафиксированы owner deployment options, отдельный authenticated E2E, отдельное production decision и ordered source inventory.
 
-- owner deployment options;
-- отдельный authenticated E2E;
-- отдельное production decision после E2E;
-- preview branch cost snapshot `0.01344` в час и six-hour ceiling `0.08064` без подтверждённой валюты;
-- ordered source inventory от read-only preflight до optional cleanup.
+Исторический branch cost snapshot:
 
-Состояние:
+- `0.01344` в час;
+- six-hour ceiling `0.08064`;
+- стоимость обязательно проверяется повторно перед созданием branch.
+
+Текущее состояние:
 
 - `selected_deployment_option=null`;
 - `explicit_owner_cost_approval=false`;
@@ -141,17 +143,7 @@ Issue #282 остаётся binding cost gate.
 
 ### PR #425 — deterministic preview bundle assembler
 
-Доказаны во временном каталоге:
-
-- byte-identical assembly;
-- exact source order и SHA-256;
-- quality apply/assert/rollback;
-- bounded core apply/assert/rollback;
-- bounded DTO apply/assert/rollback;
-- governed intake full 25-rule apply/assert/rollback;
-- отсутствие generated SQL в `supabase/migrations`.
-
-Artifacts оставались независимыми rehearsal-сегментами.
+Во временном каталоге доказаны byte-identical assembly, exact source order/SHA-256 и независимые PostgreSQL 17 apply/assert/rollback для quality, bounded и governed intake. Generated SQL не попадает в `supabase/migrations`.
 
 ### PR #427 — Edge actor identity candidate
 
@@ -159,56 +151,17 @@ Candidate `supabase/functions/nav-v2-deal-api/index.ts` содержит source-
 
 `const BOUNDED_TASK_EDGE_IDENTITY_ENABLED = false;`
 
-Проверены:
+Проверены JWT user verification, active profile, contract-v2 context, role/assignment preflight, broker mortgage-only scope, client actor-field rejection, cross-actor replay rejection и Edge-to-SQL parity.
 
-- JWT user verification;
-- active Navigator profile;
-- task contract-v2 context;
-- role/assignment preflight;
-- broker mortgage-only scope;
-- client actor-field rejection;
-- cross-actor replay rejection;
-- exact Edge-to-SQL parameter parity.
-
-Edge не деплоился.
-
-Deployed v4 закреплена отдельным immutable snapshot:
+Edge не деплоился. Deployed v4 закреплена immutable snapshot:
 
 `supabase/functions/nav-v2-deal-api/index.production-v4.ts`
 
-### PR #429 — preview candidate package v1
+### PR #429–#430 — preview package v1 и consolidated bounded candidate
 
-Создан fail-closed review package с:
-
-- exact artifact hashes и source order;
-- minimal-grants candidate;
-- Edge candidate file set;
-- preflight/post-apply/rollback inventory.
-
-Обнаружен blocker: independent `bounded_core` и `bounded_dto` повторяли base contract/mutations и не могли применяться последовательно.
-
-### PR #430 — consolidated bounded candidate
-
-Собран единый bounded forward:
-
-1. bounded task contract;
-2. governed mutations;
-3. actor-aware overloads;
-4. explicit privacy lite DTO;
-5. bounded DTO overlay.
-
-Rollback:
-
-1. bounded DTO rollback;
-2. actor-aware rollback;
-3. mutation rollback;
-4. base contract rollback.
-
-PostgreSQL 17 подтвердил полный bounded lifecycle, actor identity, DTO permissions, отсутствие побочных documents/risks и ALWAYS ROLLBACK.
+Package v1 обнаружил повторное применение bounded base sources. PR #430 собрал единый bounded forward/rollback и доказал PostgreSQL 17 lifecycle, actor identity, DTO permissions, отсутствие побочных documents/risks и ALWAYS ROLLBACK.
 
 ### PR #432 — preview candidate package v2 и read-only attestation
-
-Merge: `e88b1c3ceb356a9d083c9bc4545b29c93b7ee41a`.
 
 Добавлены:
 
@@ -217,20 +170,7 @@ Merge: `e88b1c3ceb356a9d083c9bc4545b29c93b7ee41a`.
 - deterministic temporary package index;
 - exact links на quality, consolidated bounded, intake и Edge candidates.
 
-Read-only evidence:
-
-- только production `main`;
-- preview branches `0`;
-- technical Auth users/profiles `0`;
-- candidate DB objects `0`;
-- Edge v4 hash совпадает;
-- Navigator migration boundary совпадает с `20260716063401`.
-
-Обнаружен overall release baseline drift:
-
-- `config/nav-v2-release-baseline.json` содержит `20260715203158`;
-- remote history содержит более поздние `leader_*` migrations;
-- Navigator не обновляет и не нормализует `leader_*` history.
+Package v2 остаётся fail-closed и не разрешает branch, apply или deploy.
 
 ### PR #433 — combined quality → bounded → intake lifecycle
 
@@ -247,29 +187,9 @@ Merge: `00125d63601b2064164bf01828d7244acf6ca773`.
 - standalone intake rollback, который удалял общие schemas и roles;
 - false-positive parser для `CREATE INDEX IF NOT EXISTS`.
 
-Созданы:
+Созданы shared synthetic schema, OID-preserving marker facade, combined-safe intake rollback, exact conflict inventory и cross-component assertions.
 
-- shared synthetic production-like schema;
-- OID-preserving intake marker facade;
-- combined-safe intake rollback chain;
-- exact conflict inventory;
-- cross-component privacy/service-role assertions.
-
-Канонический proof run: `29831435000`.
-
-Финальный PR head повторно прошёл lifecycle в run `29831895791`.
-
-Подтверждены:
-
-- combined forward order;
-- полный 25-rule chain;
-- actor-aware bounded lifecycle;
-- отсутствие side effects между components;
-- combined-safe intake rollback;
-- bounded rollback;
-- exact quality restoration;
-- post-rollback отсутствие candidate objects;
-- сохранность legacy task.
+Подтверждены полный 25-rule chain, actor-aware bounded lifecycle, отсутствие side effects, reverse rollback, exact quality restoration и сохранность legacy task.
 
 ### PR #434 — preview execution package v3
 
@@ -314,6 +234,33 @@ Package v3 остаётся:
 - `deployment_bundle_ready=false`;
 - `production_rollback_bundle_ready=false`.
 
+### PR #436 — Advisor whitelist и production drift attestation v2
+
+Merge: `abf83a36111cd8909ae60b2c250bed2898df3610`.
+
+Fresh read-only evidence подтвердил:
+
+- 50 curated external RPC;
+- 48 ожидаемых callable `SECURITY DEFINER` warnings;
+- observed `48/48`;
+- missing `0`;
+- unexpected `0`;
+- две `SECURITY INVOKER` exceptions;
+- Navigator migration boundary не изменилась;
+- latest overall remote migration `20260721122333` относится к `leader_*`;
+- Edge v4/JWT/hash не изменились;
+- preview branches, candidate objects и technical identities отсутствуют.
+
+Добавлен воспроизводимый источник:
+
+`tests/sql/nav_v2_advisor_readonly_preflight_v1.sql`
+
+Он выполняет aggregate-only чтение внутри `begin transaction read only`, не возвращает PII и заканчивается `rollback`.
+
+CI формирует deterministic evidence artifact и блокирует drift registry, Advisor list, migration boundary, Edge baseline, candidate objects, technical identities и safety flags.
+
+Issue #161 остаётся открытой только из-за leaked-password/Auth E2E prerequisites.
+
 ## Обязательные gates
 
 ### Repository preparation gate
@@ -329,7 +276,7 @@ Package v3 остаётся:
 - Edge disabled candidate file set;
 - preview execution runbook;
 - technical-account lifecycle plan;
-- read-only production attestation contract.
+- read-only production and Advisor attestation contracts.
 
 Это repository evidence, а не разрешение на cloud execution.
 
@@ -350,28 +297,24 @@ Package v3 остаётся:
 
 Generic команды `продолжай` или `работай по плану` не являются таким approval.
 
+### Leaked-password Auth gate
+
+`auth_leaked_password_protection` остаётся выключенной до выполнения:
+
+- issue #16 — invite/recovery/password flow на disposable accounts;
+- issue #159 — authenticated role matrix;
+- issue #282 — explicit cost/branch/Auth approval;
+- повторный login/recovery QA после включения.
+
+Production Auth автоматически не меняется.
+
 ### Production gate
 
-Production deployment запрещён без:
-
-- successful authenticated role/mutation E2E в disposable preview;
-- cleanup attestation и удалённой preview branch;
-- отдельного owner production approval;
-- approved forward migration и rollback package;
-- database-first rollout;
-- Edge deploy с feature flag disabled;
-- controlled frontend switch;
-- controlled pilot scope;
-- monitoring и rollback triggers.
+Production deployment запрещён без successful authenticated E2E, cleanup attestation, удалённой preview branch, отдельного owner approval, approved forward/rollback, database-first rollout, Edge disabled deploy, controlled frontend switch, pilot scope, monitoring и rollback triggers.
 
 ### Cleanup gate
 
-Закрытие legacy quality rows запрещено без:
-
-- live privacy-aligned replacement;
-- выбранного cleanup option;
-- owner cleanup approval;
-- reconciliation attestation.
+Закрытие legacy quality rows запрещено без live privacy-aligned replacement, выбранного cleanup option, owner cleanup approval и reconciliation attestation.
 
 ## Binding ограничения
 
@@ -397,31 +340,39 @@ Generic команда `продолжай` не является:
 - `config/nav-v2-combined-preview-intake-rollback-v1.json`
 - `config/nav-v2-preview-candidate-package-v2.json`
 - `config/nav-v2-preview-readonly-attestation-v1.json`
+- `config/nav-v2-advisor-live-attestation.json`
+- `config/nav-v2-advisor-scope.json`
+- `config/nav-v2-rpc-surface.json`
 - `config/nav-v2-preview-minimal-grants-candidate-v1.json`
 - `config/nav-v2-bounded-consolidated-candidate-v1.json`
 - `config/nav-v2-preview-bundle-assembler-v1.json`
 - `config/nav-v2-task-edge-runtime-integration-v1.json`
 - `config/nav-v2-auth-e2e-readiness.json`
+- `tests/sql/nav_v2_advisor_readonly_preflight_v1.sql`
+- `tests/sql/nav_v2_preview_readonly_preflight_v1.sql`
 - `supabase/functions/nav-v2-deal-api/index.ts`
 - `supabase/functions/nav-v2-deal-api/index.production-v4.ts`
 - `scripts/run-nav-v2-combined-preview-lifecycle-v1.sh`
 - `scripts/check_nav_v2_preview_execution_package_v3.py`
+- `scripts/check_nav_v2_advisor_live_attestation.py`
 - `docs/NAV_V2_PREVIEW_EXECUTION_PACKAGE_V3_2026-07-21.md`
 - `docs/NAV_V2_COMBINED_PREVIEW_LIFECYCLE_V1_2026-07-21.md`
+- `docs/NAV_V2_ADVISOR_TRIAGE.md`
 
 ## Следующий безопасный slice без нового approval
 
 Разрешены только бесплатные read-only/repository actions:
 
-1. поддерживать package v3, handoff и attestation contract в актуальном состоянии;
+1. поддерживать package v3, handoff и live attestations в актуальном состоянии;
 2. проверять GitHub CI/review drift;
 3. выполнять aggregate-only production preflight без PII;
-4. фиксировать изменение Navigator migration/Edge baseline;
-5. не reconciliate `leader_*` migrations в рамках Navigator;
-6. не выполнять execution-time cost confirmation заранее;
-7. не создавать branch, accounts, secrets или cloud resources.
+4. фиксировать изменение Navigator migration, Advisor whitelist или Edge baseline;
+5. классифицировать Performance Advisor только как repository evidence, без автоматического удаления индексов или изменения RLS;
+6. не reconciliate `leader_*` migrations в рамках Navigator;
+7. не выполнять execution-time cost confirmation заранее;
+8. не создавать branch, accounts, secrets или cloud resources.
 
-Новый функциональный deployment slice отсутствует: все оставшиеся шаги требуют explicit owner/cost/Auth approval.
+Новый функциональный deployment slice отсутствует: все оставшиеся cloud шаги требуют explicit owner/cost/Auth approval.
 
 ## Команда для отдельного gated решения
 
@@ -429,4 +380,4 @@ Generic команда `продолжай` не является:
 
 `authenticated_e2e_only`, свежую стоимость branch, cost confirmation, disposable preview branch максимум на 6 часов, synthetic technical accounts и automatic cleanup.
 
-Без такой формулировки продолжать cloud execution запрещено.
+Без такой формулировки cloud execution запрещено.
