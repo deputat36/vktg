@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_synthetic_fk_parent_mutation_attribution_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_on": "2026-07-21",
+  "source_main_sha": "1076b70a23c89d0058beee29847f092cdc5dabb9",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "index_drop_authorized": false,
+  "cloud_execution_allowed": false,
+  "source_evidence": {
+    "canonical_fk_mutation_contract": "config/nav-v2-index-fk-parent-mutation-evidence-v1.json",
+    "canonical_fk_mutation_harness": "tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql",
+    "attribution_harness": "tests/sql/nav_v2_index_fk_parent_mutation_attribution_harness_v1.sql",
+    "postgres_harness_major": 17
+  },
+  "scope": {
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "foreign_key": "nav_deal_answers_v2_deal_id_fkey",
+    "delete_action": "CASCADE",
+    "update_action": "NO ACTION",
+    "comparison_modes": [
+      "single_and_composite_indexes",
+      "composite_unique_index_only"
+    ]
+  },
+  "synthetic_contract": {
+    "production_schema_used": false,
+    "production_data_copied": false,
+    "synthetic_deals_before_mutation": 5002,
+    "synthetic_answers_before_mutation": 100000,
+    "answers_per_referenced_deal": 20,
+    "parent_delete_cases": 2,
+    "unreferenced_parent_update_cases": 2,
+    "referenced_parent_update_rejection_cases": 2,
+    "transaction_local_index_stats": "pg_stat_xact_user_indexes",
+    "synthetic_index_sizes_captured": true,
+    "structural_composite_prefix_plan_required": true,
+    "latency_superiority_asserted": false,
+    "full_transaction_rollback": true,
+    "post_rollback_schema_absence_required": true
+  },
+  "required_evidence": [
+    "both-index parent delete uses at least one child index",
+    "both-index unreferenced parent update uses at least one child index",
+    "composite-only parent delete increments the composite index scan counter",
+    "composite-only unreferenced parent update increments the composite index scan counter",
+    "referenced parent update is rejected with SQLSTATE 23503 in both modes",
+    "single-column index is absent in composite-only evidence",
+    "synthetic index sizes are captured without production extrapolation",
+    "all generated rows and schema are rolled back"
+  ],
+  "result_policy": {
+    "canonical_decision_preserved": "synthetic_fk_parent_mutation_gap_closed_production_drop_not_ready",
+    "candidate_decision_preserved": "review_possible_redundancy_only",
+    "production_index_removal_ready": false,
+    "synthetic_latency_is_production_latency": false
+  },
+  "active_stops": [
+    "production_statistics_window_missing",
+    "authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_scale_fk_parent_mutation_benchmark_missing",
+    "write_cost_benefit_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_actions": [
+    "drop_production_index",
+    "create_production_index",
+    "apply_production_migration",
+    "copy_production_data_to_harness",
+    "create_supabase_branch",
+    "change_production_rls",
+    "change_leader_schema"
+  ]
+}
