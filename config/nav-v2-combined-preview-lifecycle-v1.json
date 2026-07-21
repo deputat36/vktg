@@ -89,6 +89,7 @@
     "exact_object_inventory_required": true,
     "duplicate_forward_source_paths_allowed": false,
     "expected_exact_function_redefinitions": [
+      "nav_v2_private.nav_v2_quality_sync_task_v1",
       "public.nav_v2_get_deal_card_lite"
     ],
     "unexpected_exact_function_redefinitions_allowed": false,
