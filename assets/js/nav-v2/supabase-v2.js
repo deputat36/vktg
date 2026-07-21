@@ -1,10 +1,14 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';
 import {
+  NAV_AUTH_REFRESH_LOCK_NAME,
   createAuthSessionExpiredError,
+  hasSessionAdvancedSinceRequest,
   isAuthSessionExpiredError,
+  isReplacementAuthSession,
+  isSameAuthSession,
   shouldInvalidateSessionAfterRefreshFailure
-} from './auth-session-recovery-v2.js?v=20260721-01';
+} from './auth-session-recovery-v2.js?v=20260721-02';
 
 export const NAV_V2_BUILD_ID = '20260711-01';
 if (typeof document !== 'undefined') {
@@ -100,8 +104,7 @@ export function clearCachedProfiles() {
   clearProfileCache();
 }
 
-function headers() {
-  const session = readSession();
+function headers(session = readSession()) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
     Authorization: 'Bearer ' + (session?.access_token || SUPABASE_PUBLISHABLE_KEY),
@@ -158,13 +161,25 @@ function accessPageUrl() {
   return new URL('./nav-accept-invite-v2.html', window.location.href).href;
 }
 
-async function refreshSession() {
+async function withAuthRefreshLock(callback) {
+  const lockManager = globalThis.navigator?.locks;
+  if (lockManager && typeof lockManager.request === 'function') {
+    return lockManager.request(NAV_AUTH_REFRESH_LOCK_NAME, { mode: 'exclusive' }, callback);
+  }
+  return callback();
+}
+
+async function refreshSession(failedAccessToken = '') {
   if (refreshRequest) {
     console.info('[nav-v2] Auth refresh: использую уже выполняющееся обновление сессии');
     return refreshRequest;
   }
-  refreshRequest = (async () => {
+  refreshRequest = withAuthRefreshLock(async () => {
     const session = readSession();
+    if (hasSessionAdvancedSinceRequest(session, failedAccessToken)) {
+      console.info('[nav-v2] Auth refresh: другая вкладка уже обновила сессию');
+      return session;
+    }
     if (!session?.refresh_token) {
       invalidateStoredSession(session);
       throw createAuthSessionExpiredError();
@@ -176,16 +191,32 @@ async function refreshSession() {
         body: JSON.stringify({ refresh_token: session.refresh_token })
       }, 12000);
       const payload = await parse(response);
+      const currentSession = readSession();
+      if (isReplacementAuthSession(currentSession, session)) {
+        console.info('[nav-v2] Auth refresh: сохраняю более новую сессию из другой вкладки');
+        return currentSession;
+      }
+      if (!isSameAuthSession(currentSession, session)) {
+        rememberEmail(sessionEmail(session));
+        throw createAuthSessionExpiredError();
+      }
       writeSession(payload);
       return payload;
     } catch (error) {
+      if (isAuthSessionExpiredError(error)) throw error;
       if (shouldInvalidateSessionAfterRefreshFailure(error)) {
-        invalidateStoredSession(session);
+        const currentSession = readSession();
+        if (isReplacementAuthSession(currentSession, session)) {
+          console.info('[nav-v2] Auth refresh: отклонён старый token, но другая вкладка уже сохранила новую сессию');
+          return currentSession;
+        }
+        if (isSameAuthSession(currentSession, session)) invalidateStoredSession(session);
+        else rememberEmail(sessionEmail(session));
         throw createAuthSessionExpiredError(error);
       }
       throw error;
     }
-  })().finally(() => { refreshRequest = null; });
+  }).finally(() => { refreshRequest = null; });
   return refreshRequest;
 }
 
@@ -218,7 +249,7 @@ export async function requestPasswordReset(email) {
 export async function signOut() {
   const session = readSession();
   try {
-    if (session?.access_token) await safeFetch(`${SUPABASE_URL}/auth/v1/logout`, { method: 'POST', headers: headers() }, 10000);
+    if (session?.access_token) await safeFetch(`${SUPABASE_URL}/auth/v1/logout`, { method: 'POST', headers: headers(session) }, 10000);
   } finally { writeSession(null); }
 }
 
@@ -283,12 +314,13 @@ async function executeRpc(name, payload = {}, timeout = DEFAULT_RPC_TIMEOUT_MS) 
   let refreshed = false;
   if (name === 'nav_v2_save_wizard_result') beginWizardSaveRecovery();
   try {
+    const requestSession = readSession();
     let response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: 'POST', headers: headers(), body: JSON.stringify(payload)
+      method: 'POST', headers: headers(requestSession), body: JSON.stringify(payload)
     }, timeout);
     if (response.status === 401 || response.status === 403) {
       refreshed = true;
-      await refreshSession();
+      await refreshSession(requestSession?.access_token || '');
       response = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
         method: 'POST', headers: headers(), body: JSON.stringify(payload)
       }, timeout);

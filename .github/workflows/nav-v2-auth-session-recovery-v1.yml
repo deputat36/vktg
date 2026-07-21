@@ -1,4 +1,4 @@
-name: Navigator v2 auth session recovery v1
+name: Navigator v2 auth session recovery
 
 on:
   pull_request:
@@ -9,6 +9,7 @@ on:
       - 'nav-v2.html'
       - 'dashboard-v2.html'
       - 'docs/NAV_V2_AUTH_SESSION_RECOVERY_V1_2026-07-21.md'
+      - 'docs/NAV_V2_AUTH_MULTI_TAB_REFRESH_RECOVERY_V2_2026-07-21.md'
       - '.github/workflows/nav-v2-auth-session-recovery-v1.yml'
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - 'nav-v2.html'
       - 'dashboard-v2.html'
       - 'docs/NAV_V2_AUTH_SESSION_RECOVERY_V1_2026-07-21.md'
+      - 'docs/NAV_V2_AUTH_MULTI_TAB_REFRESH_RECOVERY_V2_2026-07-21.md'
       - '.github/workflows/nav-v2-auth-session-recovery-v1.yml'
   workflow_dispatch:
 
@@ -51,5 +53,5 @@ jobs:
             exit 1
           fi
 
-      - name: Run invalid refresh-token recovery tests
+      - name: Run single-tab and multi-tab refresh recovery tests
         run: node tests/unit/nav-v2-auth-session-recovery.test.mjs
