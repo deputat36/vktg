@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_redacted_auth_summary_evaluator_offline_fail_closed",
+  "created_on": "2026-07-22",
+  "source_main_sha": "9141564a610fd9f5cfe8112354b1eb120bb0f11a",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "cloud_execution_allowed": false,
+  "raw_logs_allowed": false,
+  "evaluator": "scripts/evaluate_nav_v2_auth_recovery_summary_v1.py",
+  "checker": "scripts/check_nav_v2_auth_recovery_summary_evaluator_v1.py",
+  "input_contract": {
+    "capture_mode": "redacted_summary_only",
+    "raw_logs_included": false,
+    "minimum_recovery_sequences": 1,
+    "required_sequence": [
+      "authenticated_rpc_401",
+      "refresh_endpoint_200",
+      "same_rpc_retry_200"
+    ],
+    "privacy_flags_must_all_be_false": true,
+    "authenticated_role_e2e_claims_must_be_false": true,
+    "production_change_claims_must_be_false": true
+  },
+  "exit_codes": {
+    "0": "valid_redacted_summary_no_security_regression",
+    "2": "input_file_or_json_error",
+    "3": "privacy_contract_or_sequence_invalid",
+    "4": "valid_summary_reports_security_regression"
+  },
+  "decisions": {
+    "success": "redacted_auth_recovery_summary_valid_not_authenticated_role_e2e",
+    "regression": "redacted_auth_recovery_regression_observed_manual_investigation_required",
+    "privacy_invalid": "redacted_auth_summary_invalid_privacy_violation",
+    "contract_invalid": "redacted_auth_summary_invalid_contract_capture_required",
+    "input_error": "redacted_auth_summary_input_error"
+  },
+  "self_test_cases": [
+    "valid_recovery_summary",
+    "fresh_invalid_refresh_regression",
+    "unexpected_unauthenticated_success_regression",
+    "privacy_identifier_rejected",
+    "incomplete_sequence_rejected",
+    "forbidden_e2e_claim_rejected",
+    "malformed_json_rejected"
+  ],
+  "report_boundary": {
+    "echoes_input_events": false,
+    "echoes_identifiers": false,
+    "includes_only_aggregate_counts_decision_and_reasons": true,
+    "authenticated_role_e2e_ready": false,
+    "production_change_ready": false
+  },
+  "result": {
+    "decision": "redacted_auth_summary_evaluator_prepared_offline_no_live_execution",
+    "live_logs_evaluated_by_ci": false,
+    "authenticated_role_e2e_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_actions": [
+    "read_raw_supabase_logs_in_ci",
+    "call_supabase_management_api",
+    "call_production_api",
+    "create_supabase_branch",
+    "confirm_cost",
+    "create_accounts_or_secrets",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
