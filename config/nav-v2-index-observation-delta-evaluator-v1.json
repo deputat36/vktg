@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_observation_delta_evaluator_not_automatic_index_decision",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "created_on": "2026-07-22",
+  "source_main_sha": "f361c1ce3e0a454b9ddddb78e25b974ed34553a5",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "production_dml_authorized": false,
+  "cloud_execution_allowed": false,
+  "source_evidence": {
+    "observation_window": "config/nav-v2-index-observation-window-v1.json",
+    "capacity_input_form": "config/nav-v2-index-capacity-input-decision-v1.json",
+    "evaluator": "scripts/evaluate_nav_v2_index_observation_delta_v1.py"
+  },
+  "candidate": {
+    "table": "public.nav_deal_answers_v2",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "decision_before_evaluator": "review_possible_redundancy_only",
+    "decision_after_evaluator": "review_possible_redundancy_only"
+  },
+  "input_contract": {
+    "baseline_json_required": true,
+    "current_json_required": true,
+    "accepted_root_keys": [
+      "observation_capture",
+      "observation_baseline",
+      "live_baseline",
+      "capture"
+    ],
+    "business_rows_allowed": false,
+    "pii_allowed": false,
+    "query_text_allowed": false,
+    "production_query_execution_performed_by_evaluator": false
+  },
+  "epoch_checks": [
+    "same_database_oid",
+    "same_postmaster_started_at",
+    "same_database_stats_reset_value",
+    "same_wal_stats_reset_value",
+    "same_table_oid",
+    "same_candidate_index_oids",
+    "same_candidate_index_definitions",
+    "candidate_indexes_valid_and_ready"
+  ],
+  "monotonic_counter_groups": {
+    "database": [
+      "xact_commit",
+      "xact_rollback",
+      "blks_read",
+      "blks_hit",
+      "tup_returned",
+      "tup_fetched",
+      "tup_inserted",
+      "tup_updated",
+      "tup_deleted",
+      "temp_files",
+      "temp_bytes",
+      "deadlocks"
+    ],
+    "wal": [
+      "wal_records",
+      "wal_fpi",
+      "wal_bytes",
+      "wal_buffers_full",
+      "wal_write",
+      "wal_sync"
+    ],
+    "table": [
+      "seq_scan",
+      "seq_tup_read",
+      "idx_scan",
+      "idx_tup_fetch",
+      "n_tup_ins",
+      "n_tup_upd",
+      "n_tup_del",
+      "n_tup_hot_upd"
+    ],
+    "index": [
+      "idx_scan",
+      "idx_tup_read",
+      "idx_tup_fetch"
+    ]
+  },
+  "size_fields": {
+    "table": [
+      "heap_bytes",
+      "total_bytes"
+    ],
+    "index": [
+      "size_bytes"
+    ],
+    "may_decrease_without_epoch_invalidation": true,
+    "reported_as_signed_delta_only": true
+  },
+  "valid_report_contract": {
+    "decision": "delta_valid_same_epoch_evidence_not_representative",
+    "window_valid": true,
+    "representative_authenticated_workload_proven": false,
+    "production_index_removal_ready": false,
+    "global_wal_attributable_to_candidate": false,
+    "automatic_ddl_decision": false
+  },
+  "invalid_report_contract": {
+    "decision": "observation_window_invalidated_restart_capture_required",
+    "window_valid": false,
+    "deltas_trusted": false,
+    "production_index_removal_ready": false,
+    "automatic_ddl_decision": false
+  },
+  "self_test_matrix": [
+    "same_epoch_monotonic_valid",
+    "postmaster_restart_invalid",
+    "database_stats_reset_invalid",
+    "wal_stats_reset_invalid",
+    "candidate_oid_drift_invalid",
+    "candidate_definition_drift_invalid",
+    "candidate_not_ready_invalid",
+    "counter_decrease_invalid",
+    "pii_marker_invalid",
+    "business_rows_marker_invalid",
+    "query_text_marker_invalid"
+  ],
+  "decision_policy": {
+    "positive_single_index_scan_delta_does_not_prove_latency_necessity": true,
+    "zero_single_index_scan_delta_does_not_prove_redundancy": true,
+    "global_wal_delta_not_attributable_to_candidate": true,
+    "table_write_deltas_are_not_candidate_index_write_cost": true,
+    "valid_delta_does_not_prove_representative_workload": true,
+    "valid_delta_does_not_authorize_benchmark": true,
+    "valid_delta_does_not_authorize_index_drop": true,
+    "separate_explain_benchmark_regression_migration_and_owner_approval_required": true
+  },
+  "result": {
+    "decision": "observation_delta_evaluator_prepared_offline_only",
+    "evaluator_prepared": true,
+    "production_capture_executed": false,
+    "observation_window_completed": false,
+    "production_index_removal_ready": false
+  },
+  "active_stops": [
+    "second_approved_capture_missing",
+    "observation_cadence_not_selected",
+    "observation_completion_thresholds_not_approved",
+    "representative_authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_scale_benchmark_execution_missing",
+    "authenticated_regression_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_claims": [
+    "evaluator_has_completed_observation_window",
+    "valid_delta_is_representative_workload",
+    "global_wal_delta_is_candidate_index_wal",
+    "single_column_index_is_safe_to_drop",
+    "production_index_removal_ready",
+    "production_ddl_approved"
+  ],
+  "forbidden_actions": [
+    "execute_production_sql",
+    "reset_production_statistics",
+    "change_statistics_settings",
+    "run_synthetic_workload_on_production",
+    "create_supabase_branch",
+    "confirm_cost",
+    "create_test_accounts_or_secrets",
+    "drop_production_index",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
