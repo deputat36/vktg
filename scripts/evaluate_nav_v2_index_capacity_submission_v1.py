@@ -125,9 +125,12 @@ def parse_timestamp(value: Any) -> datetime | None:
     if not is_non_empty_string(value):
         return None
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
         return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
 
 
 def input_value(inputs: dict[str, Any], name: str) -> Any:
