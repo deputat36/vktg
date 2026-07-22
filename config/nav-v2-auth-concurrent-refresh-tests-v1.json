@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_concurrent_auth_refresh_test_contract_no_live_accounts",
+  "created_on": "2026-07-22",
+  "source_main_sha": "bfd3fbc64dd36bbf1683138d8e4983f003047bd6",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "cloud_execution_allowed": false,
+  "runtime_code_changed": false,
+  "test_files": [
+    "tests/unit/nav-v2-auth-session-recovery.test.mjs",
+    "tests/unit/nav-v2-auth-concurrent-refresh.test.mjs"
+  ],
+  "runtime_files_observed": [
+    "assets/js/nav-v2/supabase-v2.js",
+    "assets/js/nav-v2/auth-session-recovery-v2.js"
+  ],
+  "scenarios": [
+    {
+      "id": "two_parallel_rpc_401_valid_shared_refresh",
+      "initial_rpc_count": 2,
+      "expected_refresh_count": 1,
+      "expected_retry_count": 2,
+      "expected_lock_count": 1,
+      "expected_result": "both_rpc_success"
+    },
+    {
+      "id": "two_parallel_rpc_401_invalid_shared_refresh",
+      "initial_rpc_count": 2,
+      "expected_refresh_count": 1,
+      "expected_retry_count": 0,
+      "expected_lock_count": 1,
+      "expected_result": "both_session_expired_rejections_and_stale_session_cleared"
+    }
+  ],
+  "test_boundary": {
+    "network_calls_mocked": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "fixture_email_domain": "example.test",
+    "browser_lock_mocked": true,
+    "storage_in_memory": true
+  },
+  "acceptance": {
+    "parallel_valid_refresh_fans_in_to_one_request": true,
+    "each_original_rpc_retries_exactly_once": true,
+    "replacement_session_persisted": true,
+    "parallel_invalid_refresh_fans_in_to_one_request": true,
+    "invalid_refresh_does_not_retry_rpc": true,
+    "stale_session_cleared": true,
+    "both_callers_receive_session_expired": true,
+    "existing_recovery_suite_still_passes": true
+  },
+  "result": {
+    "decision": "concurrent_auth_refresh_fan_in_covered_by_offline_unit_tests",
+    "authenticated_role_e2e_completed": false,
+    "live_multi_tab_browser_e2e_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "live_browser_concurrency_is_fully_verified",
+    "all_auth_races_are_eliminated",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "use_real_accounts_or_tokens",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
