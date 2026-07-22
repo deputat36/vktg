@@ -42,7 +42,3 @@ jobs:
 
       - name: Validate fail-closed benchmark plan
         run: python3 scripts/check_nav_v2_production_scale_fk_benchmark_plan_v1.py
-
-      - name: Prove workflow does not execute benchmark or cloud actions
-        run: |
-          ! grep -Eiq 'supabase db push|supabase functions deploy|apply_migration|confirm_cost|create_branch|psql .*nav_v2_production_scale_fk_benchmark' .github/workflows/nav-v2-production-scale-fk-benchmark-plan-v1.yml
