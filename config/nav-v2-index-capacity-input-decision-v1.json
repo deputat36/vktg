@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_capacity_input_decision_form_unsubmitted_execution_blocked",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "created_on": "2026-07-22",
+  "source_main_sha": "ec73826983207241f1e1d87ff6697757fdacee17",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "production_dml_authorized": false,
+  "cloud_execution_allowed": false,
+  "benchmark_execution_authorized": false,
+  "source_evidence": {
+    "benchmark_plan": "config/nav-v2-production-scale-fk-benchmark-plan-v1.json",
+    "observation_window": "config/nav-v2-index-observation-window-v1.json",
+    "query_to_index_mapping": "config/nav-v2-query-to-index-mapping-v1.json",
+    "synthetic_write_storage_evidence": "config/nav-v2-index-write-storage-measurement-v1.json"
+  },
+  "candidate": {
+    "table": "public.nav_deal_answers_v2",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "decision_before_form": "review_possible_redundancy_only",
+    "decision_after_form": "review_possible_redundancy_only"
+  },
+  "decision_form": {
+    "decision_id": "nav-v2-index-capacity-inputs-v1",
+    "status": "unsubmitted",
+    "submitted_by": null,
+    "submitted_at": null,
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "owner_approved": false,
+    "release_manager_approved": false,
+    "values_may_not_be_guessed": true,
+    "partial_submission_authorizes_execution": false,
+    "completed_form_authorizes_execution": false
+  },
+  "fixed_context": {
+    "planning_horizon_months": 12,
+    "postgres_major": 17,
+    "comparison_modes": [
+      "single_and_composite_indexes",
+      "composite_unique_index_only"
+    ],
+    "production_database_allowed": false,
+    "production_rows_copy_allowed": false,
+    "real_accounts_allowed": false,
+    "direct_identifiers_allowed": false,
+    "maximum_preview_branch_lifetime_hours": 6
+  },
+  "inputs": {
+    "selected_environment": {
+      "required": true,
+      "value": null,
+      "allowed_values": [
+        "isolated_ephemeral_postgresql_17",
+        "owner_and_cost_approved_disposable_supabase_preview_branch"
+      ],
+      "production_database_forbidden": true
+    },
+    "target_scale_source": {
+      "required": true,
+      "value": null,
+      "allowed_values": [
+        "owner_capacity_forecast",
+        "approved_non_pii_aggregate_observation",
+        "max_of_owner_forecast_and_approved_observation"
+      ]
+    },
+    "approved_target_deals": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1
+    },
+    "approved_target_answers": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1
+    },
+    "approved_answers_per_deal_distribution": {
+      "required": true,
+      "value": null,
+      "type": "object",
+      "required_fields": [
+        "p50",
+        "p95",
+        "max_bounded"
+      ],
+      "field_type": "non_negative_integer",
+      "ordering_rule": "p50_lte_p95_lte_max_bounded"
+    },
+    "approved_peak_concurrency": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1
+    },
+    "approved_concurrency_headroom": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1,
+      "meaning": "additional_workers_above_approved_peak"
+    },
+    "approved_branch_compute_class": {
+      "required_when": "selected_environment_is_preview_branch",
+      "value": null,
+      "type": "supabase_compute_class_from_fresh_cost_response",
+      "may_not_be_assumed_from_historical_snapshot": true
+    },
+    "approved_max_runtime_minutes": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1,
+      "must_fit_preview_branch_lifetime_if_selected": true
+    },
+    "selected_observation_cadence": {
+      "required": true,
+      "value": null,
+      "allowed_values": [
+        "daily",
+        "weekly",
+        "before_and_after_known_release"
+      ]
+    },
+    "approved_minimum_observation_days": {
+      "required": true,
+      "value": null,
+      "type": "positive_integer",
+      "minimum": 1
+    },
+    "approved_minimum_authenticated_sessions": {
+      "required": true,
+      "value": null,
+      "type": "non_negative_integer",
+      "minimum": 0
+    },
+    "approved_minimum_candidate_index_reads": {
+      "required": true,
+      "value": null,
+      "type": "non_negative_integer",
+      "minimum": 0
+    },
+    "approved_minimum_candidate_table_writes": {
+      "required": true,
+      "value": null,
+      "type": "non_negative_integer",
+      "minimum": 0
+    },
+    "approved_minimum_parent_mutations": {
+      "required": true,
+      "value": null,
+      "type": "non_negative_integer",
+      "minimum": 0
+    }
+  },
+  "preview_cost_gate": {
+    "applies_when": "selected_environment_is_preview_branch",
+    "cost_rechecked": false,
+    "amount": null,
+    "currency": null,
+    "recurrence": null,
+    "shown_to_owner": false,
+    "explicit_owner_cost_approval": false,
+    "cost_confirmation_id": null,
+    "automatic_delete_deadline": null,
+    "historical_cost_may_not_be_reused": true
+  },
+  "submission_validation": {
+    "all_required_values_non_null": false,
+    "numeric_types_valid": false,
+    "distribution_order_valid": false,
+    "environment_requirements_satisfied": false,
+    "preview_cost_gate_satisfied_if_applicable": false,
+    "observation_thresholds_approved": false,
+    "owner_approval_present": false,
+    "release_manager_approval_present": false,
+    "form_valid": false
+  },
+  "post_submission_gates": [
+    "fresh_readonly_schema_and_statistics_preflight",
+    "same_epoch_or_explicit_observation_window_restart",
+    "separate_benchmark_execution_authorization",
+    "disposable_environment_creation_if_selected",
+    "synthetic_dataset_manifest_and_hash",
+    "benchmark_cleanup_evidence",
+    "authenticated_regression",
+    "production_explain_analyze_on_approved_non_pii_fixtures",
+    "exact_forward_and_rollback_migration",
+    "separate_owner_production_ddl_approval"
+  ],
+  "decision_policy": {
+    "form_does_not_select_values": true,
+    "form_does_not_confirm_cost": true,
+    "form_does_not_create_environment": true,
+    "form_does_not_run_benchmark": true,
+    "form_does_not_authorize_production_dml": true,
+    "form_does_not_authorize_production_ddl": true,
+    "zero_thresholds_if_selected_require_explicit_rationale": true,
+    "successful_submission_does_not_imply_index_drop": true
+  },
+  "result": {
+    "decision": "capacity_input_decision_form_prepared_unsubmitted_execution_blocked",
+    "form_prepared": true,
+    "form_submitted": false,
+    "inputs_approved": false,
+    "benchmark_execution_ready": false,
+    "production_index_removal_ready": false
+  },
+  "active_stops": [
+    "decision_form_unsubmitted",
+    "selected_environment_missing",
+    "approved_target_scale_missing",
+    "approved_distribution_missing",
+    "approved_concurrency_missing",
+    "approved_runtime_missing",
+    "observation_cadence_missing",
+    "observation_completion_thresholds_missing",
+    "preview_cost_gate_missing_if_preview_selected",
+    "benchmark_execution_not_authorized",
+    "authenticated_regression_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_claims": [
+    "capacity_inputs_have_been_approved",
+    "benchmark_execution_is_authorized",
+    "preview_branch_cost_is_approved",
+    "production_scale_evidence_exists",
+    "single_column_index_is_safe_to_drop",
+    "production_ddl_is_approved"
+  ],
+  "forbidden_actions": [
+    "guess_capacity_or_concurrency_values",
+    "reuse_historical_branch_cost_as_current_confirmation",
+    "confirm_cost_without_owner_decision",
+    "create_supabase_branch",
+    "create_test_accounts_or_secrets",
+    "run_benchmark_on_production",
+    "copy_production_rows",
+    "drop_production_index",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
