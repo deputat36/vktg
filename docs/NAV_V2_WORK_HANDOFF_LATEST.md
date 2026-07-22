@@ -4,7 +4,7 @@
 
 - Дата: 22 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `8dca80c28f56fb5fb4830a3b7b291213dcb06e22` — squash merge PR #467.
+- `main`: `0b58ada1dbccd51d4904dd26998c416a6a9436c3` — squash merge PR #470.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project: `ACTIVE_HEALTHY`, region `eu-west-1`.
@@ -15,9 +15,9 @@
 - Edge SHA-256: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 - Preview branches отсутствуют.
 - Technical `nav-e2e` users/profiles отсутствуют.
-- После merge PR #467 открытых Navigator PR не было.
+- После merge PR #470 открытых Navigator PR не было.
 
-PR #457–#467 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
+PR #457–#470 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
 
 Не изменять, не откатывать и не reconciliate `leader_*`.
 
@@ -281,20 +281,16 @@ No-Web-Locks scenario:
 
 `2 RPC 401 → 1 shared refresh 200 → 2 retry 200`
 
-Подтверждено, что module-level `refreshRequest` предотвращает refresh storm внутри одного JavaScript context даже без `navigator.locks`.
-
 Transient network scenario:
 
 `2 RPC 401 → 1 failed shared refresh → 0 retry`
 
 Подтверждено:
 
-- session и refresh token сохраняются;
-- profile cache не очищается;
+- module-level `refreshRequest` предотвращает refresh storm без `navigator.locks`;
+- session, refresh token и profile cache сохраняются при временной network error;
 - rejected shared refresh promise очищается;
-- следующая попытка запускает новый refresh и успешно retry.
-
-Boundary: in-memory storage, mocked fetch, `example.test`, no production URL/accounts/tokens/data.
+- следующая попытка успешно refresh/retry.
 
 CI:
 
@@ -320,7 +316,7 @@ Exit codes:
 
 Fail-closed отклоняются identifiers, email/IP/request IDs/tokens/Authorization/headers/payloads/JWT-like values, incomplete sequence и запрещённые E2E/production claims.
 
-Self-test: 7 cases, включая invalid refresh regression и unexpected unauthenticated success.
+Self-test: 7 cases.
 
 CI:
 
@@ -330,6 +326,74 @@ CI:
 Decision:
 
 `redacted_auth_summary_evaluator_prepared_offline_no_live_execution`
+
+### PR #469 — Auth lock/timeout/post-refresh tests
+
+Merge: `2d8ae9d88ff45b81456c8c9313a4289aaf1efe68`.
+
+Покрыты offline:
+
+- `RPC 401 → Web Locks acquisition rejected → token endpoint 0 → retry 0`;
+- `RPC 401 → refresh AbortError → retry 0`;
+- `RPC 401 → refresh 200 → retry 401`;
+- `RPC 401 → refresh 200 → retry 403`.
+
+Подтверждено:
+
+- session/profile cache сохраняются при lock failure и timeout;
+- rejected shared refresh promise очищается;
+- следующая попытка может восстановиться;
+- второй `401/403` после refresh не запускает новый refresh-loop;
+- replacement session сохраняется.
+
+CI:
+
+- source boundary + four Auth suites: `29953965931`;
+- static 49/49: `29953965858`.
+
+Decision:
+
+`auth_lock_timeout_and_post_refresh_failures_covered_offline`
+
+### PR #470 — capacity submission evaluator
+
+Merge: `0b58ada1dbccd51d4904dd26998c416a6a9436c3`.
+
+Добавлен offline evaluator для будущей локальной копии заполненной capacity form. Каноническая форма осталась unsubmitted, все 15 values `null`.
+
+Проверяются:
+
+- input inventory, types и minimums;
+- `p50 ≤ p95 ≤ max_bounded`;
+- timezone-aware submission/review timestamps;
+- owner/release approvals;
+- rationale для каждого нулевого threshold;
+- isolated PostgreSQL и preview-specific fresh cost/lifetime gates;
+- обязательные post-submission gates;
+- запрещённые benchmark/cloud/production DDL/DML/index-removal claims.
+
+Exit codes:
+
+- `0` — structurally valid, separate execution authorization required;
+- `2` — input/JSON error;
+- `3` — form/values/approvals/rationale invalid;
+- `4` — environment/cost/lifetime invalid;
+- `5` — forbidden authorization claim.
+
+Во всех reports:
+
+- `benchmark_execution_ready=false`;
+- `production_index_removal_ready=false`;
+- `production_ddl_ready=false`.
+
+CI:
+
+- thirteen-case evaluator: `29954902600`;
+- static 49/49: `29954902524`.
+
+Decision:
+
+`capacity_submission_evaluator_prepared_offline_canonical_form_unsubmitted`
 
 ## Gates
 
@@ -359,7 +423,7 @@ Cloud шаг требует отдельного решения владельц
 - second approved capture в том же epoch;
 - representative authenticated workload;
 - submitted/approved capacity form;
-- benchmark execution authorization;
+- separate benchmark execution authorization;
 - production-scale benchmark в разрешённой среде;
 - production `EXPLAIN ANALYZE` на approved non-PII fixtures;
 - production write/storage evidence;
@@ -381,23 +445,29 @@ Index:
 - `config/nav-v2-production-scale-fk-benchmark-plan-v1.json`
 - `config/nav-v2-index-observation-window-v1.json`
 - `config/nav-v2-index-capacity-input-decision-v1.json`
+- `config/nav-v2-index-capacity-submission-evaluator-v1.json`
 - `config/nav-v2-index-observation-delta-evaluator-v1.json`
+- `scripts/evaluate_nav_v2_index_capacity_submission_v1.py`
+- `scripts/check_nav_v2_index_capacity_submission_evaluator_v1.py`
 
 Auth:
 
 - `config/nav-v2-auth-recovery-live-attestation-v1.json`
 - `config/nav-v2-auth-concurrent-refresh-tests-v1.json`
 - `config/nav-v2-auth-network-no-lock-tests-v1.json`
+- `config/nav-v2-auth-lock-timeout-post-refresh-tests-v1.json`
 - `config/nav-v2-auth-recovery-summary-evaluator-v1.json`
 - `assets/js/nav-v2/supabase-v2.js`
 - `assets/js/nav-v2/auth-session-recovery-v2.js`
 - `tests/unit/nav-v2-auth-session-recovery.test.mjs`
 - `tests/unit/nav-v2-auth-concurrent-refresh.test.mjs`
 - `tests/unit/nav-v2-auth-network-no-lock.test.mjs`
+- `tests/unit/nav-v2-auth-lock-timeout-post-refresh.test.mjs`
 - `scripts/evaluate_nav_v2_auth_recovery_summary_v1.py`
 - `scripts/check_nav_v2_auth_recovery_live_attestation_v1.py`
 - `scripts/check_nav_v2_auth_concurrent_refresh_tests_v1.py`
 - `scripts/check_nav_v2_auth_network_no_lock_tests_v1.py`
+- `scripts/check_nav_v2_auth_lock_timeout_post_refresh_tests_v1.py`
 - `scripts/check_nav_v2_auth_recovery_summary_evaluator_v1.py`
 
 Preview:
@@ -414,12 +484,12 @@ Preview:
 
 1. проверять GitHub CI/review drift;
 2. проверять Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
-3. расширять offline browser recovery tests для lock-acquisition и timeout edge cases без real accounts;
+3. расширять offline Auth tests для malformed storage и sign-in/replacement-session edge cases без real accounts;
 4. использовать redacted Auth evaluator только на заранее обезличенных summaries, не на raw logs;
-5. повторять aggregate-only index snapshot только отдельным явным действием, не выбирая cadence автоматически;
-6. использовать offline index delta evaluator после второго approved snapshot;
-7. поддерживать package v3 и handoff;
-8. не заполнять capacity form без owner decision;
+5. поддерживать offline capacity evaluator, не заполняя canonical form;
+6. повторять aggregate-only index snapshot только отдельным явным действием, не выбирая cadence автоматически;
+7. использовать offline index delta evaluator только после второго approved snapshot;
+8. поддерживать package v3 и handoff;
 9. не вызывать cost confirmation;
 10. не создавать branch/accounts/secrets;
 11. не менять production DDL/DML/RLS/Auth/Edge;
@@ -433,4 +503,6 @@ Authenticated preview E2E требует явной формулировки с 
 
 Production-scale benchmark дополнительно требует submitted/approved capacity form, selected environment, approved scale/concurrency/runtime/cadence/thresholds и separate execution authorization.
 
-Без этого cloud execution запрещено.
+Успешная offline validation формы не является execution authorization.
+
+Без этих решений cloud execution запрещено.
