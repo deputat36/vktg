@@ -1,0 +1,44 @@
+name: Navigator v2 index capacity input decision v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-index-capacity-input-decision-v1.json'
+      - 'config/nav-v2-production-scale-fk-benchmark-plan-v1.json'
+      - 'config/nav-v2-index-observation-window-v1.json'
+      - 'config/nav-v2-query-to-index-mapping-v1.json'
+      - 'config/nav-v2-index-write-storage-measurement-v1.json'
+      - 'scripts/check_nav_v2_index_capacity_input_decision_v1.py'
+      - 'docs/NAV_V2_INDEX_CAPACITY_INPUT_DECISION_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-index-capacity-input-decision-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-index-capacity-input-decision-v1.json'
+      - 'config/nav-v2-production-scale-fk-benchmark-plan-v1.json'
+      - 'config/nav-v2-index-observation-window-v1.json'
+      - 'config/nav-v2-query-to-index-mapping-v1.json'
+      - 'config/nav-v2-index-write-storage-measurement-v1.json'
+      - 'scripts/check_nav_v2_index_capacity_input_decision_v1.py'
+      - 'docs/NAV_V2_INDEX_CAPACITY_INPUT_DECISION_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-index-capacity-input-decision-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate decision JSON
+        run: python3 -m json.tool config/nav-v2-index-capacity-input-decision-v1.json > /dev/null
+
+      - name: Compile decision validator
+        run: python3 -m py_compile scripts/check_nav_v2_index_capacity_input_decision_v1.py
+
+      - name: Validate unsubmitted capacity-input decision contract
+        run: python3 scripts/check_nav_v2_index_capacity_input_decision_v1.py
