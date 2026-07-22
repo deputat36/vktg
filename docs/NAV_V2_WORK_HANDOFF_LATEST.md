@@ -4,10 +4,10 @@
 
 - Дата: 22 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `7f621d52c1330d44f13efc29263078ba167c4168` — squash merge PR #460.
+- `main`: `0aa69972d453da00182d39a443ec36845f05ca10` — squash merge PR #462.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
-- Project: `ACTIVE_HEALTHY`, `eu-west-1`.
+- Project: `ACTIVE_HEALTHY`, region `eu-west-1`.
 - PostgreSQL production: `17.6.1.121`.
 - Последняя Navigator migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`.
 - Последняя общая migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs` — относится к `leader_*`.
@@ -15,9 +15,9 @@
 - Edge SHA-256: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 - Preview branches отсутствуют.
 - Technical `nav-e2e` users/profiles отсутствуют.
-- Открытых Navigator PR после PR #460 нет.
+- Открытых Navigator PR после merge PR #462 нет.
 
-Production Supabase, Auth, RLS, grants, Edge, indexes и migrations в PR #457–#460 не менялись.
+PR #457–#462 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
 
 Не изменять, не откатывать и не reconciliate `leader_*`.
 
@@ -64,7 +64,7 @@ Task actions:
 
 Не использовать эти counts для cleanup или оценки сотрудников.
 
-Candidate indexes без изменений:
+Candidate indexes:
 
 - `nav_user_profiles_role_idx (role)` — решение `retain`;
 - `nav_deal_answers_v2_deal_idx (deal_id)` — `review_possible_redundancy_only`;
@@ -79,7 +79,7 @@ FK:
 
 `idx_scan=0` не является drop approval.
 
-## Основная repository-only evidence chain
+## Repository-only evidence chain
 
 ### Intake, privacy и preview lifecycle — PR #394–#434
 
@@ -116,9 +116,9 @@ Preview execution flags остаются false:
 - `cost_confirmation_id=null`;
 - `branch_creation_allowed=false`.
 
-Историческую branch price нельзя повторно использовать как fresh cost.
+Историческую branch price нельзя использовать как fresh cost.
 
-### Security/Performance Advisor — PR #436, #438, #440
+### Advisor и query-plan evidence — PR #436/#438/#440
 
 - 50 curated external RPC;
 - 48 expected callable `SECURITY DEFINER` warnings;
@@ -130,7 +130,7 @@ Preview execution flags остаются false:
 - SELECT-wrapped Auth `32/32`;
 - direct per-row Auth calls `0`.
 
-Не исправлять callable functions автоматической сменой security model.
+Callable functions нельзя автоматически переводить на другой security model.
 
 `auth_leaked_password_protection` остаётся отдельным gated решением.
 
@@ -146,21 +146,19 @@ Synthetic query-plan evidence:
 
 ### Browser Auth recovery — PR #442/#444
 
-Подтверждены:
+Действующий runtime покрывает:
 
 - invalid/not-found/already-used refresh loop stop;
 - cache clear once;
 - valid refresh retry once;
 - Web Lock `navigator-v2-auth-refresh`;
 - session re-read after lock;
-- new-session and logout race protection;
-- fallback without Web Locks.
+- new-session и logout race protection;
+- fallback без Web Locks.
 
-Fresh Auth logs 22 июля содержат успешный refresh/login. Новых `refresh_token_not_found` после старого инцидента не обнаружено.
+Authenticated browser smoke остаётся gated без preview secrets и technical accounts.
 
-Authenticated smoke остаётся gated без preview secrets.
-
-### FK/query/index evidence — PR #445, #449, #451
+### FK/query/index evidence — PR #445/#449/#451
 
 PostgreSQL 17 synthetic FK harness проверяет:
 
@@ -168,7 +166,7 @@ PostgreSQL 17 synthetic FK harness проверяет:
 - successful unreferenced update;
 - referenced update rejection `23503`;
 - transaction-local scan attribution;
-- composite-prefix behavior after synthetic single-index removal;
+- composite-prefix behavior после synthetic single-index removal;
 - `EXPLAIN ANALYZE, BUFFERS, WAL, FORMAT JSON`;
 - sizes, final counts и rollback.
 
@@ -210,8 +208,6 @@ Decision:
 
 `synthetic_write_storage_measurement_completed_production_drop_not_ready`
 
-Artifact `8518731280`, digest `sha256:cee54610f07a81261813fa9b69e8e5dd5e2bc814d6f7e7ae8bc5983ae93ff8ac`.
-
 ### Production-scale benchmark plan — PR #455
 
 Fail-closed protocol подготовлен, benchmark не выполнялся.
@@ -236,15 +232,13 @@ Future matrix включает zero/one/median/p95/max-bounded child deletes, su
 
 Protocol: 5 warmups, 20 measured iterations, randomized order, deterministic dataset, JSON plans, WAL/BUFFERS, locks/timeouts/deadlocks, sizes/hashes и cleanup evidence.
 
-Нет automatic latency/WAL/storage threshold для DROP INDEX.
-
 Decision:
 
 `production_scale_fk_benchmark_protocol_prepared_execution_blocked`
 
-## Новые срезы 22 июля
+## Срезы PR #457–#462
 
-### Observation-window baseline — PR #457
+### Observation baseline — PR #457
 
 Merge: `ec73826983207241f1e1d87ff6697757fdacee17`.
 
@@ -262,14 +256,6 @@ Epoch:
 - composite index OID `19402`;
 - single index OID `19583`.
 
-Baseline:
-
-- `seq_scan=4`, `seq_tup_read=35`;
-- candidate index counters `0`;
-- table DML counters `0`;
-- heap `8192`, total `81920` bytes;
-- оба indexes valid/ready, `16384` bytes.
-
 Window:
 
 - capture count `1`;
@@ -278,15 +264,11 @@ Window:
 - completion thresholds `null`;
 - representative workload unproven.
 
-Restart/reset/OID/definition/readiness/counter drift инвалидирует window.
-
 Decision:
 
 `observation_window_baseline_started_evidence_not_yet_representative`
 
-CI: `29894311897`, `29894311883`, `29894311874`, `29894311871` — success.
-
-### Capacity-input decision form — PR #458
+### Capacity-input form — PR #458
 
 Merge: `7bc8643026243bf838b1f811d811e672a557fd2a`.
 
@@ -308,27 +290,9 @@ Form:
 - values cannot be guessed;
 - form alone cannot authorize execution.
 
-Preview cost gate полностью unresolved:
-
-- `cost_rechecked=false`;
-- amount/currency/recurrence null;
-- owner cost approval false;
-- `cost_confirmation_id=null`;
-- delete deadline null.
-
 Decision:
 
 `capacity_input_decision_form_prepared_unsubmitted_execution_blocked`
-
-CI: `29894655170`, `29894655090` — success.
-
-### Canonical handoff refresh — PR #459
-
-Merge: `f361c1ce3e0a454b9ddddb78e25b974ed34553a5`.
-
-Handoff aligned with PR #457–#458 and all gates.
-
-CI: `29894901120`, `29894901121`, `29894901104`, `29894901080` — success.
 
 ### Offline observation delta evaluator — PR #460
 
@@ -353,16 +317,47 @@ Invalid result:
 
 `observation_window_invalidated_restart_capture_required`
 
-Both retain:
+Self-test covers 11 cases.
 
-- representative workload unproven;
-- global WAL not attributable to candidate;
-- `production_index_removal_ready=false`;
-- automatic DDL false.
+### Redacted live Auth recovery attestation — PR #462
 
-Self-test matrix covers 11 cases: valid delta, restart, DB/WAL reset, OID/definition drift, not-ready index, counter decrease, PII/business/query-text markers.
+Merge: `0aa69972d453da00182d39a443ec36845f05ca10`.
 
-CI: `29895228124`, `29895228036` — success.
+Read-only Supabase Auth/API/Postgres logs показали две обезличенные последовательности:
+
+`RPC 401 → refresh 200 → повторный RPC 200`
+
+Fresh Auth sample не содержит нового `refresh_token_not_found`.
+
+Unauthenticated smoke подтвердил:
+
+- authenticated callable RPC без session → `401` / `permission denied`;
+- internal/private helper через Data API → `404`;
+- unexpected unauthenticated success не наблюдался.
+
+Raw logs, identities, email, IP, tokens, request IDs, headers, payloads и business rows не коммитились.
+
+Attestation связана с:
+
+- `assets/js/nav-v2/auth-session-recovery-v2.js`;
+- `tests/unit/nav-v2-auth-session-recovery.test.mjs`.
+
+CI:
+
+- attestation contract + Auth recovery unit suite: `29947064494` — success;
+- Navigator static 49/49: `29947063145` — success.
+
+Decision:
+
+`live_auth_refresh_recovery_observed_redacted_not_authenticated_role_e2e`
+
+Не доказаны:
+
+- authenticated role matrix;
+- desktop/mobile visual E2E;
+- browser internal state и real multi-tab race;
+- готовность leaked-password protection;
+- preview branch approval.
 
 ## Gates
 
@@ -378,7 +373,7 @@ Cloud шаг требует отдельного решения владельц
 - explicit cost approval;
 - `confirm_cost` и confirmation ID;
 - disposable branch ≤6 часов;
-- delete deadline;
+- automatic delete deadline;
 - synthetic technical accounts only;
 - no production data/real employees;
 - cleanup evidence.
@@ -416,22 +411,13 @@ Index evidence:
 - `config/nav-v2-index-capacity-input-decision-v1.json`
 - `config/nav-v2-index-observation-delta-evaluator-v1.json`
 
-Tools/tests:
+Auth evidence:
 
-- `tests/sql/nav_v2_index_query_plan_harness_v1.sql`
-- `tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql`
-- `tests/sql/nav_v2_index_write_storage_measurement_harness_v1.sql`
-- `tests/sql/nav_v2_production_scale_fk_benchmark_readonly_preflight_v1.sql`
-- `tests/sql/nav_v2_index_observation_window_readonly_capture_v1.sql`
-- `scripts/evaluate_nav_v2_index_observation_delta_v1.py`
-- `scripts/check_nav_v2_index_observation_delta_evaluator_v1.py`
-
-Auth/runtime:
-
-- `assets/js/nav-v2/supabase-v2.js`
+- `config/nav-v2-auth-recovery-live-attestation-v1.json`
 - `assets/js/nav-v2/auth-session-recovery-v2.js`
 - `tests/unit/nav-v2-auth-session-recovery.test.mjs`
-- `.github/workflows/nav-v2-auth-session-recovery-v1.yml`
+- `scripts/check_nav_v2_auth_recovery_live_attestation_v1.py`
+- `.github/workflows/nav-v2-auth-recovery-live-attestation-v1.yml`
 
 Preview/lifecycle:
 
@@ -447,10 +433,10 @@ Preview/lifecycle:
 
 1. проверять GitHub CI/review drift;
 2. проверять Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
-3. повторять aggregate-only snapshot только как отдельное явное действие, не выбирая cadence автоматически;
-4. использовать offline evaluator после появления второго approved snapshot;
-5. расширять offline evaluator/report validation;
-6. расширять browser recovery tests без real accounts;
+3. расширять redacted Auth log attestation/report validation без raw logs;
+4. расширять browser recovery unit tests без real accounts;
+5. повторять aggregate-only index snapshot только отдельным явным действием, не выбирая cadence автоматически;
+6. использовать offline delta evaluator после второго approved snapshot;
 7. поддерживать package v3 и handoff;
 8. не заполнять capacity form без owner decision;
 9. не вызывать cost confirmation;
