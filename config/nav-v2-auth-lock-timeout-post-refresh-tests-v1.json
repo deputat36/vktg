@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_lock_timeout_post_refresh_test_contract_no_live_accounts",
+  "created_on": "2026-07-22",
+  "source_main_sha": "f0597e42641d5c20ef3701290b819d0701232735",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "runtime_code_changed": false,
+  "cloud_execution_allowed": false,
+  "test_file": "tests/unit/nav-v2-auth-lock-timeout-post-refresh.test.mjs",
+  "runtime_files_observed": [
+    "assets/js/nav-v2/supabase-v2.js",
+    "assets/js/nav-v2/auth-session-recovery-v2.js"
+  ],
+  "scenarios": [
+    {
+      "id": "web_locks_acquisition_failure_then_later_recovery",
+      "initial_rpc_status": 401,
+      "lock_request_rejects": true,
+      "expected_refresh_endpoint_calls_during_failure": 0,
+      "expected_session_invalidated": false,
+      "expected_profile_cache_cleared": false,
+      "expected_later_refresh_calls": 1,
+      "expected_later_rpc_retry_calls": 1,
+      "expected_result": "fail_closed_then_later_refresh_recovers"
+    },
+    {
+      "id": "refresh_abort_timeout_then_later_recovery",
+      "initial_rpc_status": 401,
+      "refresh_fetch_error_name": "AbortError",
+      "expected_timeout_message_seconds": 12,
+      "expected_rpc_retry_calls_during_timeout": 0,
+      "expected_session_invalidated": false,
+      "expected_profile_cache_cleared": false,
+      "expected_later_refresh_calls": 1,
+      "expected_later_rpc_retry_calls": 1,
+      "expected_result": "timeout_preserves_recoverable_state_then_later_refresh_recovers"
+    },
+    {
+      "id": "post_refresh_rpc_returns_401",
+      "initial_rpc_status": 401,
+      "refresh_status": 200,
+      "post_refresh_rpc_status": 401,
+      "expected_total_refresh_calls": 1,
+      "expected_post_refresh_rpc_calls": 1,
+      "expected_replacement_session_retained": true,
+      "expected_result": "second_401_surfaces_without_refresh_loop"
+    },
+    {
+      "id": "post_refresh_rpc_returns_403",
+      "initial_rpc_status": 401,
+      "refresh_status": 200,
+      "post_refresh_rpc_status": 403,
+      "expected_total_refresh_calls": 1,
+      "expected_post_refresh_rpc_calls": 1,
+      "expected_replacement_session_retained": true,
+      "expected_result": "second_403_surfaces_without_refresh_loop"
+    }
+  ],
+  "test_boundary": {
+    "network_calls_mocked": true,
+    "web_lock_api_mocked": true,
+    "storage_in_memory": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "raw_logs_used": false,
+    "fixture_email_domain": "example.test"
+  },
+  "acceptance": {
+    "lock_acquisition_failure_stops_before_token_endpoint": true,
+    "lock_acquisition_failure_preserves_session_and_profile_cache": true,
+    "rejected_lock_refresh_promise_is_cleared": true,
+    "refresh_abort_timeout_preserves_session_and_profile_cache": true,
+    "refresh_abort_timeout_stops_before_rpc_retry": true,
+    "rejected_timeout_refresh_promise_is_cleared": true,
+    "post_refresh_401_does_not_start_second_refresh": true,
+    "post_refresh_403_does_not_start_second_refresh": true,
+    "replacement_session_is_retained_after_post_refresh_error": true,
+    "existing_auth_recovery_suites_still_pass": true
+  },
+  "result": {
+    "decision": "auth_lock_timeout_and_post_refresh_failures_covered_offline",
+    "authenticated_role_e2e_completed": false,
+    "live_multi_tab_browser_e2e_completed": false,
+    "real_lock_manager_failure_completed": false,
+    "real_network_timeout_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "all_web_locks_failures_are_verified",
+    "real_browser_lock_manager_failures_are_verified",
+    "real_network_timeouts_are_fully_verified",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "use_real_accounts_or_tokens",
+    "commit_raw_auth_logs",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
