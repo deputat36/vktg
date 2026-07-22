@@ -1,0 +1,55 @@
+name: Navigator v2 Auth network and no-lock tests v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-auth-network-no-lock-tests-v1.json'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'tests/unit/nav-v2-auth-concurrent-refresh.test.mjs'
+      - 'tests/unit/nav-v2-auth-network-no-lock.test.mjs'
+      - 'scripts/check_nav_v2_auth_network_no_lock_tests_v1.py'
+      - 'docs/NAV_V2_AUTH_NETWORK_NO_LOCK_TESTS_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-auth-network-no-lock-tests-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-auth-network-no-lock-tests-v1.json'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'tests/unit/nav-v2-auth-concurrent-refresh.test.mjs'
+      - 'tests/unit/nav-v2-auth-network-no-lock.test.mjs'
+      - 'scripts/check_nav_v2_auth_network_no_lock_tests_v1.py'
+      - 'docs/NAV_V2_AUTH_NETWORK_NO_LOCK_TESTS_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-auth-network-no-lock-tests-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-network-no-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate contract JSON
+        run: python3 -m json.tool config/nav-v2-auth-network-no-lock-tests-v1.json > /dev/null
+
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_auth_network_no_lock_tests_v1.py
+
+      - name: Validate offline-only source boundary
+        run: python3 scripts/check_nav_v2_auth_network_no_lock_tests_v1.py
+
+      - name: Run existing Auth recovery suite
+        run: node tests/unit/nav-v2-auth-session-recovery.test.mjs
+
+      - name: Run existing concurrent refresh suite
+        run: node tests/unit/nav-v2-auth-concurrent-refresh.test.mjs
+
+      - name: Run network and no-lock recovery suite
+        run: node tests/unit/nav-v2-auth-network-no-lock.test.mjs
