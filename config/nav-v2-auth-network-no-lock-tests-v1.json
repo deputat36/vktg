@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_network_no_lock_test_contract_no_live_accounts",
+  "created_on": "2026-07-22",
+  "source_main_sha": "3069950e3526740451f8506095e928a63fd56e2f",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "runtime_code_changed": false,
+  "cloud_execution_allowed": false,
+  "test_file": "tests/unit/nav-v2-auth-network-no-lock.test.mjs",
+  "runtime_files_observed": [
+    "assets/js/nav-v2/supabase-v2.js",
+    "assets/js/nav-v2/auth-session-recovery-v2.js"
+  ],
+  "scenarios": [
+    {
+      "id": "parallel_rpc_valid_refresh_without_web_locks",
+      "web_locks_available": false,
+      "initial_rpc_count": 2,
+      "expected_refresh_count": 1,
+      "expected_retry_count": 2,
+      "expected_result": "both_rpc_success_and_replacement_session_persisted"
+    },
+    {
+      "id": "parallel_rpc_transient_refresh_network_failure_then_recovery",
+      "web_locks_available": false,
+      "outage_initial_rpc_count": 2,
+      "outage_expected_refresh_count": 1,
+      "outage_expected_retry_count": 0,
+      "outage_expected_session_invalidated": false,
+      "outage_expected_profile_cache_cleared": false,
+      "recovery_expected_refresh_count": 1,
+      "recovery_expected_retry_count": 1,
+      "expected_result": "later_rpc_recovers_after_rejected_shared_refresh_is_cleared"
+    }
+  ],
+  "test_boundary": {
+    "network_calls_mocked": true,
+    "web_lock_api_absent": true,
+    "storage_in_memory": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "raw_logs_used": false,
+    "fixture_email_domain": "example.test"
+  },
+  "acceptance": {
+    "no_web_locks_parallel_refresh_fans_in_to_one_request": true,
+    "each_original_rpc_retries_exactly_once_after_valid_refresh": true,
+    "transient_network_failure_does_not_invalidate_session": true,
+    "transient_network_failure_does_not_clear_profile_cache": true,
+    "transient_network_failure_does_not_retry_rpc": true,
+    "rejected_shared_refresh_promise_is_cleared": true,
+    "later_rpc_can_refresh_and_recover": true,
+    "existing_auth_recovery_suites_still_pass": true
+  },
+  "result": {
+    "decision": "auth_refresh_no_lock_and_transient_network_recovery_covered_offline",
+    "authenticated_role_e2e_completed": false,
+    "live_multi_tab_browser_e2e_completed": false,
+    "real_network_recovery_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "all_browser_lock_implementations_are_verified",
+    "real_network_outages_are_fully_verified",
+    "live_multi_tab_browser_concurrency_is_complete",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "use_real_accounts_or_tokens",
+    "commit_raw_auth_logs",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
