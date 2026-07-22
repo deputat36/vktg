@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_capacity_submission_evaluator_offline_no_values_selected",
+  "created_on": "2026-07-22",
+  "source_main_sha": "2d8ae9d88ff45b81456c8c9313a4289aaf1efe68",
+  "canonical_form": "config/nav-v2-index-capacity-input-decision-v1.json",
+  "canonical_form_must_remain_unsubmitted": true,
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "production_dml_authorized": false,
+  "cloud_execution_allowed": false,
+  "benchmark_execution_authorized": false,
+  "evaluator": "scripts/evaluate_nav_v2_index_capacity_submission_v1.py",
+  "checker": "scripts/check_nav_v2_index_capacity_submission_evaluator_v1.py",
+  "input_contract": {
+    "local_copy_only": true,
+    "required_input_count": 15,
+    "requires_reviewed_status": true,
+    "requires_owner_approval": true,
+    "requires_release_manager_approval": true,
+    "requires_submission_and_review_timestamps": true,
+    "requires_distribution_order": "p50_lte_p95_lte_max_bounded",
+    "zero_thresholds_require_explicit_rationale": true,
+    "preview_branch_requires_fresh_cost_gate": true,
+    "isolated_postgresql_must_not_contain_preview_cost_claims": true,
+    "successful_validation_authorizes_execution": false
+  },
+  "exit_codes": {
+    "0": "valid_completed_form_separate_execution_authorization_still_required",
+    "2": "input_file_or_json_error",
+    "3": "form_contract_values_approvals_or_rationale_invalid",
+    "4": "environment_preview_cost_or_lifetime_gate_invalid",
+    "5": "forbidden_execution_or_production_authorization_claim"
+  },
+  "decisions": {
+    "success": "capacity_submission_valid_separate_execution_authorization_required",
+    "input_error": "capacity_submission_input_error",
+    "invalid": "capacity_submission_invalid_or_incomplete",
+    "environment_invalid": "capacity_submission_environment_or_cost_gate_invalid",
+    "unauthorized_claim": "capacity_submission_forbidden_authorization_claim"
+  },
+  "self_test_cases": [
+    "valid_isolated_postgresql_submission",
+    "valid_preview_branch_submission_with_fresh_cost_gate",
+    "required_input_missing",
+    "positive_integer_invalid",
+    "distribution_order_invalid",
+    "zero_threshold_without_rationale",
+    "zero_threshold_with_rationale_valid",
+    "preview_cost_gate_missing",
+    "preview_runtime_exceeds_six_hours",
+    "owner_approval_missing",
+    "benchmark_authorization_claim_rejected",
+    "production_index_readiness_claim_rejected",
+    "malformed_json"
+  ],
+  "report_boundary": {
+    "echoes_input_values": false,
+    "echoes_approval_identifiers": false,
+    "includes_only_aggregate_counts_environment_decision_and_reason_codes": true,
+    "benchmark_execution_ready": false,
+    "production_index_removal_ready": false,
+    "production_ddl_ready": false
+  },
+  "result": {
+    "decision": "capacity_submission_evaluator_prepared_offline_canonical_form_unsubmitted",
+    "canonical_values_selected": false,
+    "form_submitted": false,
+    "inputs_approved": false,
+    "benchmark_execution_ready": false,
+    "production_index_removal_ready": false
+  },
+  "forbidden_actions": [
+    "fill_canonical_capacity_form",
+    "guess_capacity_or_concurrency_values",
+    "reuse_historical_branch_cost",
+    "confirm_cost",
+    "create_supabase_branch",
+    "create_accounts_or_secrets",
+    "call_production_supabase",
+    "run_production_benchmark",
+    "copy_production_rows",
+    "drop_production_index",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
