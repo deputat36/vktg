@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_redacted_live_auth_recovery_attestation_not_authenticated_role_e2e",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "created_on": "2026-07-22",
+  "source_main_sha": "ca1858eeb73c0dcab4dae9b7c9ab73457676fcb7",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "production_dml_authorized": false,
+  "auth_settings_change_authorized": false,
+  "cloud_execution_allowed": false,
+  "source_evidence": {
+    "supabase_services": [
+      "auth",
+      "api",
+      "postgres"
+    ],
+    "capture_mode": "management_api_read_only_last_24_hours_redacted_summary",
+    "runtime_helper": "assets/js/nav-v2/auth-session-recovery-v2.js",
+    "unit_test": "tests/unit/nav-v2-auth-session-recovery.test.mjs",
+    "raw_logs_committed": false
+  },
+  "observation_scope": {
+    "window_start_utc": "2026-07-22T04:49:00Z",
+    "window_end_utc": "2026-07-22T11:55:00Z",
+    "service_log_window_max_hours": 24,
+    "observed_recovery_sequences": 2,
+    "sequence_signature": [
+      "authenticated_rpc_returns_401_for_expired_access_token",
+      "refresh_token_endpoint_returns_200",
+      "same_rpc_family_retry_returns_200"
+    ],
+    "first_observed_sequence_utc": {
+      "from": "2026-07-22T04:49:30Z",
+      "to": "2026-07-22T04:49:34Z"
+    },
+    "second_observed_sequence_utc": {
+      "from": "2026-07-22T11:54:42Z",
+      "to": "2026-07-22T11:54:49Z"
+    },
+    "fresh_auth_sample_contains_refresh_token_not_found": false,
+    "successful_refresh_login_events_observed": true
+  },
+  "unauthenticated_smoke_observation": {
+    "source_marker": "Navigator-v2-rpc-auth-smoke/1.0",
+    "public_authenticated_rpc_without_auth": {
+      "expected_http_status": 401,
+      "postgres_outcome": "permission_denied",
+      "security_interpretation": "execute_requires_authenticated_context"
+    },
+    "internal_or_private_helper_via_data_api": {
+      "expected_http_status": 404,
+      "security_interpretation": "helper_not_exposed_as_callable_data_api_rpc"
+    },
+    "unexpected_unauthenticated_success_observed": false
+  },
+  "code_alignment": {
+    "unit_test_valid_refresh_sequence": [
+      "first_rpc_401",
+      "refresh_200",
+      "rpc_retry_200",
+      "retry_exactly_once",
+      "new_session_persisted"
+    ],
+    "unit_test_invalid_refresh_sequence": [
+      "invalid_refresh_classified",
+      "stored_session_cleared",
+      "no_second_rpc_retry"
+    ],
+    "multi_tab_race_guards_covered": true,
+    "live_observation_matches_valid_refresh_shape": true,
+    "live_observation_proves_browser_internal_state": false
+  },
+  "privacy": {
+    "user_ids_retained": false,
+    "names_retained": false,
+    "emails_retained": false,
+    "ip_addresses_retained": false,
+    "user_agents_retained": false,
+    "request_ids_retained": false,
+    "tokens_retained": false,
+    "headers_retained": false,
+    "payloads_retained": false,
+    "business_rows_retained": false,
+    "query_text_retained": false,
+    "raw_event_messages_retained": false,
+    "direct_identifiers_retained": false
+  },
+  "interpretation": {
+    "valid_refresh_recovery_observed": true,
+    "fresh_invalid_refresh_loop_observed": false,
+    "unauthenticated_rpc_boundary_observed": true,
+    "authenticated_role_matrix_completed": false,
+    "authenticated_visual_e2e_completed": false,
+    "all_roles_verified": false,
+    "mobile_and_desktop_verified": false,
+    "leaked_password_protection_ready_to_enable": false,
+    "preview_branch_gate_satisfied": false,
+    "production_release_gate_satisfied": false
+  },
+  "decision_policy": {
+    "successful_refresh_does_not_prove_all_auth_flows": true,
+    "absence_in_24h_sample_does_not_prove_permanent_absence": true,
+    "management_logs_do_not_prove_browser_ui_state": true,
+    "unauthenticated_401_and_404_are_expected_security_results": true,
+    "attestation_does_not_authorize_auth_setting_change": true,
+    "attestation_does_not_authorize_preview_branch": true,
+    "attestation_does_not_authorize_test_accounts": true,
+    "attestation_does_not_replace_authenticated_role_e2e": true
+  },
+  "result": {
+    "decision": "live_auth_refresh_recovery_observed_redacted_not_authenticated_role_e2e",
+    "live_recovery_shape_observed": true,
+    "invalid_refresh_regression_observed_in_fresh_sample": false,
+    "security_boundary_regression_observed": false,
+    "authenticated_role_e2e_ready": false,
+    "production_change_ready": false
+  },
+  "active_stops": [
+    "disposable_preview_branch_not_approved",
+    "fresh_preview_cost_not_confirmed",
+    "technical_accounts_missing",
+    "authenticated_role_matrix_not_executed",
+    "authenticated_mobile_desktop_visual_audit_missing",
+    "leaked_password_protection_change_not_approved"
+  ],
+  "forbidden_claims": [
+    "all_auth_flows_are_verified",
+    "refresh_token_not_found_can_never_recur",
+    "authenticated_role_matrix_is_complete",
+    "browser_visual_e2e_is_complete",
+    "leaked_password_protection_is_ready_to_enable",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "commit_raw_supabase_logs",
+    "commit_user_identifiers_or_tokens",
+    "create_supabase_branch",
+    "confirm_cost",
+    "create_real_or_technical_accounts",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}

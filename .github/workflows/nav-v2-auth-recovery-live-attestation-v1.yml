@@ -1,0 +1,43 @@
+name: Navigator v2 Auth recovery live attestation v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-auth-recovery-live-attestation-v1.json'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'scripts/check_nav_v2_auth_recovery_live_attestation_v1.py'
+      - 'docs/NAV_V2_AUTH_RECOVERY_LIVE_ATTESTATION_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-auth-recovery-live-attestation-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-auth-recovery-live-attestation-v1.json'
+      - 'assets/js/nav-v2/auth-session-recovery-v2.js'
+      - 'tests/unit/nav-v2-auth-session-recovery.test.mjs'
+      - 'scripts/check_nav_v2_auth_recovery_live_attestation_v1.py'
+      - 'docs/NAV_V2_AUTH_RECOVERY_LIVE_ATTESTATION_V1_2026-07-22.md'
+      - '.github/workflows/nav-v2-auth-recovery-live-attestation-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  redacted-source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate attestation JSON
+        run: python3 -m json.tool config/nav-v2-auth-recovery-live-attestation-v1.json > /dev/null
+
+      - name: Compile attestation validator
+        run: python3 -m py_compile scripts/check_nav_v2_auth_recovery_live_attestation_v1.py
+
+      - name: Validate redacted live recovery contract
+        run: python3 scripts/check_nav_v2_auth_recovery_live_attestation_v1.py
+
+      - name: Run existing Auth recovery unit suite
+        run: node tests/unit/nav-v2-auth-session-recovery.test.mjs
