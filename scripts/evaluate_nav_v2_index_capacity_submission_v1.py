@@ -144,7 +144,7 @@ def base_report() -> dict[str, Any]:
         "valid_form": False,
         "environment_gate_valid": False,
         "owner_approval_present": False,
-        "release_manager_approval_present": False,
+        "release_approval_present": False,
         "required_input_count": len(EXPECTED_INPUTS),
         "completed_input_count": 0,
         "selected_environment": None,
@@ -230,10 +230,10 @@ def evaluate(data: dict[str, Any]) -> tuple[dict[str, Any], int]:
         if submitted_at and reviewed_at and reviewed_at < submitted_at:
             reasons.append("decision_form_review_before_submission")
         report["owner_approval_present"] = form.get("owner_approved") is True
-        report["release_manager_approval_present"] = form.get("release_manager_approved") is True
+        report["release_approval_present"] = form.get("release_manager_approved") is True
         if not report["owner_approval_present"]:
             reasons.append("owner_approval_missing")
-        if not report["release_manager_approval_present"]:
+        if not report["release_approval_present"]:
             reasons.append("release_manager_approval_missing")
         if form.get("values_may_not_be_guessed") is not True:
             reasons.append("values_may_not_be_guessed_must_be_true")
