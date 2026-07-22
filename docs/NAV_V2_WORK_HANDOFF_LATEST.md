@@ -4,7 +4,7 @@
 
 - Дата: 22 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `d7c7fa80f011643a869cd502f94209bec8ab3ade` — squash merge PR #453.
+- `main`: `ea5d5aa684762a9f9563020abd40bf636acfe034` — squash merge PR #455.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project status: `ACTIVE_HEALTHY`.
@@ -120,19 +120,7 @@ Production task actions используют:
 
 ### PR #394–#419 — intake и trust boundary
 
-Подготовлены:
-
-- трёхэтапный intake;
-- versioned facts/evidence/rules/documents/decisions;
-- legal passport;
-- side-aware work plan;
-- server recomputation;
-- privacy allowlist;
-- verified actor context;
-- private request ledger;
-- replay protection;
-- atomic rollback;
-- production-like mapping.
+Подготовлены трёхэтапный intake, versioned facts/evidence/rules/documents/decisions, legal passport, side-aware work plan, server recomputation, privacy allowlist, verified actor context, private request ledger, replay protection, atomic rollback и production-like mapping.
 
 Effective structural coverage: `25 supported / 0 unsupported`. Это repository coverage, а не production readiness.
 
@@ -173,11 +161,11 @@ Package v3 связывает package v2, combined lifecycle, exact rollback, mi
 - две `SECURITY INVOKER` exceptions;
 - Navigator migration и Edge baseline не изменились.
 
-Fresh Advisor check 22 июля не выявил нового Navigator drift. Callable warnings остаются ожидаемыми для curated external RPC и не должны исправляться автоматической сменой security model.
+Fresh Advisor check 22 июля не выявил нового Navigator drift. Callable warnings не должны исправляться автоматической сменой security model.
 
 Issue #161 остаётся открытой из-за leaked-password/Auth E2E prerequisites.
 
-### PR #438 — Performance Advisor contract
+### PR #438 и PR #440 — Performance Advisor и query-plan evidence
 
 - Navigator tables: `11`;
 - indexes: `53`;
@@ -187,9 +175,7 @@ Issue #161 остаётся открытой из-за leaked-password/Auth E2E 
 - direct per-row Auth calls: `0`;
 - representative workload window не доказан.
 
-`idx_scan=0` не является drop approval.
-
-### PR #440 — synthetic query-plan evidence
+Synthetic query-plan harness:
 
 - `120000` profiles;
 - `5000` deals;
@@ -204,21 +190,18 @@ Issue #161 остаётся открытой из-за leaked-password/Auth E2E 
 1. `nav_user_profiles_role_idx` — `retain`.
 2. `nav_deal_answers_v2_deal_idx` — `review_possible_redundancy_only`.
 
+`idx_scan=0` не является drop approval.
+
 ### PR #442 и PR #444 — browser Auth recovery
 
-PR #442 устранил invalid/not-found/already-used refresh loop:
-
-- недействительная session/profile cache очищается один раз;
-- email сохраняется для чистого входа;
-- повторный RPC останавливается;
-- валидный refresh повторяет RPC ровно один раз.
+PR #442 устранил invalid/not-found/already-used refresh loop.
 
 PR #444 добавил multi-tab race protection:
 
 - exclusive Web Lock `navigator-v2-auth-refresh`;
-- повторное чтение session после получения lock;
-- новая session другой вкладки не перезаписывается и не очищается старым response;
-- logout во время refresh не приводит к восстановлению session;
+- повторное чтение session после lock;
+- новая session другой вкладки не перезаписывается старым response;
+- logout во время refresh не восстанавливает session;
 - fallback compare-before-write/invalidate работает без Web Locks.
 
 Merge PR #444: `d55c7646dea7d5d130f1b4571ed15610e2a6395f`.
@@ -239,14 +222,7 @@ Canonical PostgreSQL 17 harness по `100000` synthetic answers выполняе
 - 2 successful unreferenced parent key updates;
 - 2 rejected referenced parent key updates с SQLSTATE `23503`.
 
-Подтверждены:
-
-- live/synthetic FK validated, non-deferrable, initially-immediate;
-- transaction-local scans через `pg_stat_get_xact_numscans(oid)`;
-- после synthetic removal single index composite scan delta = `1` для delete, successful update и blocked update;
-- `EXPLAIN ANALYZE, BUFFERS, WAL, FORMAT JSON`;
-- synthetic index size capture;
-- final counts и full rollback.
+Подтверждены transaction-local scans через `pg_stat_get_xact_numscans(oid)`, composite scan attribution после synthetic single-index removal, `EXPLAIN ANALYZE, BUFFERS, WAL, FORMAT JSON`, size capture, final counts и full rollback.
 
 Decision:
 
@@ -275,18 +251,13 @@ Merge: `318a86d47a5ef5106819eca469313dc3afe6a109`.
 - internal FK lookup учитывается отдельно;
 - решение остаётся `review_possible_redundancy_only`.
 
-Static validator доказал полное совпадение категорий с исходными signatures без пропусков и дублей. PII и business rows не использовались.
+PII и business rows не использовались.
 
 ### PR #453 — synthetic write/storage measurement
 
 Merge: `d7c7fa80f011643a869cd502f94209bec8ab3ade`.
 
-Fresh production capture был только aggregate/statistics read-only и доказал, что текущие counters не дают representative workload evidence.
-
-Isolated PostgreSQL 17 harness сравнил:
-
-1. single `(deal_id)` + unique composite `(deal_id, question_key)`;
-2. только unique composite `(deal_id, question_key)`.
+Isolated PostgreSQL 17 harness сравнил single+composite и composite-only modes.
 
 На каждый режим:
 
@@ -321,10 +292,61 @@ CI:
 - preview package run `29892486503` — success;
 - combined lifecycle run `29892486515` — success.
 
-Artifact:
+Artifact ID `8518731280`, digest `sha256:cee54610f07a81261813fa9b69e8e5dd5e2bc814d6f7e7ae8bc5983ae93ff8ac`.
 
-- ID `8518731280`;
-- digest `sha256:cee54610f07a81261813fa9b69e8e5dd5e2bc814d6f7e7ae8bc5983ae93ff8ac`.
+### PR #455 — fail-closed production-scale FK benchmark plan
+
+Merge: `ea5d5aa684762a9f9563020abd40bf636acfe034`.
+
+Подготовлен protocol, но benchmark не выполнялся.
+
+Execution state:
+
+- `benchmark_execution_authorized=false`;
+- `cloud_execution_allowed=false`;
+- `production_dml_authorized=false`;
+- `production_ddl_authorized=false`;
+- `selected_environment=null`;
+- `preview_branch_created=false`;
+- `cost_rechecked=false`;
+- `explicit_owner_cost_approval=false`;
+- `cost_confirmation_id=null`.
+
+Allowed future environments:
+
+1. owner/cost-approved disposable Supabase preview branch;
+2. isolated ephemeral PostgreSQL 17.
+
+Production database, copied production rows, real accounts и direct identifiers запрещены.
+
+Unresolved inputs, которые нельзя угадывать:
+
+- approved target deals/answers;
+- answers-per-deal distribution;
+- peak concurrency и headroom;
+- compute class;
+- maximum runtime.
+
+Пока они `null`, execution блокируется.
+
+Required future matrix включает zero/one/median/p95/max-bounded child deletes, successful unreferenced update, rejected `23503` update и mixed batch.
+
+Measurement protocol: 5 warmups, 20 measured iterations, randomized order, same deterministic dataset, JSON plans, BUFFERS/WAL, lock/timeout/deadlock, size/count/hash и cleanup evidence.
+
+Fixed latency/WAL/storage thresholds отсутствуют. Successful benchmark не является automatic DROP INDEX approval.
+
+Read-only preflight template возвращает только catalog/statistics/settings внутри `BEGIN TRANSACTION READ ONLY ... ROLLBACK`; exact business counts, rows и PII не возвращаются. Workflow не запускает SQL preflight или benchmark.
+
+Decision:
+
+`production_scale_fk_benchmark_protocol_prepared_execution_blocked`
+
+CI:
+
+- dedicated plan run `29893186346` — success;
+- static run `29893186307` — success;
+- preview package run `29893186320` — success;
+- combined lifecycle run `29893186371` — success.
 
 ## Обязательные gates
 
@@ -346,7 +368,8 @@ Artifact:
 - hardened FK mutation semantics;
 - browser refresh recovery;
 - exact non-PII query-to-index mapping;
-- synthetic write/storage measurement methodology и CI evidence.
+- synthetic write/storage measurement methodology и CI evidence;
+- fail-closed production-scale FK benchmark protocol.
 
 Это repository evidence, а не разрешение на cloud execution или production DDL.
 
@@ -378,18 +401,19 @@ Browser recovery PR #442/#444 не заменяет authenticated E2E.
 
 Production deployment, index removal, RLS rewrite и cleanup запрещены без отдельных evidence packages и owner approvals.
 
-Для `nav_deal_answers_v2_deal_idx` repository-only structural/FK/query-mapping/write-storage evidence закрыто, но отсутствуют:
+Для `nav_deal_answers_v2_deal_idx` repository-only structural/FK/query-mapping/write-storage evidence и benchmark protocol закрыты, но отсутствуют:
 
 - известное начало production statistics window;
 - representative authenticated workload;
+- approved production capacity/concurrency inputs;
+- выполненный production-scale benchmark в разрешённой disposable/isolated среде;
 - production `EXPLAIN ANALYZE` на non-PII fixtures;
-- production-scale FK parent mutation benchmark;
 - production write amplification/storage benefit measurement;
 - authenticated regression suite;
 - exact forward/rollback migration;
 - отдельное owner DDL approval.
 
-Для `nav_user_profiles_role_idx` решение остаётся `retain`; mapping не является основанием для удаления.
+Для `nav_user_profiles_role_idx` решение остаётся `retain`.
 
 Не изменять production `leader_*`. Navigator использует только `nav_*`, `nav_v2_*` и общий Auth.
 
@@ -415,17 +439,21 @@ Advisor/index evidence:
 - `config/nav-v2-index-fk-parent-mutation-evidence-v1.json`
 - `config/nav-v2-query-to-index-mapping-v1.json`
 - `config/nav-v2-index-write-storage-measurement-v1.json`
+- `config/nav-v2-production-scale-fk-benchmark-plan-v1.json`
 - `tests/sql/nav_v2_index_query_plan_harness_v1.sql`
 - `tests/sql/nav_v2_index_fk_parent_mutation_harness_v1.sql`
 - `tests/sql/nav_v2_index_write_storage_measurement_harness_v1.sql`
+- `tests/sql/nav_v2_production_scale_fk_benchmark_readonly_preflight_v1.sql`
 - `scripts/check_nav_v2_index_query_plan_candidate_v1.py`
 - `scripts/check_nav_v2_index_fk_parent_mutation_evidence_v1.py`
 - `scripts/check_nav_v2_query_to_index_mapping_v1.py`
 - `scripts/check_nav_v2_index_write_storage_measurement_v1.py`
+- `scripts/check_nav_v2_production_scale_fk_benchmark_plan_v1.py`
 - `docs/NAV_V2_INDEX_QUERY_PLAN_CANDIDATE_V1_2026-07-21.md`
 - `docs/NAV_V2_INDEX_FK_PARENT_MUTATION_EVIDENCE_V1_2026-07-21.md`
 - `docs/NAV_V2_QUERY_TO_INDEX_MAPPING_V1_2026-07-21.md`
 - `docs/NAV_V2_INDEX_WRITE_STORAGE_MEASUREMENT_V1_2026-07-22.md`
+- `docs/NAV_V2_PRODUCTION_SCALE_FK_BENCHMARK_PLAN_V1_2026-07-22.md`
 
 Auth/runtime:
 
@@ -454,8 +482,8 @@ Edge/lifecycle:
 4. фиксировать Navigator migration, Advisor, index/RLS или Edge drift;
 5. анализировать Auth/Edge/API logs без settings changes и токенов;
 6. расширять browser recovery tests без real accounts;
-7. подготовить production-scale FK benchmark contract только как fail-closed plan без cloud execution и production DML;
-8. уточнить future production observation-window protocol без запуска workload;
+7. подготовить observation-window protocol без запуска workload или изменения statistics settings;
+8. подготовить capacity-input decision form без выбора/угадывания значений;
 9. не reconciliate `leader_*` migrations;
 10. не выполнять cost confirmation заранее;
 11. не создавать Supabase branch, accounts, secrets или cloud resources.
@@ -467,5 +495,7 @@ Edge/lifecycle:
 Для authenticated preview E2E владелец должен явно разрешить одновременно:
 
 `authenticated_e2e_only`, свежую стоимость branch, отдельный cost confirmation, disposable preview branch максимум на 6 часов, synthetic technical accounts и automatic cleanup.
+
+Для будущего production-scale FK benchmark отдельное решение должно дополнительно включать approved scale/concurrency/compute/runtime inputs и выбранную разрешённую среду.
 
 Без такой формулировки cloud execution запрещено.
