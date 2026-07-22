@@ -40,6 +40,7 @@ def main() -> None:
     helper = HELPER.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
     docs = DOC.read_text(encoding="utf-8")
+    docs_lower = docs.lower()
 
     require(data.get("schema_version") == 1, "schema_version must be 1")
     require(data.get("status") == EXPECTED_STATUS, "unexpected status")
@@ -170,8 +171,8 @@ def main() -> None:
     )
 
     require(EXPECTED_DECISION in docs, "documentation decision drift")
-    require("не является authenticated role E2E" in docs, "documentation must preserve E2E boundary")
-    require("runtime-код не меняется" in docs, "documentation must preserve runtime boundary")
+    require("не является authenticated role e2e" in docs_lower, "documentation must preserve E2E boundary")
+    require("runtime-код не меняется" in docs_lower, "documentation must preserve runtime boundary")
 
     print("Navigator v2 Auth lock/timeout/post-refresh test contract passed")
 
