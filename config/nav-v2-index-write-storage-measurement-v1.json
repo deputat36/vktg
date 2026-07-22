@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_synthetic_write_storage_measurement_not_ddl_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "captured_at": "2026-07-22T04:51:36.605125+00:00",
+  "source_main_sha": "ca9b0c2f9e60d5198a234be6f429f2f9c022168d",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "index_drop_authorized": false,
+  "index_create_authorized": false,
+  "cloud_execution_allowed": false,
+  "source_evidence": {
+    "query_to_index_mapping": "config/nav-v2-query-to-index-mapping-v1.json",
+    "canonical_fk_evidence": "config/nav-v2-index-fk-parent-mutation-evidence-v1.json",
+    "synthetic_harness": "tests/sql/nav_v2_index_write_storage_measurement_harness_v1.sql",
+    "live_capture_mode": "aggregate_catalog_and_statistics_only_read_only_transaction",
+    "postgres_harness_major": 17
+  },
+  "candidate": {
+    "table": "public.nav_deal_answers_v2",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "leading_prefix": "deal_id",
+    "decision_before_measurement": "review_possible_redundancy_only",
+    "decision_after_measurement": "review_possible_redundancy_only"
+  },
+  "live_read_only_snapshot": {
+    "table": {
+      "heap_bytes": 8192,
+      "total_bytes": 81920,
+      "seq_scan": 4,
+      "idx_scan": 0,
+      "n_tup_ins": 0,
+      "n_tup_upd": 0,
+      "n_tup_del": 0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_vacuum": null,
+      "last_autovacuum": null,
+      "last_analyze": null,
+      "last_autoanalyze": null
+    },
+    "indexes": [
+      {
+        "name": "nav_deal_answers_v2_deal_id_question_key_key",
+        "definition": "CREATE UNIQUE INDEX nav_deal_answers_v2_deal_id_question_key_key ON public.nav_deal_answers_v2 USING btree (deal_id, question_key)",
+        "size_bytes": 16384,
+        "idx_scan": 0,
+        "idx_tup_read": 0,
+        "idx_tup_fetch": 0
+      },
+      {
+        "name": "nav_deal_answers_v2_deal_idx",
+        "definition": "CREATE INDEX nav_deal_answers_v2_deal_idx ON public.nav_deal_answers_v2 USING btree (deal_id)",
+        "size_bytes": 16384,
+        "idx_scan": 0,
+        "idx_tup_read": 0,
+        "idx_tup_fetch": 0
+      }
+    ],
+    "database_stats_reset": null,
+    "global_wal_snapshot": {
+      "wal_records": 71492,
+      "wal_fpi": 14439,
+      "wal_bytes": 58847968,
+      "stats_reset": "2026-06-13T20:56:11.77719+00:00",
+      "attributable_to_candidate": false
+    },
+    "production_statistics_representative": false,
+    "pii_returned": false,
+    "business_rows_returned": false,
+    "data_mutated": false,
+    "ddl_executed": false
+  },
+  "synthetic_harness_contract": {
+    "production_schema_used": false,
+    "production_data_copied": false,
+    "comparison_modes": [
+      "single_and_composite_indexes",
+      "composite_unique_index_only"
+    ],
+    "synthetic_parent_rows": 6000,
+    "synthetic_referenced_deals": 5000,
+    "synthetic_answers_per_deal": 20,
+    "insert_rows_per_mode": 100000,
+    "indexed_update_rows_per_mode": 10000,
+    "delete_rows_per_mode": 10000,
+    "final_rows_per_mode": 90000,
+    "explain_analyze": true,
+    "explain_format": "json",
+    "buffers": true,
+    "wal": true,
+    "timing": false,
+    "storage_capture_after_each_stage": true,
+    "semantic_equivalence_required": true,
+    "full_transaction_rollback": true,
+    "post_rollback_schema_absence_required": true
+  },
+  "measurement_policy": {
+    "wal_bytes_are_statement_local_ci_diagnostics": true,
+    "relation_sizes_are_synthetic_only": true,
+    "execution_time_is_not_a_production_latency_estimate": true,
+    "no_ratio_threshold_for_index_removal": true,
+    "no_automatic_ddl_decision": true,
+    "production_benefit_requires_representative_authenticated_workload": true
+  },
+  "result": {
+    "decision": "synthetic_write_storage_measurement_completed_production_drop_not_ready",
+    "single_column_index_removed_in_production": false,
+    "synthetic_write_measurement_completed": true,
+    "synthetic_storage_measurement_completed": true,
+    "production_write_savings_proven": false,
+    "production_storage_savings_proven": false,
+    "latency_superiority_proven": false
+  },
+  "remaining_before_any_production_index_removal": [
+    "known production statistics observation start",
+    "representative authenticated workload window",
+    "production EXPLAIN ANALYZE on representative non-PII fixtures",
+    "production-scale foreign-key parent update/delete benchmark",
+    "production write amplification and storage benefit measurement",
+    "authenticated regression suite",
+    "exact forward and rollback migration",
+    "separate owner approval for production DDL"
+  ],
+  "active_stops": [
+    "production_statistics_window_missing",
+    "authenticated_workload_missing",
+    "production_explain_analyze_missing",
+    "production_scale_fk_parent_mutation_benchmark_missing",
+    "production_write_storage_benefit_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_claims": [
+    "production_index_removal_ready",
+    "single_column_index_is_safe_to_drop",
+    "synthetic_wal_is_production_wal",
+    "synthetic_storage_is_production_storage",
+    "synthetic_latency_is_production_latency",
+    "production_ddl_approved"
+  ],
+  "forbidden_actions": [
+    "drop_production_index",
+    "create_production_index",
+    "apply_production_migration",
+    "change_production_rls",
+    "copy_production_data_to_harness",
+    "create_supabase_branch",
+    "change_leader_schema"
+  ]
+}
