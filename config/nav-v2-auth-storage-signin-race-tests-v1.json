@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_storage_signin_race_test_contract_no_live_accounts",
+  "created_on": "2026-07-22",
+  "source_main_sha": "07f33386555e5f9b8d6053c5a791e524b1c5d8e3",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "runtime_code_changed": false,
+  "cloud_execution_allowed": false,
+  "test_file": "tests/unit/nav-v2-auth-storage-signin-race.test.mjs",
+  "runtime_files_observed": [
+    "assets/js/nav-v2/supabase-v2.js",
+    "assets/js/nav-v2/auth-session-recovery-v2.js"
+  ],
+  "scenarios": [
+    {
+      "id": "malformed_session_and_profile_storage_then_clean_signin",
+      "expected_cached_user": null,
+      "expected_cached_profile": null,
+      "expected_pre_signin_network_calls": 0,
+      "expected_stale_profile_cache_cleared": true,
+      "expected_result": "clean_signin_replaces_malformed_storage"
+    },
+    {
+      "id": "same_user_signin_wins_over_pending_old_refresh",
+      "expected_old_refresh_calls": 1,
+      "expected_password_calls": 1,
+      "expected_rpc_retry_calls": 1,
+      "expected_delayed_refresh_overwrites_signin": false,
+      "expected_result": "newer_same_user_password_session_retained"
+    },
+    {
+      "id": "different_user_signin_wins_over_pending_old_refresh",
+      "expected_old_refresh_calls": 1,
+      "expected_rpc_retry_status": 403,
+      "expected_second_refresh_calls": 0,
+      "expected_delayed_refresh_overwrites_signin": false,
+      "expected_result": "replacement_user_session_retained_and_old_rpc_denial_surfaces"
+    },
+    {
+      "id": "failed_signin_prevents_old_refresh_resurrection",
+      "expected_password_status": 400,
+      "expected_old_refresh_calls": 1,
+      "expected_rpc_retry_calls": 0,
+      "expected_session_after_race": null,
+      "expected_result": "old_session_not_resurrected_after_failed_signin"
+    }
+  ],
+  "test_boundary": {
+    "network_calls_mocked": true,
+    "web_lock_api_mocked": true,
+    "storage_in_memory": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "raw_logs_used": false,
+    "fixture_email_domain": "example.test"
+  },
+  "acceptance": {
+    "malformed_session_json_is_treated_as_absent": true,
+    "malformed_profile_json_is_treated_as_absent": true,
+    "require_user_fails_before_network_for_malformed_session": true,
+    "clean_signin_clears_stale_profile_cache": true,
+    "same_user_signin_session_wins_over_delayed_refresh": true,
+    "different_user_signin_session_wins_over_delayed_refresh": true,
+    "old_rpc_retries_at_most_once_with_replacement_session": true,
+    "failed_signin_does_not_allow_old_session_resurrection": true,
+    "existing_auth_recovery_suites_still_pass": true
+  },
+  "result": {
+    "decision": "auth_malformed_storage_and_signin_refresh_races_covered_offline",
+    "authenticated_role_e2e_completed": false,
+    "live_multi_tab_browser_e2e_completed": false,
+    "real_browser_storage_corruption_completed": false,
+    "real_concurrent_signin_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "all_browser_storage_failures_are_verified",
+    "real_multi_tab_signin_races_are_verified",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "use_real_accounts_or_tokens",
+    "commit_raw_auth_logs",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
