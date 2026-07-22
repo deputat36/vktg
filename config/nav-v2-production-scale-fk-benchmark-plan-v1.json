@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_fail_closed_production_scale_fk_benchmark_plan_not_execution_approval",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "created_on": "2026-07-22",
+  "source_main_sha": "a8921def49627b08336a6dd15efaa490f1a25427",
+  "production_applied": false,
+  "production_ddl_authorized": false,
+  "production_dml_authorized": false,
+  "cloud_execution_allowed": false,
+  "benchmark_execution_authorized": false,
+  "selected_environment": null,
+  "preview_branch_created": false,
+  "cost_rechecked": false,
+  "explicit_owner_cost_approval": false,
+  "cost_confirmation_id": null,
+  "technical_accounts_created": false,
+  "source_evidence": {
+    "canonical_fk_evidence": "config/nav-v2-index-fk-parent-mutation-evidence-v1.json",
+    "write_storage_measurement": "config/nav-v2-index-write-storage-measurement-v1.json",
+    "query_to_index_mapping": "config/nav-v2-query-to-index-mapping-v1.json",
+    "readonly_preflight_template": "tests/sql/nav_v2_production_scale_fk_benchmark_readonly_preflight_v1.sql"
+  },
+  "candidate": {
+    "child_table": "public.nav_deal_answers_v2",
+    "parent_table": "public.nav_deals_v2",
+    "foreign_key": "nav_deal_answers_v2_deal_id_fkey",
+    "single_column_index": "nav_deal_answers_v2_deal_idx",
+    "composite_unique_index": "nav_deal_answers_v2_deal_id_question_key_key",
+    "leading_prefix": "deal_id",
+    "delete_action": "CASCADE",
+    "update_action": "NO ACTION",
+    "decision_before_plan": "review_possible_redundancy_only",
+    "decision_after_plan": "review_possible_redundancy_only"
+  },
+  "allowed_execution_environments": [
+    "owner_and_cost_approved_disposable_supabase_preview_branch",
+    "isolated_ephemeral_postgresql_17"
+  ],
+  "forbidden_execution_environments": [
+    "production_database",
+    "shared_non_disposable_database",
+    "environment_with_real_employee_accounts",
+    "environment_with_copied_production_rows"
+  ],
+  "dataset_policy": {
+    "synthetic_only": true,
+    "production_rows_copied": false,
+    "real_client_data_allowed": false,
+    "real_employee_accounts_allowed": false,
+    "direct_identifiers_allowed": false,
+    "deterministic_seed_required": true,
+    "dataset_manifest_required": true,
+    "generated_row_hash_required": true,
+    "cleanup_required": true
+  },
+  "unresolved_capacity_inputs": {
+    "planning_horizon_months": 12,
+    "approved_target_deals": null,
+    "approved_target_answers": null,
+    "approved_answers_per_deal_distribution": null,
+    "approved_peak_concurrency": null,
+    "approved_branch_compute_class": null,
+    "approved_max_runtime_minutes": null,
+    "inputs_may_not_be_guessed": true
+  },
+  "scale_resolution_policy": {
+    "fresh_readonly_catalog_preflight_required": true,
+    "fresh_statistics_window_start_required": true,
+    "capacity_forecast_owner_approval_required": true,
+    "baseline_scale_formula": "max(fresh_observed_rows, approved_target_rows)",
+    "stress_scale_formula": "2 * baseline_scale",
+    "scale_must_fit_approved_environment": true,
+    "scale_reduction_requires_recorded_reason": true,
+    "unresolved_scale_blocks_execution": true
+  },
+  "comparison_modes": [
+    {
+      "id": "single_and_composite_indexes",
+      "single_index_present": true,
+      "composite_index_present": true
+    },
+    {
+      "id": "composite_unique_index_only",
+      "single_index_present": false,
+      "composite_index_present": true
+    }
+  ],
+  "required_mutation_matrix": [
+    "parent_delete_zero_children",
+    "parent_delete_one_child",
+    "parent_delete_median_children",
+    "parent_delete_p95_children",
+    "parent_delete_max_bounded_children",
+    "parent_update_unreferenced_success",
+    "parent_update_referenced_rejected_23503",
+    "mixed_delete_and_rejected_update_batch"
+  ],
+  "required_concurrency_matrix": {
+    "serial": 1,
+    "approved_peak": null,
+    "approved_peak_plus_headroom": null,
+    "unresolved_concurrency_blocks_execution": true
+  },
+  "measurement_protocol": {
+    "postgres_major": 17,
+    "warmup_iterations_per_case": 5,
+    "measured_iterations_per_case": 20,
+    "randomized_case_order": true,
+    "same_dataset_snapshot_for_both_modes": true,
+    "cold_cache_claims_allowed": false,
+    "explain_analyze": true,
+    "explain_format": "json",
+    "buffers": true,
+    "wal": true,
+    "timing": false,
+    "lock_timeout_required": true,
+    "statement_timeout_required": true,
+    "deadlock_timeout_recorded": true,
+    "server_settings_manifest_required": true,
+    "index_sizes_captured": true,
+    "table_sizes_captured": true,
+    "row_counts_captured": true,
+    "result_hashes_captured": true,
+    "fk_semantics_asserted": true,
+    "transaction_rollback_required": true
+  },
+  "required_outputs": [
+    "environment_manifest",
+    "cost_confirmation_reference_if_preview_branch",
+    "dataset_manifest_and_seed",
+    "resolved_scale_and_concurrency_inputs",
+    "server_settings_manifest",
+    "per_case_json_plans",
+    "per_case_wal_and_buffer_metrics",
+    "per_case_lock_and_timeout_outcomes",
+    "index_and_relation_size_snapshots",
+    "semantic_equivalence_report",
+    "cleanup_report",
+    "decision_note_without_automatic_ddl_claim"
+  ],
+  "acceptance_policy": {
+    "semantic_mismatch_is_failure": true,
+    "unexpected_fk_outcome_is_failure": true,
+    "timeout_or_deadlock_is_recorded_failure": true,
+    "incomplete_cleanup_is_failure": true,
+    "missing_artifact_is_failure": true,
+    "fixed_latency_ratio_for_drop_approval": null,
+    "fixed_wal_ratio_for_drop_approval": null,
+    "fixed_storage_ratio_for_drop_approval": null,
+    "automatic_index_drop_decision": false,
+    "separate_authenticated_regression_required": true,
+    "separate_forward_and_rollback_migration_required": true,
+    "separate_owner_production_ddl_approval_required": true
+  },
+  "preview_branch_lifecycle_if_selected": {
+    "maximum_lifetime_hours": 6,
+    "automatic_delete_deadline_required": true,
+    "database_first_apply": true,
+    "candidate_edge_deploy_required": false,
+    "technical_accounts_required_for_this_benchmark": false,
+    "production_data_import_forbidden": true,
+    "cleanup_before_branch_delete_required": true,
+    "branch_delete_evidence_required": true
+  },
+  "result": {
+    "decision": "production_scale_fk_benchmark_protocol_prepared_execution_blocked",
+    "benchmark_executed": false,
+    "production_scale_evidence_completed": false,
+    "production_index_removal_ready": false,
+    "production_write_savings_proven": false,
+    "production_latency_regression_excluded": false
+  },
+  "active_stops": [
+    "benchmark_execution_not_authorized",
+    "selected_environment_missing",
+    "fresh_statistics_window_missing",
+    "approved_capacity_forecast_missing",
+    "approved_concurrency_missing",
+    "approved_runtime_and_compute_missing",
+    "preview_cost_approval_missing_if_preview_selected",
+    "production_explain_analyze_missing",
+    "authenticated_regression_missing",
+    "production_migration_missing",
+    "owner_ddl_approval_missing"
+  ],
+  "forbidden_claims": [
+    "benchmark_has_been_executed",
+    "production_scale_evidence_exists",
+    "production_index_removal_ready",
+    "single_column_index_is_safe_to_drop",
+    "synthetic_ci_results_are_production_results",
+    "production_ddl_approved"
+  ],
+  "forbidden_actions": [
+    "run_benchmark_on_production",
+    "insert_synthetic_rows_into_production",
+    "update_production_rows_for_benchmark",
+    "delete_production_rows_for_benchmark",
+    "drop_production_index",
+    "apply_production_migration",
+    "create_supabase_branch_without_fresh_cost_and_owner_approval",
+    "copy_production_data_to_benchmark",
+    "create_real_employee_test_accounts",
+    "change_leader_schema"
+  ]
+}
