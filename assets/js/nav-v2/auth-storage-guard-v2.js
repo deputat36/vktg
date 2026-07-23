@@ -35,11 +35,37 @@ export function createAuthStorageController({
   lastEmailKey = 'nav_last_email_v2'
 } = {}) {
   let sessionReadBlocked = false;
+  let blockedSessionValue = null;
+  let blockedSessionValueKnown = false;
+
+  function setSessionBlock(value, known = true) {
+    sessionReadBlocked = true;
+    blockedSessionValue = value;
+    blockedSessionValueKnown = known;
+  }
+
+  function clearSessionBlock() {
+    sessionReadBlocked = false;
+    blockedSessionValue = null;
+    blockedSessionValueKnown = false;
+  }
+
+  function readRawSessionValue() {
+    if (!local) throw unavailableStorageCause('localStorage');
+    return local.getItem(sessionKey);
+  }
 
   function readSession() {
-    if (sessionReadBlocked || !local) return null;
+    if (!local) return null;
     try {
-      return parseJson(local.getItem(sessionKey));
+      const value = readRawSessionValue();
+      if (sessionReadBlocked) {
+        if (!blockedSessionValueKnown || value === blockedSessionValue) return null;
+        // Another tab or a later successful browser write replaced the blocked
+        // stale value. Resume normal reads without requiring a page reload.
+        clearSessionBlock();
+      }
+      return parseJson(value);
     } catch (_) {
       return null;
     }
@@ -104,7 +130,14 @@ export function createAuthStorageController({
   }
 
   function clearSession({ email = '' } = {}) {
-    sessionReadBlocked = true;
+    let previousValue = null;
+    let previousValueKnown = false;
+    try {
+      previousValue = readRawSessionValue();
+      previousValueKnown = true;
+    } catch (_) {}
+    setSessionBlock(previousValue, previousValueKnown);
+
     let persistentClearSucceeded = false;
     let removeError = null;
 
@@ -112,14 +145,17 @@ export function createAuthStorageController({
       if (!local) throw unavailableStorageCause('localStorage');
       local.removeItem(sessionKey);
       persistentClearSucceeded = true;
+      setSessionBlock(null, true);
     } catch (error) {
       removeError = error;
       try {
         if (!local) throw unavailableStorageCause('localStorage');
         local.setItem(sessionKey, 'null');
         persistentClearSucceeded = true;
+        setSessionBlock('null', true);
       } catch (_) {
         persistentClearSucceeded = false;
+        setSessionBlock(previousValue, previousValueKnown);
       }
     } finally {
       clearProfiles();
@@ -140,18 +176,25 @@ export function createAuthStorageController({
     try {
       serialized = JSON.stringify(nextSession);
     } catch (error) {
-      sessionReadBlocked = true;
+      setSessionBlock(null, false);
       clearProfiles();
       throw createAuthStorageUnavailableError('save', error);
     }
 
+    let previousValue = null;
+    let previousValueKnown = false;
+    try {
+      previousValue = readRawSessionValue();
+      previousValueKnown = true;
+    } catch (_) {}
+
     try {
       if (!local) throw unavailableStorageCause('localStorage');
       local.setItem(sessionKey, serialized);
-      sessionReadBlocked = false;
+      clearSessionBlock();
       return nextSession;
     } catch (error) {
-      sessionReadBlocked = true;
+      setSessionBlock(previousValue, previousValueKnown);
       clearProfiles();
       throw createAuthStorageUnavailableError('save', error);
     }
