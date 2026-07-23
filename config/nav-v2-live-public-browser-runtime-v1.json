@@ -52,13 +52,29 @@
     "leader_schema_changed": false
   },
   "result": {
-    "decision": "live_public_browser_runtime_contract_prepared_requires_successful_ci",
-    "local_browser_runtime_verified": false,
-    "live_browser_runtime_verified": false,
+    "decision": "live_public_browser_runtime_20260723_02_verified_read_only",
+    "local_browser_runtime_verified": true,
+    "live_browser_runtime_verified": true,
     "authenticated_role_e2e_completed": false,
     "live_browser_storage_failure_verified": false,
-    "evidence_run_id": null,
-    "evidence_commit_sha": null
+    "evidence_run_id": 30023416439,
+    "evidence_commit_sha": "41f9056d1021fd9a84ac3adf140b0877599e699b",
+    "artifact_id": 8570253047,
+    "artifact_digest": "sha256:24e71a7e91f394fbb70813cc5ae395dc5c7eb2fcee18aca019d57bf088c4cb5e"
+  },
+  "evidence": {
+    "observed_at": "2026-07-23T16:04:45.568Z",
+    "expected_build_id": "20260723-02",
+    "desktop_cases": 5,
+    "mobile_cases": 5,
+    "expected": 10,
+    "unexpected": 0,
+    "flaky": 0,
+    "exact_versioned_shared_module_observed": true,
+    "exact_versioned_storage_guard_observed": true,
+    "guest_login_gate_visible": true,
+    "console_errors_absent": true,
+    "page_errors_absent": true
   },
   "forbidden_actions": [
     "use_real_accounts_or_tokens",
