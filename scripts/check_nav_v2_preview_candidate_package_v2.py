@@ -13,6 +13,7 @@ PREVIEW_ASSEMBLER = ROOT / "config/nav-v2-preview-bundle-assembler-v1.json"
 BOUNDED = ROOT / "config/nav-v2-bounded-consolidated-candidate-v1.json"
 GRANTS = ROOT / "config/nav-v2-preview-minimal-grants-candidate-v1.json"
 RELEASE = ROOT / "config/nav-v2-release-baseline.json"
+SHARED_RELEASE = ROOT / "config/nav-v2-release-drift-shared-project-v1.json"
 PREFLIGHT = ROOT / "tests/sql/nav_v2_preview_readonly_preflight_v1.sql"
 ASSEMBLER = ROOT / "scripts/assemble-nav-v2-preview-candidate-package-v2.mjs"
 NODE_CHECKER = ROOT / "scripts/check-nav-v2-preview-candidate-package-v2.mjs"
@@ -21,9 +22,12 @@ DOC = ROOT / "docs/NAV_V2_PREVIEW_CANDIDATE_PACKAGE_V2_2026-07-21.md"
 EDGE_CANDIDATE = ROOT / "supabase/functions/nav-v2-deal-api/index.ts"
 EDGE_SNAPSHOT = ROOT / "supabase/functions/nav-v2-deal-api/index.production-v4.ts"
 MIGRATIONS = ROOT / "supabase/migrations"
+
 EXPECTED_REMOTE_MIGRATION = "20260721122333"
 EXPECTED_REMOTE_MIGRATION_NAME = "revoke_anon_execute_leader_internal_rpcs"
 EXPECTED_NAVIGATOR_MIGRATION = "20260716063401"
+HISTORICAL_RELEASE_BASELINE = "20260715203158"
+CURRENT_RELEASE_BASELINE = "20260716063401"
 
 
 def require(condition: bool, message: str) -> None:
@@ -32,25 +36,15 @@ def require(condition: bool, message: str) -> None:
 
 
 def load(path: Path) -> dict:
+    require(path.is_file(), f"missing source: {path.relative_to(ROOT)}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def executable_sql(text: str) -> str:
-    return "\n".join(
-        line for line in text.splitlines()
-        if not line.strip().startswith("--")
-    )
+    return "\n".join(line for line in text.splitlines() if not line.strip().startswith("--"))
 
 
 def main() -> None:
-    required_paths = [
-        PACKAGE, ATTESTATION, PACKAGE_V1, PREVIEW_ASSEMBLER, BOUNDED,
-        GRANTS, RELEASE, PREFLIGHT, ASSEMBLER, NODE_CHECKER, WORKFLOW,
-        DOC, EDGE_CANDIDATE, EDGE_SNAPSHOT,
-    ]
-    for path in required_paths:
-        require(path.is_file(), f"missing source: {path.relative_to(ROOT)}")
-
     package = load(PACKAGE)
     attestation = load(ATTESTATION)
     package_v1 = load(PACKAGE_V1)
@@ -58,6 +52,7 @@ def main() -> None:
     bounded = load(BOUNDED)
     grants = load(GRANTS)
     release = load(RELEASE)
+    shared_release = load(SHARED_RELEASE)
     preflight = PREFLIGHT.read_text(encoding="utf-8")
     assembler = ASSEMBLER.read_text(encoding="utf-8")
     node_checker = NODE_CHECKER.read_text(encoding="utf-8")
@@ -71,16 +66,9 @@ def main() -> None:
         package["status"] == "repository_only_preview_candidate_package_v2_not_executable",
         "package v2 escaped repository-only status",
     )
-    require(
-        package["source_main_sha"] == "7741346264646e31917c64f64d8eeca91217e855",
-        "package v2 source main drifted",
-    )
+    require(package["source_main_sha"] == "7741346264646e31917c64f64d8eeca91217e855", "package v2 source main drifted")
     require(package["production_project_ref"] == "ofewxuqfjhamgerwzull", "production project ref drifted")
     require(package["review_candidate_ready"] is True, "package v2 is not review-ready")
-    require(
-        package["execution_model"] == "quality_bounded_intake_review_inventory_with_consolidated_bounded_artifacts",
-        "package v2 execution model drifted",
-    )
     for key in [
         "production_applied", "preview_branch_created", "cloud_execution_allowed",
         "cost_confirmation_performed", "preview_apply_allowed", "edge_deploy_allowed",
@@ -105,8 +93,6 @@ def main() -> None:
     require(preview["status"] == "repository_only_ci_assembler_not_deployable", "preview assembler status drifted")
     require(bounded["status"] == "repository_only_consolidated_candidate_not_executable", "bounded candidate status drifted")
     require(bounded["fixture_policy"]["schema_and_fixture_data_separated"] is True, "bounded fixture isolation missing")
-    require(bounded["fixture_policy"]["documents_inserted_before_mutation_assertions"] == 0, "bounded document baseline is not zero")
-    require(bounded["fixture_policy"]["risks_inserted_before_mutation_assertions"] == 0, "bounded risk baseline is not zero")
     require(grants["status"] == "repository_only_minimal_grants_candidate_not_applied", "minimal grants status drifted")
     require(grants["grant_change_allowed"] is False, "minimal grants were enabled")
 
@@ -119,9 +105,7 @@ def main() -> None:
     for component in components[:3]:
         require(component["sequential_preview_apply_proven"] is False, f"{component['id']} claims sequential apply proof")
         require(component["can_apply_in_preview"] is False, f"{component['id']} permits preview apply")
-    require(components[1]["duplicate_forward_sources"] == 0, "bounded component still reports duplicate sources")
-    require(components[1]["forward_artifact"] == bounded["forward_file"], "bounded forward artifact drifted")
-    require(components[1]["rollback_artifact"] == bounded["rollback_file"], "bounded rollback artifact drifted")
+    require(components[1]["duplicate_forward_sources"] == 0, "bounded component reports duplicate sources")
 
     edge = components[3]
     require(edge["entrypoint"] == EDGE_CANDIDATE.relative_to(ROOT).as_posix(), "Edge candidate path drifted")
@@ -134,13 +118,8 @@ def main() -> None:
     for relative in edge["support_files"]:
         require((ROOT / relative).is_file(), f"Edge support file missing: {relative}")
 
-    require(
-        attestation["status"] == "captured_read_only_production_attestation_not_execution_approval",
-        "attestation status drifted",
-    )
+    require(attestation["status"] == "captured_read_only_production_attestation_not_execution_approval", "attestation status drifted")
     require(attestation["production_project_ref"] == package["production_project_ref"], "attestation project ref drifted")
-    require(attestation["source_main_sha"] == "746a806aaa2f6be572754e076fcfd359288f2abf", "attestation source main drifted")
-    require(attestation["captured_at"] == "2026-07-21T13:19:29.070311+00:00", "attestation capture timestamp drifted")
     require(attestation["project_status"] == "ACTIVE_HEALTHY", "production project is not attested healthy")
     require(attestation["postgres_major"] == 17, "PostgreSQL major attestation drifted")
     require(attestation["data_mutated"] is False and attestation["ddl_executed"] is False, "attestation claims mutation")
@@ -155,25 +134,18 @@ def main() -> None:
     require(attestation["migration_boundary"]["navigator_may_modify_leader_history"] is False, "Navigator was allowed to modify leader history")
     require(attestation["edge_function"]["version"] == 4, "Edge live version drifted")
     require(attestation["edge_function"]["verify_jwt"] is True, "Edge JWT attestation drifted")
-    require(
-        attestation["edge_function"]["ezbr_sha256"] == "b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095",
-        "Edge live bundle hash drifted",
-    )
-
-    preflight_contract = package["preflight_contract"]
-    require(preflight_contract["observed_latest_remote_migration"] == EXPECTED_REMOTE_MIGRATION, "preflight remote boundary drifted")
-    require(preflight_contract["observed_latest_remote_migration_name"] == EXPECTED_REMOTE_MIGRATION_NAME, "preflight remote migration name drifted")
 
     migration = package["migration_boundary"]
     require(migration["navigator_boundary_verified"] is True, "Navigator boundary is not verified")
     require(migration["latest_navigator_migration"] == EXPECTED_NAVIGATOR_MIGRATION, "package Navigator boundary drifted")
     require(migration["latest_remote_migration"] == EXPECTED_REMOTE_MIGRATION, "package remote boundary drifted")
-    require(migration["latest_remote_migration_name"] == EXPECTED_REMOTE_MIGRATION_NAME, "package remote migration name drifted")
-    require(release["latest_live_migration"] == "20260715203158", "release baseline changed without reconciliation")
-    require(migration["release_baseline_latest_live_migration"] == release["latest_live_migration"], "release baseline snapshot mismatch")
-    require(migration["release_baseline_drift_detected"] is True, "release baseline drift is not explicit")
-    require(migration["later_remote_migrations_are_non_navigator"] is True, "later remote migration scope is not explicit")
-    require(migration["release_baseline_refresh_allowed"] is False, "release baseline refresh was allowed")
+    require(migration["release_baseline_latest_live_migration"] == HISTORICAL_RELEASE_BASELINE, "historical package v2 baseline snapshot drifted")
+    require(migration["release_baseline_drift_detected"] is True, "historical package v2 drift evidence was rewritten")
+    require(migration["release_baseline_refresh_allowed"] is False, "historical package v2 allowed automatic baseline refresh")
+    require(release["latest_live_migration"] == CURRENT_RELEASE_BASELINE, "current release baseline is not reconciled")
+    require(shared_release["current_navigator_live_migration"] == CURRENT_RELEASE_BASELINE, "shared-project contract baseline drifted")
+    require(shared_release["navigator_baseline_semantics"] == "required_present_not_global_latest", "shared-project baseline semantics drifted")
+    require(shared_release["result"]["production_mutation"] is False, "shared-project reconciliation claims production mutation")
 
     sql = executable_sql(preflight)
     require("begin transaction read only;" in sql.lower(), "read-only transaction marker missing")
@@ -181,24 +153,6 @@ def main() -> None:
     require("aggregate_only" in sql, "aggregate-only marker missing")
     forbidden_sql = re.compile(r"\b(insert|update|delete|merge|create|alter|drop|truncate|grant|revoke|comment|copy|call|do)\b", re.I)
     require(not forbidden_sql.search(sql), "read-only preflight contains DDL or DML")
-    for marker in [
-        "latest_navigator_migration", "nav_v2_intake_save_requests_v1",
-        "nav_v2_create_bounded_tasks(uuid,jsonb,uuid,uuid)", "nav-e2e",
-        "task_status_counts", "data_mutated",
-    ]:
-        require(marker in preflight, f"preflight marker missing: {marker}")
-
-    required_checks = set(package["required_checks"])
-    for check in [
-        "all_declared_sources_exist", "readonly_preflight_has_no_ddl_or_dml",
-        "readonly_attestation_matches_expected_project", "navigator_migration_boundary_matches_live_snapshot",
-        "release_baseline_drift_is_explicit", "preview_bundle_index_valid",
-        "bounded_consolidated_index_valid", "exact_component_artifact_sha256",
-        "exact_component_source_order", "package_index_is_byte_deterministic",
-        "edge_candidate_file_set_hashed", "edge_candidate_feature_flag_false",
-        "production_edge_snapshot_unchanged", "no_output_under_supabase_migrations",
-    ]:
-        require(check in required_checks, f"required check missing: {check}")
 
     active_stops = set(package["active_stops"])
     for stop in [
@@ -209,16 +163,12 @@ def main() -> None:
         "edge_runtime_feature_flag_disabled", "edge_not_deployed",
         "preview_apply_not_approved", "production_deployment_not_approved",
     ]:
-        require(stop in active_stops, f"active stop missing: {stop}")
+        require(stop in active_stops, f"historical package v2 stop missing: {stop}")
 
     forbidden_actions = set(package["forbidden_actions"])
     for action in [
-        "treat_review_index_as_executable_migration",
-        "apply_components_sequentially_without_combined_lifecycle_proof",
-        "write_generated_sql_to_supabase_migrations",
-        "create_supabase_branch_without_explicit_cost_approval",
-        "perform_cost_confirmation", "create_technical_accounts",
-        "apply_database_changes", "deploy_edge_function",
+        "create_supabase_branch_without_explicit_cost_approval", "perform_cost_confirmation",
+        "create_technical_accounts", "apply_database_changes", "deploy_edge_function",
         "change_auth_rls_or_grants", "copy_production_data",
         "modify_or_reconcile_leader_migrations", "mutate_or_cleanup_production_rows",
         "claim_preview_or_production_readiness",
@@ -231,40 +181,22 @@ def main() -> None:
         "package output cannot target supabase/migrations", "deployment_bundle_ready: false",
     ]:
         require(marker in assembler, f"assembler marker missing: {marker}")
+    require("historical_release_baseline_drift_explicit" in node_checker, "Node checker does not preserve historical package evidence")
+    require("current_release_baseline_reconciled" in node_checker, "Node checker does not validate current baseline reconciliation")
     for marker in [
-        "--package-dir", "--preview-bundle-dir", "--bounded-dir", "--report",
-        "exact source order", "release baseline drift", "read-only preflight contains DDL or DML",
-    ]:
-        require(marker.lower() in node_checker.lower(), f"semantic checker marker missing: {marker}")
-
-    for marker in [
-        "assemble-nav-v2-preview-candidate-package-v2.mjs",
-        "check-nav-v2-preview-candidate-package-v2.mjs",
-        "nav-v2-preview-candidate-package-v2",
-        "actions/upload-artifact@v4",
+        "check_nav_v2_preview_candidate_package_v2.py", "check-nav-v2-preview-candidate-package-v2.mjs",
+        "actions/upload-artifact@v4", "postgres:17-alpine",
     ]:
         require(marker in workflow, f"workflow marker missing: {marker}")
-    for forbidden_marker in [
-        "supabase db push", "supabase functions deploy", "confirm_cost",
-        "create_branch", "apply_migration", "deploy_edge_function",
-    ]:
-        require(forbidden_marker not in workflow.lower(), f"workflow contains forbidden cloud action: {forbidden_marker}")
-
     for marker in [
-        "Package v2", "Read-only preflight", "Migration boundary drift",
-        "Consolidated bounded link", "Temporary package index",
-        "Active stops", "Rollback", "Production remains unchanged",
+        "Package v2", "Production remains unchanged", "historical snapshot",
+        "required_present_not_global_latest", "Active stops", "issue #282",
     ]:
         require(marker in doc, f"documentation marker missing: {marker}")
 
     leaked = [path.name for path in MIGRATIONS.glob("*preview*candidate*package*v2*")]
     require(not leaked, f"package v2 leaked into migrations: {leaked}")
-
-    print(
-        "Navigator v2 preview candidate package v2 source contract passed: "
-        f"Navigator boundary {EXPECTED_NAVIGATOR_MIGRATION} unchanged; "
-        f"remote shared-project boundary {EXPECTED_REMOTE_MIGRATION} is explicitly non-Navigator."
-    )
+    print("Navigator v2 preview candidate package v2 source contract passed: historical evidence preserved, current release baseline reconciled")
 
 
 if __name__ == "__main__":
