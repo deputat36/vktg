@@ -2,7 +2,7 @@
   "schema_version": 1,
   "build_id": "20260723-01",
   "shared_module": "assets/js/nav-v2/supabase-v2.js",
-  "minimum_importmap_pages": 20,
+  "minimum_importmap_pages": 35,
   "legacy_specifiers": [
     "./supabase-v2.js?v=20260625-1230",
     "./supabase-v2.js?v=20260625-1320"
