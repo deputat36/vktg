@@ -55,13 +55,18 @@ def main() -> None:
         "public config": "`config/nav-v2-public-build-attestation-v1.json`",
         "browser config": "`config/nav-v2-live-public-browser-runtime-v1.json`",
         "build bumper": "`scripts/bump_nav_v2_shared_build.py`",
-        "cost gate": "не вызывать cost confirmation",
-        "branch gate": "не создавать Supabase branch/accounts/secrets",
-        "production gate": "не менять production DDL/DML/RLS/Auth/Edge",
-        "leader gate": "не трогать `leader_*`",
     }
     for label, marker in required_markers.items():
         require_marker(handoff, marker, label)
+
+    boundary_markers = {
+        "cost gate": "не вызывать cost confirmation",
+        "branch gate": "не создавать supabase branch/accounts/secrets",
+        "production gate": "не менять production ddl/dml/rls/auth/edge",
+        "leader gate": "не трогать `leader_*`",
+    }
+    for label, marker in boundary_markers.items():
+        require_marker(handoff_lower, marker, label)
 
     pending_public = public_decision == "public_build_attestation_contract_prepared_requires_successful_live_ci"
     if pending_public:
