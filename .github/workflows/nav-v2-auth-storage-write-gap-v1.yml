@@ -11,6 +11,7 @@ on:
       - '*-v2.html'
       - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
       - 'tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs'
+      - 'tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs'
       - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
       - 'scripts/check_nav_v2_auth_storage_guard_helper_v1.py'
       - 'scripts/check_nav_v2_build_version.py'
@@ -27,6 +28,7 @@ on:
       - '*-v2.html'
       - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
       - 'tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs'
+      - 'tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs'
       - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
       - 'scripts/check_nav_v2_auth_storage_guard_helper_v1.py'
       - 'scripts/check_nav_v2_build_version.py'
@@ -68,6 +70,9 @@ jobs:
 
       - name: Run unavailable storage object regressions
         run: node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs
+
+      - name: Run fingerprint tombstone recovery regressions
+        run: node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs
 
       - name: Run fixed storage write regressions
         run: node tests/unit/nav-v2-auth-storage-write-gap.test.mjs
