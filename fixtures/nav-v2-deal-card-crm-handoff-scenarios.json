@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "missing_required_document",
+      "profile": { "role": "spn" },
+      "data": {
+        "deal": {
+          "status": "need_documents",
+          "readiness_deposit": 55,
+          "readiness_deal": 35,
+          "expenses_agreed": true,
+          "settlements_agreed": false,
+          "address": "СИНТЕТИЧЕСКИЙ АДРЕС НЕ КОПИРОВАТЬ",
+          "seller_name": "СИНТЕТИЧЕСКОЕ ФИО НЕ КОПИРОВАТЬ"
+        },
+        "documents": [
+          {
+            "id": "doc-1",
+            "is_required": true,
+            "status": "needed",
+            "responsible_role": "spn",
+            "due_date": "2026-07-25"
+          }
+        ],
+        "tasks": [],
+        "risks": [],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "подготовка недостающих документов",
+        "owner": "СПН",
+        "deadline": "25.07.2026",
+        "missing_documents": 1,
+        "forbidden": [
+          "СИНТЕТИЧЕСКИЙ АДРЕС НЕ КОПИРОВАТЬ",
+          "СИНТЕТИЧЕСКОЕ ФИО НЕ КОПИРОВАТЬ"
+        ]
+      }
+    },
+    {
+      "id": "blocking_risk_requires_lawyer",
+      "profile": { "role": "manager" },
+      "data": {
+        "deal": {
+          "status": "need_lawyer",
+          "lawyer_needed": true,
+          "readiness_deposit": 40,
+          "readiness_deal": 20,
+          "expenses_agreed": false,
+          "settlements_agreed": false
+        },
+        "documents": [],
+        "tasks": [],
+        "risks": [
+          {
+            "id": "risk-1",
+            "level": "red",
+            "blocks_deposit": true,
+            "blocks_deal": true,
+            "is_resolved": false,
+            "responsible_role": "lawyer"
+          }
+        ],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "юридическая проверка",
+        "owner": "юрист",
+        "deadline": null,
+        "blocking_risks": 1
+      }
+    },
+    {
+      "id": "registered_post_deal_control",
+      "profile": { "role": "spn" },
+      "data": {
+        "deal": {
+          "status": "registered",
+          "readiness_deposit": 100,
+          "readiness_deal": 100,
+          "expenses_agreed": true,
+          "settlements_agreed": true
+        },
+        "documents": [],
+        "tasks": [],
+        "risks": [],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "переход права зарегистрирован",
+        "owner": "СПН",
+        "deadline": null,
+        "copy_contains": "проконтролировать раскрытие расчётов, передачу объекта, акт и ключи"
+      }
+    },
+    {
+      "id": "confirmed_outcomes_leave_queue",
+      "profile": { "role": "lawyer" },
+      "data": {
+        "deal": {
+          "status": "preparing_deal",
+          "readiness_deposit": 90,
+          "readiness_deal": 75,
+          "expenses_agreed": true,
+          "settlements_agreed": true
+        },
+        "documents": [
+          {
+            "id": "doc-2",
+            "is_required": true,
+            "status": "needed",
+            "outcome_state": "confirmed",
+            "outcome_code": "not_applicable"
+          }
+        ],
+        "tasks": [],
+        "risks": [
+          {
+            "id": "risk-2",
+            "level": "red",
+            "blocks_deal": true,
+            "is_resolved": false,
+            "resolution_state": "confirmed",
+            "resolution_code": "mitigated"
+          }
+        ],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "подготовка основной сделки",
+        "missing_documents": 0,
+        "blocking_risks": 0
+      }
+    }
+  ]
+}

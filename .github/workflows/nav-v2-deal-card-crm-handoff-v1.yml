@@ -1,0 +1,51 @@
+name: Navigator v2 deal-card CRM handoff
+
+on:
+  pull_request:
+    paths:
+      - 'deal-card-v2.html'
+      - 'assets/js/nav-v2/deal-card-recheck-alert-v2.js'
+      - 'assets/js/nav-v2/deal-card-crm-handoff-model-v1.js'
+      - 'assets/js/nav-v2/deal-card-crm-handoff-v1.js'
+      - 'fixtures/nav-v2-deal-card-crm-handoff-scenarios.json'
+      - 'tests/unit/nav-v2-deal-card-crm-handoff.test.mjs'
+      - 'config/nav-v2-deal-card-crm-handoff-v1.json'
+      - 'scripts/check_nav_v2_deal_card_crm_handoff_v1.py'
+      - 'docs/NAV_V2_CRM_HANDOFF_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-deal-card-crm-handoff-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crm-handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate source and privacy contract
+        run: python3 scripts/check_nav_v2_deal_card_crm_handoff_v1.py
+      - name: Run process summary regression
+        run: node tests/unit/nav-v2-deal-card-crm-handoff.test.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/deal-card-crm-handoff-model-v1.js
+          node --check assets/js/nav-v2/deal-card-crm-handoff-v1.js
+          node --check assets/js/nav-v2/deal-card-recheck-alert-v2.js
+      - name: Compile checker
+        run: python3 -m py_compile scripts/check_nav_v2_deal_card_crm_handoff_v1.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-deal-card-crm-handoff-v1
+          path: |
+            config/nav-v2-deal-card-crm-handoff-v1.json
+            fixtures/nav-v2-deal-card-crm-handoff-scenarios.json
+            assets/js/nav-v2/deal-card-crm-handoff-model-v1.js
+            assets/js/nav-v2/deal-card-crm-handoff-v1.js
+            tests/unit/nav-v2-deal-card-crm-handoff.test.mjs
+          if-no-files-found: error
