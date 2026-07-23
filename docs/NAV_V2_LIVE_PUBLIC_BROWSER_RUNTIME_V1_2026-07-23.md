@@ -37,11 +37,11 @@
 
 Причина: короткие scoped importmap keys не совпадали с нормализованным relative module URL.
 
-Atomic build `20260723-02` добавил normalized mappings на всех 35 страницах. Тест не был ослаблен и теперь требует фактические Resource Timing entries для двух exact versioned assets.
+Atomic build `20260723-02` добавил normalized importmap mappings на всех 35 страницах. Тест не был ослаблен и теперь требует фактические Resource Timing entries для двух exact versioned assets.
 
 ## Test harness correction
 
-Первый post-merge run `30022851155` успешно подтвердил source/hash, но Chromium получил 404: абсолютные test paths сбрасывали project subpath `/vktg/`.
+Первый post-merge run `30022851155` успешно подтвердил source/hash, но Chromium получил 404: абсолютные test paths сбрасывали GitHub Pages subpath `/vktg/`.
 
 Исправление `41f9056d1021fd9a84ac3adf140b0877599e699b` разрешает страницы внутри configured base directory. Один и тот же тест работает для:
 
