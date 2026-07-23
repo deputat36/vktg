@@ -42,6 +42,7 @@ const attestation = await readRootJson('config/nav-v2-preview-readonly-attestati
 const previewConfig = await readRootJson('config/nav-v2-preview-bundle-assembler-v1.json');
 const boundedConfig = await readRootJson('config/nav-v2-bounded-consolidated-candidate-v1.json');
 const releaseBaseline = await readRootJson('config/nav-v2-release-baseline.json');
+const sharedRelease = await readRootJson('config/nav-v2-release-drift-shared-project-v1.json');
 const packageIndexSource = await readJsonText(path.join(packageDir, packageConfig.package_index_file));
 const previewIndexSource = await readJsonText(path.join(previewBundleDir, 'bundle-index.json'));
 const boundedIndexSource = await readJsonText(path.join(boundedDir, 'bounded-consolidated-index.json'));
@@ -130,11 +131,15 @@ assert(attestation.edge_function.status === 'ACTIVE', 'live Edge status drifted'
 assert(attestation.edge_function.verify_jwt === true, 'live Edge verify_jwt drifted');
 assert(attestation.edge_function.ezbr_sha256 === packageConfig.preflight_contract.expected_edge_bundle_sha256, 'live Edge bundle hash drifted');
 
-assert(releaseBaseline.latest_live_migration === packageConfig.migration_boundary.release_baseline_latest_live_migration, 'release baseline snapshot changed without package review');
-assert(packageConfig.migration_boundary.release_baseline_drift_detected === true, 'release baseline drift is not explicit');
-assert(packageConfig.migration_boundary.release_baseline_refresh_allowed === false, 'release baseline refresh was allowed');
-assert(packageConfig.active_stops.includes('release_baseline_migration_drift_unreconciled'), 'release baseline drift stop missing');
+assert(packageConfig.migration_boundary.release_baseline_latest_live_migration === '20260715203158', 'historical package v2 release baseline snapshot drifted');
+assert(packageConfig.migration_boundary.release_baseline_drift_detected === true, 'historical package v2 drift evidence was rewritten');
+assert(packageConfig.migration_boundary.release_baseline_refresh_allowed === false, 'historical package v2 allowed automatic baseline refresh');
+assert(packageConfig.active_stops.includes('release_baseline_migration_drift_unreconciled'), 'historical package v2 drift stop missing');
 assert(packageConfig.active_stops.includes('cross_component_sequential_apply_not_proven'), 'cross-component apply stop missing');
+assert(releaseBaseline.latest_live_migration === '20260716063401', 'current release baseline is not reconciled');
+assert(sharedRelease.current_navigator_live_migration === releaseBaseline.latest_live_migration, 'shared-project release contract differs from current baseline');
+assert(sharedRelease.navigator_baseline_semantics === 'required_present_not_global_latest', 'shared-project baseline semantics drifted');
+assert(sharedRelease.result.production_mutation === false, 'shared-project reconciliation claims production mutation');
 
 const edgeFiles = [];
 for (const item of packageIndex.edge_candidate.files) {
@@ -171,7 +176,7 @@ const report = {
     checked_at: attestation.checked_at,
     latest_remote_migration: attestation.migration_boundary.latest_remote_migration,
     latest_navigator_migration: attestation.migration_boundary.latest_navigator_migration,
-    release_baseline_matches_latest_remote: false,
+    historical_release_baseline_matches_latest_remote: false,
     preview_branches: 0,
     technical_auth_users: 0,
     technical_profiles: 0,
@@ -179,7 +184,10 @@ const report = {
     edge_version: 4,
     edge_bundle_sha256: attestation.edge_function.ezbr_sha256,
   },
-  release_baseline_drift_explicit: true,
+  historical_release_baseline_drift_explicit: true,
+  current_release_baseline_reconciled: true,
+  current_release_baseline: releaseBaseline.latest_live_migration,
+  shared_project_baseline_semantics: sharedRelease.navigator_baseline_semantics,
   sequential_preview_apply_proven: false,
   preview_branch_created: false,
   production_applied: false,
@@ -191,4 +199,4 @@ const report = {
 };
 
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-process.stdout.write('Navigator v2 preview candidate package v2 semantic validation passed\n');
+process.stdout.write('Navigator v2 preview candidate package v2 semantic validation passed: historical evidence preserved, current baseline reconciled\n');
