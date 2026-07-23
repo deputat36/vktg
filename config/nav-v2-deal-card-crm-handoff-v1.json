@@ -1,11 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "repository_frontend_read_only",
-  "decision": "crm_handoff_summary_added_read_only_no_crm_write",
-  "purpose": "Подготовить компактную процессную запись для основной CRM без создания параллельного хранилища и без автоматической записи.",
+  "decision": "crm_handoff_task_policy_preview_added_no_backfill",
+  "purpose": "Подготовить компактную процессную запись для основной CRM и точнее определять ответственного и срок для legacy-задач без создания параллельного хранилища, автоматической записи или backfill.",
   "surface": {
     "page": "deal-card-v2.html",
     "integration_module": "assets/js/nav-v2/deal-card-recheck-alert-v2.js",
+    "task_policy": "assets/js/nav-v2/task-process-policy-v1.js",
     "model": "assets/js/nav-v2/deal-card-crm-handoff-model-v1.js",
     "renderer": "assets/js/nav-v2/deal-card-crm-handoff-v1.js"
   },
@@ -17,12 +18,25 @@
     "missing",
     "next_action_owner_deadline"
   ],
+  "task_policy": {
+    "preview_only": true,
+    "use_explicit_task_type_first": true,
+    "infer_legacy_null_task_type_from_source": true,
+    "use_explicit_assigned_role_first": true,
+    "hide_assigned_person_identity": true,
+    "infer_default_owner_from_task_type": true,
+    "use_explicit_due_date_first": true,
+    "infer_control_due_date_from_created_at_and_sla": true,
+    "production_task_backfill": false,
+    "automatic_assignment": false
+  },
   "privacy": {
     "exclude_client_names": true,
     "exclude_address": true,
     "exclude_phone_email": true,
     "exclude_document_numbers": true,
     "exclude_free_text_next_action": true,
+    "exclude_assigned_person_identifiers": true,
     "use_process_state_only": true
   },
   "boundaries": {
@@ -32,6 +46,7 @@
     "browser_storage": false,
     "production_supabase_change": false,
     "production_data_change": false,
+    "production_task_backfill": false,
     "leader_scope_change": false
   },
   "verification": {
