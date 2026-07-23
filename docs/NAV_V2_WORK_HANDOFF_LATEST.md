@@ -4,7 +4,8 @@
 
 - Дата: 23 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `08b2bc7ca061d8e42fcf9cc30fb5dd73d6898557` — squash merge PR #476.
+- `main`: `6dd1593e96a2fd899d0caf58dc5bf3e61e68907d` — squash merge PR #480.
+- Shared frontend build: `20260723-01`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project: `ACTIVE_HEALTHY`, region `eu-west-1`.
@@ -15,9 +16,9 @@
 - Edge SHA-256: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 - Preview branches отсутствуют.
 - Technical `nav-e2e` users/profiles отсутствуют.
-- После merge PR #476 открытых Navigator PR нет.
+- После merge PR #480 открытых Navigator PR не было.
 
-PR #457–#476 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
+PR #457–#480 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
 
 Не изменять, не откатывать и не reconciliate `leader_*`.
 
@@ -122,7 +123,7 @@ Synthetic observations:
 
 Это synthetic CI workload, не production forecast или DDL approval.
 
-## Последние срезы
+## Index/capacity status
 
 ### PR #457 — observation baseline
 
@@ -132,99 +133,118 @@ Synthetic observations:
 - Capture count `1`; required at least `2`; cadence/thresholds `null`; representative workload unproven.
 - Decision: `observation_window_baseline_started_evidence_not_yet_representative`.
 
-### PR #458 — capacity-input form
+### PR #458/#470 — capacity form/evaluator
 
-- Merge: `7bc8643026243bf838b1f811d811e672a557fd2a`.
-- Все 15 required values `null`; form `unsubmitted`; owner/release approvals `false`; execution flags `false`.
-- Decision: `capacity_input_decision_form_prepared_unsubmitted_execution_blocked`.
+- Все 15 canonical required values остаются `null`.
+- Form `unsubmitted`; owner/release approvals `false`; execution flags `false`.
+- Offline evaluator проверяет только локальную заполненную копию и не авторизует execution.
+- Decision: `capacity_submission_evaluator_prepared_offline_canonical_form_unsubmitted`.
 
 ### PR #460 — offline index delta evaluator
 
-- Merge: `7f621d52c1330d44f13efc29263078ba167c4168`.
 - Проверяет две локальные JSON snapshots: epoch, OIDs, definitions, valid/ready state, monotonic counters, privacy markers и signed deltas.
 - Decisions: `delta_valid_same_epoch_evidence_not_representative`; `observation_window_invalidated_restart_capture_required`.
-- Self-test: 11 cases.
+- Второй capture без явного выбора cadence/thresholds не выполнять.
+
+## Auth evidence до storage runtime integration
 
 ### PR #462 — redacted live Auth attestation
 
-- Merge: `0aa69972d453da00182d39a443ec36845f05ca10`.
-- Read-only logs: две обезличенные последовательности `RPC 401 → refresh 200 → retry 200`.
+- Две обезличенные последовательности `RPC 401 → refresh 200 → retry 200`.
 - Fresh sample без нового `refresh_token_not_found`.
 - Unauthenticated callable RPC → `401`; private/internal helper through Data API → `404`.
 - Raw logs, identities, email, IP, tokens, request IDs, headers, payloads и business rows не коммитились.
-- CI: `29947064494`, static `29947063145`.
 - Decision: `live_auth_refresh_recovery_observed_redacted_not_authenticated_role_e2e`.
 
-### PR #464 — concurrent refresh fan-in
+### PR #464/#466/#469/#472/#474/#476
 
-- Merge: `6579c15c92b9ee5d4082796875b11711d7023db2`.
-- `2 RPC 401 → 1 refresh 200 → 2 retry 200`.
-- `2 RPC 401 → 1 invalid refresh → 0 retry`.
-- Подтверждены one-refresh fan-in, exclusive lock, отсутствие refresh storm и очистка stale session при invalid refresh.
-- CI: `29947790090`, static `29947789996`.
-- Decision: `concurrent_auth_refresh_fan_in_covered_by_offline_unit_tests`.
+Offline покрыты:
 
-### PR #466 — no-Web-Locks/network recovery
+- concurrent refresh fan-in и один refresh на несколько 401;
+- invalid refresh без RPC retry;
+- no-Web-Locks fan-in;
+- transient network recovery;
+- Web Locks acquisition reject;
+- refresh timeout/AbortError;
+- post-refresh 401/403 без второго refresh-loop;
+- malformed session/profile storage;
+- same-user/different-user sign-in против delayed refresh;
+- failed sign-in без resurrection;
+- logout во время pending refresh;
+- logout endpoint failure с local cleanup;
+- storage read `SecurityError`;
+- password-reset success/network/timeout/429 paths.
 
-- Merge: `9141564a610fd9f5fce8112354b1eb120bb0f11a`.
-- Подтверждены module-level fan-in без Web Locks, сохранение session/profile cache при transient network failure, очистка rejected refresh promise и успешная следующая попытка.
-- CI: `29951835421`, static `29951835276`.
-- Decision: `auth_refresh_no_lock_and_transient_network_recovery_covered_offline`.
+## Auth storage write hardening — PR #478–#480
 
-### PR #467 — redacted Auth summary evaluator
+### PR #478 — gap evidence
 
-- Merge: `8dca80c28f56fb5fb4830a3b7b291213dcb06e22`.
-- Принимает только заранее обезличенный summary.
-- Exit codes: `0` valid, `2` input error, `3` privacy/contract invalid, `4` security regression.
-- Fail-closed отклоняет identifiers, tokens, headers, payloads, incomplete sequences и запрещённые E2E/production claims.
-- CI: `29952411253`, static `29952411571`.
-- Decision: `redacted_auth_summary_evaluator_prepared_offline_no_live_execution`.
+- Merge: `6af98a7f992e13a2ab42265296438eb1674728ce`.
+- Подтверждены пять source-level gaps:
+  - remembered-email write мог прервать invalid-session cleanup;
+  - session remove failure мог прервать logout cleanup;
+  - profile-cache write failure мог сломать успешный RPC;
+  - convenience-email write мог изменить outcome password reset;
+  - session persistence failure возвращал raw browser error.
+- Decision: `auth_storage_write_failures_confirmed_repository_only_runtime_hardening_planned`.
 
-### PR #469 — lock/timeout/post-refresh
+### PR #479 — detached helper
 
-- Merge: `2d8ae9d88ff45b81456c8c9313a4289aaf1efe68`.
-- Покрыты Web Locks acquisition reject, refresh `AbortError`, повторный `401` и `403` после успешного refresh.
-- Session/profile cache сохраняются при recoverable failures; второй refresh-loop не запускается.
-- CI: `29953965931`, static `29953965858`.
-- Decision: `auth_lock_timeout_and_post_refresh_failures_covered_offline`.
+- Merge: `ac46c2a2a55f80592da4b5610e65ffba7feceb1b`.
+- Добавлен `assets/js/nav-v2/auth-storage-guard-v2.js`.
+- Подготовлены fail-closed reads, tombstone, remove/null fallback, best-effort cache/email и `NAV_AUTH_STORAGE_UNAVAILABLE`.
+- Helper оставался detached.
+- Decision: `auth_storage_write_hardening_helper_prepared_offline_not_integrated`.
 
-### PR #470 — capacity submission evaluator
+### PR #480 — runtime integration и shared build
 
-- Merge: `0b58ada1dbccd51d4904dd26998c416a6a9436c3`.
-- Проверяет локальную копию заполненной capacity form: 15 inputs, types, distribution order, timezone-aware timestamps, owner/release approvals, zero-threshold rationale, isolated/preview cost gates и forbidden execution claims.
-- Exit codes: `0` structurally valid but separate authorization required; `2` input error; `3` form invalid; `4` environment/cost invalid; `5` forbidden authorization claim.
-- Во всех reports: `benchmark_execution_ready=false`, `production_index_removal_ready=false`, `production_ddl_ready=false`.
-- Canonical form осталась all-null/unsubmitted.
-- CI: `29954902600`, static `29954902524`.
-- Decision: `capacity_submission_evaluator_prepared_offline_canonical_form_unsubmitted`.
+- Merge/main: `6dd1593e96a2fd899d0caf58dc5bf3e61e68907d`.
+- Helper интегрирован в `assets/js/nav-v2/supabase-v2.js`.
+- Shared build: `20260711-01 → 20260723-01`.
+- Обновлены все 35 root `*-v2.html` scoped importmaps.
+- Обновлён diagnostic cache-bust.
+- Прямые session/email/profile storage writes заменены controller operations.
+- Missing storage objects обрабатываются fail-closed.
+- Session persistence failure нормализуется как `NAV_AUTH_STORAGE_UNAVAILABLE`.
+- RPC не retry, если refreshed session невозможно сохранить.
+- Optional profile/email storage не меняют успешный business/Auth outcome.
 
-### PR #472 — malformed storage/sign-in races
+Первая реализация постоянного boolean tombstone была отклонена existing auth-session-recovery CI: новая replacement session из другой вкладки оставалась заблокирована.
 
-- Merge: `9352df68fb9033a8086d650b9d29d9a33f81f1f2`.
-- Malformed session/profile JSON → cache readers `null`, `requireUser` stops before network, clean sign-in clears stale cache.
-- Same-user и different-user sign-in выигрывают у delayed old refresh.
-- Failed sign-in не позволяет old refresh воскресить session.
-- CI: `29955633485`, static `29955632495`.
-- Decision: `auth_malformed_storage_and_signin_refresh_races_covered_offline`.
+Финальная реализация использует fingerprint tombstone:
 
-### PR #474 — logout/storage read failures
+- блокируется только конкретное stale stored value;
+- отличающаяся replacement session снимает block без reload;
+- отдельный fingerprint recovery test защищает поведение.
 
-- Merge: `70ead72790ab963adf51cb422be752b3f3844698`.
-- Logout во время pending refresh очищает session/profile cache; delayed old refresh не воскрешает session; RPC не retry.
-- Transport failure logout endpoint передаётся caller, но local state очищается в `finally`.
-- Logout без session не вызывает сеть и чистит stale profile cache.
-- Browser storage `SecurityError` трактуется как отсутствие session/profile и protected action stops before network.
-- CI: `29979882159`, static `29979882085`.
-- Decision: `auth_logout_and_storage_read_failures_covered_offline`.
+Ключевой CI на final PR head `87c7c37a7251215a2787a53e5a34c03aabc4e20b`:
 
-### PR #476 — password reset paths
+- integrated storage guard + все Auth suites: `29985503505`;
+- storage write regressions: `29985503474`;
+- logout/storage historical contract: `29985503472`;
+- storage/sign-in historical contract: `29985503541`;
+- auth session recovery: `29985503548`;
+- static 49/49: `29985503450`;
+- JavaScript syntax: `29985503460`;
+- invite checks: `29985503430`;
+- public desktop/mobile smoke: `29985503433`;
+- authenticated smoke: skipped существующим gate.
 
-- Merge: `08b2bc7ca061d8e42fcf9cc30fb5dd73d6898557`.
-- Blank email stops before network.
-- Success trims email, calls `/auth/v1/recover`, redirects to `nav-accept-invite-v2.html`, preserves active session/profile and remembers email only after `200`.
-- Network failure, 12-second timeout and mocked `429 over_request_rate_limit` preserve session/profile and previous remembered email.
-- CI: `29980416449`, static `29980416462`.
-- Decision: `auth_password_reset_paths_covered_offline`.
+Decision:
+
+`auth_storage_write_failures_fixed_in_source_build_rollout_prepared_not_live_verified`
+
+Границы решения:
+
+- source integration merged to `main`;
+- `runtime_hardening_completed=true`;
+- `build_bump_completed=true`;
+- реальный GitHub Pages build отдельно не наблюдался доступными инструментами;
+- `runtime_rollout_completed=false`;
+- `live_browser_storage_failure_verified=false`;
+- `authenticated_role_e2e_completed=false`.
+
+Не утверждать, что реальные browser `QuotaExceededError`/`SecurityError` воспроизведены live.
 
 ## Active gates
 
@@ -290,9 +310,13 @@ Auth:
 - `config/nav-v2-auth-storage-signin-race-tests-v1.json`
 - `config/nav-v2-auth-logout-storage-failure-tests-v1.json`
 - `config/nav-v2-auth-password-reset-tests-v1.json`
+- `config/nav-v2-auth-storage-write-gap-v1.json`
+- `config/nav-v2-auth-storage-guard-helper-v1.json`
 - `config/nav-v2-auth-recovery-summary-evaluator-v1.json`
+- `config/nav-v2-build.json`
 - `assets/js/nav-v2/supabase-v2.js`
 - `assets/js/nav-v2/auth-session-recovery-v2.js`
+- `assets/js/nav-v2/auth-storage-guard-v2.js`
 - `tests/unit/nav-v2-auth-session-recovery.test.mjs`
 - `tests/unit/nav-v2-auth-concurrent-refresh.test.mjs`
 - `tests/unit/nav-v2-auth-network-no-lock.test.mjs`
@@ -300,6 +324,10 @@ Auth:
 - `tests/unit/nav-v2-auth-storage-signin-race.test.mjs`
 - `tests/unit/nav-v2-auth-logout-storage-failure.test.mjs`
 - `tests/unit/nav-v2-auth-password-reset.test.mjs`
+- `tests/unit/nav-v2-auth-storage-guard-helper.test.mjs`
+- `tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs`
+- `tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs`
+- `tests/unit/nav-v2-auth-storage-write-gap.test.mjs`
 - `scripts/evaluate_nav_v2_auth_recovery_summary_v1.py`
 - `scripts/check_nav_v2_auth_recovery_live_attestation_v1.py`
 - `scripts/check_nav_v2_auth_concurrent_refresh_tests_v1.py`
@@ -308,7 +336,10 @@ Auth:
 - `scripts/check_nav_v2_auth_storage_signin_race_tests_v1.py`
 - `scripts/check_nav_v2_auth_logout_storage_failure_tests_v1.py`
 - `scripts/check_nav_v2_auth_password_reset_tests_v1.py`
+- `scripts/check_nav_v2_auth_storage_write_gap_v1.py`
+- `scripts/check_nav_v2_auth_storage_guard_helper_v1.py`
 - `scripts/check_nav_v2_auth_recovery_summary_evaluator_v1.py`
+- `docs/NAV_V2_AUTH_STORAGE_RUNTIME_INTEGRATION_V1_2026-07-23.md`
 
 Preview:
 
@@ -322,19 +353,20 @@ Preview:
 
 Только бесплатные read-only/repository actions:
 
-1. проверять GitHub CI/review drift;
-2. проверять Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
-3. исследовать browser storage write failures сначала как repository-only gap evidence и build-version plan, без скрытого runtime rollout;
-4. расширять offline Auth coverage только для ещё не доказанных deterministic edge cases;
-5. использовать redacted Auth evaluator только на заранее обезличенных summaries, не на raw logs;
-6. поддерживать offline capacity evaluator, не заполняя canonical form;
-7. повторять aggregate-only index snapshot только отдельным явным действием, не выбирая cadence автоматически;
-8. использовать offline index delta evaluator только после второго approved snapshot;
-9. поддерживать preview package v3 и handoff;
-10. не вызывать cost confirmation;
-11. не создавать Supabase branch/accounts/secrets;
-12. не менять production DDL/DML/RLS/Auth/Edge;
-13. не трогать `leader_*`.
+1. проверить GitHub CI/review drift после merge PR #480;
+2. выполнить read-only public build attestation, когда GitHub Pages output доступен, и подтвердить только фактический build ID/cache-bust;
+3. не использовать реальных аккаунтов и не превращать public attestation в authenticated E2E;
+4. проверить Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
+5. расширять offline Auth coverage только для ещё не доказанных deterministic edge cases;
+6. использовать redacted Auth evaluator только на заранее обезличенных summaries, не на raw logs;
+7. поддерживать offline capacity evaluator, не заполняя canonical form;
+8. повторять aggregate-only index snapshot только после отдельного явного выбора cadence/thresholds;
+9. использовать offline index delta evaluator только после второго approved snapshot;
+10. поддерживать preview package v3 и handoff;
+11. не вызывать cost confirmation;
+12. не создавать Supabase branch/accounts/secrets;
+13. не менять production DDL/DML/RLS/Auth/Edge;
+14. не трогать `leader_*`.
 
 Новый cloud deployment slice отсутствует.
 
