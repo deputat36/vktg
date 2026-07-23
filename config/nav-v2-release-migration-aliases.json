@@ -21,7 +21,8 @@
     "20260714102956": {"canonical_migrations": ["20260714103000"], "reason": "Production apply assigned a live timestamp to the reviewed exact recent wizard-save duplicate trigger source."},
     "20260714125054": {"canonical_migrations": ["20260714130000"], "reason": "Production apply assigned a live timestamp to the reviewed read-only exact duplicate review pack source."},
     "20260715195732": {"canonical_migrations": ["20260715213000"], "reason": "Production apply assigned a live timestamp to the reviewed retired viewer assignment guard source."},
-    "20260715203158": {"canonical_migrations": ["20260715224500"], "reason": "Production apply assigned a live timestamp to the reviewed client identifier minimization source."}
+    "20260715203158": {"canonical_migrations": ["20260715224500"], "reason": "Production apply assigned a live timestamp to the reviewed client identifier minimization source."},
+    "20260716063401": {"canonical_migrations": ["20260716064500"], "reason": "Production apply assigned a live timestamp to the reviewed mortgage broker scope correction source."}
   },
   "approved_repository_only": {
     "20260712160000": {"represented_by_live": ["20260712143253"], "source_blob_sha": "f749635bdcbc36081975c36571c81deb41cf2ed5", "reason": "Canonical fresh-install source for the already-live risk-resolution lifecycle."},
@@ -38,11 +39,12 @@
     "20260713233000": {"represented_by_live": ["20260713180701"], "source_blob_sha": "7d540b25b8e9127e058e44a05a6123b781c934c3", "reason": "Canonical fresh-install source for read-only responsibility evidence candidates and the delivered remediation screen contract."},
     "20260713234500": {"represented_by_live": ["20260713184344"], "source_blob_sha": "c4ee976a59e2645c04c97948e234d69b8a7d03d1", "reason": "Canonical fresh-install source for the read-only responsibility confirmation catalog used by browser-local drafts and exports."},
     "20260714001500": {"represented_by_live": ["20260713195749"], "source_blob_sha": "298c5093419e7cf3837b3255df170f32f60498c9", "reason": "Canonical fresh-install source for the read-only responsibility point preview and health registration."},
-    "20260714001600": {"represented_by_live": ["20260713195810"], "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f", "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private preview implementation."},
+    "20260714001600": {"represented_by_live": ["20260713195810"], "source_blob_sha": "d92aaf30482f0fc8802f947e796ca9307cc3479f", "reason": "Canonical fresh-install source for the explicit expected-current wrapper and private implementation."},
     "20260714013000": {"represented_by_live": ["20260714064311"], "source_blob_sha": "2fde357c95d838645927a466053e551dff11941a", "reason": "Canonical fresh-install source for the read-only three-lane operational pilot shortlist with duplicate avoidance and no automatic selection."},
     "20260714103000": {"represented_by_live": ["20260714102956"], "source_blob_sha": "6aab0d57fa1cc33ffbbcc27444300db8da2df5dd", "reason": "Canonical fresh-install source for the exact same-creator wizard payload guard with advisory transaction locking and no existing-row cleanup."},
     "20260714130000": {"represented_by_live": ["20260714125054"], "source_blob_sha": "cd6c0962b7f3bfcce5bc3b51fe717fbfca100a14", "reason": "Canonical fresh-install source for the read-only exact duplicate comparison pack, owner decision draft and report version 8."},
     "20260715213000": {"represented_by_live": ["20260715195732"], "source_blob_sha": "fdce76deac3451015e97ad11437bcdcf4cd7de7d", "reason": "Canonical fresh-install source for the already-live retired viewer assignment guard."},
-    "20260715224500": {"represented_by_live": ["20260715203158"], "source_blob_sha": "87adddbf9e66e9366dd47343a4af673a5036dcf8", "reason": "Canonical fresh-install source for the already-live client identifier minimization wrapper and table guard."}
+    "20260715224500": {"represented_by_live": ["20260715203158"], "source_blob_sha": "87adddbf9e66e9366dd47343a4af673a5036dcf8", "reason": "Canonical fresh-install source for the already-live client identifier minimization wrapper and table guard."},
+    "20260716064500": {"represented_by_live": ["20260716063401"], "source_blob_sha": "93687e0aed8d88d604e31a730ba8c9f8c806b94e", "reason": "Canonical fresh-install source for the already-live mortgage broker scope correction."}
   }
 }
