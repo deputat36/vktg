@@ -1,5 +1,5 @@
 import { esc } from './supabase-v2.js';
-import { buildDealActionFocus } from './deal-card-action-focus-model-v2.js?v=20260714-01';
+import { buildDealActionFocus } from './deal-card-action-focus-model-v2.js?v=20260723-01';
 import { buildMobileFirstScreenPlan } from './mobile-first-screen-model-v2.js?v=20260715-01';
 
 function dateLabel(value) {
@@ -29,6 +29,11 @@ function blockerPills(focus) {
   return pills.join('');
 }
 
+function criticalNotice(focus) {
+  if (!focus.criticalText) return '';
+  return `<div class="status error" role="alert"><b>Критично:</b> ${esc(focus.criticalText)}</div>`;
+}
+
 function tabLabel(tab) {
   return ({ tasks: 'Открыть задачи', risks: 'Открыть риски', docs: 'Открыть документы', overview: 'Открыть сводку' })[tab] || 'Открыть раздел';
 }
@@ -54,17 +59,21 @@ function focusHtml(focus) {
       </div>
       <div class="deal-action-focus-pills">${taskNotice}${deadlinePill(focus)}<span class="pill blue">${esc(focus.responsible)}</span></div>
     </div>
+    ${criticalNotice(focus)}
     <div class="deal-action-focus-result"><span>Как понять, что готово</span><b>${esc(focus.resultCriteria)}</b></div>
+    <div class="deal-action-focus-result deal-action-focus-crm"><span>Что зафиксировать в CRM</span><b>${esc(focus.crmRecord)}</b></div>
     <div class="actions deal-action-focus-actions">${actionButtons}</div>
     <details class="mobile-first-screen-details deal-action-focus-details">
-      <summary>Ответственный и препятствия</summary>
+      <summary>Этап, ответственный и препятствия</summary>
       <div class="mobile-first-screen-details-body">
         <div class="deal-action-focus-grid">
+          <div><span>Текущий этап</span><b>${esc(focus.stageLabel)}</b></div>
           <div><span>Ответственный</span><b>${esc(focus.responsible)}</b></div>
           <div><span>Срок</span><b>${esc(focus.dueDate ? dateLabel(focus.dueDate) : 'Нужно назначить')}</b></div>
           <div><span>Готовность</span><b>Задаток ${focus.readiness.deposit}% · Сделка ${focus.readiness.deal}%</b></div>
         </div>
         <div class="deal-action-focus-blockers">${blockerPills(focus)}</div>
+        <div class="status"><b>Граница систем:</b> CRM хранит клиентов, договорённости, задачи и историю. Навигатор объясняет маршрут, риски и ближайшее действие.</div>
         ${readOnlyNotice}
       </div>
     </details>
