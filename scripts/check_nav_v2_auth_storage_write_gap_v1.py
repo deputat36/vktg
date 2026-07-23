@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate repository-only Auth storage-write gap evidence and build plan."""
+"""Validate integrated Auth storage-write hardening and fixed regressions."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/nav-v2-auth-storage-write-gap-v1.json"
 TEST = ROOT / "tests/unit/nav-v2-auth-storage-write-gap.test.mjs"
+MISSING_STORAGE_TEST = ROOT / "tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs"
 RUNTIME = ROOT / "assets/js/nav-v2/supabase-v2.js"
+HELPER = ROOT / "assets/js/nav-v2/auth-storage-guard-v2.js"
 BUILD = ROOT / "config/nav-v2-build.json"
 DIAGNOSTIC = ROOT / "nav-system-check-v2.html"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-auth-storage-write-gap-v1.yml"
@@ -23,94 +25,103 @@ def require(condition: bool, message: str) -> None:
 def main() -> None:
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     test_source = TEST.read_text(encoding="utf-8")
+    missing_storage_test = MISSING_STORAGE_TEST.read_text(encoding="utf-8")
     runtime_source = RUNTIME.read_text(encoding="utf-8")
+    helper_source = HELPER.read_text(encoding="utf-8")
     build = json.loads(BUILD.read_text(encoding="utf-8"))
     diagnostic_source = DIAGNOSTIC.read_text(encoding="utf-8")
     workflow_source = WORKFLOW.read_text(encoding="utf-8")
 
     require(config["schema_version"] == 1, "schema version changed")
     require(
-        config["status"] == "repository_only_auth_storage_write_gap_evidence_runtime_unchanged",
-        "gap evidence escaped repository-only status",
+        config["status"]
+        == "repository_only_auth_storage_write_regression_source_integrated_build_prepared",
+        "unexpected integration status",
     )
-    for key in [
-        "production_applied",
-        "production_auth_changed",
-        "runtime_code_changed",
-        "cloud_execution_allowed",
-    ]:
-        require(config[key] is False, f"{key} must remain false")
+    require(config["production_applied"] is False, "production_applied must remain false")
+    require(config["production_auth_changed"] is False, "production_auth_changed must remain false")
+    require(config["runtime_code_changed"] is True, "runtime integration flag missing")
+    require(config["cloud_execution_allowed"] is False, "cloud execution must remain blocked")
 
-    require(len(config["known_gaps"]) == 5, "expected exactly five documented gaps")
-    gap_ids = {gap["id"] for gap in config["known_gaps"]}
-    require(
-        gap_ids
-        == {
-            "remember_email_failure_interrupts_invalid_session_cleanup",
-            "session_remove_failure_interrupts_logout_cleanup",
-            "profile_cache_write_failure_breaks_successful_profile_rpc",
-            "password_reset_success_breaks_on_convenience_email_write",
-            "session_persist_failure_has_raw_browser_error",
-        },
-        "gap inventory changed",
-    )
-    require(
-        sum(gap["severity"] == "high" for gap in config["known_gaps"]) == 2,
-        "high-severity gap count changed",
-    )
+    require(len(config["resolved_gaps"]) == 6, "expected six fixed storage regressions")
+    require(all(item["fixed_in_source"] is True for item in config["resolved_gaps"]), "a gap is not fixed in source")
+    require(sum(item["severity"] == "high" for item in config["resolved_gaps"]) == 3, "high severity count changed")
 
     result = config["result"]
     require(
         result["decision"]
-        == "auth_storage_write_failures_confirmed_repository_only_runtime_hardening_planned",
+        == "auth_storage_write_failures_fixed_in_source_build_rollout_prepared_not_live_verified",
         "unexpected decision",
     )
+    require(result["runtime_hardening_completed"] is True, "runtime hardening flag missing")
+    require(result["build_bump_completed"] is True, "build bump flag missing")
     for key in [
-        "runtime_hardening_completed",
         "runtime_rollout_completed",
-        "build_bump_completed",
         "authenticated_role_e2e_completed",
+        "live_browser_storage_failure_verified",
         "preview_branch_ready",
         "production_auth_change_ready",
     ]:
         require(result[key] is False, f"{key} must remain false")
 
-    require(build["build_id"] == config["current_build_id"], "current build id is not anchored")
-    require(config["proposed_runtime_build_id"] != build["build_id"], "proposed build must differ")
-    require(
-        f"export const NAV_V2_BUILD_ID = '{build['build_id']}';" in runtime_source,
-        "runtime build marker differs from current build config",
-    )
-    require(
-        f"nav-system-check-v2.js?v={build['build_id']}" in diagnostic_source,
-        "diagnostic cache-bust differs from current build",
-    )
+    build_id = config["current_build_id"]
+    require(build["build_id"] == build_id, "build config differs from integration contract")
+    require(config["previous_build_id"] != build_id, "build id was not advanced")
+    require(f"export const NAV_V2_BUILD_ID = '{build_id}';" in runtime_source, "runtime build marker missing")
+    require(f"nav-system-check-v2.js?v={build_id}" in diagnostic_source, "diagnostic cache-bust missing")
 
-    # Anchor the evidence to the exact currently unguarded storage writes. A
-    # later hardening PR must intentionally replace these markers and update the
-    # contract instead of silently claiming this evidence still represents runtime.
     for marker in [
+        "createAuthStorageController",
+        "auth-storage-guard-v2.js?v=20260723-01",
+        "authStorage.readSession()",
+        "authStorage.clearSession({ email: sessionEmail(session) })",
+        "authStorage.persistSession(session)",
+        "authStorage.readLastEmail()",
+        "authStorage.saveProfile(profileCacheKey(), profile)",
+    ]:
+        require(marker in runtime_source, f"runtime integration marker missing: {marker}")
+
+    for forbidden_marker in [
         "localStorage.removeItem(SESSION_KEY);",
         "localStorage.setItem(SESSION_KEY, JSON.stringify(session));",
         "localStorage.setItem(LAST_EMAIL_KEY, clean);",
-        "sessionStorage.setItem(profileCacheKey(), JSON.stringify({ ...profile, cached_at: Date.now() }));",
-        "rememberEmail(sessionEmail(session));\n  writeSession(null);",
+        "sessionStorage.setItem(profileCacheKey()",
     ]:
-        require(marker in runtime_source, f"runtime gap marker missing: {marker}")
+        require(forbidden_marker not in runtime_source, f"direct storage write remains: {forbidden_marker}")
 
     for marker in [
-        "known gap: stale session remains stored",
-        "known gap: logout leaves stored session",
-        "the server request itself succeeded once",
-        "the reset request was accepted before the local write failed",
-        "session write failure currently remains fail-closed",
-        "QuotaExceededError",
-        "SecurityError",
+        "readLastEmail",
+        "unavailableStorageCause",
+        "persistentClearSucceeded",
+        "local.setItem(sessionKey, 'null')",
+        "throw createAuthStorageUnavailableError('save', error)",
+    ]:
+        require(marker in helper_source, f"helper marker missing: {marker}")
+
+    for marker in [
+        "Fixed regression 1",
+        "Fixed regression 2",
+        "Fixed regression 3",
+        "Fixed regression 4",
+        "Fixed regression 5",
+        "Fixed regression 6",
+        "NAV_AUTH_STORAGE_UNAVAILABLE",
+        "NAV_AUTH_SESSION_EXPIRED",
+        "RPC must not retry",
         "example.test",
     ]:
-        require(marker in test_source, f"test evidence marker missing: {marker}")
+        require(marker in test_source, f"fixed regression marker missing: {marker}")
 
-    forbidden_test_markers = [
+    for marker in [
+        "storage objects themselves remains fail-closed",
+        "readLastEmail",
+        "persistentClearSucceeded, false",
+        "NAV_AUTH_STORAGE_UNAVAILABLE",
+    ]:
+        require(marker in missing_storage_test, f"missing-storage test marker missing: {marker}")
+
+    combined = (test_source + "\n" + missing_storage_test).lower()
+    for marker in [
         "ofewxuqfjhamgerwzull",
         "supabase.co",
         "service_role",
@@ -119,16 +130,14 @@ def main() -> None:
         "create_branch",
         "apply_migration",
         "deploy_edge_function",
-    ]
-    lowered_test = test_source.lower()
-    for marker in forbidden_test_markers:
-        require(marker.lower() not in lowered_test, f"offline test contains forbidden marker: {marker}")
+    ]:
+        require(marker.lower() not in combined, f"offline tests contain forbidden marker: {marker}")
 
-    plan = config["build_rollout_plan"]
-    require(plan["single_atomic_commit_required"] is True, "atomic build update requirement missing")
-    require(plan["static_build_checker_required"] is True, "build checker requirement missing")
-    require(plan["all_existing_auth_suites_required"] is True, "Auth regression requirement missing")
-    require(plan["production_supabase_change_required"] is False, "plan incorrectly requires Supabase change")
+    rollout = config["build_rollout"]
+    require(rollout["single_squash_merge_required"] is True, "squash merge requirement missing")
+    require(rollout["static_build_checker_required"] is True, "build checker requirement missing")
+    require(rollout["all_existing_auth_suites_required"] is True, "Auth regression requirement missing")
+    require(rollout["production_supabase_change_required"] is False, "Supabase change must not be required")
 
     boundary = config["test_boundary"]
     require(boundary["network_calls_mocked"] is True, "network boundary changed")
@@ -145,11 +154,14 @@ def main() -> None:
         require(boundary[key] is False, f"boundary flag {key} must remain false")
 
     require("permissions:\n  contents: read" in workflow_source, "workflow permissions are not read-only")
-    require("workflow_dispatch:" in workflow_source, "manual workflow trigger missing")
-    require("node tests/unit/nav-v2-auth-storage-write-gap.test.mjs" in workflow_source, "gap test missing from workflow")
-    require("python3 scripts/check_nav_v2_build_version.py" in workflow_source, "build checker missing from workflow")
+    require("node tests/unit/nav-v2-auth-storage-write-gap.test.mjs" in workflow_source, "fixed regression missing")
+    require(
+        "node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow_source,
+        "missing-storage regression missing",
+    )
+    require("python3 scripts/check_nav_v2_build_version.py" in workflow_source, "build checker missing")
 
-    print("Navigator v2 Auth storage write gap evidence contract passed")
+    print("Navigator v2 Auth storage write fixed regression contract passed")
 
 
 if __name__ == "__main__":
