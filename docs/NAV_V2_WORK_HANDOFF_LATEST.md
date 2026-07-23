@@ -4,7 +4,7 @@
 
 - Дата: 23 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Последний подтверждённый `main`: `8c354d4dfa51cff100f622f9a92c845e49939663` — squash merge PR #488.
+- Последний подтверждённый `main`: `8eb9d11c973a82583cc066940e2587d53ce7f3a9` — squash merge PR #490.
 - Открытые PR по Navigator v2 отсутствуют.
 - Shared frontend build: `20260723-02`.
 - Public GitHub Pages: `https://deputat36.github.io/vktg/`.
@@ -142,6 +142,55 @@ Exact green head PR #488 прошёл:
 
 Production DDL/DML/Auth/RLS/grants/Edge/data не менялись.
 
+## Запись для основной CRM — PR #490
+
+Merge SHA:
+
+`8eb9d11c973a82583cc066940e2587d53ce7f3a9`
+
+Решение:
+
+`crm_handoff_summary_added_read_only_no_crm_write`
+
+Практический результат:
+
+- в карточку сделки добавлен блок `В CRM`;
+- блок формирует только процессную запись: текущий этап, результат, препятствие, договорённость, недостающее, следующее действие, ответственный и срок;
+- запись не сохраняется автоматически и копируется сотрудником только после проверки;
+- Navigator не создаёт параллельную CRM, журнал или отдельный источник состояния;
+- адрес, ФИО, телефон, email, реквизиты документов и другие клиентские идентификаторы исключены;
+- свободный `deal.next_action` не используется, потому что может содержать лишние персональные детали;
+- подтверждённые terminal outcomes документов и рисков исключаются из активного долга;
+- неизвестный ответственный или срок отображаются явно;
+- интеграция выполнена через существующий consolidated deal-card enhancement hook без увеличения HTML module budget.
+
+Канонические файлы:
+
+- `assets/js/nav-v2/deal-card-crm-handoff-model-v1.js`;
+- `assets/js/nav-v2/deal-card-crm-handoff-v1.js`;
+- `config/nav-v2-deal-card-crm-handoff-v1.json`;
+- `fixtures/nav-v2-deal-card-crm-handoff-scenarios.json`;
+- `tests/unit/nav-v2-deal-card-crm-handoff.test.mjs`;
+- `scripts/check_nav_v2_deal_card_crm_handoff_v1.py`;
+- `.github/workflows/nav-v2-deal-card-crm-handoff-v1.yml`;
+- `docs/NAV_V2_CRM_HANDOFF_V1_2026-07-23.md`.
+
+Exact green head PR #490 прошёл:
+
+- CRM handoff contract run `30042459907`;
+- static checks run `30042459759`;
+- JavaScript syntax run `30042460705`;
+- mobile-first run `30042460520`;
+- sensitive free-text guard run `30042460680`;
+- work-item outcome preview run `30042459818`;
+- legal passport preview run `30042460024`;
+- accessibility feedback run `30042459851`;
+- public browser runtime run `30042459762`.
+
+Всего завершились успешно 28 запущенных workflow. Authenticated browser workflow использовал существующий gate и не является новым cloud role/mutation E2E.
+
+Production Supabase/Auth/RLS/grants/schema/data/indexes/Edge не менялись.
+
 ## Supabase boundary
 
 Финальная read-only сверка после merge:
@@ -233,10 +282,12 @@ Cloud шаг требует отдельного решения владельц
 
 ## Следующий безопасный slice
 
-1. Поддерживать scheduled public source/browser monitoring.
-2. Проверять новые Navigator PR и issues на repository-only задачи.
-3. Развивать интерфейс и offline contracts без изменения production.
-4. Не выполнять второй index snapshot без выбранной cadence/thresholds.
-5. Не создавать preview branch или technical identities без отдельного cost/Auth approval.
-6. Не менять production schema/data/Auth/RLS/grants/Edge.
-7. Не трогать `leader_*`.
+1. Улучшить выбор ответственного и срока для CRM-handoff на основе устойчивой task taxonomy и уже загруженных process fields.
+2. Не использовать клиентские free-text поля, адреса, ФИО и реквизиты документов.
+3. Сначала подготовить pure policy, fixtures и read-only classification preview для legacy `task_type = NULL`.
+4. Не выполнять production task backfill или автоматическое назначение ролей без отдельного решения владельца.
+5. Поддерживать scheduled public source/browser monitoring.
+6. Не выполнять второй index snapshot без выбранной cadence/thresholds.
+7. Не создавать preview branch или technical identities без отдельного cost/Auth approval.
+8. Не менять production schema/data/Auth/RLS/grants/Edge.
+9. Не трогать `leader_*`.
