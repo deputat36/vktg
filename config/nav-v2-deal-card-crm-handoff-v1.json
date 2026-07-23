@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "repository_frontend_read_only",
+  "decision": "crm_handoff_summary_added_read_only_no_crm_write",
+  "purpose": "Подготовить компактную процессную запись для основной CRM без создания параллельного хранилища и без автоматической записи.",
+  "surface": {
+    "page": "deal-card-v2.html",
+    "integration_module": "assets/js/nav-v2/deal-card-recheck-alert-v2.js",
+    "model": "assets/js/nav-v2/deal-card-crm-handoff-model-v1.js",
+    "renderer": "assets/js/nav-v2/deal-card-crm-handoff-v1.js"
+  },
+  "fields": [
+    "current_stage",
+    "result",
+    "risk_or_obstacle",
+    "agreement",
+    "missing",
+    "next_action_owner_deadline"
+  ],
+  "privacy": {
+    "exclude_client_names": true,
+    "exclude_address": true,
+    "exclude_phone_email": true,
+    "exclude_document_numbers": true,
+    "exclude_free_text_next_action": true,
+    "use_process_state_only": true
+  },
+  "boundaries": {
+    "automatic_crm_write": false,
+    "navigator_database_write": false,
+    "network_request": false,
+    "browser_storage": false,
+    "production_supabase_change": false,
+    "production_data_change": false,
+    "leader_scope_change": false
+  },
+  "verification": {
+    "fixture": "fixtures/nav-v2-deal-card-crm-handoff-scenarios.json",
+    "unit_test": "tests/unit/nav-v2-deal-card-crm-handoff.test.mjs",
+    "checker": "scripts/check_nav_v2_deal_card_crm_handoff_v1.py",
+    "workflow": ".github/workflows/nav-v2-deal-card-crm-handoff-v1.yml"
+  }
+}
