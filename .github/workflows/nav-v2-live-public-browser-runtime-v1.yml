@@ -1,0 +1,105 @@
+name: Navigator v2 live public browser runtime v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-live-public-browser-runtime-v1.json'
+      - 'tests/e2e/live-public-runtime.spec.js'
+      - 'tests/e2e/helpers.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.mjs'
+      - 'scripts/check_nav_v2_live_public_browser_runtime_v1.py'
+      - 'scripts/attest_nav_v2_public_build_v1.py'
+      - 'docs/NAV_V2_LIVE_PUBLIC_BROWSER_RUNTIME_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-live-public-browser-runtime-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-build.json'
+      - 'config/nav-v2-public-build-attestation-v1.json'
+      - 'config/nav-v2-live-public-browser-runtime-v1.json'
+      - '*-v2.html'
+      - 'nav-v2.html'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'assets/js/nav-v2/auth-storage-guard-v2.js'
+      - 'tests/e2e/live-public-runtime.spec.js'
+      - 'tests/e2e/helpers.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.mjs'
+      - 'scripts/check_nav_v2_live_public_browser_runtime_v1.py'
+      - 'scripts/attest_nav_v2_public_build_v1.py'
+      - 'docs/NAV_V2_LIVE_PUBLIC_BROWSER_RUNTIME_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-live-public-browser-runtime-v1.yml'
+  schedule:
+    - cron: '07 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-live-public-browser-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-browser-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Validate public runtime contract
+        run: |
+          python3 -m json.tool config/nav-v2-build.json > /dev/null
+          python3 -m json.tool config/nav-v2-public-build-attestation-v1.json > /dev/null
+          python3 -m json.tool config/nav-v2-live-public-browser-runtime-v1.json > /dev/null
+          python3 -m py_compile scripts/check_nav_v2_live_public_browser_runtime_v1.py
+          python3 scripts/check_nav_v2_live_public_browser_runtime_v1.py
+
+      - name: Install pinned browser dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Execute PR checkout runtime locally
+        if: github.event_name == 'pull_request'
+        run: npm run test:e2e:live-public-runtime
+
+      - name: Preserve local browser evidence
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -d playwright-report ]; then mv playwright-report playwright-report-local; fi
+          if [ -d test-results ]; then mv test-results test-results-local; fi
+
+      - name: Attest deployed public source before browser execution
+        run: |
+          python3 scripts/attest_nav_v2_public_build_v1.py \
+            --attempts 12 \
+            --retry-delay 15 \
+            --report-path nav-v2-public-source-attestation-report.json
+
+      - name: Execute deployed GitHub Pages runtime
+        env:
+          NAV_E2E_BASE_URL: https://deputat36.github.io/vktg/
+        run: npm run test:e2e:live-public-runtime
+
+      - name: Upload public browser runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-live-public-browser-runtime-v1
+          path: |
+            nav-v2-public-source-attestation-report.json
+            playwright-report/
+            test-results/
+            playwright-report-local/
+            test-results-local/
+          if-no-files-found: warn
+          retention-days: 14
