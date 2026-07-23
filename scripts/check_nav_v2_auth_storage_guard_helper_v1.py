@@ -11,9 +11,10 @@ CONFIG = ROOT / "config/nav-v2-auth-storage-guard-helper-v1.json"
 HELPER = ROOT / "assets/js/nav-v2/auth-storage-guard-v2.js"
 TEST = ROOT / "tests/unit/nav-v2-auth-storage-guard-helper.test.mjs"
 MISSING_STORAGE_TEST = ROOT / "tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs"
+FINGERPRINT_TEST = ROOT / "tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs"
 RUNTIME = ROOT / "assets/js/nav-v2/supabase-v2.js"
 BUILD = ROOT / "config/nav-v2-build.json"
-WORKFLOW = ROOT / ".github/workflows/nav-v2-auth-storage-write-gap-v1.yml"
+WORKFLOW = ROOT / ".github/workflows/nav-v2-auth-storage-guard-helper-v1.yml"
 
 
 def require(condition: bool, message: str) -> None:
@@ -26,6 +27,7 @@ def main() -> None:
     helper = HELPER.read_text(encoding="utf-8")
     test = TEST.read_text(encoding="utf-8")
     missing_test = MISSING_STORAGE_TEST.read_text(encoding="utf-8")
+    fingerprint_test = FINGERPRINT_TEST.read_text(encoding="utf-8")
     runtime = RUNTIME.read_text(encoding="utf-8")
     build = json.loads(BUILD.read_text(encoding="utf-8"))
     workflow = WORKFLOW.read_text(encoding="utf-8")
@@ -61,6 +63,7 @@ def main() -> None:
 
     require(build["build_id"] == config["current_build_id"], "current build id drifted")
     require(config["previous_build_id"] != build["build_id"], "build id was not advanced")
+    require(build["minimum_importmap_pages"] == 35, "all 35 shared pages must remain required")
     require("auth-storage-guard-v2.js?v=20260723-01" in runtime, "runtime helper import missing")
     require("createAuthStorageController" in runtime, "runtime controller creation missing")
 
@@ -70,7 +73,9 @@ def main() -> None:
         "export function createAuthStorageController",
         "function readLastEmail()",
         "function unavailableStorageCause(storageName)",
-        "sessionReadBlocked = true",
+        "blockedSessionValue",
+        "blockedSessionValueKnown",
+        "different cross-tab session fingerprint",
         "local.setItem(sessionKey, 'null')",
         "persistentClearSucceeded",
         "clearProfiles();",
@@ -106,7 +111,16 @@ def main() -> None:
     ]:
         require(marker in missing_test, f"missing-storage test marker missing: {marker}")
 
-    combined = (helper + "\n" + test + "\n" + missing_test).lower()
+    for marker in [
+        "unchanged stale fingerprint must remain blocked",
+        "different cross-tab session fingerprint must be accepted",
+        "external-clean-signin",
+        "isSessionReadBlocked(), false",
+        "example.test",
+    ]:
+        require(marker in fingerprint_test, f"fingerprint test marker missing: {marker}")
+
+    combined = (helper + "\n" + test + "\n" + missing_test + "\n" + fingerprint_test).lower()
     for marker in [
         "ofewxuqfjhamgerwzull",
         "supabase.co",
@@ -119,6 +133,11 @@ def main() -> None:
     ]:
         require(marker.lower() not in combined, f"offline helper package contains forbidden marker: {marker}")
 
+    guarantees = config["guarantees_proven_offline"]
+    require(guarantees["double_clear_failure_blocks_exact_stale_session_in_current_page"] is True, "exact stale block guarantee missing")
+    require(guarantees["different_cross_tab_session_fingerprint_restores_reads"] is True, "cross-tab recovery guarantee missing")
+    require(guarantees["session_persist_failure_blocks_exact_stale_reads"] is True, "persist fingerprint guarantee missing")
+
     integration = config["integration_results"]
     for key in [
         "direct_session_reads_replaced",
@@ -128,10 +147,11 @@ def main() -> None:
         "direct_profile_cache_write_replaced",
         "cross_tab_refresh_race_guards_preserved",
         "logout_and_signin_race_guards_preserved",
-        "all_scoped_importmaps_updated_in_branch",
+        "all_35_scoped_importmaps_updated_in_branch",
         "build_config_updated",
         "diagnostics_cache_bust_updated",
         "gap_evidence_converted_to_fixed_regression",
+        "fingerprint_tombstone_regression_added",
     ]:
         require(integration[key] is True, f"integration result {key} missing")
     require(integration["production_supabase_change_required"] is False, "integration incorrectly requires Supabase change")
@@ -155,6 +175,10 @@ def main() -> None:
     require(
         "node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow,
         "missing-storage test missing",
+    )
+    require(
+        "node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow,
+        "fingerprint recovery test missing",
     )
     require("node tests/unit/nav-v2-auth-storage-write-gap.test.mjs" in workflow, "fixed regression missing")
     require("python3 scripts/check_nav_v2_build_version.py" in workflow, "build checker missing")
