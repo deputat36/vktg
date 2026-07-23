@@ -16,10 +16,18 @@ const expectedAssets = contract.required_runtime_assets.map((asset) => ({
   version: expectedBuildId
 }));
 
+function pageUrlWithinBase(path, testInfo) {
+  const configuredBase = String(testInfo.project.use.baseURL || '').trim();
+  if (!configuredBase) throw new Error('Playwright baseURL is required');
+  const directoryBase = configuredBase.endsWith('/') ? configuredBase : `${configuredBase}/`;
+  return new URL(String(path).replace(/^\//, ''), directoryBase).toString();
+}
+
 for (const path of contract.representative_pages) {
   test(`public runtime executes canonical build: ${path}`, async ({ page }, testInfo) => {
     const failures = captureRuntimeFailures(page);
-    await openPage(page, path);
+    const resolvedPageUrl = pageUrlWithinBase(path, testInfo);
+    await openPage(page, resolvedPageUrl);
 
     for (const selector of contract.required_login_selectors) {
       await expect(page.locator(selector)).toBeVisible({ timeout: 30_000 });
@@ -53,6 +61,7 @@ for (const path of contract.representative_pages) {
     await testInfo.attach('public-runtime-evidence.json', {
       body: Buffer.from(JSON.stringify({
         path,
+        resolved_page_url: resolvedPageUrl,
         expected_build_id: expectedBuildId,
         observed_build_id: await page.locator('html').getAttribute('data-nav-v2-build'),
         expected_assets: expectedAssets,
