@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "created_on": "2026-07-23",
-  "status": "post_merge_public_runtime_evidence_requested",
+  "status": "post_merge_public_runtime_evidence_recorded",
   "repository": "deputat36/vktg",
   "merged_main_sha": "ecda0aeacd48845194b28c7d7e8d50ef068b4724",
   "expected_build_id": "20260723-02",
@@ -26,11 +26,30 @@
     "leader_schema_changed": false
   },
   "result": {
-    "decision": "post_merge_live_evidence_requested_not_yet_observed",
-    "verified": false,
-    "evidence_run_id": null,
-    "evidence_commit_sha": null,
-    "artifact_id": null,
-    "artifact_digest": null
+    "decision": "post_merge_public_runtime_20260723_02_verified_read_only",
+    "verified": true,
+    "evidence_run_id": 30023416439,
+    "evidence_commit_sha": "41f9056d1021fd9a84ac3adf140b0877599e699b",
+    "artifact_id": 8570253047,
+    "artifact_digest": "sha256:24e71a7e91f394fbb70813cc5ae395dc5c7eb2fcee18aca019d57bf088c4cb5e"
+  },
+  "evidence": {
+    "observed_at": "2026-07-23T16:04:44.867398+00:00",
+    "repository_page_count": 35,
+    "matched_page_count": 35,
+    "diagnostic_status": "matched",
+    "browser_expected": 10,
+    "browser_unexpected": 0,
+    "browser_flaky": 0,
+    "assets": {
+      "assets/js/nav-v2/supabase-v2.js": {
+        "sha256": "f2713e29d1a84e27a4a290af99695211c5c2d4c9ed6df21c36fecf2a9b23ecd8",
+        "bytes": 18395
+      },
+      "assets/js/nav-v2/auth-storage-guard-v2.js": {
+        "sha256": "4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10",
+        "bytes": 5881
+      }
+    }
   }
 }
