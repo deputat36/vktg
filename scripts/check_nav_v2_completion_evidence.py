@@ -8,6 +8,8 @@ PAGE = ROOT / "deal-card-v2.html"
 LIFECYCLE = ROOT / "assets/js/nav-v2/deal-card-recheck-alert-v2.js"
 HOOK = ROOT / "assets/js/nav-v2/deal-card-completion-evidence-v2.js"
 MODEL = ROOT / "assets/js/nav-v2/deal-card-completion-evidence-model-v2.js"
+ACTION_HOOK = ROOT / "assets/js/nav-v2/deal-card-action-focus-v2.js"
+ACTION_MODEL = ROOT / "assets/js/nav-v2/deal-card-action-focus-model-v2.js"
 CSS = ROOT / "assets/css/nav-v2-completion-evidence.css"
 SEMANTIC = ROOT / "scripts/check-nav-v2-completion-evidence.mjs"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-completion-evidence.yml"
@@ -15,7 +17,7 @@ WORKFLOW = ROOT / ".github/workflows/nav-v2-completion-evidence.yml"
 
 def main() -> int:
     errors: list[str] = []
-    for path in (PAGE, LIFECYCLE, HOOK, MODEL, CSS, SEMANTIC, WORKFLOW):
+    for path in (PAGE, LIFECYCLE, HOOK, MODEL, ACTION_HOOK, ACTION_MODEL, CSS, SEMANTIC, WORKFLOW):
         if not path.exists():
             errors.append(f"missing completion evidence file: {path.relative_to(ROOT)}")
 
@@ -29,11 +31,14 @@ def main() -> int:
     lifecycle = LIFECYCLE.read_text(encoding="utf-8")
     hook = HOOK.read_text(encoding="utf-8")
     model = MODEL.read_text(encoding="utf-8")
+    action_hook = ACTION_HOOK.read_text(encoding="utf-8")
+    action_model = ACTION_MODEL.read_text(encoding="utf-8")
     css = CSS.read_text(encoding="utf-8")
 
     for marker in (
         "nav-v2-completion-evidence.css?v=20260715-01",
         "deal-card-recheck-alert-v2.js?v=20260715-15",
+        '"./deal-card-action-focus-v2.js?v=20260715-01": "./assets/js/nav-v2/deal-card-action-focus-v2.js?v=20260723-01"',
     ):
         if marker not in page:
             errors.append(f"deal-card-v2.html: missing {marker!r}")
@@ -83,6 +88,31 @@ def main() -> int:
     for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
         if marker in model:
             errors.append(f"completion evidence model must remain pure: {marker!r}")
+
+    for marker in (
+        "criticalNotice(focus)",
+        "Что зафиксировать в CRM",
+        "Текущий этап",
+        "Граница систем:",
+    ):
+        if marker not in action_hook:
+            errors.append(f"deal-card action focus: missing CRM operational brief marker {marker!r}")
+    for marker in ("rpc(", "new MutationObserver", "localStorage", "sessionStorage", "nav_v2_update_", "nav_v2_add_", "nav_v2_save_"):
+        if marker in action_hook:
+            errors.append(f"deal-card action focus must remain RPC-free and read-only: {marker!r}")
+
+    for marker in (
+        "DEAL_STAGE_LABELS",
+        "stageLabel: dealStageLabel(deal.status)",
+        "criticalText: criticalSummary(blockers)",
+        "crmRecord: crmRecordHint(focus, deal)",
+        "В основной CRM:",
+    ):
+        if marker not in action_model:
+            errors.append(f"deal-card action focus model: missing CRM operational brief marker {marker!r}")
+    for marker in ("document.", "window.", "rpc(", "localStorage", "sessionStorage"):
+        if marker in action_model:
+            errors.append(f"deal-card action focus model must remain pure: {marker!r}")
 
     for marker in (
         ".deal-completion-evidence",
