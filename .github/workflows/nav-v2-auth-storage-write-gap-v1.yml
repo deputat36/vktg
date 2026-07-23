@@ -1,0 +1,73 @@
+name: Navigator v2 Auth storage write gap v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-auth-storage-write-gap-v1.json'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'config/nav-v2-build.json'
+      - 'nav-system-check-v2.html'
+      - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
+      - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
+      - 'scripts/check_nav_v2_build_version.py'
+      - 'docs/NAV_V2_AUTH_STORAGE_WRITE_GAP_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-auth-storage-write-gap-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/nav-v2-auth-storage-write-gap-v1.json'
+      - 'assets/js/nav-v2/supabase-v2.js'
+      - 'config/nav-v2-build.json'
+      - 'nav-system-check-v2.html'
+      - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
+      - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
+      - 'scripts/check_nav_v2_build_version.py'
+      - 'docs/NAV_V2_AUTH_STORAGE_WRITE_GAP_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-auth-storage-write-gap-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-gap-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate contract JSON
+        run: python3 -m json.tool config/nav-v2-auth-storage-write-gap-v1.json > /dev/null
+
+      - name: Compile source checker
+        run: python3 -m py_compile scripts/check_nav_v2_auth_storage_write_gap_v1.py
+
+      - name: Validate gap evidence and build plan
+        run: python3 scripts/check_nav_v2_auth_storage_write_gap_v1.py
+
+      - name: Validate current shared build version
+        run: python3 scripts/check_nav_v2_build_version.py
+
+      - name: Run existing Auth recovery suite
+        run: node tests/unit/nav-v2-auth-session-recovery.test.mjs
+
+      - name: Run existing concurrent refresh suite
+        run: node tests/unit/nav-v2-auth-concurrent-refresh.test.mjs
+
+      - name: Run existing network and no-lock suite
+        run: node tests/unit/nav-v2-auth-network-no-lock.test.mjs
+
+      - name: Run existing lock timeout and post-refresh suite
+        run: node tests/unit/nav-v2-auth-lock-timeout-post-refresh.test.mjs
+
+      - name: Run existing storage and sign-in race suite
+        run: node tests/unit/nav-v2-auth-storage-signin-race.test.mjs
+
+      - name: Run existing logout and storage failure suite
+        run: node tests/unit/nav-v2-auth-logout-storage-failure.test.mjs
+
+      - name: Run existing password reset suite
+        run: node tests/unit/nav-v2-auth-password-reset.test.mjs
+
+      - name: Run storage write gap evidence
+        run: node tests/unit/nav-v2-auth-storage-write-gap.test.mjs
