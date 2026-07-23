@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_logout_storage_failure_test_contract_no_live_accounts",
+  "created_on": "2026-07-23",
+  "source_main_sha": "5fc329be7b9e3acfc07423e1cca8e069f97d2f01",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "runtime_code_changed": false,
+  "cloud_execution_allowed": false,
+  "test_file": "tests/unit/nav-v2-auth-logout-storage-failure.test.mjs",
+  "runtime_files_observed": [
+    "assets/js/nav-v2/supabase-v2.js",
+    "assets/js/nav-v2/auth-session-recovery-v2.js"
+  ],
+  "scenarios": [
+    {
+      "id": "logout_during_pending_old_refresh",
+      "expected_initial_rpc_status": 401,
+      "expected_refresh_calls": 1,
+      "expected_logout_calls": 1,
+      "expected_rpc_retry_calls": 0,
+      "expected_session_after_race": null,
+      "expected_result": "logout_wins_and_delayed_refresh_cannot_resurrect_session"
+    },
+    {
+      "id": "logout_transport_failure_clears_local_state",
+      "expected_logout_transport_error": true,
+      "expected_local_session_cleared": true,
+      "expected_profile_cache_cleared": true,
+      "expected_later_rpc_network_calls": 0,
+      "expected_result": "transport_error_surfaces_but_local_logout_completes"
+    },
+    {
+      "id": "logout_without_session_clears_stale_profiles",
+      "expected_logout_calls": 0,
+      "expected_stale_profile_cache_cleared": true,
+      "expected_result": "local_cleanup_without_network"
+    },
+    {
+      "id": "storage_read_security_error_fails_closed",
+      "expected_cached_user": null,
+      "expected_cached_profile": null,
+      "expected_protected_action_network_calls": 0,
+      "expected_result": "storage_read_denial_is_treated_as_absent_session"
+    }
+  ],
+  "test_boundary": {
+    "network_calls_mocked": true,
+    "web_lock_api_mocked": true,
+    "storage_in_memory_or_synthetic_denial": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "raw_logs_used": false,
+    "fixture_email_domain": "example.test"
+  },
+  "acceptance": {
+    "logout_clears_session_before_delayed_refresh_completion": true,
+    "delayed_refresh_cannot_resurrect_logged_out_session": true,
+    "logout_network_failure_still_clears_local_session": true,
+    "logout_network_failure_still_clears_profile_cache": true,
+    "cleared_session_stops_later_rpc_before_network": true,
+    "logout_without_session_skips_network": true,
+    "logout_without_session_clears_stale_profile_cache": true,
+    "storage_read_security_error_returns_no_cached_user": true,
+    "storage_read_security_error_returns_no_cached_profile": true,
+    "storage_read_security_error_stops_protected_action_before_network": true,
+    "existing_auth_recovery_suites_still_pass": true
+  },
+  "result": {
+    "decision": "auth_logout_and_storage_read_failures_covered_offline",
+    "authenticated_role_e2e_completed": false,
+    "live_multi_tab_browser_e2e_completed": false,
+    "real_logout_endpoint_failure_completed": false,
+    "real_browser_storage_denial_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "all_logout_failures_are_verified",
+    "real_multi_tab_logout_races_are_verified",
+    "real_browser_storage_denial_is_verified",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "use_real_accounts_or_tokens",
+    "commit_raw_auth_logs",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
