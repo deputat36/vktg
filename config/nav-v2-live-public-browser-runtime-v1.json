@@ -27,13 +27,14 @@
   ],
   "acceptance": {
     "canonical_build_marker_executed": true,
-    "shared_runtime_resource_observed": true,
-    "storage_guard_resource_observed": true,
+    "shared_runtime_resource_observed_with_exact_build_query": true,
+    "storage_guard_resource_observed_with_exact_build_query": true,
     "guest_login_gate_visible": true,
     "console_errors_absent": true,
     "page_errors_absent": true,
-    "source_hash_attestation_passes_first": true,
-    "local_and_live_pr_evidence": true,
+    "local_pr_evidence": true,
+    "source_hash_attestation_before_live_execution": true,
+    "post_merge_live_evidence": true,
     "scheduled_live_evidence": true
   },
   "boundaries": {
