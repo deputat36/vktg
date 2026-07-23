@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "status": "repository_frontend_ready",
+  "decision": "legacy_task_lifecycle_closure_frontend_enabled_atomic_server_completion_blocked",
+  "diagnosis": {
+    "captured_at": "2026-07-24",
+    "production_read_only": true,
+    "all_tasks": 98,
+    "open_tasks": 88,
+    "in_progress_tasks": 0,
+    "done_tasks": 0,
+    "cancelled_tasks": 10,
+    "non_demo_tasks": 82,
+    "non_demo_open_tasks": 78,
+    "task_status_changed_events": 0,
+    "tasks_with_overdue_explicit_due_date": 98,
+    "missing_or_inactive_person_assignees": 0,
+    "root_cause": "Задачи имеют срок и ответственного, но карточка не формирует последовательный сценарий начала работы, фиксации результата и завершения. Серверный legacy RPC доступен, но ни одного подтверждённого перехода статуса в истории нет."
+  },
+  "frontend_flow": {
+    "open": "Показывать только действие Начать работу.",
+    "in_progress": "Показывать обязательное поле результата и действие Сохранить результат и завершить.",
+    "done": "Показывать только осознанный возврат в работу.",
+    "cancelled": "Не показывать рабочие действия.",
+    "completion_order": [
+      "validate_result",
+      "save_team_comment",
+      "set_task_status_done",
+      "reload_server_state"
+    ],
+    "partial_failure_recovery": "Если комментарий сохранён, а статус не изменён, повторная попытка в текущей сессии не дублирует комментарий."
+  },
+  "boundaries": {
+    "production_schema_change": false,
+    "production_data_backfill": false,
+    "automatic_task_close": false,
+    "automatic_assignment": false,
+    "bounded_transport_enabled": false,
+    "atomic_server_completion": false,
+    "new_rpc_deployed": false,
+    "leader_scope_change": false
+  },
+  "blocked_follow_up": {
+    "item": "atomic_task_completion_rpc",
+    "reason": "Требует отдельного production database deployment approval и migration/rollback package.",
+    "prepared_frontend_recovery": true,
+    "blocks_frontend_release": false
+  },
+  "verification": {
+    "model": "assets/js/nav-v2/task-lifecycle-closure-model-v1.js",
+    "guard": "assets/js/nav-v2/task-action-guard-v2.js",
+    "unit_test": "tests/unit/nav-v2-task-lifecycle-closure.test.mjs",
+    "browser_test": "tests/e2e/task-action-feedback.spec.js",
+    "fixture": "tests/fixtures/nav-v2-task-action-feedback.html",
+    "checker": "scripts/check_nav_v2_task_action_feedback.py",
+    "workflow": ".github/workflows/nav-v2-task-action-feedback.yml"
+  }
+}
