@@ -1,5 +1,6 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';
+import { createAuthStorageController } from './auth-storage-guard-v2.js?v=20260723-01';
 import {
   NAV_AUTH_REFRESH_LOCK_NAME,
   createAuthSessionExpiredError,
@@ -10,7 +11,7 @@ import {
   shouldInvalidateSessionAfterRefreshFailure
 } from './auth-session-recovery-v2.js?v=20260721-02';
 
-export const NAV_V2_BUILD_ID = '20260711-01';
+export const NAV_V2_BUILD_ID = '20260723-01';
 if (typeof document !== 'undefined') {
   document.documentElement.dataset.navV2Build = NAV_V2_BUILD_ID;
 }
@@ -34,30 +35,32 @@ let lastDealsListIds = new Set();
 let wizardSaveRecovery = null;
 let inFlightRpc = new Map();
 
+function browserStorage(name) {
+  try { return globalThis[name] || null; } catch (_) { return null; }
+}
+
+const authStorage = createAuthStorageController({
+  local: browserStorage('localStorage'),
+  session: browserStorage('sessionStorage'),
+  sessionKey: SESSION_KEY,
+  profilePrefix: PROFILE_CACHE_PREFIX,
+  lastEmailKey: LAST_EMAIL_KEY
+});
+
 function readSession() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
+  return authStorage.readSession();
 }
 
 function clearProfileCache() {
-  try {
-    Object.keys(sessionStorage)
-      .filter((key) => key.startsWith(PROFILE_CACHE_PREFIX))
-      .forEach((key) => sessionStorage.removeItem(key));
-  } catch (_) {}
+  return authStorage.clearProfiles();
 }
 
 function writeSession(session) {
-  if (!session) {
-    localStorage.removeItem(SESSION_KEY);
-    clearProfileCache();
-  } else {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  }
+  return session ? authStorage.persistSession(session) : authStorage.clearSession();
 }
 
 function rememberEmail(email) {
-  const clean = String(email || '').trim();
-  if (clean) localStorage.setItem(LAST_EMAIL_KEY, clean);
+  return authStorage.rememberEmail(email);
 }
 
 function decodeJwt(token) {
@@ -74,8 +77,7 @@ function sessionEmail(session) {
 }
 
 function invalidateStoredSession(session) {
-  rememberEmail(sessionEmail(session));
-  writeSession(null);
+  return authStorage.clearSession({ email: sessionEmail(session) });
 }
 
 export function getCachedUser() {
@@ -92,16 +94,15 @@ function profileCacheKey() {
 }
 
 export function getCachedProfile() {
-  try { return JSON.parse(sessionStorage.getItem(profileCacheKey()) || 'null'); } catch (_) { return null; }
+  return authStorage.readProfile(profileCacheKey());
 }
 
 export function saveCachedProfile(profile) {
-  if (!profile?.role) return;
-  sessionStorage.setItem(profileCacheKey(), JSON.stringify({ ...profile, cached_at: Date.now() }));
+  return authStorage.saveProfile(profileCacheKey(), profile);
 }
 
 export function clearCachedProfiles() {
-  clearProfileCache();
+  return clearProfileCache();
 }
 
 function headers(session = readSession()) {
@@ -228,8 +229,8 @@ export async function signIn(email, password) {
     body: JSON.stringify({ email, password })
   });
   const session = await parse(response);
-  rememberEmail(email);
   writeSession(session);
+  rememberEmail(email);
   return session.user;
 }
 
@@ -379,7 +380,7 @@ export function setupTop(active) {
 }
 
 export function renderAuthBox(target, onLogin) {
-  const lastEmail = esc(localStorage.getItem(LAST_EMAIL_KEY) || '');
+  const lastEmail = esc(authStorage.readLastEmail());
   target.innerHTML = `<section class="card auth-card"><h2>Вход в Навигатор сделок</h2><p class="muted">Используется общий Supabase Auth, но роли проекта хранятся отдельно в nav_user_profiles.</p><div class="field"><label>Email</label><input id="navEmail" type="email" autocomplete="email" value="${lastEmail}"></div><div class="field"><label>Пароль</label><input id="navPassword" type="password" autocomplete="current-password"></div><div id="authStatus" class="status">Введите логин и пароль.</div><button id="navLogin" class="btn primary" type="button">Войти</button><button id="navForgot" class="btn light" type="button" style="margin-left:8px">Восстановить пароль</button></section>`;
   document.getElementById('navLogin').onclick = async () => {
     const status = document.getElementById('authStatus');

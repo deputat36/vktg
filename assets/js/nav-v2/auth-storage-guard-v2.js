@@ -21,6 +21,12 @@ function parseJson(value) {
   }
 }
 
+function unavailableStorageCause(storageName) {
+  const error = new Error(`${storageName} is unavailable`);
+  error.name = 'SecurityError';
+  return error;
+}
+
 export function createAuthStorageController({
   local,
   session,
@@ -29,19 +35,55 @@ export function createAuthStorageController({
   lastEmailKey = 'nav_last_email_v2'
 } = {}) {
   let sessionReadBlocked = false;
+  let blockedSessionValue = null;
+  let blockedSessionValueKnown = false;
+
+  function setSessionBlock(value, known = true) {
+    sessionReadBlocked = true;
+    blockedSessionValue = value;
+    blockedSessionValueKnown = known;
+  }
+
+  function clearSessionBlock() {
+    sessionReadBlocked = false;
+    blockedSessionValue = null;
+    blockedSessionValueKnown = false;
+  }
+
+  function readRawSessionValue() {
+    if (!local) throw unavailableStorageCause('localStorage');
+    return local.getItem(sessionKey);
+  }
 
   function readSession() {
-    if (sessionReadBlocked) return null;
+    if (!local) return null;
     try {
-      return parseJson(local?.getItem(sessionKey));
+      const value = readRawSessionValue();
+      if (sessionReadBlocked) {
+        if (!blockedSessionValueKnown || value === blockedSessionValue) return null;
+        // Another tab or a later successful browser write replaced the blocked
+        // stale value. Resume normal reads without requiring a page reload.
+        clearSessionBlock();
+      }
+      return parseJson(value);
     } catch (_) {
       return null;
     }
   }
 
-  function readProfile(cacheKey) {
+  function readLastEmail() {
+    if (!local) return '';
     try {
-      return parseJson(session?.getItem(cacheKey));
+      return String(local.getItem(lastEmailKey) || '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function readProfile(cacheKey) {
+    if (!session) return null;
+    try {
+      return parseJson(session.getItem(cacheKey));
     } catch (_) {
       return null;
     }
@@ -49,8 +91,9 @@ export function createAuthStorageController({
 
   function clearProfiles() {
     let cleared = 0;
+    if (!session) return cleared;
     try {
-      const keys = Object.keys(session || {}).filter((key) => key.startsWith(profilePrefix));
+      const keys = Object.keys(session).filter((key) => key.startsWith(profilePrefix));
       for (const key of keys) {
         try {
           session.removeItem(key);
@@ -67,9 +110,9 @@ export function createAuthStorageController({
 
   function rememberEmail(email) {
     const clean = String(email || '').trim();
-    if (!clean) return false;
+    if (!clean || !local) return false;
     try {
-      local?.setItem(lastEmailKey, clean);
+      local.setItem(lastEmailKey, clean);
       return true;
     } catch (_) {
       return false;
@@ -77,9 +120,9 @@ export function createAuthStorageController({
   }
 
   function saveProfile(cacheKey, profile) {
-    if (!cacheKey || !profile?.role) return false;
+    if (!cacheKey || !profile?.role || !session) return false;
     try {
-      session?.setItem(cacheKey, JSON.stringify({ ...profile, cached_at: Date.now() }));
+      session.setItem(cacheKey, JSON.stringify({ ...profile, cached_at: Date.now() }));
       return true;
     } catch (_) {
       return false;
@@ -87,20 +130,32 @@ export function createAuthStorageController({
   }
 
   function clearSession({ email = '' } = {}) {
-    sessionReadBlocked = true;
+    let previousValue = null;
+    let previousValueKnown = false;
+    try {
+      previousValue = readRawSessionValue();
+      previousValueKnown = true;
+    } catch (_) {}
+    setSessionBlock(previousValue, previousValueKnown);
+
     let persistentClearSucceeded = false;
     let removeError = null;
 
     try {
-      local?.removeItem(sessionKey);
+      if (!local) throw unavailableStorageCause('localStorage');
+      local.removeItem(sessionKey);
       persistentClearSucceeded = true;
+      setSessionBlock(null, true);
     } catch (error) {
       removeError = error;
       try {
-        local?.setItem(sessionKey, 'null');
+        if (!local) throw unavailableStorageCause('localStorage');
+        local.setItem(sessionKey, 'null');
         persistentClearSucceeded = true;
+        setSessionBlock('null', true);
       } catch (_) {
         persistentClearSucceeded = false;
+        setSessionBlock(previousValue, previousValueKnown);
       }
     } finally {
       clearProfiles();
@@ -121,17 +176,25 @@ export function createAuthStorageController({
     try {
       serialized = JSON.stringify(nextSession);
     } catch (error) {
-      sessionReadBlocked = true;
+      setSessionBlock(null, false);
       clearProfiles();
       throw createAuthStorageUnavailableError('save', error);
     }
 
+    let previousValue = null;
+    let previousValueKnown = false;
     try {
-      local?.setItem(sessionKey, serialized);
-      sessionReadBlocked = false;
+      previousValue = readRawSessionValue();
+      previousValueKnown = true;
+    } catch (_) {}
+
+    try {
+      if (!local) throw unavailableStorageCause('localStorage');
+      local.setItem(sessionKey, serialized);
+      clearSessionBlock();
       return nextSession;
     } catch (error) {
-      sessionReadBlocked = true;
+      setSessionBlock(previousValue, previousValueKnown);
       clearProfiles();
       throw createAuthStorageUnavailableError('save', error);
     }
@@ -143,6 +206,7 @@ export function createAuthStorageController({
 
   return {
     readSession,
+    readLastEmail,
     readProfile,
     saveProfile,
     clearProfiles,

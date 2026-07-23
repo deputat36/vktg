@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/nav-v2-auth-logout-storage-failure-tests-v1.json"
 TEST = ROOT / "tests/unit/nav-v2-auth-logout-storage-failure.test.mjs"
 RUNTIME = ROOT / "assets/js/nav-v2/supabase-v2.js"
+STORAGE_HELPER = ROOT / "assets/js/nav-v2/auth-storage-guard-v2.js"
 HELPER = ROOT / "assets/js/nav-v2/auth-session-recovery-v2.js"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-auth-logout-storage-failure-tests-v1.yml"
 DOC = ROOT / "docs/NAV_V2_AUTH_LOGOUT_STORAGE_FAILURE_TESTS_V1_2026-07-23.md"
@@ -31,12 +32,13 @@ def require(condition: bool, message: str) -> None:
 
 
 def main() -> None:
-    for path in (CONFIG, TEST, RUNTIME, HELPER, WORKFLOW, DOC):
+    for path in (CONFIG, TEST, RUNTIME, STORAGE_HELPER, HELPER, WORKFLOW, DOC):
         require(path.is_file(), f"missing required file: {path.relative_to(ROOT)}")
 
     data = json.loads(CONFIG.read_text(encoding="utf-8"))
     test_source = TEST.read_text(encoding="utf-8")
     runtime = RUNTIME.read_text(encoding="utf-8")
+    storage_helper = STORAGE_HELPER.read_text(encoding="utf-8")
     helper = HELPER.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
     docs = DOC.read_text(encoding="utf-8")
@@ -121,10 +123,12 @@ def main() -> None:
     ):
         require(action in forbidden_actions, f"missing forbidden action: {action}")
 
-    # Runtime behavior under observation must remain present.
+    # Historical behavior remains covered after the runtime moved behind the
+    # fail-closed storage controller.
     for marker in (
+        "createAuthStorageController",
         "function readSession()",
-        "try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }",
+        "return authStorage.readSession();",
         "async function refreshSession(failedAccessToken = '')",
         "if (!isSameAuthSession(currentSession, session))",
         "export async function signOut()",
@@ -132,9 +136,15 @@ def main() -> None:
         "finally { writeSession(null); }",
     ):
         require(marker in runtime, f"runtime marker missing: {marker}")
+    for marker in (
+        "function readSession()",
+        "function clearSession({ email = '' } = {})",
+        "setSessionBlock(previousValue, previousValueKnown)",
+        "clearProfiles();",
+    ):
+        require(marker in storage_helper, f"storage helper marker missing: {marker}")
     require("NAV_AUTH_SESSION_EXPIRED" in helper, "Auth session-expired helper contract missing")
 
-    # New test must explicitly cover all four deterministic scenarios.
     for marker in (
         "logout must clear the stored session before delayed refresh completes",
         "delayed refresh must not resurrect a logged-out session",
@@ -176,7 +186,7 @@ def main() -> None:
 
     require(EXPECTED_DECISION in docs, "documentation decision drift")
     require("не является authenticated role e2e" in docs_lower, "documentation must preserve E2E boundary")
-    require("runtime-код не меняется" in docs_lower, "documentation must preserve runtime boundary")
+    require("runtime-код не меняется" in docs_lower, "documentation must preserve original slice boundary")
     require("production supabase не изменён" in docs_lower, "documentation must preserve production boundary")
 
     print("Navigator v2 Auth logout/storage-failure test contract passed")

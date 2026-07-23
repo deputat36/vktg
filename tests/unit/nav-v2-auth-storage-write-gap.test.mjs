@@ -9,13 +9,9 @@ class ControlledStorage {
     });
   }
 
-  get length() {
-    return this._values.size;
-  }
+  get length() { return this._values.size; }
 
-  setFailure(operation, predicate) {
-    this._failures[operation] = predicate;
-  }
+  setFailure(operation, predicate) { this._failures[operation] = predicate; }
 
   clearFailures() {
     this._failures.get = null;
@@ -65,13 +61,8 @@ class ControlledStorage {
     this.clearFailures();
   }
 
-  key(index) {
-    return [...this._values.keys()][index] ?? null;
-  }
-
-  peek(key) {
-    return this._values.get(String(key)) ?? null;
-  }
+  key(index) { return [...this._values.keys()][index] ?? null; }
+  peek(key) { return this._values.get(String(key)) ?? null; }
 }
 
 function jsonResponse(status, payload) {
@@ -97,6 +88,11 @@ function readRawSession() {
 function resetBrowserState() {
   globalThis.localStorage.clear();
   globalThis.sessionStorage.clear();
+  delete globalThis.fetch;
+}
+
+async function loadSupabase(label) {
+  return import(`../../assets/js/nav-v2/supabase-v2.js?storage-write-regression=${label}-${Date.now()}-${Math.random()}`);
 }
 
 Object.defineProperty(globalThis, 'window', {
@@ -115,20 +111,18 @@ Object.defineProperty(globalThis, 'navigator', {
 globalThis.localStorage = new ControlledStorage();
 globalThis.sessionStorage = new ControlledStorage();
 
-const supabase = await import(`../../assets/js/nav-v2/supabase-v2.js?storage-write-gap=${Date.now()}`);
-
-// Known gap 1: a convenience-email write failure interrupts invalid-session
-// cleanup before the stale session and profile cache are removed.
+// Fixed regression 1: convenience-email failure cannot interrupt invalid-session cleanup.
 {
   resetBrowserState();
   const session = {
-    access_token: 'gap-invalid-access',
-    refresh_token: 'gap-invalid-refresh',
-    user: { id: 'gap-invalid-user', email: 'gap-invalid@example.test' }
+    access_token: 'fixed-invalid-access',
+    refresh_token: 'fixed-invalid-refresh',
+    user: { id: 'fixed-invalid-user', email: 'fixed-invalid@example.test' }
   };
   saveSession(session);
-  saveProfile('gap-invalid-user', { role: 'spn' });
+  saveProfile('fixed-invalid-user', { role: 'spn' });
   globalThis.localStorage.setFailure('set', (key) => key === 'nav_last_email_v2');
+  const supabase = await loadSupabase('invalid-refresh');
 
   let rpcCalls = 0;
   let refreshCalls = 0;
@@ -150,33 +144,27 @@ const supabase = await import(`../../assets/js/nav-v2/supabase-v2.js?storage-wri
 
   await assert.rejects(
     () => supabase.rpc('nav_v2_get_dashboard', {}, 2000),
-    (error) => {
-      assert.equal(error.name, 'QuotaExceededError');
-      return true;
-    }
+    (error) => error.code === 'NAV_AUTH_SESSION_EXPIRED'
   );
-
-  assert.equal(rpcCalls, 1);
+  assert.equal(rpcCalls, 1, 'invalid refresh must not retry the RPC');
   assert.equal(refreshCalls, 1);
-  assert.equal(readRawSession()?.access_token, session.access_token, 'known gap: stale session remains stored');
-  assert.notEqual(
-    globalThis.sessionStorage.peek('nav_profile_v2:gap-invalid-user'),
-    null,
-    'known gap: profile cache remains because cleanup was interrupted'
-  );
+  assert.equal(readRawSession(), null, 'stale session must be removed or overwritten with null');
+  assert.equal(globalThis.sessionStorage.peek('nav_profile_v2:fixed-invalid-user'), null);
+  assert.equal(supabase.getCachedUser(), null);
 }
 
-// Known gap 2: removeItem failure during logout throws before profile cleanup.
+// Fixed regression 2: logout cleanup survives localStorage.removeItem failure.
 {
   resetBrowserState();
   const session = {
-    access_token: 'gap-logout-access',
-    refresh_token: 'gap-logout-refresh',
-    user: { id: 'gap-logout-user', email: 'gap-logout@example.test' }
+    access_token: 'fixed-logout-access',
+    refresh_token: 'fixed-logout-refresh',
+    user: { id: 'fixed-logout-user', email: 'fixed-logout@example.test' }
   };
   saveSession(session);
-  saveProfile('gap-logout-user', { role: 'manager' });
+  saveProfile('fixed-logout-user', { role: 'manager' });
   globalThis.localStorage.setFailure('remove', (key) => key === 'nav_session_v2');
+  const supabase = await loadSupabase('logout-remove');
 
   let logoutCalls = 0;
   globalThis.fetch = async (url) => {
@@ -188,67 +176,53 @@ const supabase = await import(`../../assets/js/nav-v2/supabase-v2.js?storage-wri
     throw new Error(`Unexpected logout request: ${normalized}`);
   };
 
-  await assert.rejects(
-    () => supabase.signOut(),
-    (error) => {
-      assert.equal(error.name, 'SecurityError');
-      return true;
-    }
-  );
-
+  await supabase.signOut();
   assert.equal(logoutCalls, 1);
-  assert.equal(readRawSession()?.access_token, session.access_token, 'known gap: logout leaves stored session');
-  assert.notEqual(
-    globalThis.sessionStorage.peek('nav_profile_v2:gap-logout-user'),
-    null,
-    'known gap: profile cache cleanup is skipped'
-  );
+  assert.equal(readRawSession(), null, 'fallback null overwrite must clear the persistent session');
+  assert.equal(globalThis.sessionStorage.peek('nav_profile_v2:fixed-logout-user'), null);
+  assert.equal(supabase.getCachedUser(), null);
 }
 
-// Known gap 3: an optional profile-cache write failure turns a successful RPC
-// into an application error.
+// Fixed regression 3: optional profile-cache failure cannot change a successful RPC result.
 {
   resetBrowserState();
   saveSession({
-    access_token: 'gap-profile-access',
-    refresh_token: 'gap-profile-refresh',
-    user: { id: 'gap-profile-user', email: 'gap-profile@example.test' }
+    access_token: 'fixed-profile-access',
+    refresh_token: 'fixed-profile-refresh',
+    user: { id: 'fixed-profile-user', email: 'fixed-profile@example.test' }
   });
   globalThis.sessionStorage.setFailure('set', (key) => key.startsWith('nav_profile_v2:'));
+  const supabase = await loadSupabase('profile-cache');
 
   let rpcCalls = 0;
   globalThis.fetch = async (url) => {
     const normalized = String(url);
     if (normalized.includes('/rest/v1/rpc/nav_v2_get_my_profile')) {
       rpcCalls += 1;
-      return jsonResponse(200, { profile: { id: 'gap-profile-user', role: 'lawyer' } });
+      return jsonResponse(200, { profile: { id: 'fixed-profile-user', role: 'lawyer' } });
     }
     throw new Error(`Unexpected profile request: ${normalized}`);
   };
 
-  await assert.rejects(
-    () => supabase.rpc('nav_v2_get_my_profile', {}, 2000),
-    (error) => {
-      assert.equal(error.name, 'QuotaExceededError');
-      return true;
-    }
-  );
-  assert.equal(rpcCalls, 1, 'the server request itself succeeded once');
-  assert.equal(readRawSession()?.access_token, 'gap-profile-access');
+  const data = await supabase.rpc('nav_v2_get_my_profile', {}, 2000);
+  assert.equal(rpcCalls, 1);
+  assert.equal(data.profile.role, 'lawyer');
+  assert.equal(globalThis.sessionStorage.peek('nav_profile_v2:fixed-profile-user'), null);
+  assert.equal(supabase.getCachedUser()?.id, 'fixed-profile-user');
 }
 
-// Known gap 4: password-reset success is reported as a failure when saving the
-// convenience email is unavailable.
+// Fixed regression 4: accepted password reset stays successful when remembered-email write fails.
 {
   resetBrowserState();
   saveSession({
-    access_token: 'gap-reset-access',
-    refresh_token: 'gap-reset-refresh',
-    user: { id: 'gap-reset-user', email: 'gap-reset@example.test' }
+    access_token: 'fixed-reset-access',
+    refresh_token: 'fixed-reset-refresh',
+    user: { id: 'fixed-reset-user', email: 'fixed-reset@example.test' }
   });
-  saveProfile('gap-reset-user', { role: 'spn' });
+  saveProfile('fixed-reset-user', { role: 'spn' });
   globalThis.localStorage.setItem('nav_last_email_v2', 'previous@example.test');
   globalThis.localStorage.setFailure('set', (key) => key === 'nav_last_email_v2');
+  const supabase = await loadSupabase('password-reset');
 
   let recoverCalls = 0;
   globalThis.fetch = async (url) => {
@@ -260,25 +234,19 @@ const supabase = await import(`../../assets/js/nav-v2/supabase-v2.js?storage-wri
     throw new Error(`Unexpected password-reset request: ${normalized}`);
   };
 
-  await assert.rejects(
-    () => supabase.requestPasswordReset('new-reset@example.test'),
-    (error) => {
-      assert.equal(error.name, 'QuotaExceededError');
-      return true;
-    }
-  );
-  assert.equal(recoverCalls, 1, 'the reset request was accepted before the local write failed');
+  assert.equal(await supabase.requestPasswordReset('new-reset@example.test'), true);
+  assert.equal(recoverCalls, 1);
   assert.equal(globalThis.localStorage.peek('nav_last_email_v2'), 'previous@example.test');
-  assert.equal(readRawSession()?.access_token, 'gap-reset-access');
-  assert.notEqual(globalThis.sessionStorage.peek('nav_profile_v2:gap-reset-user'), null);
+  assert.equal(readRawSession()?.access_token, 'fixed-reset-access');
+  assert.notEqual(globalThis.sessionStorage.peek('nav_profile_v2:fixed-reset-user'), null);
 }
 
-// Known gap 5: successful password authentication cannot be persisted when the
-// session write fails. The flow is fail-closed, but the raw storage error is not
-// normalized for the user.
+// Fixed regression 5: sign-in persistence failure is normalized and never authenticates the page.
 {
   resetBrowserState();
+  globalThis.localStorage.setItem('nav_last_email_v2', 'previous-signin@example.test');
   globalThis.localStorage.setFailure('set', (key) => key === 'nav_session_v2');
+  const supabase = await loadSupabase('signin-persist');
 
   let passwordCalls = 0;
   globalThis.fetch = async (url) => {
@@ -286,24 +254,68 @@ const supabase = await import(`../../assets/js/nav-v2/supabase-v2.js?storage-wri
     if (normalized.includes('/auth/v1/token?grant_type=password')) {
       passwordCalls += 1;
       return jsonResponse(200, {
-        access_token: 'gap-signin-access',
-        refresh_token: 'gap-signin-refresh',
-        user: { id: 'gap-signin-user', email: 'gap-signin@example.test' }
+        access_token: 'fixed-signin-access',
+        refresh_token: 'fixed-signin-refresh',
+        user: { id: 'fixed-signin-user', email: 'fixed-signin@example.test' }
       });
     }
     throw new Error(`Unexpected sign-in request: ${normalized}`);
   };
 
   await assert.rejects(
-    () => supabase.signIn('gap-signin@example.test', 'synthetic-password'),
+    () => supabase.signIn('fixed-signin@example.test', 'synthetic-password'),
     (error) => {
-      assert.equal(error.name, 'QuotaExceededError');
+      assert.equal(error.code, 'NAV_AUTH_STORAGE_UNAVAILABLE');
+      assert.equal(error.isAuthStorageUnavailable, true);
+      assert.equal(error.operation, 'save');
       return true;
     }
   );
   assert.equal(passwordCalls, 1);
-  assert.equal(readRawSession(), null, 'session write failure currently remains fail-closed');
-  assert.equal(globalThis.localStorage.peek('nav_last_email_v2'), 'gap-signin@example.test');
+  assert.equal(readRawSession(), null);
+  assert.equal(supabase.getCachedUser(), null);
+  assert.equal(globalThis.localStorage.peek('nav_last_email_v2'), 'previous-signin@example.test');
 }
 
-console.log('Navigator v2 Auth storage write gap evidence passed');
+// Fixed regression 6: refreshed session persistence failure blocks stale reads and RPC retry.
+{
+  resetBrowserState();
+  const staleSession = {
+    access_token: 'fixed-refresh-stale-access',
+    refresh_token: 'fixed-refresh-token',
+    user: { id: 'fixed-refresh-user', email: 'fixed-refresh@example.test' }
+  };
+  saveSession(staleSession);
+  globalThis.localStorage.setFailure('set', (key) => key === 'nav_session_v2');
+  const supabase = await loadSupabase('refresh-persist');
+
+  let rpcCalls = 0;
+  let refreshCalls = 0;
+  globalThis.fetch = async (url) => {
+    const normalized = String(url);
+    if (normalized.includes('/rest/v1/rpc/')) {
+      rpcCalls += 1;
+      return jsonResponse(401, { message: 'JWT expired' });
+    }
+    if (normalized.includes('/auth/v1/token?grant_type=refresh_token')) {
+      refreshCalls += 1;
+      return jsonResponse(200, {
+        access_token: 'fixed-refresh-new-access',
+        refresh_token: 'fixed-refresh-new-token',
+        user: staleSession.user
+      });
+    }
+    throw new Error(`Unexpected refresh-persist request: ${normalized}`);
+  };
+
+  await assert.rejects(
+    () => supabase.rpc('nav_v2_get_dashboard', {}, 2000),
+    (error) => error.code === 'NAV_AUTH_STORAGE_UNAVAILABLE'
+  );
+  assert.equal(rpcCalls, 1, 'RPC must not retry without a persisted refreshed session');
+  assert.equal(refreshCalls, 1);
+  assert.equal(supabase.getCachedUser(), null, 'current-page tombstone must block stale session reuse');
+  assert.equal(readRawSession()?.access_token, 'fixed-refresh-stale-access', 'raw stale value may remain but must be unreadable');
+}
+
+console.log('Navigator v2 Auth storage write fixed regressions passed');

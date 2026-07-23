@@ -1,76 +1,90 @@
 {
   "schema_version": 1,
-  "status": "repository_only_auth_storage_write_gap_evidence_runtime_unchanged",
+  "status": "repository_only_auth_storage_write_regression_source_integrated_build_prepared",
   "created_on": "2026-07-23",
-  "source_main_sha": "bcbd8f602360761d004cb33ebc270561ab65c180",
+  "source_main_sha": "ac46c2a2a55f80592da4b5610e65ffba7feceb1b",
   "production_applied": false,
   "production_auth_changed": false,
-  "runtime_code_changed": false,
+  "runtime_code_changed": true,
   "cloud_execution_allowed": false,
   "test_file": "tests/unit/nav-v2-auth-storage-write-gap.test.mjs",
+  "fingerprint_recovery_test_file": "tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs",
   "runtime_file_observed": "assets/js/nav-v2/supabase-v2.js",
-  "current_build_id": "20260711-01",
-  "proposed_runtime_build_id": "20260723-01",
-  "known_gaps": [
+  "previous_build_id": "20260711-01",
+  "current_build_id": "20260723-01",
+  "resolved_gaps": [
     {
       "id": "remember_email_failure_interrupts_invalid_session_cleanup",
       "severity": "high",
-      "current_result": "raw_storage_error_and_stale_session_profile_remain",
-      "required_fix": "make_convenience_email_write_best_effort_and_clear_session_before_or_independently_of_it"
+      "fixed_in_source": true,
+      "regression_result": "invalid_session_cleanup_completes_and_stale_session_profile_are_blocked_or_removed"
     },
     {
       "id": "session_remove_failure_interrupts_logout_cleanup",
       "severity": "high",
-      "current_result": "logout_rejects_and_profile_cleanup_is_skipped",
-      "required_fix": "fail_closed_session_tombstone_best_effort_remove_or_null_overwrite_and_unconditional_profile_cleanup"
+      "fixed_in_source": true,
+      "regression_result": "logout_uses_null_overwrite_fallback_and_profile_cleanup_continues"
     },
     {
       "id": "profile_cache_write_failure_breaks_successful_profile_rpc",
       "severity": "medium",
-      "current_result": "successful_rpc_is_reported_as_application_failure",
-      "required_fix": "treat_profile_cache_as_optional_best_effort_storage"
+      "fixed_in_source": true,
+      "regression_result": "successful_profile_rpc_result_is_returned_when_optional_cache_write_fails"
     },
     {
       "id": "password_reset_success_breaks_on_convenience_email_write",
       "severity": "medium",
-      "current_result": "accepted_reset_request_is_reported_as_failure",
-      "required_fix": "remembered_email_write_must_not_change_reset_request_outcome"
+      "fixed_in_source": true,
+      "regression_result": "accepted_password_reset_remains_successful_when_remembered_email_write_fails"
     },
     {
       "id": "session_persist_failure_has_raw_browser_error",
       "severity": "medium",
-      "current_result": "sign_in_remains_fail_closed_but_error_is_not_normalized",
-      "required_fix": "normalized_auth_storage_unavailable_error_and_no_stale_session_reuse"
+      "fixed_in_source": true,
+      "regression_result": "session_persist_failure_is_normalized_and_current_page_stays_logged_out"
+    },
+    {
+      "id": "refresh_session_persist_failure_retries_rpc_or_reuses_stale_session",
+      "severity": "high",
+      "fixed_in_source": true,
+      "regression_result": "refresh_persist_failure_blocks_stale_reads_and_does_not_retry_rpc"
     }
   ],
-  "planned_runtime_contract": {
+  "implemented_runtime_contract": {
     "session_reads_fail_closed": true,
     "session_clear_sets_in_memory_tombstone_before_storage_mutation": true,
+    "session_tombstone_is_scoped_to_exact_stale_fingerprint": true,
+    "different_cross_tab_session_fingerprint_restores_reads": true,
     "session_remove_uses_best_effort_remove_then_null_overwrite_fallback": true,
     "profile_cleanup_runs_even_when_session_remove_fails": true,
     "remembered_email_is_best_effort_only": true,
+    "remembered_email_read_is_fail_closed": true,
     "profile_cache_is_best_effort_only": true,
     "new_session_persist_failure_is_normalized": true,
     "new_session_persist_failure_keeps_current_page_logged_out": true,
     "refresh_does_not_retry_rpc_when_new_session_cannot_be_persisted": true,
+    "missing_storage_objects_are_fail_closed": true,
     "existing_auth_race_guards_remain": true
   },
-  "build_rollout_plan": {
+  "build_rollout": {
     "runtime_module": "assets/js/nav-v2/supabase-v2.js",
+    "helper_module": "assets/js/nav-v2/auth-storage-guard-v2.js",
     "build_config": "config/nav-v2-build.json",
     "diagnostic_page": "nav-system-check-v2.html",
     "page_selection": "all root *-v2.html files importing ./supabase-v2.js",
-    "minimum_expected_pages": 20,
-    "required_updates": [
+    "minimum_expected_pages": 35,
+    "exact_pages_updated_in_branch": 35,
+    "required_updates_completed_in_branch": [
       "NAV_V2_BUILD_ID",
       "config build_id",
       "all scoped importmap targets",
-      "diagnostic module cache bust"
+      "diagnostic module cache bust",
+      "storage write fixed regressions",
+      "fingerprint tombstone recovery regression"
     ],
-    "single_atomic_commit_required": true,
+    "single_squash_merge_required": true,
     "static_build_checker_required": true,
     "all_existing_auth_suites_required": true,
-    "new_storage_write_regression_required": true,
     "production_supabase_change_required": false
   },
   "test_boundary": {
@@ -86,17 +100,17 @@
     "fixture_email_domain": "example.test"
   },
   "result": {
-    "decision": "auth_storage_write_failures_confirmed_repository_only_runtime_hardening_planned",
-    "runtime_hardening_completed": false,
+    "decision": "auth_storage_write_failures_fixed_in_source_build_rollout_prepared_not_live_verified",
+    "runtime_hardening_completed": true,
     "runtime_rollout_completed": false,
-    "build_bump_completed": false,
+    "build_bump_completed": true,
     "authenticated_role_e2e_completed": false,
+    "live_browser_storage_failure_verified": false,
     "preview_branch_ready": false,
     "production_auth_change_ready": false
   },
   "forbidden_claims": [
-    "storage_write_failures_are_fixed",
-    "runtime_hardening_is_deployed",
+    "runtime_hardening_is_live_verified",
     "real_browser_quota_failure_is_verified",
     "real_browser_security_error_is_verified",
     "authenticated_role_e2e_is_complete",

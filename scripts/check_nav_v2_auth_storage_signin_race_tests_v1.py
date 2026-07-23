@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/nav-v2-auth-storage-signin-race-tests-v1.json"
 TEST = ROOT / "tests/unit/nav-v2-auth-storage-signin-race.test.mjs"
 RUNTIME = ROOT / "assets/js/nav-v2/supabase-v2.js"
+STORAGE_HELPER = ROOT / "assets/js/nav-v2/auth-storage-guard-v2.js"
 HELPER = ROOT / "assets/js/nav-v2/auth-session-recovery-v2.js"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-auth-storage-signin-race-tests-v1.yml"
 DOC = ROOT / "docs/NAV_V2_AUTH_STORAGE_SIGNIN_RACE_TESTS_V1_2026-07-22.md"
@@ -31,12 +32,13 @@ def require(condition: bool, message: str) -> None:
 
 
 def main() -> None:
-    for path in (CONFIG, TEST, RUNTIME, HELPER, WORKFLOW, DOC):
+    for path in (CONFIG, TEST, RUNTIME, STORAGE_HELPER, HELPER, WORKFLOW, DOC):
         require(path.is_file(), f"missing required file: {path.relative_to(ROOT)}")
 
     data = json.loads(CONFIG.read_text(encoding="utf-8"))
     test_source = TEST.read_text(encoding="utf-8")
     runtime = RUNTIME.read_text(encoding="utf-8")
+    storage_helper = STORAGE_HELPER.read_text(encoding="utf-8")
     helper = HELPER.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
     docs = DOC.read_text(encoding="utf-8")
@@ -115,10 +117,14 @@ def main() -> None:
     ):
         require(action in forbidden_actions, f"missing forbidden action: {action}")
 
+    # Historical race behavior remains present after direct storage operations
+    # moved behind the fail-closed storage controller.
     for marker in (
+        "createAuthStorageController",
         "function readSession()",
-        "JSON.parse(localStorage.getItem(SESSION_KEY) || 'null')",
+        "return authStorage.readSession();",
         "export function getCachedProfile()",
+        "return authStorage.readProfile(profileCacheKey());",
         "export async function signIn(email, password)",
         "writeSession(null);",
         "if (isReplacementAuthSession(currentSession, session))",
@@ -126,6 +132,13 @@ def main() -> None:
         ").finally(() => { refreshRequest = null; });",
     ):
         require(marker in runtime, f"runtime marker missing: {marker}")
+    for marker in (
+        "function readSession()",
+        "if (!blockedSessionValueKnown || value === blockedSessionValue) return null;",
+        "clearSessionBlock();",
+        "function persistSession(nextSession)",
+    ):
+        require(marker in storage_helper, f"storage helper marker missing: {marker}")
     for marker in ("isReplacementAuthSession", "isSameAuthSession", "NAV_AUTH_SESSION_EXPIRED"):
         require(marker in helper, f"helper marker missing: {marker}")
 
@@ -170,7 +183,7 @@ def main() -> None:
 
     require(EXPECTED_DECISION in docs, "documentation decision drift")
     require("не является authenticated role e2e" in docs_lower, "documentation must preserve E2E boundary")
-    require("runtime-код не меняется" in docs_lower, "documentation must preserve runtime boundary")
+    require("runtime-код не меняется" in docs_lower, "documentation must preserve original slice boundary")
     require("malformed storage" in docs_lower, "documentation must describe malformed storage")
 
     print("Navigator v2 Auth storage/sign-in race test contract passed")
