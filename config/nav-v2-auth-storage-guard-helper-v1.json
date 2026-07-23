@@ -12,6 +12,7 @@
   "helper_file": "assets/js/nav-v2/auth-storage-guard-v2.js",
   "test_file": "tests/unit/nav-v2-auth-storage-guard-helper.test.mjs",
   "missing_storage_test_file": "tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs",
+  "fingerprint_recovery_test_file": "tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs",
   "target_runtime_file": "assets/js/nav-v2/supabase-v2.js",
   "previous_build_id": "20260711-01",
   "current_build_id": "20260723-01",
@@ -39,10 +40,11 @@
     "profile_cache_write_is_best_effort": true,
     "session_remove_failure_uses_null_overwrite_fallback": true,
     "profile_cleanup_runs_after_session_remove_failure": true,
-    "double_clear_failure_blocks_stale_session_in_current_page": true,
+    "double_clear_failure_blocks_exact_stale_session_in_current_page": true,
+    "different_cross_tab_session_fingerprint_restores_reads": true,
     "profile_cleanup_continues_after_one_remove_failure": true,
     "session_persist_failure_is_normalized": true,
-    "session_persist_failure_blocks_stale_reads": true,
+    "session_persist_failure_blocks_exact_stale_reads": true,
     "later_successful_persist_restores_reads": true
   },
   "integration_results": {
@@ -53,10 +55,11 @@
     "direct_profile_cache_write_replaced": true,
     "cross_tab_refresh_race_guards_preserved": true,
     "logout_and_signin_race_guards_preserved": true,
-    "all_scoped_importmaps_updated_in_branch": true,
+    "all_35_scoped_importmaps_updated_in_branch": true,
     "build_config_updated": true,
     "diagnostics_cache_bust_updated": true,
     "gap_evidence_converted_to_fixed_regression": true,
+    "fingerprint_tombstone_regression_added": true,
     "production_supabase_change_required": false
   },
   "test_boundary": {
