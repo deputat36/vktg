@@ -15,7 +15,8 @@
   "fingerprint_recovery_test_file": "tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs",
   "target_runtime_file": "assets/js/nav-v2/supabase-v2.js",
   "previous_build_id": "20260711-01",
-  "current_build_id": "20260723-01",
+  "initial_integrated_build_id": "20260723-01",
+  "current_build_id": "20260723-02",
   "exported_contract": {
     "error_code": "NAV_AUTH_STORAGE_UNAVAILABLE",
     "factory": "createAuthStorageController",
@@ -56,6 +57,7 @@
     "cross_tab_refresh_race_guards_preserved": true,
     "logout_and_signin_race_guards_preserved": true,
     "all_35_scoped_importmaps_updated_in_branch": true,
+    "normalized_importmap_mappings_required": true,
     "build_config_updated": true,
     "diagnostics_cache_bust_updated": true,
     "gap_evidence_converted_to_fixed_regression": true,

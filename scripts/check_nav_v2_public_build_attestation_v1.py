@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,11 +14,6 @@ RUNNER = ROOT / "scripts/attest_nav_v2_public_build_v1.py"
 TEST = ROOT / "tests/unit/test_nav_v2_public_build_attestation_v1.py"
 WORKFLOW = ROOT / ".github/workflows/nav-v2-public-build-attestation-v1.yml"
 DOC = ROOT / "docs/NAV_V2_PUBLIC_BUILD_ATTESTATION_V1_2026-07-23.md"
-
-ALLOWED_DECISIONS = {
-    "public_build_attestation_contract_prepared_requires_successful_live_ci",
-    "public_build_20260723_01_attested_read_only_via_github_pages_ci",
-}
 
 
 def require(condition: bool, message: str) -> None:
@@ -39,20 +35,12 @@ def main() -> None:
     docs_lower = docs.lower()
 
     require(data.get("schema_version") == 1, "schema_version must be 1")
-    require(data.get("created_on") == "2026-07-23", "unexpected created_on")
-    require(
-        data.get("status") == "repository_only_public_build_attestation_contract",
-        "unexpected contract status",
-    )
-    require(
-        data.get("public_base_url") == "https://deputat36.github.io/vktg/",
-        "unexpected public base URL",
-    )
-    require(
-        data.get("expected_build_source") == "config/nav-v2-build.json",
-        "canonical build source must remain config/nav-v2-build.json",
-    )
-    require(build.get("build_id") == "20260723-01", "unexpected canonical build id")
+    require(data.get("status") == "repository_only_public_build_attestation_contract", "unexpected contract status")
+    require(data.get("public_base_url") == "https://deputat36.github.io/vktg/", "unexpected public base URL")
+    require(data.get("expected_build_source") == "config/nav-v2-build.json", "canonical build source mismatch")
+
+    build_id = str(build.get("build_id") or "")
+    require(re.fullmatch(r"\d{8}-\d{2}", build_id) is not None, "unexpected canonical build id")
 
     acceptance = data.get("acceptance") or {}
     for flag in (
@@ -83,25 +71,31 @@ def main() -> None:
         require(boundaries.get(flag) is False, f"boundary must remain false: {flag}")
 
     result = data.get("result") or {}
-    decision = result.get("decision")
-    require(decision in ALLOWED_DECISIONS, f"unexpected decision: {decision}")
+    decision = str(result.get("decision") or "")
+    pending_decision = "public_build_attestation_contract_prepared_requires_successful_live_ci"
+    passed_decision = f"public_build_{build_id.replace('-', '_')}_attested_read_only_via_github_pages_ci"
+    require(decision in {pending_decision, passed_decision}, f"unexpected decision: {decision}")
     require(result.get("authenticated_role_e2e_completed") is False, "authenticated E2E must remain false")
     require(result.get("live_browser_storage_failure_verified") is False, "live storage failure claim is forbidden")
 
-    if decision == "public_build_attestation_contract_prepared_requires_successful_live_ci":
+    if decision == pending_decision:
+        require(data.get("pending_build_id") == build_id, "pending build id must match canonical build")
         require(result.get("live_public_build_verified") is False, "pending contract cannot claim live verification")
         require(result.get("runtime_rollout_completed") is False, "pending contract cannot claim rollout")
         require(result.get("evidence_run_id") is None, "pending contract must not include run id")
         require(result.get("evidence_commit_sha") is None, "pending contract must not include commit sha")
+        require("evidence" not in data, "pending contract must not expose current evidence")
+        previous = data.get("previous_successful_attestation") or {}
+        require((previous.get("result") or {}).get("live_public_build_verified") is True, "historical successful evidence is required")
     else:
-        require(result.get("live_public_build_verified") is True, "passed attestation must claim public build only")
-        require(result.get("runtime_rollout_completed") is True, "passed attestation must mark public rollout")
+        require(data.get("pending_build_id") in {None, build_id}, "passed contract pending build drift")
+        require(result.get("live_public_build_verified") is True, "passed attestation must claim public build")
+        require(result.get("runtime_rollout_completed") is True, "passed attestation must mark rollout")
         require(isinstance(result.get("evidence_run_id"), int), "passed attestation requires numeric run id")
-        require(
-            isinstance(result.get("evidence_commit_sha"), str)
-            and len(result.get("evidence_commit_sha")) == 40,
-            "passed attestation requires full evidence commit SHA",
-        )
+        require(isinstance(result.get("evidence_commit_sha"), str) and len(result.get("evidence_commit_sha")) == 40, "passed attestation requires full commit SHA")
+        evidence = data.get("evidence") or {}
+        require(evidence.get("expected_build_id") == build_id, "evidence build id mismatch")
+        require(evidence.get("matched_page_count") >= int(build.get("minimum_importmap_pages") or 0), "insufficient matched pages")
 
     forbidden_actions = set(data.get("forbidden_actions") or [])
     for action in (
@@ -126,9 +120,9 @@ def main() -> None:
         "sha256_bytes",
         "inspect_importmap",
         "nav_build_attestation",
-        "authenticated_requests\": False",
-        "credentials_used\": False",
-        "production_mutation\": False",
+        'authenticated_requests": False',
+        'credentials_used": False',
+        'production_mutation": False',
     ):
         require(marker in runner, f"runner marker missing: {marker}")
 
@@ -145,23 +139,12 @@ def main() -> None:
     require("python3 scripts/check_nav_v2_public_build_attestation_v1.py" in workflow, "workflow must run contract checker")
     require("python3 -m unittest tests/unit/test_nav_v2_public_build_attestation_v1.py" in workflow, "workflow must run offline tests")
     require("python3 scripts/attest_nav_v2_public_build_v1.py" in workflow, "workflow must run live attestation")
-    require("actions/upload-artifact@v4" in workflow, "workflow must preserve public evidence artifact")
+    require("actions/upload-artifact@v4" in workflow, "workflow must preserve evidence")
 
     for prohibited in (
-        "secrets.",
-        "nav_e2e_email",
-        "nav_e2e_password",
-        "service_role",
-        "authorization:",
-        "supabase.co",
-        "execute_sql",
-        "apply_migration",
-        "confirm_cost",
-        "create_branch",
-        "deploy_edge_function",
-        "curl ",
-        "wget ",
-        "psql ",
+        "secrets.", "nav_e2e_email", "nav_e2e_password", "service_role", "authorization:",
+        "supabase.co", "execute_sql", "apply_migration", "confirm_cost", "create_branch",
+        "deploy_edge_function", "curl ", "wget ", "psql ",
     ):
         require(prohibited not in workflow_lower, f"workflow contains prohibited token: {prohibited.strip()}")
 
@@ -169,9 +152,10 @@ def main() -> None:
     require("только публичные html/js assets" in docs_lower, "docs must preserve public-only boundary")
     require("supabase не изменяется" in docs_lower, "docs must preserve Supabase boundary")
     require("реальные ошибки browser storage" in docs_lower, "docs must reject live storage-error claim")
+    require(build_id in docs, "documentation canonical build drift")
     require(decision in docs, "documentation decision drift")
 
-    print("Navigator v2 public build attestation contract passed")
+    print(f"Navigator v2 public build attestation contract passed: build {build_id}, decision {decision}")
 
 
 if __name__ == "__main__":

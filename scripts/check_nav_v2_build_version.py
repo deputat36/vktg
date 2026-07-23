@@ -39,11 +39,20 @@ def main() -> int:
             errors.append(f"{shared_rel}: missing canonical build marker {marker!r}")
         if "document.documentElement.dataset.navV2Build = NAV_V2_BUILD_ID" not in shared_source:
             errors.append(f"{shared_rel}: build marker is not exposed on documentElement")
+        guard_query = f"./auth-storage-guard-v2.js?v={build_id}"
+        if guard_query not in shared_source:
+            errors.append(f"{shared_rel}: missing storage guard cache-bust {guard_query}")
 
     target = f"./{shared_rel}?v={build_id}"
-    specifiers = ["./supabase-v2.js", *(config.get("legacy_specifiers") or [])]
-    checked_pages = 0
+    short_specifiers = ["./supabase-v2.js", *(config.get("legacy_specifiers") or [])]
+    required_specifiers: list[str] = []
+    for specifier in short_specifiers:
+        required_specifiers.append(specifier)
+        required_specifiers.append(
+            f"./assets/js/nav-v2/{str(specifier).removeprefix('./')}"
+        )
 
+    checked_pages = 0
     for page_path in sorted(ROOT.glob("*-v2.html")):
         source = page_path.read_text(encoding="utf-8")
         if '"./supabase-v2.js"' not in source:
@@ -59,7 +68,7 @@ def main() -> int:
             errors.append(f"{page_path.name}: invalid importmap JSON: {error}")
             continue
         imports = (importmap.get("scopes") or {}).get("./assets/js/nav-v2/", {})
-        for specifier in specifiers:
+        for specifier in required_specifiers:
             if imports.get(specifier) != target:
                 errors.append(
                     f"{page_path.name}: {specifier} must resolve to {target}, "
@@ -92,7 +101,8 @@ def main() -> int:
         return 1
 
     print(
-        f"Navigator v2 build version passed: {checked_pages} pages use build {build_id}"
+        f"Navigator v2 build version passed: {checked_pages} pages use build {build_id} "
+        f"with {len(required_specifiers)} scoped mappings"
     )
     return 0
 

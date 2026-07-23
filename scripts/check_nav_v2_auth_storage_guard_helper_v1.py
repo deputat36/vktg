@@ -61,10 +61,12 @@ def main() -> None:
     ]:
         require(result[key] is False, f"{key} must remain false")
 
-    require(build["build_id"] == config["current_build_id"], "current build id drifted")
-    require(config["previous_build_id"] != build["build_id"], "build id was not advanced")
+    build_id = config["current_build_id"]
+    require(build["build_id"] == build_id, "current build id drifted")
+    require(config["previous_build_id"] != build_id, "build id was not advanced")
+    require(config["initial_integrated_build_id"] != build_id, "current build must record later rollout")
     require(build["minimum_importmap_pages"] == 35, "all 35 shared pages must remain required")
-    require("auth-storage-guard-v2.js?v=20260723-01" in runtime, "runtime helper import missing")
+    require(f"auth-storage-guard-v2.js?v={build_id}" in runtime, "runtime helper import missing")
     require("createAuthStorageController" in runtime, "runtime controller creation missing")
 
     for marker in [
@@ -85,8 +87,7 @@ def main() -> None:
     ]:
         require(marker in helper, f"helper marker missing: {marker}")
 
-    operations = config["exported_contract"]["operations"]
-    for operation in operations:
+    for operation in config["exported_contract"]["operations"]:
         require(operation in helper, f"exported operation missing: {operation}")
 
     for marker in [
@@ -149,6 +150,7 @@ def main() -> None:
         "cross_tab_refresh_race_guards_preserved",
         "logout_and_signin_race_guards_preserved",
         "all_35_scoped_importmaps_updated_in_branch",
+        "normalized_importmap_mappings_required",
         "build_config_updated",
         "diagnostics_cache_bust_updated",
         "gap_evidence_converted_to_fixed_regression",
@@ -173,18 +175,12 @@ def main() -> None:
 
     require("permissions:\n  contents: read" in workflow, "workflow permissions are not read-only")
     require("node tests/unit/nav-v2-auth-storage-guard-helper.test.mjs" in workflow, "helper test missing")
-    require(
-        "node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow,
-        "missing-storage test missing",
-    )
-    require(
-        "node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow,
-        "fingerprint recovery test missing",
-    )
+    require("node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow, "missing-storage test missing")
+    require("node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow, "fingerprint recovery test missing")
     require("node tests/unit/nav-v2-auth-storage-write-gap.test.mjs" in workflow, "fixed regression missing")
     require("python3 scripts/check_nav_v2_build_version.py" in workflow, "build checker missing")
 
-    print("Navigator v2 integrated Auth storage guard helper contract passed")
+    print(f"Navigator v2 integrated Auth storage guard helper contract passed: build {build_id}")
 
 
 if __name__ == "__main__":

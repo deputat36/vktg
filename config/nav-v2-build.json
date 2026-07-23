@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "build_id": "20260723-01",
+  "build_id": "20260723-02",
   "shared_module": "assets/js/nav-v2/supabase-v2.js",
   "minimum_importmap_pages": 35,
   "legacy_specifiers": [

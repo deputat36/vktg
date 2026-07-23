@@ -1,6 +1,6 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../../config/supabase.js';
 import { minimizeNavigatorReadPayload } from './read-layer-minimization-model-v2.js?v=20260716-01';
-import { createAuthStorageController } from './auth-storage-guard-v2.js?v=20260723-01';
+import { createAuthStorageController } from './auth-storage-guard-v2.js?v=20260723-02';
 import {
   NAV_AUTH_REFRESH_LOCK_NAME,
   createAuthSessionExpiredError,
@@ -11,7 +11,7 @@ import {
   shouldInvalidateSessionAfterRefreshFailure
 } from './auth-session-recovery-v2.js?v=20260721-02';
 
-export const NAV_V2_BUILD_ID = '20260723-01';
+export const NAV_V2_BUILD_ID = '20260723-02';
 if (typeof document !== 'undefined') {
   document.documentElement.dataset.navV2Build = NAV_V2_BUILD_ID;
 }

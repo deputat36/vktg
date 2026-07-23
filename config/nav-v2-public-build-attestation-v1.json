@@ -32,33 +32,13 @@
     "leader_schema_changed": false
   },
   "result": {
-    "decision": "public_build_20260723_01_attested_read_only_via_github_pages_ci",
-    "live_public_build_verified": true,
-    "runtime_rollout_completed": true,
+    "decision": "public_build_attestation_contract_prepared_requires_successful_live_ci",
+    "live_public_build_verified": false,
+    "runtime_rollout_completed": false,
     "authenticated_role_e2e_completed": false,
     "live_browser_storage_failure_verified": false,
-    "evidence_run_id": 29989423379,
-    "evidence_commit_sha": "300e3f221ae9e755a6390ccea846121e358190a2"
-  },
-  "evidence": {
-    "observed_at": "2026-07-23T07:51:10.572762+00:00",
-    "expected_build_id": "20260723-01",
-    "repository_page_count": 35,
-    "matched_page_count": 35,
-    "diagnostic_page": "nav-system-check-v2.html",
-    "diagnostic_status": "matched",
-    "artifact_id": 8556415410,
-    "artifact_digest": "sha256:d68cf8bd64011c62c951b3c39dd475d0d6a4df10ea7c3a3aa47e45c74335bcbb",
-    "assets": {
-      "assets/js/nav-v2/supabase-v2.js": {
-        "sha256": "febb71791013d24a0d9dc1296cb84f586848b93ba2bf603119a4bc6c247ce9a2",
-        "bytes": 18395
-      },
-      "assets/js/nav-v2/auth-storage-guard-v2.js": {
-        "sha256": "4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10",
-        "bytes": 5881
-      }
-    }
+    "evidence_run_id": null,
+    "evidence_commit_sha": null
   },
   "forbidden_actions": [
     "use_real_accounts_or_tokens",
@@ -71,5 +51,37 @@
     "apply_production_migration",
     "change_production_data",
     "change_leader_schema"
-  ]
+  ],
+  "previous_successful_attestation": {
+    "result": {
+      "decision": "public_build_20260723_01_attested_read_only_via_github_pages_ci",
+      "live_public_build_verified": true,
+      "runtime_rollout_completed": true,
+      "authenticated_role_e2e_completed": false,
+      "live_browser_storage_failure_verified": false,
+      "evidence_run_id": 29989423379,
+      "evidence_commit_sha": "300e3f221ae9e755a6390ccea846121e358190a2"
+    },
+    "evidence": {
+      "observed_at": "2026-07-23T07:51:10.572762+00:00",
+      "expected_build_id": "20260723-01",
+      "repository_page_count": 35,
+      "matched_page_count": 35,
+      "diagnostic_page": "nav-system-check-v2.html",
+      "diagnostic_status": "matched",
+      "artifact_id": 8556415410,
+      "artifact_digest": "sha256:d68cf8bd64011c62c951b3c39dd475d0d6a4df10ea7c3a3aa47e45c74335bcbb",
+      "assets": {
+        "assets/js/nav-v2/supabase-v2.js": {
+          "sha256": "febb71791013d24a0d9dc1296cb84f586848b93ba2bf603119a4bc6c247ce9a2",
+          "bytes": 18395
+        },
+        "assets/js/nav-v2/auth-storage-guard-v2.js": {
+          "sha256": "4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10",
+          "bytes": 5881
+        }
+      }
+    }
+  },
+  "pending_build_id": "20260723-02"
 }
