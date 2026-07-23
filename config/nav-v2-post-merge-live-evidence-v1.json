@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "created_on": "2026-07-23",
+  "status": "post_merge_public_runtime_evidence_requested",
+  "repository": "deputat36/vktg",
+  "merged_main_sha": "ecda0aeacd48845194b28c7d7e8d50ef068b4724",
+  "expected_build_id": "20260723-02",
+  "public_base_url": "https://deputat36.github.io/vktg/",
+  "required_checks": {
+    "source_hash_attestation": true,
+    "all_35_importmap_pages": true,
+    "desktop_mobile_browser_runtime": true,
+    "exact_versioned_shared_module": true,
+    "exact_versioned_storage_guard": true,
+    "guest_login_gate": true,
+    "console_and_page_errors_absent": true
+  },
+  "boundaries": {
+    "public_assets_only": true,
+    "credentials_used": false,
+    "authenticated_requests": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "supabase_management_api_called": false,
+    "production_mutation": false,
+    "leader_schema_changed": false
+  },
+  "result": {
+    "decision": "post_merge_live_evidence_requested_not_yet_observed",
+    "verified": false,
+    "evidence_run_id": null,
+    "evidence_commit_sha": null,
+    "artifact_id": null,
+    "artifact_digest": null
+  }
+}
