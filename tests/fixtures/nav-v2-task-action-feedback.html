@@ -10,21 +10,54 @@
   <main id="app" class="nav-v2-shell mobile-first-screen-card">
     <section class="hero"><h1><span id="demoBadge" class="pill blue" hidden>ДЕМО</span> Карточка сделки</h1></section>
     <div id="pageStatus" class="status">Выберите действие по задаче.</div>
+
     <section class="card">
-      <h2>Legacy-задача</h2>
+      <h2>Открытая legacy-задача</h2>
       <div class="list">
-        <div class="list-item" id="taskItem">
+        <div class="list-item" id="openTaskItem">
           <div><span class="pill yellow">важно</span> <span class="pill">открыта</span> <span class="pill blue">СПН</span></div>
           <b>Получить документ</b>
           <p class="muted">Запросить документ у клиента и подтвердить результат.</p>
           <div class="actions">
-            <button id="taskProgress" class="btn light" data-task-status="in_progress" data-task-id="task-1" type="button">В работе</button>
-            <button id="taskDone" class="btn green" data-task-status="done" data-task-id="task-1" type="button">Готово</button>
-            <button id="taskOpen" class="btn light" data-task-status="open" data-task-id="task-1" type="button">Открыта</button>
+            <button id="openTaskStart" class="btn light" data-task-status="in_progress" data-task-id="task-open" type="button">В работе</button>
+            <button id="openTaskDone" class="btn green" data-task-status="done" data-task-id="task-open" type="button">Готово</button>
+            <button id="openTaskReopen" class="btn light" data-task-status="open" data-task-id="task-open" type="button">Открыта</button>
           </div>
         </div>
       </div>
     </section>
+
+    <section class="card">
+      <h2>Legacy-задача в работе</h2>
+      <div class="list">
+        <div class="list-item" id="progressTaskItem">
+          <div><span class="pill yellow">важно</span> <span class="pill">в работе</span> <span class="pill blue">СПН</span></div>
+          <b>Согласовать порядок расчётов</b>
+          <p class="muted">Получить подтверждение сторон и записать итог.</p>
+          <div class="actions">
+            <button id="progressTaskStart" class="btn light" data-task-status="in_progress" data-task-id="task-progress" type="button">В работе</button>
+            <button id="progressTaskDone" class="btn green" data-task-status="done" data-task-id="task-progress" type="button">Готово</button>
+            <button id="progressTaskReopen" class="btn light" data-task-status="open" data-task-id="task-progress" type="button">Открыта</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Завершённая legacy-задача</h2>
+      <div class="list">
+        <div class="list-item" id="doneTaskItem">
+          <div><span class="pill blue">обычно</span> <span class="pill green">готово</span> <span class="pill blue">СПН</span></div>
+          <b>Проверить данные сделки</b>
+          <div class="actions">
+            <button id="doneTaskStart" class="btn light" data-task-status="in_progress" data-task-id="task-done" type="button">В работе</button>
+            <button id="doneTaskDone" class="btn green" data-task-status="done" data-task-id="task-done" type="button">Готово</button>
+            <button id="doneTaskReopen" class="btn light" data-task-status="open" data-task-id="task-done" type="button">Открыта</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Bounded-задача</h2>
       <div class="list">
@@ -55,6 +88,6 @@
       document.getElementById('demoBadge').hidden = false;
     }
   </script>
-  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260717-01"></script>
+  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260724-01"></script>
 </body>
 </html>

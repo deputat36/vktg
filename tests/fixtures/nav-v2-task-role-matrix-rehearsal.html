@@ -18,10 +18,10 @@
       <h2>Legacy-задача</h2>
       <div class="list">
         <div class="list-item" id="legacyTaskItem">
-          <b>Подтвердить выполнение legacy-задачи</b>
-          <p class="muted">Проверяется точный старый RPC payload и отсутствие competing onclick.</p>
+          <b>Начать выполнение legacy-задачи</b>
+          <p class="muted">Проверяется разрешённый переход open → in_progress, точный старый RPC payload и отсутствие competing onclick.</p>
           <div class="actions">
-            <button id="legacyDone" class="btn green" data-task-status="done" data-task-id="task-role-legacy" type="button">Готово</button>
+            <button id="legacyStart" class="btn primary" data-task-status="in_progress" data-task-id="task-role-legacy" type="button">Начать работу</button>
           </div>
         </div>
       </div>
@@ -69,6 +69,6 @@
       button.onclick = () => { window.__baseTaskHandlerCalls += 1; };
     });
   </script>
-  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260717-01"></script>
+  <script type="module" src="/assets/js/nav-v2/task-action-guard-v2.js?v=20260724-01"></script>
 </body>
 </html>

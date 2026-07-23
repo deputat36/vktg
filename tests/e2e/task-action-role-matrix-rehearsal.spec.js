@@ -20,6 +20,8 @@ function permissionPayload(scenario) {
     tasks: [
       {
         id: 'task-role-legacy',
+        title: 'Начать выполнение legacy-задачи',
+        status: 'open',
         assigned_role: scenario.role,
         can_change_status: scenario.legacy
       },
@@ -99,19 +101,20 @@ async function routeRoleMatrixRpc(page, scenario) {
 }
 
 for (const scenario of scenarios) {
-  test(`${scenario.name}: role-scoped DTO controls the legacy action through the single authoritative handler`, async ({ page }, testInfo) => {
+  test(`${scenario.name}: role-scoped DTO controls the legacy start action through the single authoritative handler`, async ({ page }, testInfo) => {
     const failures = captureRuntimeFailures(page);
     const calls = await routeRoleMatrixRpc(page, scenario);
     await openPage(page, `${fixture}&scenario=${scenario.name}`);
 
-    const button = page.locator('#legacyDone');
+    const button = page.locator('#legacyStart');
     if (scenario.legacy) {
       await expect(button).toHaveAttribute('data-task-action-guard', 'ready');
+      await expect(button).toHaveText('Начать работу');
       await button.click();
       await expect.poll(() => calls.legacyMutationCalls.length).toBe(1);
       expect(calls.legacyMutationCalls[0].body).toEqual({
         p_task_id: 'task-role-legacy',
-        p_status: 'done'
+        p_status: 'in_progress'
       });
     } else {
       await expect(button).toBeDisabled();

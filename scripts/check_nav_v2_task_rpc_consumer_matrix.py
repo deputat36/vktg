@@ -137,8 +137,11 @@ def main() -> int:
 
     require(guard, (
         'taskActionRoutePreview', "rpc('nav_v2_get_deal_card_lite'",
+        "await rpc('nav_v2_add_comment'",
         'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
         'const BOUNDED_TRANSPORT_ENABLED = false;', 'event.stopImmediatePropagation()',
+        "p_visibility: 'team'",
+        'completionEvidence.set(taskId, reference)',
     ), GUARD.name, errors)
 
     require(edge_snapshot, ('if (action === "update_task_status")', 'nav_v2_update_task_status'), EDGE_SNAPSHOT.name, errors)
@@ -191,7 +194,12 @@ def main() -> int:
 
     require(dual_e2e, ('legacy and bounded actions select exactly one transport-free route', 'toEqual([])'), DUAL_E2E.name, errors)
     require(pipeline_e2e, ('one browser action produces one exact validated RPC preview without network', 'expect(networkCalls).toEqual([])'), PIPELINE_E2E.name, errors)
-    require(runtime_e2e, ('authoritative handler performs one legacy mutation', 'base onclick stays dormant'), RUNTIME_E2E.name, errors)
+    require(runtime_e2e, (
+        'cold first click checks permission and starts an open task with one status mutation',
+        'completion saves team result first and then marks the task done',
+        'status failure after saved result is recoverable without duplicate comment',
+        '__baseTaskHandlerCalls',
+    ), RUNTIME_E2E.name, errors)
 
     closed = set(matrix.get('closed_blockers') or [])
     for blocker in (
@@ -232,7 +240,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task RPC consumer matrix v5 passed: the frontend handler remains authoritative, deployed Edge v4 is pinned as an immutable legacy snapshot, the candidate Edge route is source-integrated behind a disabled flag, and database/deployment/transport remain blocked')
+    print('Navigator v2 task RPC consumer matrix v5 passed: the frontend handler remains authoritative, legacy completion adds one team evidence comment before the existing status RPC, deployed Edge v4 is pinned as an immutable legacy snapshot, candidate Edge remains disabled, and database/deployment/transport remain blocked')
     return 0
 
 

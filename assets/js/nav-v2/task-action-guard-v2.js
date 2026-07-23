@@ -1,6 +1,11 @@
 import { rpc } from './supabase-v2.js?v=20260625-1320';
 import { applyPageActionFeedback } from './page-action-feedback-v2.js?v=20260715-01';
 import { taskActionControlModel, taskActionRoutePreview } from './task-action-router-v2.js?v=20260716-01';
+import {
+  buildTaskCompletionComment,
+  taskLifecyclePhase,
+  taskLifecycleView
+} from './task-lifecycle-closure-model-v1.js?v=20260724-01';
 
 const dealId = new URLSearchParams(location.search).get('id');
 const BOUNDED_TRANSPORT_ENABLED = false;
@@ -10,6 +15,7 @@ let loaded = false;
 let loading = null;
 let applyQueued = false;
 const mutations = new Set();
+const completionEvidence = new Map();
 
 function boolValue(value) {
   return value === true || value === 'true';
@@ -54,6 +60,10 @@ function taskButtons(taskId) {
   return [...document.querySelectorAll(`button[data-task-id="${escaped}"][data-task-action],button[data-task-id="${escaped}"][data-task-status]`)];
 }
 
+function taskContainer(taskId) {
+  return taskButtons(taskId)[0]?.closest('.list-item') || null;
+}
+
 function isDemoCard() {
   return [...document.querySelectorAll('.pill.blue')].some((node) => node.textContent.trim() === 'ДЕМО')
     || document.body.textContent.includes('Тестовая карточка');
@@ -88,26 +98,113 @@ function clearHint(container) {
   container?.querySelector('[data-task-permission-hint]')?.remove();
 }
 
+function lifecycleInstruction(container, task) {
+  if (!container || Number(task?.task_contract_version) === 2) return;
+  const view = taskLifecycleView(task, task?.can_change_status === true);
+  let instruction = container.querySelector('[data-task-lifecycle-instruction]');
+  if (!instruction) {
+    instruction = document.createElement('div');
+    instruction.dataset.taskLifecycleInstruction = 'true';
+    instruction.className = 'status';
+    const actions = container.querySelector('.actions');
+    if (actions) actions.insertAdjacentElement('beforebegin', instruction);
+    else container.appendChild(instruction);
+  }
+  instruction.className = `status ${view.phase === 'done' ? 'ok' : view.phase === 'cancelled' ? '' : 'warn'}`;
+  instruction.innerHTML = `<b>${view.phase === 'open' ? 'Шаг 1 из 2.' : view.phase === 'in_progress' ? 'Шаг 2 из 2.' : view.phase === 'done' ? 'Результат подтверждён.' : 'Задача отменена.'}</b> ${view.instruction}`;
+}
+
+function ensureCompletionEditor(container, task) {
+  if (!container || Number(task?.task_contract_version) === 2) return;
+  const phase = taskLifecyclePhase(task);
+  const existing = container.querySelector('[data-task-completion-editor]');
+  if (phase !== 'in_progress' || task?.can_change_status !== true) {
+    existing?.remove();
+    return;
+  }
+  if (existing) return;
+
+  const taskId = String(task?.id || '');
+  const wrapper = document.createElement('div');
+  wrapper.dataset.taskCompletionEditor = 'true';
+  wrapper.className = 'field';
+  const inputId = `taskCompletionResult-${taskId}`;
+  wrapper.innerHTML = `<label for="${inputId}">Результат выполнения</label>
+    <textarea id="${inputId}" data-task-completion-result="${taskId}" rows="3" maxlength="1200" placeholder="Что сделано, какой документ получен, что согласовано или какой результат достигнут"></textarea>
+    <span class="small">Минимум 10 символов. Результат сохранится в командных комментариях до перевода задачи в «Готово».</span>`;
+  const actions = container.querySelector('.actions');
+  if (actions) actions.insertAdjacentElement('beforebegin', wrapper);
+  else container.appendChild(wrapper);
+}
+
+function completionInput(taskId) {
+  return taskContainer(taskId)?.querySelector(`[data-task-completion-result="${taskId}"]`) || null;
+}
+
 function setTaskBusy(taskId, busy) {
   taskButtons(taskId).forEach((button) => {
     button.setAttribute('aria-busy', busy ? 'true' : 'false');
     if (busy) button.disabled = true;
   });
+  const input = completionInput(taskId);
+  if (input) input.disabled = busy;
 }
 
 function taskActionInput(button) {
   return {
     client_request_id: button.dataset.clientRequestId || '',
-    evidence_reference_id: button.dataset.evidenceReferenceId || '',
+    evidence_reference_id: button.dataset.evidenceReferenceId || completionEvidence.get(String(button.dataset.taskId || '')) || '',
     reason_code: button.dataset.reasonCode || '',
     review_date: button.dataset.reviewDate || '',
     replacement_task_id: button.dataset.replacementTaskId || ''
   };
 }
 
+function lifecycleActionAllowed(task, action) {
+  if (Number(task?.task_contract_version) === 2) return true;
+  const phase = taskLifecyclePhase(task);
+  if (phase === 'open') return action === 'start';
+  if (phase === 'in_progress') return action === 'complete';
+  if (phase === 'done') return action === 'reopen';
+  return false;
+}
+
 function actionAllowed(task, action) {
-  if (!task || !action) return false;
+  if (!task || !action || !lifecycleActionAllowed(task, action)) return false;
   return taskActionControlModel(task).actions.includes(action);
+}
+
+function actionLabel(action) {
+  return ({
+    start: 'Начать работу',
+    complete: 'Сохранить результат и завершить',
+    reopen: 'Вернуть в работу'
+  })[action] || '';
+}
+
+function prepareLegacyCompletionEvidence(taskId, task) {
+  const input = completionInput(taskId);
+  const prepared = buildTaskCompletionComment(task, input?.value || '');
+  if (prepared.ok) return prepared;
+  applyPageActionFeedback(prepared.error, 'error');
+  input?.focus();
+  return null;
+}
+
+async function ensureLegacyCompletionEvidence(taskId, prepared) {
+  const existingReference = completionEvidence.get(taskId);
+  if (existingReference) return existingReference;
+  if (!prepared?.ok) throw new Error('Результат задачи не подготовлен.');
+
+  applyPageActionFeedback('Сохраняю результат задачи в комментариях...', 'busy');
+  const saved = await rpc('nav_v2_add_comment', {
+    p_deal_id: dealId,
+    p_body: prepared.comment,
+    p_visibility: 'team'
+  });
+  const reference = String(saved?.comment_id || 'comment-saved');
+  completionEvidence.set(taskId, reference);
+  return reference;
 }
 
 async function executeTaskAction(button) {
@@ -137,28 +234,74 @@ async function executeTaskAction(button) {
     return;
   }
 
+  let preparedCompletion = null;
+  if (action === 'complete' && !completionEvidence.has(taskId)) {
+    preparedCompletion = prepareLegacyCompletionEvidence(taskId, task);
+    if (!preparedCompletion) return;
+  }
+
   if (!confirmDemoTaskAction()) return;
   mutations.add(taskId);
   setTaskBusy(taskId, true);
-  applyPageActionFeedback('Обновляю статус задачи...', 'busy');
   let succeeded = false;
+  let evidenceSaved = false;
   try {
+    if (action === 'complete') {
+      await ensureLegacyCompletionEvidence(taskId, preparedCompletion);
+      evidenceSaved = true;
+      applyPageActionFeedback('Результат сохранён. Завершаю задачу...', 'busy');
+    } else {
+      applyPageActionFeedback(action === 'start' ? 'Перевожу задачу в работу...' : 'Возвращаю задачу в работу...', 'busy');
+    }
+
     await rpc(route.rpc_preview.name, route.rpc_preview.args);
     succeeded = true;
-    applyPageActionFeedback('Статус задачи сохранён. Обновляю карточку...', 'success');
+    completionEvidence.delete(taskId);
+    applyPageActionFeedback(
+      action === 'complete'
+        ? 'Результат сохранён, задача завершена. Обновляю карточку...'
+        : action === 'start'
+          ? 'Задача принята в работу. Обновляю карточку...'
+          : 'Задача возвращена в работу. Обновляю карточку...',
+      'success'
+    );
     setTimeout(() => location.reload(), 250);
   } catch (error) {
-    applyPageActionFeedback(`Ошибка задачи: ${error.message}`, 'error');
+    if (action === 'complete' && evidenceSaved) {
+      applyPageActionFeedback(`Результат сохранён в комментариях, но статус задачи не изменён: ${error.message}. Повторите завершение — комментарий не будет продублирован.`, 'error');
+    } else if (action === 'complete') {
+      applyPageActionFeedback(`Не удалось сохранить результат задачи: ${error.message}. Статус не изменён.`, 'error');
+    } else {
+      applyPageActionFeedback(`Ошибка задачи: ${error.message}`, 'error');
+    }
   } finally {
     mutations.delete(taskId);
     taskButtons(taskId).forEach((taskButton) => taskButton.setAttribute('aria-busy', 'false'));
+    const input = completionInput(taskId);
+    if (input) input.disabled = false;
     if (!succeeded) applyTaskPermissions();
   }
 }
 
 function installTaskHandler(button, task) {
   const action = actionFromButton(button);
+  const relevant = lifecycleActionAllowed(task, action);
   const allowed = actionAllowed(task, action);
+  const container = button.closest('.list-item');
+
+  if (Number(task?.task_contract_version) !== 2) {
+    button.hidden = !relevant;
+    button.style.display = relevant ? '' : 'none';
+    if (relevant && actionLabel(action)) button.textContent = actionLabel(action);
+  }
+
+  if (!relevant) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.onclick = null;
+    return;
+  }
+
   button.disabled = !allowed;
   button.setAttribute('aria-disabled', allowed ? 'false' : 'true');
   button.onclick = null;
@@ -168,7 +311,7 @@ function installTaskHandler(button, task) {
     button.style.opacity = '.45';
     button.style.cursor = 'not-allowed';
     button.title = 'Это действие доступно ответственному специалисту по задаче';
-    ensureHint(button.closest('.list-item'), task);
+    ensureHint(container, task);
     return;
   }
 
@@ -178,20 +321,28 @@ function installTaskHandler(button, task) {
   button.title = Number(task.task_contract_version) === 2 && !BOUNDED_TRANSPORT_ENABLED
     ? 'Bounded-действие подготовлено, но сохранение пока выключено'
     : '';
-  clearHint(button.closest('.list-item'));
+  clearHint(container);
   button.dataset.taskActionGuard = 'ready';
 }
 
 function applyTaskPermissions() {
   if (!loaded) return;
+  const preparedContainers = new Set();
   document.querySelectorAll(taskButtonSelector()).forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
-    const task = permissions.get(String(button.dataset.taskId || ''));
+    const taskId = String(button.dataset.taskId || '');
+    const task = permissions.get(taskId);
+    const container = button.closest('.list-item');
     if (!task) {
       button.disabled = true;
       button.setAttribute('aria-disabled', 'true');
-      ensureHint(button.closest('.list-item'), null);
+      ensureHint(container, null);
       return;
+    }
+    if (!preparedContainers.has(taskId)) {
+      lifecycleInstruction(container, task);
+      ensureCompletionEditor(container, task);
+      preparedContainers.add(taskId);
     }
     installTaskHandler(button, task);
   });
