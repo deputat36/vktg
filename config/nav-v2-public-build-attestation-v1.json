@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "created_on": "2026-07-23",
+  "status": "repository_only_public_build_attestation_contract",
+  "public_base_url": "https://deputat36.github.io/vktg/",
+  "expected_build_source": "config/nav-v2-build.json",
+  "required_scope": "./assets/js/nav-v2/",
+  "required_specifier": "./supabase-v2.js",
+  "additional_hashed_assets": [
+    "assets/js/nav-v2/auth-storage-guard-v2.js"
+  ],
+  "acceptance": {
+    "all_repository_importmap_pages_match_canonical_build": true,
+    "diagnostic_module_cache_bust_matches_canonical_build": true,
+    "shared_runtime_sha256_matches_repository": true,
+    "storage_guard_sha256_matches_repository": true,
+    "public_requests_use_cache_busting": true,
+    "failure_report_is_written": true
+  },
+  "boundaries": {
+    "public_assets_only": true,
+    "credentials_used": false,
+    "authenticated_requests": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "supabase_management_api_called": false,
+    "production_api_mutation": false,
+    "production_auth_changed": false,
+    "production_schema_changed": false,
+    "production_data_changed": false,
+    "edge_function_changed": false,
+    "leader_schema_changed": false
+  },
+  "result": {
+    "decision": "public_build_attestation_contract_prepared_requires_successful_live_ci",
+    "live_public_build_verified": false,
+    "runtime_rollout_completed": false,
+    "authenticated_role_e2e_completed": false,
+    "live_browser_storage_failure_verified": false,
+    "evidence_run_id": null,
+    "evidence_commit_sha": null
+  },
+  "forbidden_actions": [
+    "use_real_accounts_or_tokens",
+    "read_authenticated_business_data",
+    "create_supabase_branch",
+    "confirm_cost",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_production_data",
+    "change_leader_schema"
+  ]
+}
