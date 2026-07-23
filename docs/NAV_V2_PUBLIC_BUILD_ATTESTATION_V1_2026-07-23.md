@@ -2,58 +2,71 @@
 
 Дата: 23 июля 2026 года.
 
-## Цель
+## Результат
 
-Подтвердить, что публичная версия Navigator v2 на GitHub Pages фактически использует canonical frontend build из `config/nav-v2-build.json`.
-
-Проверяются только публичные HTML/JS assets.
-
-## Текущий canonical build
+Публичная версия Navigator v2 на GitHub Pages подтверждена на canonical build:
 
 `20260723-02`
 
-Build подготовлен после browser-trace обнаружения, что короткие scoped importmap keys не применяли query cache-bust к относительным imports `./supabase-v2.js`.
+Решение:
 
-Исправление добавляет normalized importmap keys на всех 35 страницах и требует фактическую browser Resource Timing запись:
+`public_build_20260723_02_attested_read_only_via_github_pages_ci`
 
-`supabase-v2.js?v=20260723-02`
+Подтверждено:
 
-## Что проверяет read-only runner
+- `live_public_build_verified=true`;
+- `runtime_rollout_completed=true`;
+- 35/35 public importmap pages matched;
+- diagnostic page/module matched;
+- live shared runtime SHA-256 совпал с repository source;
+- live storage guard SHA-256 совпал с repository source.
 
-1. canonical build ID;
-2. все repository root `*-v2.html` со shared importmap;
-3. короткие и normalized importmap mappings;
-4. diagnostic cache-bust;
-5. SHA-256 опубликованного `supabase-v2.js`;
-6. SHA-256 опубликованного `auth-storage-guard-v2.js`;
-7. JSON report как GitHub Actions artifact.
+Не подтверждено и остаётся за отдельными gates:
 
-Каждый public request получает cache-busting query и `no-cache/no-store` headers. После push в `main` допускается ограниченный retry из-за задержки GitHub Pages deployment.
-
-## Historical evidence build 20260723-01
-
-Предыдущая успешная attestation сохранена в `previous_successful_attestation`:
-
-- run `29989423379`;
-- evidence commit `300e3f221ae9e755a6390ccea846121e358190a2`;
-- matched pages `35/35`;
-- artifact `8556415410`;
-- artifact digest `sha256:d68cf8bd64011c62c951b3c39dd475d0d6a4df10ea7c3a3aa47e45c74335bcbb`.
-
-Это historical evidence и не подтверждает новый build `20260723-02`.
-
-## Текущее решение
-
-`public_build_attestation_contract_prepared_requires_successful_live_ci`
-
-До post-merge live job:
-
-- `live_public_build_verified=false`;
-- `runtime_rollout_completed=false`;
 - `authenticated_role_e2e_completed=false`;
 - `live_browser_storage_failure_verified=false`.
 
+## Почему понадобился build 20260723-02
+
+Browser trace показал, что короткие scoped importmap keys не применяли query cache-bust к относительному import `./supabase-v2.js`.
+
+Исправление:
+
+- все 35 root pages содержат compatibility и normalized importmap keys;
+- шесть mappings на каждой странице ведут на `supabase-v2.js?v=20260723-02`;
+- `NAV_V2_BUILD_ID`, storage guard query и diagnostic cache-bust обновлены атомарно;
+- повторно используемый generator: `scripts/bump_nav_v2_shared_build.py`.
+
+## Live evidence
+
+Run: `30023416439`.
+
+Evidence commit: `41f9056d1021fd9a84ac3adf140b0877599e699b`.
+
+Observed at: `2026-07-23T16:04:44.867398+00:00`.
+
+Artifact:
+
+- ID `8570253047`;
+- digest `sha256:24e71a7e91f394fbb70813cc5ae395dc5c7eb2fcee18aca019d57bf088c4cb5e`.
+
+Assets:
+
+- `supabase-v2.js` — SHA-256 `f2713e29d1a84e27a4a290af99695211c5c2d4c9ed6df21c36fecf2a9b23ecd8`, 18395 bytes;
+- `auth-storage-guard-v2.js` — SHA-256 `4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10`, 5881 bytes.
+
+## Historical evidence build 20260723-01
+
+Предыдущее evidence сохранено в `previous_successful_attestation`:
+
+- run `29989423379`;
+- commit `300e3f221ae9e755a6390ccea846121e358190a2`;
+- 35/35 pages;
+- artifact `8556415410`.
+
 ## Граница
+
+Проверяются только публичные HTML/JS assets.
 
 Проверка:
 

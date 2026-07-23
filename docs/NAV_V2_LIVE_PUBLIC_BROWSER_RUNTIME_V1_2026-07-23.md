@@ -2,55 +2,72 @@
 
 Дата: 23 июля 2026 года.
 
-## Цель
+## Результат
 
-Подтвердить в реальном Chromium не только наличие опубликованных файлов, но и выполнение canonical browser module graph Navigator v2.
+Опубликованный GitHub Pages runtime Navigator v2 подтверждён в desktop и mobile Chromium.
 
-Проверка закрывает разрыв между:
+Решение:
 
-- source/hash attestation GitHub Pages;
-- локальными Playwright smoke tests;
-- фактическим выполнением опубликованных ES modules.
+`live_public_browser_runtime_20260723_02_verified_read_only`
 
-## Обнаруженный дефект
+Подтверждено:
 
-Первый run `30017592617` подтвердил guest login gate и `data-nav-v2-build=20260723-01`, но browser trace показал:
+- `local_browser_runtime_verified=true`;
+- `live_browser_runtime_verified=true`;
+- exact `data-nav-v2-build=20260723-02`;
+- exact versioned `supabase-v2.js?v=20260723-02`;
+- exact versioned `auth-storage-guard-v2.js?v=20260723-02`;
+- guest login gate;
+- `pageerror` отсутствуют;
+- `console.error` отсутствуют;
+- 10/10 browser cases passed без flaky и unexpected результатов.
 
-- `supabase-v2.js` загружался без build query;
-- `auth-storage-guard-v2.js` загружался с `?v=20260723-01`.
+Не подтверждено:
 
-Причина: scoped importmap содержал короткие keys `./supabase-v2.js`, которые нормализовались относительно документа, а не каталога importing module. Поэтому относительные imports внутри `assets/js/nav-v2/` обходили ожидаемый cache-bust.
+- `authenticated_role_e2e_completed=false`;
+- `live_browser_storage_failure_verified=false`.
 
-Это не было замаскировано ослаблением теста.
+## Обнаруженный и исправленный дефект
 
-## Исправление
+Первый run `30017592617` показал:
 
-Подготовлен atomic build `20260723-02`:
+- build marker выполнялся;
+- storage guard загружался с query version;
+- shared `supabase-v2.js` загружался без query version.
 
-- все 35 root importmap pages сохраняют короткие compatibility keys;
-- дополнительно содержат normalized importmap keys `./assets/js/nav-v2/supabase-v2.js` и legacy query variants;
-- все шесть mappings указывают на `supabase-v2.js?v=20260723-02`;
-- `NAV_V2_BUILD_ID` обновлён до `20260723-02`;
-- storage guard import обновлён до `?v=20260723-02`;
-- diagnostic cache-bust обновлён до `20260723-02`;
-- предыдущая успешная attestation build `20260723-01` сохранена как historical evidence;
-- build `20260723-02` остаётся pending до post-merge live проверки.
+Причина: короткие scoped importmap keys не совпадали с нормализованным relative module URL.
 
-Для атомарного изменения создан повторно используемый генератор:
+Atomic build `20260723-02` добавил normalized importmap mappings на всех 35 страницах. Тест не был ослаблен и теперь требует фактические Resource Timing entries для двух exact versioned assets.
 
-`scripts/bump_nav_v2_shared_build.py`
+## Test harness correction
 
-Он fail-closed проверяет исходный build, минимум страниц, diagnostic marker и exact replacements.
+Первый post-merge run `30022851155` успешно подтвердил source/hash, но Chromium получил 404: абсолютные test paths сбрасывали GitHub Pages subpath `/vktg/`.
 
-## Browser acceptance
+Исправление `41f9056d1021fd9a84ac3adf140b0877599e699b` разрешает страницы внутри configured base directory. Один и тот же тест работает для:
 
-Для пяти ключевых страниц в desktop и mobile Chromium проверяются:
+- local root `http://127.0.0.1:4173/`;
+- GitHub Pages subpath `https://deputat36.github.io/vktg/`.
 
-1. guest login gate;
-2. exact `data-nav-v2-build`;
-3. фактическая Resource Timing запись `supabase-v2.js?v=<build>`;
-4. фактическая Resource Timing запись `auth-storage-guard-v2.js?v=<build>`;
-5. отсутствие `pageerror` и `console.error`.
+Это был defect test harness, а не опубликованного runtime.
+
+## Live evidence
+
+Run: `30023416439`.
+
+Evidence commit: `41f9056d1021fd9a84ac3adf140b0877599e699b`.
+
+Artifact:
+
+- ID `8570253047`;
+- digest `sha256:24e71a7e91f394fbb70813cc5ae395dc5c7eb2fcee18aca019d57bf088c4cb5e`.
+
+Browser statistics:
+
+- desktop cases `5`;
+- mobile cases `5`;
+- expected `10`;
+- unexpected `0`;
+- flaky `0`.
 
 Representative pages:
 
@@ -64,19 +81,14 @@ Representative pages:
 
 Pull request:
 
-- contract/checker;
-- build/importmap checker;
-- local browser execution из PR checkout;
-- local JSON/HTML/trace artifact.
+- repository contract/checkers;
+- local browser execution.
 
-Push в `main`, schedule и manual dispatch:
+Push, schedule и отдельный post-merge evidence PR:
 
-- contract/checker;
-- source/hash attestation с retry;
+- source/hash attestation;
 - live browser execution GitHub Pages;
 - JSON/HTML/trace artifact.
-
-Live GitHub Pages execution намеренно не выполняется на deployment PR: ещё не опубликованный build не может совпасть с текущим Pages output. Он становится обязательным после merge/push.
 
 ## Граница
 
@@ -93,16 +105,5 @@ Live GitHub Pages execution намеренно не выполняется на 
 - не затрагивает `leader_*`.
 
 Проверка не воспроизводит реальные browser storage exceptions `QuotaExceededError` или `SecurityError`. Она подтверждает выполнение опубликованного hardened runtime.
-
-## Текущее решение
-
-`live_public_browser_runtime_contract_prepared_requires_successful_ci`
-
-До успешных local и post-merge live jobs:
-
-- `local_browser_runtime_verified=false`;
-- `live_browser_runtime_verified=false`;
-- `authenticated_role_e2e_completed=false`;
-- `live_browser_storage_failure_verified=false`.
 
 Успешная public browser проверка не снимает отдельный gate authenticated preview E2E и не разрешает production Supabase changes.

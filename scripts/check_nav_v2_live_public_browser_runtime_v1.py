@@ -141,15 +141,69 @@ def main() -> int:
             errors.append(f"boundary flag must be false: {key}")
 
     result = contract.get("result") or {}
-    if result.get("decision") not in {
-        "live_public_browser_runtime_contract_prepared_requires_successful_ci",
-        f"live_public_browser_runtime_{build_id.replace('-', '_')}_verified_read_only",
-    }:
-        errors.append("unexpected result decision")
+    pending_decision = "live_public_browser_runtime_contract_prepared_requires_successful_ci"
+    passed_decision = f"live_public_browser_runtime_{build_id.replace('-', '_')}_verified_read_only"
+    decision = str(result.get("decision") or "")
+    if decision not in {pending_decision, passed_decision}:
+        errors.append(f"unexpected result decision: {decision}")
     if result.get("authenticated_role_e2e_completed") is not False:
         errors.append("authenticated role E2E must remain false")
     if result.get("live_browser_storage_failure_verified") is not False:
         errors.append("live browser storage failure verification must remain false")
+
+    if decision == pending_decision:
+        for key in ["local_browser_runtime_verified", "live_browser_runtime_verified"]:
+            if result.get(key) is not False:
+                errors.append(f"pending contract must keep {key}=false")
+        for key in ["evidence_run_id", "evidence_commit_sha"]:
+            if result.get(key) is not None:
+                errors.append(f"pending contract must keep {key}=null")
+        if "evidence" in contract:
+            errors.append("pending contract must not contain current evidence")
+        required_doc_state = [
+            pending_decision,
+            "local_browser_runtime_verified=false",
+            "live_browser_runtime_verified=false",
+        ]
+    elif decision == passed_decision:
+        if result.get("local_browser_runtime_verified") is not True:
+            errors.append("verified contract must mark local browser runtime true")
+        if result.get("live_browser_runtime_verified") is not True:
+            errors.append("verified contract must mark live browser runtime true")
+        if not isinstance(result.get("evidence_run_id"), int):
+            errors.append("verified contract requires numeric evidence_run_id")
+        if not isinstance(result.get("evidence_commit_sha"), str) or len(result.get("evidence_commit_sha")) != 40:
+            errors.append("verified contract requires full evidence commit SHA")
+        if not isinstance(result.get("artifact_id"), int):
+            errors.append("verified contract requires artifact_id")
+        if not str(result.get("artifact_digest") or "").startswith("sha256:"):
+            errors.append("verified contract requires artifact digest")
+
+        evidence = contract.get("evidence") or {}
+        if evidence.get("expected_build_id") != build_id:
+            errors.append("browser evidence build id mismatch")
+        if evidence.get("expected") != 10:
+            errors.append("browser evidence must contain ten expected cases")
+        if evidence.get("unexpected") != 0:
+            errors.append("browser evidence contains unexpected cases")
+        if evidence.get("flaky") != 0:
+            errors.append("browser evidence contains flaky cases")
+        for key in [
+            "exact_versioned_shared_module_observed",
+            "exact_versioned_storage_guard_observed",
+            "guest_login_gate_visible",
+            "console_errors_absent",
+            "page_errors_absent",
+        ]:
+            if evidence.get(key) is not True:
+                errors.append(f"verified browser evidence missing flag: {key}")
+        required_doc_state = [
+            passed_decision,
+            "local_browser_runtime_verified=true",
+            "live_browser_runtime_verified=true",
+        ]
+    else:
+        required_doc_state = []
 
     required_test_tokens = [
         "contract.representative_pages",
@@ -159,6 +213,8 @@ def main() -> int:
         "expectedBuildId",
         "expectedAssets",
         "resource.version === expectedAsset.version",
+        "pageUrlWithinBase",
+        "resolved_page_url",
         "expectNoRuntimeFailures",
     ]
     for token in required_test_tokens:
@@ -214,12 +270,12 @@ def main() -> int:
             errors.append(f"build bumper is missing marker: {marker}")
 
     for marker in [
-        "live_public_browser_runtime_contract_prepared_requires_successful_ci",
+        *required_doc_state,
         "authenticated_role_e2e_completed=false",
         "live_browser_storage_failure_verified=false",
         "QuotaExceededError",
         "SecurityError",
-        "20260723-02",
+        build_id,
         "normalized importmap",
     ]:
         if marker not in doc:
@@ -233,7 +289,7 @@ def main() -> int:
 
     print(
         f"Navigator v2 live public browser runtime contract passed: "
-        f"{len(pages)} pages, build {build_id}, exact versioned assets, public-only"
+        f"{len(pages)} pages, build {build_id}, decision {decision}, public-only"
     )
     return 0
 
