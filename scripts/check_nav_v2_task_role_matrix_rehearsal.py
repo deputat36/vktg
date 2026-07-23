@@ -108,6 +108,8 @@ def main() -> int:
         "app.addEventListener('click', handleTaskAction, true)",
         'event.stopImmediatePropagation()',
         'taskActionRoutePreview',
+        "if (phase === 'open') return action === 'start';",
+        "if (phase === 'in_progress') return action === 'complete';",
     ), GUARD.name, errors)
     require(router, (
         "name: 'nav_v2_update_task_status'",
@@ -119,20 +121,22 @@ def main() -> int:
     require(fixture, (
         'Task role matrix rehearsal',
         'Это не реальная авторизация или RLS-проверка',
-        'id="legacyDone"',
+        'id="legacyStart"',
+        'data-task-status="in_progress"',
         'id="boundedDone"',
         'id="boundedReopen"',
         'id="boundedDecision"',
         '__baseTaskHandlerCalls',
-        'task-action-guard-v2.js?v=20260717-01',
+        'task-action-guard-v2.js?v=20260724-01',
     ), FIXTURE.name, errors)
     require(spec, (
-        'role-scoped DTO controls the legacy action through the single authoritative handler',
+        'role-scoped DTO controls the legacy start action through the single authoritative handler',
         'bounded completion follows DTO permission but never enables network transport',
         'terminal outcome decision is manager-owner-admin only and transport-free',
         'must not be reported as real authenticated or RLS proof',
+        "status: 'open'",
         "p_task_id: 'task-role-legacy'",
-        "p_status: 'done'",
+        "p_status: 'in_progress'",
         'boundedMutationCalls).toHaveLength(0)',
         '__baseTaskHandlerCalls',
         'spn_unassigned',
@@ -180,7 +184,7 @@ def main() -> int:
             print(f'- {error}')
         return 1
 
-    print('Navigator v2 task role matrix rehearsal passed: seven roles plus unassigned SPN are exercised with mocked role-scoped DTOs, the authoritative handler stays single-source, bounded transport stays off, and no real auth/RLS/deployment claim is made')
+    print('Navigator v2 task role matrix rehearsal passed: seven roles plus unassigned SPN exercise the allowed open-to-in-progress legacy transition through the authoritative handler, bounded transport stays off, and no real auth/RLS/deployment claim is made')
     return 0
 
 
