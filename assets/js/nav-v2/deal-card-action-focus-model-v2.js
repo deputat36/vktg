@@ -1,5 +1,20 @@
 const OPEN_TASK_STATUSES = new Set(['open', 'in_progress']);
 const PRIORITY_WEIGHT = { urgent: 40, high: 25, normal: 10, low: 0 };
+const DEAL_STAGE_LABELS = Object.freeze({
+  draft: 'Первичная подготовка',
+  need_info: 'Сбор недостающей информации',
+  need_lawyer: 'Юридическая проверка',
+  need_broker: 'Ипотечное согласование',
+  need_documents: 'Подготовка документов',
+  ready_for_deposit: 'Готовность к задатку',
+  deposit_done: 'Задаток внесён',
+  preparing_deal: 'Подготовка договора и расчётов',
+  ready_for_deal: 'Готовность к подписанию',
+  registration: 'Государственная регистрация',
+  registered: 'Переход права зарегистрирован',
+  closed: 'Сделка закрыта',
+  cancelled: 'Сделка отменена'
+});
 
 function list(data, key) {
   return Array.isArray(data?.[key]) ? data[key] : [];
@@ -29,6 +44,10 @@ function roleName(role) {
     broker: 'Брокер',
     viewer: 'Наблюдатель'
   })[role] || text(role) || 'Не назначен';
+}
+
+function dealStageLabel(status) {
+  return DEAL_STAGE_LABELS[text(status)] || 'Этап нужно уточнить';
 }
 
 function dayBoundary(value) {
@@ -143,6 +162,37 @@ function fallbackAction(data) {
   };
 }
 
+function criticalSummary(blockers) {
+  const parts = [];
+  if (blockers.redRisks) parts.push(`красных рисков: ${blockers.redRisks}`);
+  if (blockers.overdueTasks) parts.push(`просроченных задач: ${blockers.overdueTasks}`);
+  return parts.length
+    ? `До перехода дальше требуется решение по критичным пунктам: ${parts.join(', ')}.`
+    : '';
+}
+
+function crmRecordHint(focus, deal) {
+  const parts = [];
+
+  if (focus.source === 'task') {
+    parts.push('после выполнения обновить статус задачи и кратко записать результат');
+  } else if (focus.source === 'risk') {
+    parts.push('зафиксировать решение профильного специалиста, последствия и условие снятия риска');
+  } else if (focus.source === 'document') {
+    parts.push('обновить статус документа, срок получения и найденные расхождения');
+  } else {
+    parts.push('обновить следующий шаг сделки');
+  }
+
+  if (!text(focus.responsible) || /не назначен/i.test(text(focus.responsible))) {
+    parts.push('назначить ответственного');
+  }
+  if (!focus.dueDate) parts.push('установить срок');
+  if (!text(deal?.next_action)) parts.push('проверить поле «Следующий шаг»');
+
+  return `В основной CRM: ${parts.join('; ')}. В Навигаторе оставить только сведения, необходимые для маршрута, рисков и контроля сделки.`;
+}
+
 export function buildDealActionFocus(data, profile, nowValue = Date.now()) {
   const deal = data?.deal || {};
   const tasks = list(data, 'tasks');
@@ -178,16 +228,21 @@ export function buildDealActionFocus(data, profile, nowValue = Date.now()) {
     focus.canChangeTask = false;
   }
 
+  const blockers = {
+    overdueTasks: overdueTasks.length,
+    redRisks: redRisks.length,
+    missingDocuments: missingDocs.length
+  };
+
   return {
     ...focus,
     dealId: deal.id || null,
     dealStatus: deal.status || null,
+    stageLabel: dealStageLabel(deal.status),
     readOnly: profile?.role === 'viewer',
-    blockers: {
-      overdueTasks: overdueTasks.length,
-      redRisks: redRisks.length,
-      missingDocuments: missingDocs.length
-    },
+    blockers,
+    criticalText: criticalSummary(blockers),
+    crmRecord: crmRecordHint(focus, deal),
     readiness: {
       deposit: number(deal.readiness_deposit),
       deal: number(deal.readiness_deal)
