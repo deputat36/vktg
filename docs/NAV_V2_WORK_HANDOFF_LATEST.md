@@ -4,8 +4,9 @@
 
 - Дата: 23 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- `main`: `6dd1593e96a2fd899d0caf58dc5bf3e61e68907d` — squash merge PR #480.
+- Последний функциональный `main`: `18a8d61d7ef1af16f3b23a23e294140cb2b41669` — squash merge PR #483.
 - Shared frontend build: `20260723-01`.
+- Public GitHub Pages: `https://deputat36.github.io/vktg/`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
 - Organization: `Lider`, plan `free`.
 - Project: `ACTIVE_HEALTHY`, region `eu-west-1`.
@@ -16,13 +17,14 @@
 - Edge SHA-256: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 - Preview branches отсутствуют.
 - Technical `nav-e2e` users/profiles отсутствуют.
-- После merge PR #480 открытых Navigator PR не было.
+- PR #482 закрыт без merge из-за зафиксированного GitHub head на промежуточном commit.
+- PR #483 содержит полный финальный public-build attestation slice и слит.
 
-PR #457–#480 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
+PR #457–#483 не меняли production data/schema/indexes, Auth settings, RLS, grants или Edge.
 
 Не изменять, не откатывать и не reconciliate `leader_*`.
 
-## Назначение и production runtime
+## Назначение Navigator
 
 Navigator — единая заявка на подготовку сделки и диспетчер взаимодействия СПН, юриста, ипотечного брокера и менеджера:
 
@@ -76,7 +78,7 @@ FK `nav_deal_answers_v2.deal_id → nav_deals_v2.id`:
 
 `idx_scan=0` не является drop approval.
 
-## Базовая repository-only evidence chain
+## Repository-only evidence chain
 
 ### Intake, privacy и preview — PR #394–#434
 
@@ -127,7 +129,6 @@ Synthetic observations:
 
 ### PR #457 — observation baseline
 
-- Merge: `ec73826983207241f1e1d87ff6697757fdacee17`.
 - Read-only capture: `2026-07-22T05:31:47.591346+00:00`.
 - Epoch: DB OID `5`, postmaster `2026-06-13T20:56:45.579218+00:00`, WAL reset `2026-06-13T20:56:11.777190+00:00`, table OID `19392`, composite index OID `19402`, single index OID `19583`.
 - Capture count `1`; required at least `2`; cadence/thresholds `null`; representative workload unproven.
@@ -146,7 +147,7 @@ Synthetic observations:
 - Decisions: `delta_valid_same_epoch_evidence_not_representative`; `observation_window_invalidated_restart_capture_required`.
 - Второй capture без явного выбора cadence/thresholds не выполнять.
 
-## Auth evidence до storage runtime integration
+## Auth recovery evidence
 
 ### PR #462 — redacted live Auth attestation
 
@@ -177,74 +178,89 @@ Offline покрыты:
 
 ## Auth storage write hardening — PR #478–#480
 
-### PR #478 — gap evidence
+### PR #478
 
-- Merge: `6af98a7f992e13a2ab42265296438eb1674728ce`.
-- Подтверждены пять source-level gaps:
-  - remembered-email write мог прервать invalid-session cleanup;
-  - session remove failure мог прервать logout cleanup;
-  - profile-cache write failure мог сломать успешный RPC;
-  - convenience-email write мог изменить outcome password reset;
-  - session persistence failure возвращал raw browser error.
-- Decision: `auth_storage_write_failures_confirmed_repository_only_runtime_hardening_planned`.
+Подтверждены пять source-level gaps:
 
-### PR #479 — detached helper
+- remembered-email write мог прервать invalid-session cleanup;
+- session remove failure мог прервать logout cleanup;
+- profile-cache write failure мог сломать успешный RPC;
+- convenience-email write мог изменить outcome password reset;
+- session persistence failure возвращал raw browser error.
 
-- Merge: `ac46c2a2a55f80592da4b5610e65ffba7feceb1b`.
-- Добавлен `assets/js/nav-v2/auth-storage-guard-v2.js`.
-- Подготовлены fail-closed reads, tombstone, remove/null fallback, best-effort cache/email и `NAV_AUTH_STORAGE_UNAVAILABLE`.
-- Helper оставался detached.
-- Decision: `auth_storage_write_hardening_helper_prepared_offline_not_integrated`.
+Decision: `auth_storage_write_failures_confirmed_repository_only_runtime_hardening_planned`.
 
-### PR #480 — runtime integration и shared build
+### PR #479
 
-- Merge/main: `6dd1593e96a2fd899d0caf58dc5bf3e61e68907d`.
+Добавлен detached helper `assets/js/nav-v2/auth-storage-guard-v2.js` с fail-closed reads, tombstone, remove/null fallback, best-effort cache/email и `NAV_AUTH_STORAGE_UNAVAILABLE`.
+
+Decision: `auth_storage_write_hardening_helper_prepared_offline_not_integrated`.
+
+### PR #480
+
+- Merge: `6dd1593e96a2fd899d0caf58dc5bf3e61e68907d`.
 - Helper интегрирован в `assets/js/nav-v2/supabase-v2.js`.
 - Shared build: `20260711-01 → 20260723-01`.
-- Обновлены все 35 root `*-v2.html` scoped importmaps.
-- Обновлён diagnostic cache-bust.
-- Прямые session/email/profile storage writes заменены controller operations.
+- Обновлены все 35 root `*-v2.html` scoped importmaps и diagnostic cache-bust.
 - Missing storage objects обрабатываются fail-closed.
 - Session persistence failure нормализуется как `NAV_AUTH_STORAGE_UNAVAILABLE`.
 - RPC не retry, если refreshed session невозможно сохранить.
 - Optional profile/email storage не меняют успешный business/Auth outcome.
 
-Первая реализация постоянного boolean tombstone была отклонена existing auth-session-recovery CI: новая replacement session из другой вкладки оставалась заблокирована.
+Первая boolean-tombstone реализация была отклонена existing CI. Финальная fingerprint tombstone блокирует только конкретное stale value, а replacement session другой вкладки снимает block без reload.
 
-Финальная реализация использует fingerprint tombstone:
-
-- блокируется только конкретное stale stored value;
-- отличающаяся replacement session снимает block без reload;
-- отдельный fingerprint recovery test защищает поведение.
-
-Ключевой CI на final PR head `87c7c37a7251215a2787a53e5a34c03aabc4e20b`:
-
-- integrated storage guard + все Auth suites: `29985503505`;
-- storage write regressions: `29985503474`;
-- logout/storage historical contract: `29985503472`;
-- storage/sign-in historical contract: `29985503541`;
-- auth session recovery: `29985503548`;
-- static 49/49: `29985503450`;
-- JavaScript syntax: `29985503460`;
-- invite checks: `29985503430`;
-- public desktop/mobile smoke: `29985503433`;
-- authenticated smoke: skipped существующим gate.
-
-Decision:
+Decision до public attestation:
 
 `auth_storage_write_failures_fixed_in_source_build_rollout_prepared_not_live_verified`
 
-Границы решения:
+## Public build attestation — PR #483
 
-- source integration merged to `main`;
+PR #482 был закрыт без merge: GitHub PR head остался на первом evidence commit. Финальный PR #483 создан из exact SHA и слит.
+
+Первичный live run `29989423379` на evidence commit `300e3f221ae9e755a6390ccea846121e358190a2` подтвердил:
+
+- public base URL `https://deputat36.github.io/vktg/`;
+- canonical build `20260723-01`;
+- repository importmap pages `35`;
+- live matched pages `35/35`;
+- по три expected mapping на каждой странице;
+- diagnostic page/module matched;
+- `supabase-v2.js` live/repository SHA-256 `febb71791013d24a0d9dc1296cb84f586848b93ba2bf603119a4bc6c247ce9a2`;
+- `auth-storage-guard-v2.js` live/repository SHA-256 `4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10`;
+- artifact ID `8556415410`;
+- artifact digest `sha256:d68cf8bd64011c62c951b3c39dd475d0d6a4df10ea7c3a3aa47e45c74335bcbb`.
+
+Final-head CI `6c0809b7d2e1555dd74666199a2fce8f68115352`:
+
+- public contract/offline/live attestation `29989797977` — success;
+- static checks 49/49 `29989797964` — success;
+- review threads — none.
+
+Decision:
+
+`public_build_20260723_01_attested_read_only_via_github_pages_ci`
+
+Теперь подтверждено:
+
 - `runtime_hardening_completed=true`;
 - `build_bump_completed=true`;
-- реальный GitHub Pages build отдельно не наблюдался доступными инструментами;
-- `runtime_rollout_completed=false`;
-- `live_browser_storage_failure_verified=false`;
-- `authenticated_role_e2e_completed=false`.
+- `live_public_build_verified=true`;
+- `runtime_rollout_completed=true`.
 
-Не утверждать, что реальные browser `QuotaExceededError`/`SecurityError` воспроизведены live.
+Не подтверждено:
+
+- `authenticated_role_e2e_completed=false`;
+- `live_browser_storage_failure_verified=false`.
+
+Public attestation доказывает публикацию source/build, но не воспроизведение реальных `QuotaExceededError`/`SecurityError` и не authenticated role behavior.
+
+Scheduled workflow:
+
+- `.github/workflows/nav-v2-public-build-attestation-v1.yml`;
+- ежедневный read-only запуск;
+- public HTML/JS only;
+- no credentials, no authenticated requests, no production mutations;
+- JSON evidence artifact хранится 14 дней.
 
 ## Active gates
 
@@ -286,7 +302,37 @@ Cloud шаг требует отдельного решения владельц
 
 ## Канонические артефакты
 
-Index:
+### Public build
+
+- `config/nav-v2-build.json`
+- `config/nav-v2-public-build-attestation-v1.json`
+- `scripts/attest_nav_v2_public_build_v1.py`
+- `scripts/check_nav_v2_public_build_attestation_v1.py`
+- `tests/unit/test_nav_v2_public_build_attestation_v1.py`
+- `.github/workflows/nav-v2-public-build-attestation-v1.yml`
+- `docs/NAV_V2_PUBLIC_BUILD_ATTESTATION_V1_2026-07-23.md`
+
+### Auth
+
+- `config/nav-v2-auth-recovery-live-attestation-v1.json`
+- `config/nav-v2-auth-concurrent-refresh-tests-v1.json`
+- `config/nav-v2-auth-network-no-lock-tests-v1.json`
+- `config/nav-v2-auth-lock-timeout-post-refresh-tests-v1.json`
+- `config/nav-v2-auth-storage-signin-race-tests-v1.json`
+- `config/nav-v2-auth-logout-storage-failure-tests-v1.json`
+- `config/nav-v2-auth-password-reset-tests-v1.json`
+- `config/nav-v2-auth-storage-write-gap-v1.json`
+- `config/nav-v2-auth-storage-guard-helper-v1.json`
+- `config/nav-v2-auth-recovery-summary-evaluator-v1.json`
+- `assets/js/nav-v2/supabase-v2.js`
+- `assets/js/nav-v2/auth-session-recovery-v2.js`
+- `assets/js/nav-v2/auth-storage-guard-v2.js`
+- `tests/unit/nav-v2-auth-*.test.mjs`
+- `scripts/check_nav_v2_auth_*.py`
+- `scripts/evaluate_nav_v2_auth_recovery_summary_v1.py`
+- `docs/NAV_V2_AUTH_STORAGE_RUNTIME_INTEGRATION_V1_2026-07-23.md`
+
+### Index
 
 - `config/nav-v2-performance-advisor-attestation-v1.json`
 - `config/nav-v2-index-query-plan-candidate-v1.json`
@@ -301,47 +347,7 @@ Index:
 - `scripts/evaluate_nav_v2_index_capacity_submission_v1.py`
 - `scripts/check_nav_v2_index_capacity_submission_evaluator_v1.py`
 
-Auth:
-
-- `config/nav-v2-auth-recovery-live-attestation-v1.json`
-- `config/nav-v2-auth-concurrent-refresh-tests-v1.json`
-- `config/nav-v2-auth-network-no-lock-tests-v1.json`
-- `config/nav-v2-auth-lock-timeout-post-refresh-tests-v1.json`
-- `config/nav-v2-auth-storage-signin-race-tests-v1.json`
-- `config/nav-v2-auth-logout-storage-failure-tests-v1.json`
-- `config/nav-v2-auth-password-reset-tests-v1.json`
-- `config/nav-v2-auth-storage-write-gap-v1.json`
-- `config/nav-v2-auth-storage-guard-helper-v1.json`
-- `config/nav-v2-auth-recovery-summary-evaluator-v1.json`
-- `config/nav-v2-build.json`
-- `assets/js/nav-v2/supabase-v2.js`
-- `assets/js/nav-v2/auth-session-recovery-v2.js`
-- `assets/js/nav-v2/auth-storage-guard-v2.js`
-- `tests/unit/nav-v2-auth-session-recovery.test.mjs`
-- `tests/unit/nav-v2-auth-concurrent-refresh.test.mjs`
-- `tests/unit/nav-v2-auth-network-no-lock.test.mjs`
-- `tests/unit/nav-v2-auth-lock-timeout-post-refresh.test.mjs`
-- `tests/unit/nav-v2-auth-storage-signin-race.test.mjs`
-- `tests/unit/nav-v2-auth-logout-storage-failure.test.mjs`
-- `tests/unit/nav-v2-auth-password-reset.test.mjs`
-- `tests/unit/nav-v2-auth-storage-guard-helper.test.mjs`
-- `tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs`
-- `tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs`
-- `tests/unit/nav-v2-auth-storage-write-gap.test.mjs`
-- `scripts/evaluate_nav_v2_auth_recovery_summary_v1.py`
-- `scripts/check_nav_v2_auth_recovery_live_attestation_v1.py`
-- `scripts/check_nav_v2_auth_concurrent_refresh_tests_v1.py`
-- `scripts/check_nav_v2_auth_network_no_lock_tests_v1.py`
-- `scripts/check_nav_v2_auth_lock_timeout_post_refresh_tests_v1.py`
-- `scripts/check_nav_v2_auth_storage_signin_race_tests_v1.py`
-- `scripts/check_nav_v2_auth_logout_storage_failure_tests_v1.py`
-- `scripts/check_nav_v2_auth_password_reset_tests_v1.py`
-- `scripts/check_nav_v2_auth_storage_write_gap_v1.py`
-- `scripts/check_nav_v2_auth_storage_guard_helper_v1.py`
-- `scripts/check_nav_v2_auth_recovery_summary_evaluator_v1.py`
-- `docs/NAV_V2_AUTH_STORAGE_RUNTIME_INTEGRATION_V1_2026-07-23.md`
-
-Preview:
+### Preview
 
 - `config/nav-v2-preview-candidate-package-v3.json`
 - `config/nav-v2-preview-execution-runbook-v1.json`
@@ -353,20 +359,19 @@ Preview:
 
 Только бесплатные read-only/repository actions:
 
-1. проверить GitHub CI/review drift после merge PR #480;
-2. выполнить read-only public build attestation, когда GitHub Pages output доступен, и подтвердить только фактический build ID/cache-bust;
-3. не использовать реальных аккаунтов и не превращать public attestation в authenticated E2E;
-4. проверить Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
-5. расширять offline Auth coverage только для ещё не доказанных deterministic edge cases;
-6. использовать redacted Auth evaluator только на заранее обезличенных summaries, не на raw logs;
-7. поддерживать offline capacity evaluator, не заполняя canonical form;
-8. повторять aggregate-only index snapshot только после отдельного явного выбора cadence/thresholds;
-9. использовать offline index delta evaluator только после второго approved snapshot;
-10. поддерживать preview package v3 и handoff;
-11. не вызывать cost confirmation;
-12. не создавать Supabase branch/accounts/secrets;
-13. не менять production DDL/DML/RLS/Auth/Edge;
-14. не трогать `leader_*`.
+1. контролировать scheduled public-build attestation и не путать Pages drift с authenticated E2E;
+2. проверять GitHub CI/review drift;
+3. проверять Supabase project/migration/Edge/Advisor/Auth drift без settings changes;
+4. расширять offline Auth coverage только для ещё не доказанных deterministic edge cases;
+5. использовать redacted Auth evaluator только на заранее обезличенных summaries, не на raw logs;
+6. поддерживать offline capacity evaluator, не заполняя canonical form;
+7. повторять aggregate-only index snapshot только после отдельного явного выбора cadence/thresholds;
+8. использовать offline index delta evaluator только после второго approved snapshot;
+9. поддерживать preview package v3 и handoff;
+10. не вызывать cost confirmation;
+11. не создавать Supabase branch/accounts/secrets;
+12. не менять production DDL/DML/RLS/Auth/Edge;
+13. не трогать `leader_*`.
 
 Новый cloud deployment slice отсутствует.
 
