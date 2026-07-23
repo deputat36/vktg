@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/nav-v2-auth-storage-write-gap-v1.json"
 TEST = ROOT / "tests/unit/nav-v2-auth-storage-write-gap.test.mjs"
 MISSING_STORAGE_TEST = ROOT / "tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs"
+FINGERPRINT_TEST = ROOT / "tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs"
 RUNTIME = ROOT / "assets/js/nav-v2/supabase-v2.js"
 HELPER = ROOT / "assets/js/nav-v2/auth-storage-guard-v2.js"
 BUILD = ROOT / "config/nav-v2-build.json"
@@ -26,6 +27,7 @@ def main() -> None:
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     test_source = TEST.read_text(encoding="utf-8")
     missing_storage_test = MISSING_STORAGE_TEST.read_text(encoding="utf-8")
+    fingerprint_test = FINGERPRINT_TEST.read_text(encoding="utf-8")
     runtime_source = RUNTIME.read_text(encoding="utf-8")
     helper_source = HELPER.read_text(encoding="utf-8")
     build = json.loads(BUILD.read_text(encoding="utf-8"))
@@ -67,6 +69,9 @@ def main() -> None:
     build_id = config["current_build_id"]
     require(build["build_id"] == build_id, "build config differs from integration contract")
     require(config["previous_build_id"] != build_id, "build id was not advanced")
+    require(build["minimum_importmap_pages"] == 35, "build config must require all 35 shared pages")
+    require(config["build_rollout"]["minimum_expected_pages"] == 35, "rollout minimum page count changed")
+    require(config["build_rollout"]["exact_pages_updated_in_branch"] == 35, "exact page count evidence missing")
     require(f"export const NAV_V2_BUILD_ID = '{build_id}';" in runtime_source, "runtime build marker missing")
     require(f"nav-system-check-v2.js?v={build_id}" in diagnostic_source, "diagnostic cache-bust missing")
 
@@ -92,6 +97,9 @@ def main() -> None:
     for marker in [
         "readLastEmail",
         "unavailableStorageCause",
+        "blockedSessionValue",
+        "blockedSessionValueKnown",
+        "different cross-tab session fingerprint",
         "persistentClearSucceeded",
         "local.setItem(sessionKey, 'null')",
         "throw createAuthStorageUnavailableError('save', error)",
@@ -120,7 +128,16 @@ def main() -> None:
     ]:
         require(marker in missing_storage_test, f"missing-storage test marker missing: {marker}")
 
-    combined = (test_source + "\n" + missing_storage_test).lower()
+    for marker in [
+        "unchanged stale fingerprint must remain blocked",
+        "different cross-tab session fingerprint must be accepted",
+        "external-clean-signin",
+        "isSessionReadBlocked(), false",
+        "example.test",
+    ]:
+        require(marker in fingerprint_test, f"fingerprint recovery marker missing: {marker}")
+
+    combined = (test_source + "\n" + missing_storage_test + "\n" + fingerprint_test).lower()
     for marker in [
         "ofewxuqfjhamgerwzull",
         "supabase.co",
@@ -132,6 +149,10 @@ def main() -> None:
         "deploy_edge_function",
     ]:
         require(marker.lower() not in combined, f"offline tests contain forbidden marker: {marker}")
+
+    contract = config["implemented_runtime_contract"]
+    require(contract["session_tombstone_is_scoped_to_exact_stale_fingerprint"] is True, "fingerprint tombstone contract missing")
+    require(contract["different_cross_tab_session_fingerprint_restores_reads"] is True, "cross-tab recovery contract missing")
 
     rollout = config["build_rollout"]
     require(rollout["single_squash_merge_required"] is True, "squash merge requirement missing")
@@ -158,6 +179,10 @@ def main() -> None:
     require(
         "node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow_source,
         "missing-storage regression missing",
+    )
+    require(
+        "node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow_source,
+        "fingerprint recovery regression missing",
     )
     require("python3 scripts/check_nav_v2_build_version.py" in workflow_source, "build checker missing")
 
