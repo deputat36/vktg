@@ -6,7 +6,7 @@
 
 Подтвердить, что публичная версия Navigator v2 на GitHub Pages фактически использует canonical frontend build из `config/nav-v2-build.json`.
 
-Проверка нужна после интеграции fail-closed Auth storage runtime и build bump до `20260723-01`.
+Проверка выполнена после интеграции fail-closed Auth storage runtime и build bump до `20260723-01`.
 
 ## Что проверяется
 
@@ -36,7 +36,7 @@ Read-only runner:
 - не меняет production data, schema, indexes, Auth, RLS, grants или Edge;
 - не затрагивает `leader_*`.
 
-Supabase не изменяется. Supabase используется только для отдельной read-only drift-сверки вне этого workflow.
+Supabase не изменяется. Supabase использован только для отдельной read-only drift-сверки вне этого workflow.
 
 Эта проверка не является authenticated role E2E.
 
@@ -48,15 +48,42 @@ Supabase не изменяется. Supabase используется тольк
 
 После push в `main` runner допускает ограниченное число повторов, чтобы не трактовать обычную задержку GitHub Pages как окончательный deployment failure.
 
-## Решение до первого успешного live CI
+## Live evidence
 
-`public_build_attestation_contract_prepared_requires_successful_live_ci`
+GitHub Actions run: `29989423379`.
 
-До успешного live job:
+Evidence commit: `300e3f221ae9e755a6390ccea846121e358190a2`.
 
-- `live_public_build_verified=false`;
-- `runtime_rollout_completed=false`;
+Observed at: `2026-07-23T07:51:10.572762+00:00`.
+
+Artifact:
+
+- ID: `8556415410`;
+- digest: `sha256:d68cf8bd64011c62c951b3c39dd475d0d6a4df10ea7c3a3aa47e45c74335bcbb`.
+
+Фактический результат:
+
+- canonical build: `20260723-01`;
+- repository importmap pages: `35`;
+- live matched pages: `35`;
+- каждая страница содержит три ожидаемых mapping;
+- diagnostic page/module: matched;
+- `supabase-v2.js` live SHA-256: `febb71791013d24a0d9dc1296cb84f586848b93ba2bf603119a4bc6c247ce9a2`;
+- `auth-storage-guard-v2.js` live SHA-256: `4384686ca4782603d4e307686d88f0e21922d66b92ebd59e10ff67d040d27a10`;
+- оба live asset hash полностью совпали с repository source.
+
+## Решение
+
+`public_build_20260723_01_attested_read_only_via_github_pages_ci`
+
+Подтверждено:
+
+- `live_public_build_verified=true`;
+- `runtime_rollout_completed=true`.
+
+Не подтверждено и остаётся за отдельными gates:
+
 - `authenticated_role_e2e_completed=false`;
 - `live_browser_storage_failure_verified=false`.
 
-После успешного live job допустимо обновить contract и handoff только фактическими run ID, commit SHA и build ID. Успех public attestation не снимает отдельный gate authenticated preview E2E.
+Успех public attestation не снимает отдельный gate authenticated preview E2E и не разрешает production Auth/RLS/DDL/Edge изменения.
