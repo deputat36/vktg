@@ -182,17 +182,19 @@ function actionLabel(action) {
   })[action] || '';
 }
 
-async function ensureLegacyCompletionEvidence(taskId, task) {
-  const existingReference = completionEvidence.get(taskId);
-  if (existingReference) return existingReference;
-
+function prepareLegacyCompletionEvidence(taskId, task) {
   const input = completionInput(taskId);
   const prepared = buildTaskCompletionComment(task, input?.value || '');
-  if (!prepared.ok) {
-    applyPageActionFeedback(prepared.error, 'error');
-    input?.focus();
-    throw Object.assign(new Error(prepared.error), { code: 'TASK_RESULT_VALIDATION' });
-  }
+  if (prepared.ok) return prepared;
+  applyPageActionFeedback(prepared.error, 'error');
+  input?.focus();
+  return null;
+}
+
+async function ensureLegacyCompletionEvidence(taskId, prepared) {
+  const existingReference = completionEvidence.get(taskId);
+  if (existingReference) return existingReference;
+  if (!prepared?.ok) throw new Error('Результат задачи не подготовлен.');
 
   applyPageActionFeedback('Сохраняю результат задачи в комментариях...', 'busy');
   const saved = await rpc('nav_v2_add_comment', {
@@ -232,6 +234,12 @@ async function executeTaskAction(button) {
     return;
   }
 
+  let preparedCompletion = null;
+  if (action === 'complete' && !completionEvidence.has(taskId)) {
+    preparedCompletion = prepareLegacyCompletionEvidence(taskId, task);
+    if (!preparedCompletion) return;
+  }
+
   if (!confirmDemoTaskAction()) return;
   mutations.add(taskId);
   setTaskBusy(taskId, true);
@@ -239,7 +247,7 @@ async function executeTaskAction(button) {
   let evidenceSaved = false;
   try {
     if (action === 'complete') {
-      await ensureLegacyCompletionEvidence(taskId, task);
+      await ensureLegacyCompletionEvidence(taskId, preparedCompletion);
       evidenceSaved = true;
       applyPageActionFeedback('Результат сохранён. Завершаю задачу...', 'busy');
     } else {
@@ -259,7 +267,6 @@ async function executeTaskAction(button) {
     );
     setTimeout(() => location.reload(), 250);
   } catch (error) {
-    if (error?.code === 'TASK_RESULT_VALIDATION') return;
     if (action === 'complete' && evidenceSaved) {
       applyPageActionFeedback(`Результат сохранён в комментариях, но статус задачи не изменён: ${error.message}. Повторите завершение — комментарий не будет продублирован.`, 'error');
     } else if (action === 'complete') {
@@ -284,6 +291,7 @@ function installTaskHandler(button, task) {
 
   if (Number(task?.task_contract_version) !== 2) {
     button.hidden = !relevant;
+    button.style.display = relevant ? '' : 'none';
     if (relevant && actionLabel(action)) button.textContent = actionLabel(action);
   }
 
