@@ -1,14 +1,18 @@
-name: Navigator v2 Auth storage write gap v1
+name: Navigator v2 Auth storage write regression v1
 
 on:
   pull_request:
     paths:
       - 'config/nav-v2-auth-storage-write-gap-v1.json'
+      - 'config/nav-v2-auth-storage-guard-helper-v1.json'
+      - 'assets/js/nav-v2/auth-storage-guard-v2.js'
       - 'assets/js/nav-v2/supabase-v2.js'
       - 'config/nav-v2-build.json'
-      - 'nav-system-check-v2.html'
+      - '*-v2.html'
       - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
+      - 'tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs'
       - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
+      - 'scripts/check_nav_v2_auth_storage_guard_helper_v1.py'
       - 'scripts/check_nav_v2_build_version.py'
       - 'docs/NAV_V2_AUTH_STORAGE_WRITE_GAP_V1_2026-07-23.md'
       - '.github/workflows/nav-v2-auth-storage-write-gap-v1.yml'
@@ -16,11 +20,15 @@ on:
     branches: [main]
     paths:
       - 'config/nav-v2-auth-storage-write-gap-v1.json'
+      - 'config/nav-v2-auth-storage-guard-helper-v1.json'
+      - 'assets/js/nav-v2/auth-storage-guard-v2.js'
       - 'assets/js/nav-v2/supabase-v2.js'
       - 'config/nav-v2-build.json'
-      - 'nav-system-check-v2.html'
+      - '*-v2.html'
       - 'tests/unit/nav-v2-auth-storage-write-gap.test.mjs'
+      - 'tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs'
       - 'scripts/check_nav_v2_auth_storage_write_gap_v1.py'
+      - 'scripts/check_nav_v2_auth_storage_guard_helper_v1.py'
       - 'scripts/check_nav_v2_build_version.py'
       - 'docs/NAV_V2_AUTH_STORAGE_WRITE_GAP_V1_2026-07-23.md'
       - '.github/workflows/nav-v2-auth-storage-write-gap-v1.yml'
@@ -30,23 +38,39 @@ permissions:
   contents: read
 
 jobs:
-  offline-gap-evidence:
+  offline-fixed-regressions:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
       - name: Validate contract JSON
-        run: python3 -m json.tool config/nav-v2-auth-storage-write-gap-v1.json > /dev/null
+        run: |
+          python3 -m json.tool config/nav-v2-auth-storage-write-gap-v1.json > /dev/null
+          python3 -m json.tool config/nav-v2-auth-storage-guard-helper-v1.json > /dev/null
 
-      - name: Compile source checker
-        run: python3 -m py_compile scripts/check_nav_v2_auth_storage_write_gap_v1.py
+      - name: Compile source checkers
+        run: |
+          python3 -m py_compile scripts/check_nav_v2_auth_storage_write_gap_v1.py
+          python3 -m py_compile scripts/check_nav_v2_auth_storage_guard_helper_v1.py
 
-      - name: Validate gap evidence and build plan
+      - name: Validate integrated storage hardening
         run: python3 scripts/check_nav_v2_auth_storage_write_gap_v1.py
 
-      - name: Validate current shared build version
+      - name: Validate integrated helper contract
+        run: python3 scripts/check_nav_v2_auth_storage_guard_helper_v1.py
+
+      - name: Validate shared build version
         run: python3 scripts/check_nav_v2_build_version.py
+
+      - name: Run helper unit contract
+        run: node tests/unit/nav-v2-auth-storage-guard-helper.test.mjs
+
+      - name: Run unavailable storage object regressions
+        run: node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs
+
+      - name: Run fixed storage write regressions
+        run: node tests/unit/nav-v2-auth-storage-write-gap.test.mjs
 
       - name: Run existing Auth recovery suite
         run: node tests/unit/nav-v2-auth-session-recovery.test.mjs
@@ -68,6 +92,3 @@ jobs:
 
       - name: Run existing password reset suite
         run: node tests/unit/nav-v2-auth-password-reset.test.mjs
-
-      - name: Run storage write gap evidence
-        run: node tests/unit/nav-v2-auth-storage-write-gap.test.mjs
