@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "status": "repository_only_auth_storage_guard_helper_detached_not_integrated",
+  "created_on": "2026-07-23",
+  "source_main_sha": "6af98a7f992e13a2ab42265296438eb1674728ce",
+  "production_applied": false,
+  "production_auth_changed": false,
+  "runtime_source_integrated": false,
+  "runtime_rollout_completed": false,
+  "build_bump_completed": false,
+  "cloud_execution_allowed": false,
+  "helper_file": "assets/js/nav-v2/auth-storage-guard-v2.js",
+  "test_file": "tests/unit/nav-v2-auth-storage-guard-helper.test.mjs",
+  "target_runtime_file": "assets/js/nav-v2/supabase-v2.js",
+  "current_build_id": "20260711-01",
+  "planned_integration_build_id": "20260723-01",
+  "exported_contract": {
+    "error_code": "NAV_AUTH_STORAGE_UNAVAILABLE",
+    "factory": "createAuthStorageController",
+    "operations": [
+      "readSession",
+      "readProfile",
+      "saveProfile",
+      "clearProfiles",
+      "rememberEmail",
+      "clearSession",
+      "persistSession",
+      "isSessionReadBlocked"
+    ]
+  },
+  "guarantees_proven_offline": {
+    "malformed_session_read_returns_null": true,
+    "storage_read_denial_returns_null": true,
+    "remembered_email_write_is_best_effort": true,
+    "profile_cache_write_is_best_effort": true,
+    "session_remove_failure_uses_null_overwrite_fallback": true,
+    "profile_cleanup_runs_after_session_remove_failure": true,
+    "double_clear_failure_blocks_stale_session_in_current_page": true,
+    "profile_cleanup_continues_after_one_remove_failure": true,
+    "session_persist_failure_is_normalized": true,
+    "session_persist_failure_blocks_stale_reads": true,
+    "later_successful_persist_restores_reads": true
+  },
+  "integration_requirements": {
+    "replace_direct_session_reads_and_writes": true,
+    "replace_direct_remembered_email_write": true,
+    "replace_direct_profile_cache_write": true,
+    "preserve_cross_tab_refresh_race_guards": true,
+    "preserve_logout_and_signin_race_guards": true,
+    "update_all_scoped_importmaps_atomically": true,
+    "update_build_config": true,
+    "update_diagnostics_cache_bust": true,
+    "run_all_existing_auth_suites": true,
+    "convert_gap_evidence_to_fixed_regression": true,
+    "production_supabase_change_required": false
+  },
+  "test_boundary": {
+    "network_called": false,
+    "storage_in_memory_with_synthetic_failures": true,
+    "supabase_management_api_called": false,
+    "production_api_called": false,
+    "real_accounts_used": false,
+    "technical_accounts_created": false,
+    "real_tokens_used": false,
+    "real_user_data_used": false,
+    "raw_logs_used": false,
+    "fixture_email_domain": "example.test"
+  },
+  "result": {
+    "decision": "auth_storage_write_hardening_helper_prepared_offline_not_integrated",
+    "helper_unit_contract_proven": true,
+    "runtime_hardening_completed": false,
+    "runtime_rollout_completed": false,
+    "authenticated_role_e2e_completed": false,
+    "preview_branch_ready": false,
+    "production_auth_change_ready": false
+  },
+  "forbidden_claims": [
+    "storage_write_failures_are_fixed_in_runtime",
+    "helper_is_deployed",
+    "build_bump_is_complete",
+    "real_browser_storage_failures_are_verified",
+    "authenticated_role_e2e_is_complete",
+    "preview_branch_is_approved",
+    "production_auth_change_is_approved"
+  ],
+  "forbidden_actions": [
+    "call_production_supabase",
+    "create_supabase_branch",
+    "confirm_cost",
+    "use_real_accounts_or_tokens",
+    "commit_raw_auth_logs",
+    "change_auth_settings",
+    "change_rls_or_grants",
+    "deploy_edge_function",
+    "apply_production_migration",
+    "change_leader_schema"
+  ]
+}
