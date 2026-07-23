@@ -46,6 +46,9 @@ jobs:
           python3 scripts/check_nav_v2_release_drift.py --baseline-only
           python3 scripts/check_nav_v2_release_drift_aliases.py --self-test
           python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only
+          python3 scripts/check_nav_v2_release_drift_shared_project.py --self-test
+          python3 scripts/check_nav_v2_release_drift_shared_project.py --baseline-only
+          python3 -m unittest tests/unit/test_nav_v2_release_drift_shared_project_v1.py
 
       - name: Read project reference
         run: |
@@ -82,7 +85,7 @@ jobs:
           set +e
           extra=""
           if [ "$ALLOW_DRIFT" = "true" ]; then extra="--allow-drift"; fi
-          python3 scripts/check_nav_v2_release_drift_aliases.py \
+          python3 scripts/check_nav_v2_release_drift_shared_project.py \
             --migration-list artifacts/migration-list.txt \
             --functions-json artifacts/functions.json \
             --json-output artifacts/release-drift.json \
