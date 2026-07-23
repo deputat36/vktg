@@ -6,9 +6,13 @@ on:
       - 'deal-card-v2.html'
       - 'assets/js/nav-v2/task-action-guard-v2.js'
       - 'assets/js/nav-v2/task-action-router-v2.js'
+      - 'assets/js/nav-v2/task-lifecycle-closure-model-v1.js'
       - 'assets/js/nav-v2/page-action-feedback-v2.js'
       - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'config/nav-v2-task-lifecycle-closure-v1.json'
+      - 'docs/NAV_V2_TASK_LIFECYCLE_CLOSURE_V1_2026-07-24.md'
       - 'scripts/check_nav_v2_task_action_feedback.py'
+      - 'tests/unit/nav-v2-task-lifecycle-closure.test.mjs'
       - 'tests/e2e/task-action-feedback.spec.js'
       - 'tests/fixtures/nav-v2-task-action-feedback.html'
       - '.github/workflows/nav-v2-task-action-feedback.yml'
@@ -19,9 +23,13 @@ on:
       - 'deal-card-v2.html'
       - 'assets/js/nav-v2/task-action-guard-v2.js'
       - 'assets/js/nav-v2/task-action-router-v2.js'
+      - 'assets/js/nav-v2/task-lifecycle-closure-model-v1.js'
       - 'assets/js/nav-v2/page-action-feedback-v2.js'
       - 'assets/js/nav-v2/deal-card-v2.js'
+      - 'config/nav-v2-task-lifecycle-closure-v1.json'
+      - 'docs/NAV_V2_TASK_LIFECYCLE_CLOSURE_V1_2026-07-24.md'
       - 'scripts/check_nav_v2_task_action_feedback.py'
+      - 'tests/unit/nav-v2-task-lifecycle-closure.test.mjs'
       - 'tests/e2e/task-action-feedback.spec.js'
       - 'tests/fixtures/nav-v2-task-action-feedback.html'
       - '.github/workflows/nav-v2-task-action-feedback.yml'
@@ -43,8 +51,12 @@ jobs:
         run: |
           node --check assets/js/nav-v2/task-action-guard-v2.js
           node --check assets/js/nav-v2/task-action-router-v2.js
+          node --check assets/js/nav-v2/task-lifecycle-closure-model-v1.js
           node --check assets/js/nav-v2/page-action-feedback-v2.js
+          node --check tests/unit/nav-v2-task-lifecycle-closure.test.mjs
           node --check tests/e2e/task-action-feedback.spec.js
+      - name: Task lifecycle closure model regression
+        run: node tests/unit/nav-v2-task-lifecycle-closure.test.mjs
       - name: Task action feedback source contract
         run: python3 scripts/check_nav_v2_task_action_feedback.py
       - name: Compatible feedback and completion contracts
