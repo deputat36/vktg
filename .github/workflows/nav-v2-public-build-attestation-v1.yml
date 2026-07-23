@@ -1,0 +1,86 @@
+name: Navigator v2 public build attestation v1
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 5 * * *'
+  pull_request:
+    paths:
+      - 'config/nav-v2-public-build-attestation-v1.json'
+      - 'scripts/attest_nav_v2_public_build_v1.py'
+      - 'scripts/check_nav_v2_public_build_attestation_v1.py'
+      - 'tests/unit/test_nav_v2_public_build_attestation_v1.py'
+      - 'docs/NAV_V2_PUBLIC_BUILD_ATTESTATION_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-public-build-attestation-v1.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/nav-v2-build.json'
+      - 'config/nav-v2-public-build-attestation-v1.json'
+      - '*-v2.html'
+      - 'assets/js/nav-v2/**'
+      - 'scripts/attest_nav_v2_public_build_v1.py'
+      - 'scripts/check_nav_v2_public_build_attestation_v1.py'
+      - 'tests/unit/test_nav_v2_public_build_attestation_v1.py'
+      - 'docs/NAV_V2_PUBLIC_BUILD_ATTESTATION_V1_2026-07-23.md'
+      - '.github/workflows/nav-v2-public-build-attestation-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-public-build-attestation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-and-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate contract JSON
+        run: |
+          python3 -m json.tool config/nav-v2-build.json > /dev/null
+          python3 -m json.tool config/nav-v2-public-build-attestation-v1.json > /dev/null
+
+      - name: Compile attestation tools
+        run: |
+          python3 -m py_compile scripts/attest_nav_v2_public_build_v1.py
+          python3 -m py_compile scripts/check_nav_v2_public_build_attestation_v1.py
+          python3 -m py_compile tests/unit/test_nav_v2_public_build_attestation_v1.py
+
+      - name: Validate repository-only contract
+        run: python3 scripts/check_nav_v2_public_build_attestation_v1.py
+
+      - name: Validate canonical repository build
+        run: python3 scripts/check_nav_v2_build_version.py
+
+      - name: Run offline parser and mismatch tests
+        run: python3 -m unittest tests/unit/test_nav_v2_public_build_attestation_v1.py
+
+  live-public-attestation:
+    needs: contract-and-offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Attest deployed public build
+        env:
+          NAV_V2_BASE_URL: https://deputat36.github.io/vktg/
+        run: |
+          python3 scripts/attest_nav_v2_public_build_v1.py \
+            --attempts 12 \
+            --retry-delay 15 \
+            --report-path nav-v2-public-build-attestation-report.json
+
+      - name: Upload public build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-public-build-attestation-v1
+          path: nav-v2-public-build-attestation-report.json
+          if-no-files-found: error
+          retention-days: 14
