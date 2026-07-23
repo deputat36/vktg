@@ -69,15 +69,17 @@ def main() -> None:
     build_id = config["current_build_id"]
     require(build["build_id"] == build_id, "build config differs from integration contract")
     require(config["previous_build_id"] != build_id, "build id was not advanced")
+    require(config["initial_integrated_build_id"] != build_id, "current build must record later rollout")
     require(build["minimum_importmap_pages"] == 35, "build config must require all 35 shared pages")
     require(config["build_rollout"]["minimum_expected_pages"] == 35, "rollout minimum page count changed")
     require(config["build_rollout"]["exact_pages_updated_in_branch"] == 35, "exact page count evidence missing")
+    require(config["build_rollout"]["normalized_importmap_mappings_required"] is True, "normalized importmap requirement missing")
     require(f"export const NAV_V2_BUILD_ID = '{build_id}';" in runtime_source, "runtime build marker missing")
     require(f"nav-system-check-v2.js?v={build_id}" in diagnostic_source, "diagnostic cache-bust missing")
 
     for marker in [
         "createAuthStorageController",
-        "auth-storage-guard-v2.js?v=20260723-01",
+        f"auth-storage-guard-v2.js?v={build_id}",
         "authStorage.readSession()",
         "authStorage.clearSession({ email: sessionEmail(session) })",
         "authStorage.persistSession(session)",
@@ -177,17 +179,11 @@ def main() -> None:
 
     require("permissions:\n  contents: read" in workflow_source, "workflow permissions are not read-only")
     require("node tests/unit/nav-v2-auth-storage-write-gap.test.mjs" in workflow_source, "fixed regression missing")
-    require(
-        "node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow_source,
-        "missing-storage regression missing",
-    )
-    require(
-        "node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow_source,
-        "fingerprint recovery regression missing",
-    )
+    require("node tests/unit/nav-v2-auth-storage-controller-missing-storage.test.mjs" in workflow_source, "missing-storage regression missing")
+    require("node tests/unit/nav-v2-auth-storage-fingerprint-recovery.test.mjs" in workflow_source, "fingerprint recovery regression missing")
     require("python3 scripts/check_nav_v2_build_version.py" in workflow_source, "build checker missing")
 
-    print("Navigator v2 Auth storage write fixed regression contract passed")
+    print(f"Navigator v2 Auth storage write fixed regression contract passed: build {build_id}")
 
 
 if __name__ == "__main__":
