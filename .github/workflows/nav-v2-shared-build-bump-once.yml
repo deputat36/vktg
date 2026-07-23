@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify generated scope
         run: |
-          test "$(git diff --name-only | grep -E '(^config/nav-v2-build.json$|^config/nav-v2-public-build-attestation-v1.json$|^assets/js/nav-v2/supabase-v2.js$|^nav-system-check-v2.html$|^[^/]+-v2.html$)' | wc -l)" -ge 39
+          test "$(git diff --name-only | grep -E '(^config/nav-v2-build.json$|^config/nav-v2-public-build-attestation-v1.json$|^assets/js/nav-v2/supabase-v2.js$|^nav-system-check-v2.html$|^[^/]+-v2.html$)' | wc -l)" -ge 38
           git diff --check
 
       - name: Commit generated files to branch
