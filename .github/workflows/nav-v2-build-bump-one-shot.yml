@@ -1,0 +1,66 @@
+name: Navigator v2 one-shot branch build bump
+
+on:
+  push:
+    branches:
+      - agent/nav-v2-auth-storage-runtime-integration-v1
+    paths:
+      - '.github/workflows/nav-v2-build-bump-one-shot.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-importmaps:
+    if: github.repository == 'deputat36/vktg' && github.ref_name == 'agent/nav-v2-auth-storage-runtime-integration-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/nav-v2-auth-storage-runtime-integration-v1
+          fetch-depth: 0
+
+      - name: Update all shared Navigator importmaps
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          old = '20260711-01'
+          new = '20260723-01'
+          root = Path('.')
+          pages = []
+
+          for path in sorted(root.glob('*-v2.html')):
+              source = path.read_text(encoding='utf-8')
+              if '"./supabase-v2.js"' not in source:
+                  continue
+              if old not in source:
+                  raise SystemExit(f'{path}: expected old build {old} is missing')
+              updated = source.replace(old, new)
+              if updated == source:
+                  raise SystemExit(f'{path}: build replacement produced no change')
+              path.write_text(updated, encoding='utf-8')
+              pages.append(path.name)
+
+          if len(pages) != 35:
+              raise SystemExit(f'Expected exactly 35 shared importmap pages, got {len(pages)}: {pages}')
+
+          diagnostic = Path('nav-system-check-v2.html').read_text(encoding='utf-8')
+          if f'nav-system-check-v2.js?v={new}' not in diagnostic:
+              raise SystemExit('Diagnostic cache-bust was not updated')
+
+          Path('.github/workflows/nav-v2-build-bump-one-shot.yml').unlink()
+          print(f'Updated {len(pages)} pages: {", ".join(pages)}')
+          PY
+
+      - name: Validate build consistency before push
+        run: python3 scripts/check_nav_v2_build_version.py
+
+      - name: Commit branch-only build bump
+        run: |
+          git config user.name 'navigator-v2-bot'
+          git config user.email 'navigator-v2-bot@users.noreply.github.com'
+          git add -- '*-v2.html' '.github/workflows/nav-v2-build-bump-one-shot.yml'
+          git commit -m 'chore(nav-v2): update shared importmaps for auth storage build'
+          git push origin HEAD:agent/nav-v2-auth-storage-runtime-integration-v1
