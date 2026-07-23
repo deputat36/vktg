@@ -1,9 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "scenarios": [
     {
       "id": "missing_required_document",
-      "profile": { "role": "spn" },
+      "profile": {
+        "role": "spn"
+      },
       "data": {
         "deal": {
           "status": "need_documents",
@@ -40,7 +42,9 @@
     },
     {
       "id": "blocking_risk_requires_lawyer",
-      "profile": { "role": "manager" },
+      "profile": {
+        "role": "manager"
+      },
       "data": {
         "deal": {
           "status": "need_lawyer",
@@ -73,7 +77,9 @@
     },
     {
       "id": "registered_post_deal_control",
-      "profile": { "role": "spn" },
+      "profile": {
+        "role": "spn"
+      },
       "data": {
         "deal": {
           "status": "registered",
@@ -96,7 +102,9 @@
     },
     {
       "id": "confirmed_outcomes_leave_queue",
-      "profile": { "role": "lawyer" },
+      "profile": {
+        "role": "lawyer"
+      },
       "data": {
         "deal": {
           "status": "preparing_deal",
@@ -131,6 +139,92 @@
         "stage": "подготовка основной сделки",
         "missing_documents": 0,
         "blocking_risks": 0
+      }
+    },
+    {
+      "id": "legacy_broker_task_infers_owner_and_deadline",
+      "profile": {
+        "role": "spn"
+      },
+      "data": {
+        "deal": {
+          "status": "need_broker",
+          "readiness_deposit": 65,
+          "readiness_deal": 45,
+          "expenses_agreed": true,
+          "settlements_agreed": true
+        },
+        "documents": [],
+        "tasks": [
+          {
+            "id": "task-broker-1",
+            "status": "open",
+            "priority": "high",
+            "source": "auto_broker",
+            "task_type": null,
+            "assigned_to": null,
+            "assigned_role": null,
+            "due_date": null,
+            "created_at": "2026-07-23T10:00:00Z"
+          }
+        ],
+        "risks": [],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "согласование финансового маршрута",
+        "owner": "ипотечный брокер",
+        "deadline": "25.07.2026",
+        "inferred_task_types": 1,
+        "inferred_task_deadlines": 1,
+        "task_type": "broker_task",
+        "task_type_source": "inferred_from_source",
+        "owner_source": "inferred_from_task_type",
+        "deadline_source": "inferred_sla",
+        "copy_contains": "уточнить финансовый маршрут с ипотечным брокером"
+      }
+    },
+    {
+      "id": "explicit_person_assignment_stays_anonymous",
+      "profile": {
+        "role": "manager"
+      },
+      "data": {
+        "deal": {
+          "status": "need_info",
+          "readiness_deposit": 25,
+          "readiness_deal": 10,
+          "expenses_agreed": true,
+          "settlements_agreed": true
+        },
+        "documents": [],
+        "tasks": [
+          {
+            "id": "task-person-1",
+            "status": "open",
+            "priority": "normal",
+            "source": "manual",
+            "assigned_to": "11111111-2222-3333-4444-555555555555",
+            "assigned_role": null,
+            "due_date": "2026-07-24",
+            "created_at": "2026-07-23T09:00:00Z"
+          }
+        ],
+        "risks": [],
+        "reviews": []
+      },
+      "expect": {
+        "stage": "сбор и уточнение информации",
+        "owner": "назначенный сотрудник",
+        "deadline": "24.07.2026",
+        "inferred_task_types": 1,
+        "inferred_task_deadlines": 0,
+        "task_type": "operational_task",
+        "owner_source": "explicit_assigned_person",
+        "deadline_source": "explicit_due_date",
+        "forbidden": [
+          "11111111-2222-3333-4444-555555555555"
+        ]
       }
     }
   ]

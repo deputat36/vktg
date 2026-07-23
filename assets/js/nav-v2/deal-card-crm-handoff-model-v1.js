@@ -1,3 +1,8 @@
+import {
+  classifyTaskForProcess,
+  taskProcessRoleLabel
+} from './task-process-policy-v1.js?v=20260723-01';
+
 const TERMINAL_DOCUMENT_OUTCOMES = new Set(['not_applicable', 'replaced', 'cancelled']);
 const TERMINAL_RISK_OUTCOMES = new Set(['mitigated', 'not_applicable', 'superseded', 'accepted_by_specialist', 'cancelled']);
 
@@ -24,7 +29,8 @@ const ROLE_LABELS = {
   spn: 'СПН',
   lawyer: 'юрист',
   broker: 'ипотечный брокер',
-  viewer: 'наблюдатель'
+  viewer: 'наблюдатель',
+  assigned_person: 'назначенный сотрудник'
 };
 
 function items(data, key) {
@@ -87,7 +93,7 @@ function formatDate(date) {
 }
 
 function roleTitle(role) {
-  return ROLE_LABELS[role] || text(role) || 'ответственный не назначен';
+  return ROLE_LABELS[role] || taskProcessRoleLabel(role);
 }
 
 function stageTitle(status) {
@@ -129,24 +135,35 @@ function agreementText(deal) {
 function missingText(missingDocuments, unownedTasks) {
   const parts = [];
   if (missingDocuments.length) parts.push(`${missingDocuments.length} обязательных документов`);
-  if (unownedTasks.length) parts.push(`${unownedTasks.length} открытых задач без ответственного`);
+  if (unownedTasks.length) parts.push(`${unownedTasks.length} открытых задач без явного ответственного`);
   return parts.length ? parts.join('; ') + '.' : 'Обязательные пробелы для процессной записи не обнаружены.';
 }
 
-function chooseNextAction(deal, openTasks, missingDocuments, blockingRisks, blockingReviews) {
-  const sortedTasks = [...openTasks].sort((left, right) => {
-    const priority = priorityRank(left?.priority) - priorityRank(right?.priority);
-    if (priority !== 0) return priority;
-    const leftDue = validDate(left?.due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-    const rightDue = validDate(right?.due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-    return leftDue - rightDue;
-  });
+function classifyOpenTasks(openTasks, nowValue) {
+  return openTasks.map((task) => ({
+    task,
+    policy: classifyTaskForProcess(task, nowValue)
+  }));
+}
+
+function taskSort(left, right) {
+  const priority = priorityRank(left.task?.priority) - priorityRank(right.task?.priority);
+  if (priority !== 0) return priority;
+  const leftDue = validDate(left.policy?.control_due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  const rightDue = validDate(right.policy?.control_due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  if (leftDue !== rightDue) return leftDue - rightDue;
+  return text(left.task?.id).localeCompare(text(right.task?.id));
+}
+
+function chooseNextAction(deal, classifiedTasks, missingDocuments, blockingRisks, blockingReviews) {
+  const sortedTasks = [...classifiedTasks].sort(taskSort);
 
   if (blockingReviews.length) {
     return {
       action: 'получить и зафиксировать решение профильного специалиста по блокирующему замечанию',
       owner: blockingReviews[0]?.reviewer_role || (deal?.lawyer_needed ? 'lawyer' : 'manager'),
-      due: earliestDue(sortedTasks)
+      due: earliestDue(sortedTasks.map((item) => ({ due_date: item.policy?.control_due_date }))),
+      task_policy: null
     };
   }
   if (blockingRisks.length) {
@@ -154,7 +171,8 @@ function chooseNextAction(deal, openTasks, missingDocuments, blockingRisks, bloc
     return {
       action: 'уточнить условия устранения блокирующего риска и приложить подтверждение результата',
       owner: risk?.responsible_role || risk?.assigned_role || (deal?.lawyer_needed ? 'lawyer' : 'manager'),
-      due: earliestDue(sortedTasks)
+      due: earliestDue(sortedTasks.map((item) => ({ due_date: item.policy?.control_due_date }))),
+      task_policy: null
     };
   }
   if (missingDocuments.length) {
@@ -166,42 +184,46 @@ function chooseNextAction(deal, openTasks, missingDocuments, blockingRisks, bloc
     return {
       action: 'получить обязательный документ и передать его профильному специалисту на проверку',
       owner: document?.responsible_role || document?.assigned_role || 'spn',
-      due: validDate(document?.due_date)
+      due: validDate(document?.due_date),
+      task_policy: null
     };
   }
   if (sortedTasks.length) {
-    const task = sortedTasks[0];
+    const selected = sortedTasks[0];
     return {
-      action: 'выполнить ближайшую открытую задачу и зафиксировать подтверждённый результат',
-      owner: task?.assigned_role || 'spn',
-      due: validDate(task?.due_date)
+      action: selected.policy.action_text,
+      owner: selected.policy.owner_role,
+      owner_label: selected.policy.owner_label,
+      due: validDate(selected.policy.control_due_date),
+      task_policy: selected.policy
     };
   }
   if (deal?.settlements_agreed !== true) {
-    return { action: 'согласовать порядок расчётов с участниками и профильным специалистом', owner: 'spn', due: null };
+    return { action: 'согласовать порядок расчётов с участниками и профильным специалистом', owner: 'spn', due: null, task_policy: null };
   }
   if (deal?.expenses_agreed !== true) {
-    return { action: 'согласовать распределение расходов между сторонами', owner: 'spn', due: null };
+    return { action: 'согласовать распределение расходов между сторонами', owner: 'spn', due: null, task_policy: null };
   }
   if (deal?.status === 'registered') {
-    return { action: 'проконтролировать раскрытие расчётов, передачу объекта, акт и ключи', owner: 'spn', due: null };
+    return { action: 'проконтролировать раскрытие расчётов, передачу объекта, акт и ключи', owner: 'spn', due: null, task_policy: null };
   }
   if (deal?.status === 'closed') {
-    return { action: 'проверить закрытие связанных задач и необходимость постсделочного сопровождения', owner: 'manager', due: null };
+    return { action: 'проверить закрытие связанных задач и необходимость постсделочного сопровождения', owner: 'manager', due: null, task_policy: null };
   }
-  return { action: 'определить следующий обязательный шаг по текущему этапу', owner: 'spn', due: null };
+  return { action: 'определить следующий обязательный шаг по текущему этапу', owner: 'spn', due: null, task_policy: null };
 }
 
-export function buildDealCardCrmHandoffModel(data, profile = null) {
+export function buildDealCardCrmHandoffModel(data, profile = null, nowValue = Date.now()) {
   const deal = data?.deal || {};
   const openTasks = items(data, 'tasks').filter(isOpenTask);
+  const classifiedTasks = classifyOpenTasks(openTasks, nowValue);
   const missingDocuments = items(data, 'documents').filter(isOpenDocument);
   const blockingRisks = items(data, 'risks').filter(riskIsBlocking);
   const blockingReviews = items(data, 'reviews').filter(isBlockingReview);
   const unownedTasks = openTasks.filter((task) => !task?.assigned_to && !task?.assigned_role);
-  const next = chooseNextAction(deal, openTasks, missingDocuments, blockingRisks, blockingReviews);
+  const next = chooseNextAction(deal, classifiedTasks, missingDocuments, blockingRisks, blockingReviews);
   const deadline = formatDate(next.due) || 'срок требуется уточнить';
-  const owner = roleTitle(next.owner);
+  const owner = next.owner_label || roleTitle(next.owner);
 
   const fields = [
     { key: 'stage', label: 'Текущий этап', value: stageTitle(deal?.status) },
@@ -220,13 +242,20 @@ export function buildDealCardCrmHandoffModel(data, profile = null) {
       missing_documents: missingDocuments.length,
       blocking_risks: blockingRisks.length,
       blocking_reviews: blockingReviews.length,
-      unowned_tasks: unownedTasks.length
+      unowned_tasks: unownedTasks.length,
+      inferred_task_types: classifiedTasks.filter((item) => item.policy.task_type_source === 'inferred_from_source').length,
+      inferred_task_deadlines: classifiedTasks.filter((item) => item.policy.deadline_source === 'inferred_sla').length
     },
     next_action: {
       owner_role: next.owner || null,
       owner_label: owner,
       deadline: formatDate(next.due) || null,
-      deadline_known: Boolean(next.due)
+      deadline_known: Boolean(next.due),
+      task_type: next.task_policy?.task_type || null,
+      task_type_source: next.task_policy?.task_type_source || null,
+      owner_source: next.task_policy?.owner_source || null,
+      deadline_source: next.task_policy?.deadline_source || null,
+      preview_only: true
     },
     role: profile?.role || data?.profile?.role || null,
     privacy: {

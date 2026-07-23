@@ -1,4 +1,4 @@
-import { buildDealCardCrmHandoffModel } from './deal-card-crm-handoff-model-v1.js?v=20260723-01';
+import { buildDealCardCrmHandoffModel } from './deal-card-crm-handoff-model-v1.js?v=20260723-02';
 
 const BLOCK_ID = 'dealCardCrmHandoffV1';
 
