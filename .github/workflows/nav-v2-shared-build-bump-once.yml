@@ -1,9 +1,7 @@
 name: Navigator v2 one-time shared build bump
 
 on:
-  push:
-    branches:
-      - agent/nav-v2-live-public-browser-runtime-v1
+  pull_request:
     paths:
       - '.github/workflows/nav-v2-shared-build-bump-once.yml'
   workflow_dispatch:
@@ -17,7 +15,7 @@ concurrency:
 
 jobs:
   bump-shared-build:
-    if: github.ref_name == 'agent/nav-v2-live-public-browser-runtime-v1'
+    if: github.head_ref == 'agent/nav-v2-live-public-browser-runtime-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
