@@ -2,6 +2,8 @@
 
 Дата исходного package: 21 июля 2026 года. Последняя read-only attestation refresh: 21 июля 2026 года, `13:19:29 UTC`.
 
+Важно: migration boundary внутри package v2 является historical snapshot на момент сборки. Текущий release baseline позже reconciled в PR #488 без изменения production по семантике `required_present_not_global_latest`.
+
 ## Package v2
 
 Статус: repository-only review package. Не является migration, deployment bundle или разрешением на создание Supabase branch.
@@ -44,7 +46,7 @@ Package v2 использует:
 3. mutation rollback;
 4. base contract rollback.
 
-Позднее PR #433 отдельно доказал общий lifecycle `quality → bounded → intake`. Package v2 сохраняет своё исходное fail-closed состояние, а актуальная execution orchestration находится в package v3.
+Позднее PR #433 отдельно доказал общий lifecycle `quality → bounded → intake`. Package v2 сохраняет исходное fail-closed состояние, а актуальная execution orchestration находится в package v3.
 
 ## Component inventory
 
@@ -61,17 +63,7 @@ Package v2 связывает:
 
 `tests/sql/nav_v2_preview_readonly_preflight_v1.sql` выполняет aggregate-only чтение внутри `begin transaction read only` и заканчивается `rollback`.
 
-Проверяются:
-
-- PostgreSQL version;
-- overall remote migration boundary;
-- Navigator migration boundary;
-- отсутствие bounded task columns;
-- отсутствие mutation event table;
-- отсутствие governed intake ledger и mapper;
-- отсутствие actor-aware RPC;
-- отсутствие `nav-e2e` Auth users и profiles;
-- агрегированные статусы legacy tasks.
+Проверяются PostgreSQL version, общая и Navigator migration boundary, отсутствие candidate DB objects, отсутствие `nav-e2e` identities и агрегированные статусы legacy tasks.
 
 Запрос не возвращает ФИО, email, телефоны, адреса, UUID пользователей или клиентские данные.
 
@@ -85,49 +77,46 @@ Captured snapshot:
 - technical Auth users: `0`;
 - technical profiles: `0`;
 - candidate DB objects: `0`;
-- tasks: `88 open`, `10 cancelled`, `0 in_progress`, `0 done`;
 - Edge `nav-v2-deal-api`: v4, ACTIVE, JWT required;
 - Edge hash: `b64e3fdbc2fa22ccb4998e69232e4351308f1d9b0a7c3c2bec7093186d3e4095`.
 
 Snapshot не является execution authorization и повторяется непосредственно перед любым gated cloud action.
 
-## Migration boundary drift
+## Historical migration boundary evidence
 
-Read-only evidence разделяет две границы:
+Package v2 зафиксировал на 21 июля 2026 года:
 
 - latest Navigator migration: `20260716063401_nav_v2_correct_mortgage_broker_scope`;
-- latest overall remote migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs`.
+- latest overall remote migration: `20260721122333_revoke_anon_execute_leader_internal_rpcs`;
+- тогдашний release baseline snapshot: `20260715203158`;
+- historical `release_baseline_drift_detected=true`;
+- automatic `release_baseline_refresh_allowed=false`;
+- historical stop `release_baseline_migration_drift_unreconciled`.
 
-`config/nav-v2-release-baseline.json` содержит `20260715203158`.
+Эти значения не переписываются задним числом, потому что package v2 является доказательством состояния на дату сборки.
 
-Новая overall migration относится к `leader_*`. Package v2 не обновляет release baseline автоматически и не получает права изменять или нормализовать историю другого модуля.
+## Current release reconciliation
 
-Зафиксировано:
+PR #488 обновляет отдельный текущий release contract:
 
-- Navigator boundary подтверждена и не изменилась;
-- overall release baseline drift существует;
-- latest remote migration явно non-Navigator;
-- `release_baseline_refresh_allowed=false`;
-- drift остаётся active stop до source reconciliation владельцем соответствующего модуля.
+- current Navigator baseline: `20260716063401`;
+- canonical repository migration: `20260716064500`;
+- baseline semantics: `required_present_not_global_latest`;
+- более новые repository-known `leader_*` migrations не считаются Navigator drift только из-за timestamp;
+- неизвестные remote-only migrations по-прежнему блокируют gate;
+- production, Auth, RLS, Edge и `leader_*` не менялись.
+
+Канонические текущие файлы:
+
+- `config/nav-v2-release-baseline.json`;
+- `config/nav-v2-release-drift-shared-project-v1.json`;
+- `scripts/check_nav_v2_release_drift_shared_project.py`.
 
 ## Temporary package index
 
-Assembler:
+Assembler `scripts/assemble-nav-v2-preview-candidate-package-v2.mjs` создаёт во временном каталоге только `preview-candidate-package-v2-index.json`.
 
-`scripts/assemble-nav-v2-preview-candidate-package-v2.mjs`
-
-Он принимает deterministic preview bundle и consolidated bounded directory, а создаёт во временном каталоге только `preview-candidate-package-v2-index.json`.
-
-Index содержит:
-
-- hashes upstream indexes;
-- exact SQL artifact hashes и source order;
-- Edge file set hashes;
-- read-only preflight hash;
-- captured attestation hash;
-- migration boundary state;
-- active stops;
-- fail-closed readiness flags.
+Index содержит hashes upstream indexes, exact SQL artifact hashes/source order, Edge file hashes, read-only preflight hash, captured attestation hash, historical migration boundary и fail-closed flags.
 
 Generated SQL не копируется в package output или `supabase/migrations`. CI собирает index дважды и требует побайтного совпадения.
 
@@ -149,27 +138,25 @@ Production snapshot:
 
 ## Active stops
 
-Package v2 остаётся fail-closed:
+Исторический package v2 остаётся fail-closed и сохраняет свой исходный список stops как evidence. Для текущего package v3 обязательными остаются:
 
-- release baseline migration drift не reconciled;
+- execution не авторизован;
 - preview branch отсутствует;
-- explicit cost approval отсутствует;
-- cost confirmation id отсутствует;
+- explicit cost approval и cost confirmation id отсутствуют;
+- fresh execution-time attestation отсутствует;
 - technical accounts отсутствуют;
 - authenticated role matrix не выполнена;
-- Edge feature flag выключен;
 - Edge candidate не deployed;
-- minimal grants не applied;
-- preview apply не approved;
-- production deployment не approved;
+- frontend transport выключен;
+- preview apply и production deployment не approved;
 - controlled pilot не approved;
 - cleanup option не выбран.
 
-Исторический флаг `cross_component_sequential_apply_not_proven` в package v2 закрыт отдельным package v3 evidence, но не переписывается как разрешение на cloud execution.
+Текущий reconciled release baseline больше не является активным blocker package v3. Это не разрешает cloud execution.
 
 ## Rollback
 
-Repository rollback этой attestation refresh означает возврат package v2 config, snapshot, validator и документа к предыдущей captured boundary.
+Repository rollback этой документационной reconciliation означает возврат валидаторов и current release contract. Historical package v2 config и captured attestation остаются неизменным evidence.
 
 Production rollback не требуется: production Supabase, Auth, RLS, grants, Edge Functions и rows не менялись.
 
