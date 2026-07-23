@@ -1,0 +1,88 @@
+name: Navigator v2 post-merge live evidence v1
+
+on:
+  pull_request:
+    paths:
+      - 'config/nav-v2-post-merge-live-evidence-v1.json'
+      - '.github/workflows/nav-v2-post-merge-live-evidence-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-v2-post-merge-live-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  post-merge-live-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Validate evidence request and repository build
+        run: |
+          python3 -m json.tool config/nav-v2-post-merge-live-evidence-v1.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          request = json.loads(Path('config/nav-v2-post-merge-live-evidence-v1.json').read_text())
+          build = json.loads(Path('config/nav-v2-build.json').read_text())
+          assert request['status'] in {
+              'post_merge_public_runtime_evidence_requested',
+              'post_merge_public_runtime_evidence_recorded'
+          }
+          assert request['expected_build_id'] == build['build_id']
+          assert request['public_base_url'] == 'https://deputat36.github.io/vktg/'
+          assert request['boundaries']['credentials_used'] is False
+          assert request['boundaries']['authenticated_requests'] is False
+          assert request['boundaries']['production_mutation'] is False
+          print(f"Post-merge evidence request valid for build {build['build_id']}")
+          PY
+          python3 scripts/check_nav_v2_build_version.py
+          python3 scripts/check_nav_v2_public_build_attestation_v1.py
+          python3 scripts/check_nav_v2_live_public_browser_runtime_v1.py
+
+      - name: Install pinned Chromium dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Attest deployed public source and hashes
+        env:
+          NAV_V2_BASE_URL: https://deputat36.github.io/vktg/
+        run: |
+          python3 scripts/attest_nav_v2_public_build_v1.py \
+            --attempts 12 \
+            --retry-delay 15 \
+            --report-path nav-v2-post-merge-source-attestation.json
+
+      - name: Execute deployed desktop and mobile browser runtime
+        env:
+          NAV_E2E_BASE_URL: https://deputat36.github.io/vktg/
+        run: |
+          for attempt in 1 2 3; do
+            if npm run test:e2e:live-public-runtime; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+          exit 1
+
+      - name: Upload post-merge live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-post-merge-live-evidence-v1
+          path: |
+            nav-v2-post-merge-source-attestation.json
+            playwright-report/
+            test-results/
+          if-no-files-found: error
+          retention-days: 14
