@@ -36,7 +36,8 @@
     "cross_component_sequential_apply_not_proven",
     "exact_preview_rollback_inventory_missing",
     "preview_execution_runbook_missing",
-    "technical_account_lifecycle_plan_missing"
+    "technical_account_lifecycle_plan_missing",
+    "release_baseline_migration_drift_unreconciled"
   ],
   "database_forward_order": [
     {
@@ -82,7 +83,9 @@
     "full_25_rule_assertions_success": true,
     "always_rollback_success": true,
     "post_rollback_success": true,
-    "production_changed": false
+    "production_changed": false,
+    "release_baseline_reconciled_repository_only": true,
+    "release_baseline_semantics": "required_present_not_global_latest"
   },
   "preview_execution_dependencies": {
     "fresh_cost_lookup_required": true,
@@ -106,7 +109,6 @@
     "authenticated_role_matrix_not_run",
     "edge_not_deployed",
     "frontend_bounded_transport_disabled",
-    "release_baseline_migration_drift_unreconciled",
     "production_deployment_not_approved",
     "controlled_pilot_not_approved",
     "cleanup_option_unselected"

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "created_on": "2026-07-23",
+  "status": "repository_only_shared_supabase_release_drift_contract",
+  "project_ref": "ofewxuqfjhamgerwzull",
+  "shared_supabase_project": true,
+  "navigator_baseline_semantics": "required_present_not_global_latest",
+  "canonical_baseline_path": "config/nav-v2-release-baseline.json",
+  "canonical_aliases_path": "config/nav-v2-release-migration-aliases.json",
+  "current_navigator_live_migration": "20260716063401",
+  "canonical_repository_migration": "20260716064500",
+  "canonical_repository_blob_sha": "93687e0aed8d88d604e31a730ba8c9f8c806b94e",
+  "later_repository_known_migrations_allowed": true,
+  "unknown_remote_migrations_block": true,
+  "edge_function_baseline_unchanged": true,
+  "boundaries": {
+    "read_only": true,
+    "production_schema_changed": false,
+    "production_data_changed": false,
+    "production_auth_changed": false,
+    "edge_function_changed": false,
+    "leader_schema_changed": false,
+    "cost_confirmation_requested": false,
+    "preview_branch_created": false
+  },
+  "result": {
+    "decision": "shared_project_release_drift_false_positive_removed_repository_only",
+    "production_mutation": false,
+    "authenticated_role_e2e_completed": false
+  }
+}

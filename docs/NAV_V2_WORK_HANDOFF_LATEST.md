@@ -4,8 +4,8 @@
 
 - Дата: 23 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Последний функциональный `main`: `ecda0aeacd48845194b28c7d7e8d50ef068b4724` — squash merge PR #486.
-- Evidence PR: #487 — фиксация post-merge source/hash и Chromium evidence.
+- Последний подтверждённый `main`: `251044106437224480295688ac7954950fc44055` — squash merge PR #487.
+- Рабочий PR: #488 — shared-project aware release drift gate.
 - Shared frontend build: `20260723-02`.
 - Public GitHub Pages: `https://deputat36.github.io/vktg/`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
@@ -187,6 +187,47 @@ Public browser evidence не воспроизводит реальные `QuotaE
 - pages `35/35`;
 - artifact `8556415410`.
 
+## Shared-project release drift — PR #488
+
+Read-only Supabase inspection подтвердил одновременно:
+
+- latest Navigator migration `20260716063401_nav_v2_correct_mortgage_broker_scope`;
+- latest overall migration `20260721122333_revoke_anon_execute_leader_internal_rpcs`;
+- production содержит более новые `leader_*` migrations без изменения Navigator runtime;
+- `nav-v2-deal-api` v4 ACTIVE, `verify_jwt=true`, hash unchanged;
+- preview branch отсутствует.
+
+Старый release drift gate требовал, чтобы Navigator baseline был глобально последней migration общего project. Это создавало ложный drift после законных более новых `leader_*` migrations.
+
+PR #488 вводит семантику:
+
+`required_present_not_global_latest`
+
+Подготовлено:
+
+- baseline Navigator продвинут до live `20260716063401`;
+- exact alias live `20260716063401` → canonical `20260716064500`;
+- canonical SQL blob `93687e0aed8d88d604e31a730ba8c9f8c806b94e`;
+- `config/nav-v2-release-drift-shared-project-v1.json`;
+- `scripts/check_nav_v2_release_drift_shared_project.py`;
+- dedicated unit/self-tests;
+- PR CI в `.github/workflows/nav-v2-release-alias-static.yml`;
+- read-only production workflow переключён на shared-project evaluator.
+
+Сохраняются блокирующие условия:
+
+- approved Navigator migration отсутствует в remote history;
+- unknown remote-only migration;
+- unapproved repository-only migration;
+- Edge version/status/JWT/hash/source drift;
+- незарегистрированная Navigator Edge Function.
+
+Решение после зелёного CI:
+
+`shared_project_release_drift_false_positive_removed_repository_only`
+
+Production DDL/DML/Auth/Edge и `leader_*` не изменялись.
+
 ## Index/capacity status
 
 Observation baseline:
@@ -252,6 +293,19 @@ Public/build:
 - `.github/workflows/nav-v2-post-merge-live-evidence-v1.yml`;
 - `.github/workflows/nav-v2-shared-runtime-rollout-gate-v1.yml`.
 
+Release drift:
+
+- `config/nav-v2-release-baseline.json`;
+- `config/nav-v2-release-migration-aliases.json`;
+- `config/nav-v2-release-drift-shared-project-v1.json`;
+- `scripts/check_nav_v2_release_drift.py`;
+- `scripts/check_nav_v2_release_drift_aliases.py`;
+- `scripts/check_nav_v2_release_drift_shared_project.py`;
+- `scripts/check_nav_v2_release_drift_workflow.py`;
+- `tests/unit/test_nav_v2_release_drift_shared_project_v1.py`;
+- `.github/workflows/nav-v2-release-alias-static.yml`;
+- `.github/workflows/nav-v2-release-drift.yml`.
+
 Auth:
 
 - `assets/js/nav-v2/supabase-v2.js`;
@@ -268,13 +322,14 @@ Index:
 
 ## Следующий безопасный slice
 
-1. завершить PR #487 с recorded evidence и exact green head;
-2. проверить post-merge evidence workflow повторно;
-3. проверить canonical handoff/public/browser contracts;
-4. merge только без review threads;
-5. проверить Supabase drift read-only;
-6. поддерживать scheduled public source/browser monitoring;
-7. не вызывать cost confirmation;
-8. не создавать Supabase branch/accounts/secrets;
-9. не менять production DDL/DML/RLS/Auth/Edge;
-10. не трогать `leader_*`.
+1. завершить PR #488 только на exact green head;
+2. проверить migration alias/shared-project unit и workflow contract CI;
+3. проверить static и handoff consistency;
+4. убедиться, что review threads отсутствуют;
+5. merge repository-only slice без production mutations;
+6. после merge обновить issues #164 и #177;
+7. поддерживать scheduled public source/browser monitoring;
+8. не вызывать cost confirmation;
+9. не создавать Supabase branch/accounts/secrets;
+10. не менять production DDL/DML/RLS/Auth/Edge;
+11. не трогать `leader_*`.

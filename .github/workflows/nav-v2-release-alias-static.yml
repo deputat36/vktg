@@ -5,9 +5,14 @@ on:
     paths:
       - 'config/nav-v2-release-baseline.json'
       - 'config/nav-v2-release-migration-aliases.json'
+      - 'config/nav-v2-release-drift-shared-project-v1.json'
       - 'scripts/check_nav_v2_release_drift.py'
       - 'scripts/check_nav_v2_release_drift_aliases.py'
+      - 'scripts/check_nav_v2_release_drift_shared_project.py'
       - 'scripts/check_nav_v2_release_drift_workflow.py'
+      - 'tests/unit/test_nav_v2_release_drift_shared_project_v1.py'
+      - 'docs/NAV_V2_RELEASE_DRIFT.md'
+      - 'docs/NAV_V2_RELEASE_DRIFT_SHARED_PROJECT_V1_2026-07-23.md'
       - '.github/workflows/nav-v2-release-drift.yml'
       - '.github/workflows/nav-v2-release-alias-static.yml'
   push:
@@ -16,8 +21,13 @@ on:
     paths:
       - 'config/nav-v2-release-baseline.json'
       - 'config/nav-v2-release-migration-aliases.json'
+      - 'config/nav-v2-release-drift-shared-project-v1.json'
       - 'scripts/check_nav_v2_release_drift_aliases.py'
+      - 'scripts/check_nav_v2_release_drift_shared_project.py'
       - 'scripts/check_nav_v2_release_drift_workflow.py'
+      - 'tests/unit/test_nav_v2_release_drift_shared_project_v1.py'
+      - 'docs/NAV_V2_RELEASE_DRIFT.md'
+      - 'docs/NAV_V2_RELEASE_DRIFT_SHARED_PROJECT_V1_2026-07-23.md'
       - '.github/workflows/nav-v2-release-drift.yml'
       - '.github/workflows/nav-v2-release-alias-static.yml'
 
@@ -39,6 +49,9 @@ jobs:
             python3 scripts/check_nav_v2_release_drift.py --baseline-only
             python3 scripts/check_nav_v2_release_drift_aliases.py --self-test
             python3 scripts/check_nav_v2_release_drift_aliases.py --baseline-only
+            python3 scripts/check_nav_v2_release_drift_shared_project.py --self-test
+            python3 scripts/check_nav_v2_release_drift_shared_project.py --baseline-only
+            python3 -m unittest tests/unit/test_nav_v2_release_drift_shared_project_v1.py
             python3 scripts/check_nav_v2_release_drift_workflow.py
           ) 2>&1 | tee artifacts/migration-alias-check.log
           code=${PIPESTATUS[0]}
