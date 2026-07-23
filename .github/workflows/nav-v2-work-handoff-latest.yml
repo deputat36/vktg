@@ -1,0 +1,40 @@
+name: Navigator v2 canonical handoff consistency
+
+on:
+  pull_request:
+    paths:
+      - 'docs/NAV_V2_WORK_HANDOFF_LATEST.md'
+      - 'config/nav-v2-build.json'
+      - 'config/nav-v2-public-build-attestation-v1.json'
+      - 'scripts/check_nav_v2_work_handoff_latest.py'
+      - '.github/workflows/nav-v2-work-handoff-latest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/NAV_V2_WORK_HANDOFF_LATEST.md'
+      - 'config/nav-v2-build.json'
+      - 'config/nav-v2-public-build-attestation-v1.json'
+      - 'scripts/check_nav_v2_work_handoff_latest.py'
+      - '.github/workflows/nav-v2-work-handoff-latest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  handoff-consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate canonical evidence JSON
+        run: |
+          python3 -m json.tool config/nav-v2-build.json > /dev/null
+          python3 -m json.tool config/nav-v2-public-build-attestation-v1.json > /dev/null
+
+      - name: Compile handoff checker
+        run: python3 -m py_compile scripts/check_nav_v2_work_handoff_latest.py
+
+      - name: Validate canonical handoff consistency
+        run: python3 scripts/check_nav_v2_work_handoff_latest.py
