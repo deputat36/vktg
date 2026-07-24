@@ -23,18 +23,45 @@ const taskFocus = buildDealActionFocus({
   documents: [{ is_required: true, status: 'needed' }]
 }, profile, now);
 
-assert.equal(taskFocus.taskId, 'overdue', 'Overdue urgent task must be primary');
+assert.equal(taskFocus.taskId, 'overdue', 'Overdue urgent actionable task must be primary');
 assert.equal(taskFocus.deadlineState, 'overdue');
 assert.equal(taskFocus.responsible, 'Юрист');
 assert.equal(taskFocus.primaryTab, 'tasks');
 assert.equal(taskFocus.relatedTab, 'risks');
 assert.equal(taskFocus.canChangeTask, true);
+assert.equal(taskFocus.focusScope, 'actionable_for_current_user');
 assert.match(taskFocus.resultCriteria, /Юрист зафиксировал результат проверки/);
 assert.deepEqual(taskFocus.blockers, { overdueTasks: 1, redRisks: 1, missingDocuments: 1 });
 
+const spnProfile = { id: 'spn-1', role: 'spn', full_name: 'СПН Тест' };
+const actionablePriority = buildDealActionFocus({
+  deal: baseDeal,
+  tasks: [
+    { id: 'other-role', title: 'Срочная задача юриста', status: 'open', priority: 'urgent', due_date: '2026-07-01', assigned_role: 'lawyer', can_change_status: false },
+    { id: 'my-task', title: 'Получить согласование клиента', status: 'open', priority: 'normal', due_date: '2026-07-14', assigned_to: 'spn-1', assigned_role: 'spn', can_change_status: true }
+  ],
+  risks: [],
+  documents: []
+}, spnProfile, now);
+
+assert.equal(actionablePriority.taskId, 'my-task', 'Actionable task must outrank a more urgent task owned by another role');
+assert.equal(actionablePriority.canChangeTask, true);
+assert.equal(actionablePriority.focusScope, 'actionable_for_current_user');
+assert.equal(actionablePriority.responsible, 'СПН Тест');
+
+const controlOnly = buildDealActionFocus({
+  deal: baseDeal,
+  tasks: [
+    { id: 'lawyer-control', title: 'Контроль юридической проверки', status: 'open', priority: 'urgent', due_date: '2026-07-01', assigned_role: 'lawyer', can_change_status: false }
+  ]
+}, spnProfile, now);
+assert.equal(controlOnly.taskId, 'lawyer-control');
+assert.equal(controlOnly.canChangeTask, false);
+assert.equal(controlOnly.focusScope, 'control_only');
+
 const ownTask = buildDealActionFocus({
   deal: baseDeal,
-  tasks: [{ id: 'mine', title: 'Моя задача', status: 'in_progress', due_date: '2026-07-14', assigned_to: 'user-1', source: 'manual' }]
+  tasks: [{ id: 'mine', title: 'Моя задача', status: 'in_progress', due_date: '2026-07-14', assigned_to: 'user-1', source: 'manual', can_change_status: true }]
 }, profile, now);
 assert.equal(ownTask.responsible, 'Алексей Ковтун');
 assert.equal(ownTask.deadlineState, 'today');
