@@ -50,6 +50,7 @@ if not errors:
         'const BOUNDED_TRANSPORT_ENABLED = false;',
         'const completionEvidence = new Map();',
         "rpc('nav_v2_get_deal_card_lite'",
+        "rpc('nav_v2_get_deal_card'",
         "await rpc('nav_v2_add_comment'",
         'await rpc(route.rpc_preview.name, route.rpc_preview.args)',
         'buildTaskCompletionComment(task, input?.value || \'\')',
@@ -80,8 +81,8 @@ if not errors:
         'aria-busy'
     ), TASK.name)
 
-    if task.count('rpc(') != 3:
-        errors.append(f'{TASK.name}: expected permission read, result comment and routed status mutation RPC, got {task.count("rpc(")}')
+    if task.count('rpc(') != 4:
+        errors.append(f'{TASK.name}: expected lite read, full-card permission fallback, result comment and routed status mutation RPC, got {task.count("rpc(")}')
     if task.count('new MutationObserver') > 1:
         errors.append(f'{TASK.name}: must not add another observer')
     task_without_allowed_comment = task.replace('nav_v2_add_comment', '')
@@ -128,7 +129,7 @@ if not errors:
         if forbidden in base:
             errors.append(f'{BASE.name}: base task mutation source must be absent: {forbidden}')
 
-    require(page, ('task-action-guard-v2.js?v=20260724-01',), PAGE.name)
+    require(page, ('task-action-guard-v2.js?v=20260724-02',), PAGE.name)
     if '<script type="module" src="./assets/js/nav-v2/page-action-feedback-v2.js' in page:
         errors.append('page action feedback helper must not increase the HTML entry-module budget')
     if '<script type="module" src="./assets/js/nav-v2/task-lifecycle-closure-model-v1.js' in page:
@@ -146,7 +147,7 @@ if not errors:
         'data-task-action="reopen"',
         'data-evidence-reference-id=',
         '__baseTaskHandlerCalls',
-        'task-action-guard-v2.js?v=20260724-01'
+        'task-action-guard-v2.js?v=20260724-02'
     ), FIXTURE.name)
 
     require(browser, (
@@ -245,4 +246,4 @@ if errors:
     for error in errors:
         print(f'- {error}')
     sys.exit(1)
-print('Navigator v2 task lifecycle closure passed: phased actions, team result before done, retry-safe partial failure, bounded transport and production DDL remain blocked')
+print('Navigator v2 task lifecycle closure passed: phased actions, server permission fallback, team result before done, retry-safe partial failure, bounded transport and production DDL remain blocked')

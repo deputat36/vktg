@@ -127,7 +127,7 @@ def main() -> int:
         'id="boundedReopen"',
         'id="boundedDecision"',
         '__baseTaskHandlerCalls',
-        'task-action-guard-v2.js?v=20260724-01',
+        'task-action-guard-v2.js?v=20260724-02',
     ), FIXTURE.name, errors)
     require(spec, (
         'role-scoped DTO controls the legacy start action through the single authoritative handler',

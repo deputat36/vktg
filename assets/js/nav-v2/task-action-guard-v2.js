@@ -10,6 +10,14 @@ import {
 const dealId = new URLSearchParams(location.search).get('id');
 const BOUNDED_TRANSPORT_ENABLED = false;
 const LEGACY_ACTION_BY_STATUS = Object.freeze({ in_progress: 'start', done: 'complete', open: 'reopen' });
+const PERMISSION_FIELDS = Object.freeze([
+  'can_change_status',
+  'can_start',
+  'can_complete',
+  'can_set_active_outcome',
+  'can_propose_terminal_outcome',
+  'can_decide_terminal_outcome'
+]);
 let permissions = new Map();
 let loaded = false;
 let loading = null;
@@ -22,6 +30,7 @@ function boolValue(value) {
 }
 
 function normalizedTask(task = {}) {
+  const present = PERMISSION_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(task, field));
   return {
     ...task,
     can_change_status: boolValue(task.can_change_status),
@@ -29,8 +38,53 @@ function normalizedTask(task = {}) {
     can_complete: boolValue(task.can_complete),
     can_set_active_outcome: boolValue(task.can_set_active_outcome),
     can_propose_terminal_outcome: boolValue(task.can_propose_terminal_outcome),
-    can_decide_terminal_outcome: boolValue(task.can_decide_terminal_outcome)
+    can_decide_terminal_outcome: boolValue(task.can_decide_terminal_outcome),
+    permission_fields_present: present
   };
+}
+
+function taskMap(card = {}) {
+  return new Map((Array.isArray(card?.tasks) ? card.tasks : []).map((task) => {
+    const normalized = normalizedTask(task);
+    return [String(normalized.id || ''), normalized];
+  }).filter(([id]) => id));
+}
+
+function hasAuthoritativePermission(task = {}) {
+  const present = Array.isArray(task.permission_fields_present) ? task.permission_fields_present : [];
+  if (Number(task.task_contract_version) === 2) return present.length > 0;
+  return present.includes('can_change_status');
+}
+
+function needsFullCardPermissions(taskPermissions) {
+  if (!(taskPermissions instanceof Map) || taskPermissions.size === 0) return false;
+  return [...taskPermissions.values()].some((task) => !hasAuthoritativePermission(task));
+}
+
+function mergeFullCardPermissions(litePermissions, fullCard = {}) {
+  const merged = new Map(litePermissions instanceof Map ? litePermissions : []);
+  for (const fullTaskRaw of Array.isArray(fullCard?.tasks) ? fullCard.tasks : []) {
+    const id = String(fullTaskRaw?.id || '');
+    if (!id) continue;
+    const current = merged.get(id) || {};
+    const authority = normalizedTask(fullTaskRaw);
+    const next = {
+      ...current,
+      id,
+      status: authority.status ?? current.status,
+      assigned_role: authority.assigned_role ?? current.assigned_role,
+      task_contract_version: authority.task_contract_version ?? current.task_contract_version,
+      outcome_state: authority.outcome_state ?? current.outcome_state
+    };
+    const present = new Set(Array.isArray(current.permission_fields_present) ? current.permission_fields_present : []);
+    for (const field of authority.permission_fields_present) {
+      next[field] = authority[field];
+      present.add(field);
+    }
+    next.permission_fields_present = [...present];
+    merged.set(id, next);
+  }
+  return merged;
 }
 
 function roleLabel(role) {
@@ -357,25 +411,36 @@ function queueApply() {
   }, 50);
 }
 
+async function loadFullCardPermissions(basePermissions = new Map()) {
+  const fullCard = await rpc('nav_v2_get_deal_card', { p_deal_id: dealId }, 12000);
+  return mergeFullCardPermissions(basePermissions, fullCard);
+}
+
 async function loadPermissions(force = false) {
   if (!dealId) return false;
   if (loaded && !force) return true;
   if (loading) return loading;
-  loading = rpc('nav_v2_get_deal_card_lite', { p_deal_id: dealId }, 12000)
-    .then((card) => {
-      permissions = new Map((card.tasks || []).map((task) => {
-        const normalized = normalizedTask(task);
-        return [String(normalized.id), normalized];
-      }));
-      loaded = true;
-      applyTaskPermissions();
-      return true;
-    })
-    .catch(() => {
-      loaded = false;
-      return false;
-    })
-    .finally(() => { loading = null; });
+  loading = (async () => {
+    let nextPermissions = new Map();
+    try {
+      const liteCard = await rpc('nav_v2_get_deal_card_lite', { p_deal_id: dealId }, 12000);
+      nextPermissions = taskMap(liteCard);
+      if (needsFullCardPermissions(nextPermissions)) {
+        nextPermissions = await loadFullCardPermissions(nextPermissions);
+      }
+    } catch (liteError) {
+      try {
+        nextPermissions = await loadFullCardPermissions(nextPermissions);
+      } catch (_) {
+        loaded = false;
+        return false;
+      }
+    }
+    permissions = nextPermissions;
+    loaded = true;
+    applyTaskPermissions();
+    return true;
+  })().finally(() => { loading = null; });
   return loading;
 }
 
