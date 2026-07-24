@@ -76,13 +76,24 @@ async function routeTaskRpc(page, {
     const url = request.url();
     const body = request.postDataJSON();
     if (url.includes('/rpc/nav_v2_get_deal_card_lite')) {
-      permissionCalls.push({ url, body });
+      permissionCalls.push({ url, body, source: 'lite' });
       if (permissionDelay) await new Promise((resolve) => setTimeout(resolve, permissionDelay));
       if (permissionStatus !== 200) {
         await fulfillJson(route, { message: 'Не удалось проверить права.' }, permissionStatus);
         return;
       }
       await fulfillJson(route, permissionPayload(canChange, assignedRole));
+      return;
+    }
+
+    if (url.includes('/rpc/nav_v2_get_deal_card')) {
+      permissionCalls.push({ url, body, source: 'full' });
+      if (permissionDelay) await new Promise((resolve) => setTimeout(resolve, permissionDelay));
+      if (permissionStatus !== 200) {
+        await fulfillJson(route, { message: 'Не удалось проверить права.' }, permissionStatus);
+        return;
+      }
+      await fulfillJson(route, { deal: { id: 'deal-1' }, ...permissionPayload(canChange, assignedRole) });
       return;
     }
 
