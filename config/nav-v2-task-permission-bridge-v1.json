@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "decision": "full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked",
+  "diagnosis": {
+    "all_tasks": 98,
+    "open_tasks": 88,
+    "in_progress_tasks": 0,
+    "done_tasks": 0,
+    "task_status_changed_events": 0,
+    "lite_task_has_can_change_status": false,
+    "full_card_task_has_can_change_status": true,
+    "root_cause": "task_guard_normalized_missing_lite_permission_to_false"
+  },
+  "bridge": {
+    "authority": "nav_v2_get_deal_card.can_change_status",
+    "transport": "same_page_memory_only",
+    "event": "nav-v2-task-permissions-ready",
+    "permission_inference": false,
+    "pii_fields": [],
+    "mismatched_deal_rejected": true,
+    "missing_snapshot_behavior": "fail_closed"
+  },
+  "boundaries": {
+    "production_schema_change": false,
+    "production_data_change": false,
+    "new_rpc_deployed": false,
+    "rls_change": false,
+    "grant_change": false,
+    "auth_change": false,
+    "edge_change": false,
+    "browser_storage": false,
+    "automatic_task_transition": false,
+    "leader_scope_change": false
+  },
+  "blocked_follow_up": {
+    "item": "add_authoritative_task_permissions_to_lite_dto",
+    "requires": "explicit_production_database_approval",
+    "blocks_frontend_fix": false
+  }
+}
