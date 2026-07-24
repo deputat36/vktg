@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision": "full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked",
+  "decision": "full_card_task_permission_fallback_enabled_lite_dto_database_change_blocked",
   "diagnosis": {
     "all_tasks": 98,
     "open_tasks": 88,
@@ -11,14 +11,13 @@
     "full_card_task_has_can_change_status": true,
     "root_cause": "task_guard_normalized_missing_lite_permission_to_false"
   },
-  "bridge": {
-    "authority": "nav_v2_get_deal_card.can_change_status",
-    "transport": "same_page_memory_only",
-    "event": "nav-v2-task-permissions-ready",
+  "runtime": {
+    "primary_metadata_source": "nav_v2_get_deal_card_lite",
+    "authoritative_permission_source": "nav_v2_get_deal_card",
+    "shared_rpc_dedupe": true,
     "permission_inference": false,
-    "pii_fields": [],
-    "mismatched_deal_rejected": true,
-    "missing_snapshot_behavior": "fail_closed"
+    "lite_failure_recovery": true,
+    "missing_all_sources_behavior": "fail_closed"
   },
   "boundaries": {
     "production_schema_change": false,
