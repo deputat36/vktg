@@ -5,12 +5,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BOOTSTRAP = ROOT / 'assets/js/nav-v2/task-permission-bootstrap-v1.js'
-BASE = ROOT / 'assets/js/nav-v2/deal-card-v2.js'
 GUARD = ROOT / 'assets/js/nav-v2/task-action-guard-v2.js'
+SUPABASE = ROOT / 'assets/js/nav-v2/supabase-v2.js'
 PAGE = ROOT / 'deal-card-v2.html'
-UNIT = ROOT / 'tests/unit/nav-v2-task-permission-bootstrap.test.mjs'
-BROWSER = ROOT / 'tests/e2e/task-action-feedback.spec.js'
+BROWSER = ROOT / 'tests/e2e/task-permission-bridge.spec.js'
 CONTRACT = ROOT / 'config/nav-v2-task-permission-bridge-v1.json'
 DOC = ROOT / 'docs/NAV_V2_TASK_PERMISSION_BRIDGE_V1_2026-07-24.md'
 WORKFLOW = ROOT / '.github/workflows/nav-v2-task-permission-bridge-v1.yml'
@@ -24,83 +22,65 @@ def require(text: str, markers: tuple[str, ...], label: str, errors: list[str]) 
 
 def main() -> int:
     errors: list[str] = []
-    paths = (BOOTSTRAP, BASE, GUARD, PAGE, UNIT, BROWSER, CONTRACT, DOC, WORKFLOW)
-    for path in paths:
+    for path in (GUARD, SUPABASE, PAGE, BROWSER, CONTRACT, DOC, WORKFLOW):
         if not path.exists():
             errors.append(f'missing {path.relative_to(ROOT)}')
     if errors:
         print('\n'.join(errors))
         return 1
 
-    bootstrap = BOOTSTRAP.read_text(encoding='utf-8')
-    base = BASE.read_text(encoding='utf-8')
     guard = GUARD.read_text(encoding='utf-8')
+    supabase = SUPABASE.read_text(encoding='utf-8')
     page = PAGE.read_text(encoding='utf-8')
-    unit = UNIT.read_text(encoding='utf-8')
     browser = BROWSER.read_text(encoding='utf-8')
     contract = json.loads(CONTRACT.read_text(encoding='utf-8'))
     doc = DOC.read_text(encoding='utf-8')
     workflow = WORKFLOW.read_text(encoding='utf-8')
 
-    require(bootstrap, (
-        "TASK_PERMISSION_BOOTSTRAP_KEY = '__NAV_V2_TASK_PERMISSION_BOOTSTRAP_V1__'",
-        "TASK_PERMISSION_BOOTSTRAP_EVENT = 'nav-v2-task-permissions-ready'",
-        'export function buildTaskPermissionBootstrap(data = {})',
-        'export function readTaskPermissionBootstrap',
-        'export function publishTaskPermissionBootstrap',
-        "authority: 'full_deal_card_server_permission'",
-        "storage: 'memory_only'",
-        'contains_pii: false',
-        'permission_inference: false',
-        'fail_closed_without_snapshot: true',
-    ), BOOTSTRAP.name, errors)
-    for forbidden in ('rpc(', 'fetch(', 'localStorage', 'sessionStorage', 'assigned_to', 'title:', 'description:'):
-        if forbidden in bootstrap:
-            errors.append(f'{BOOTSTRAP.name}: forbidden {forbidden!r}')
-
-    require(base, (
-        "import { publishTaskPermissionBootstrap } from './task-permission-bootstrap-v1.js?v=20260724-01';",
-        'publishTaskPermissionBootstrap(data);',
-        "return task?.can_change_status === true || task?.can_change_status === 'true';",
-    ), BASE.name, errors)
-    if 'task.assigned_to && task.assigned_to === userId' in base:
-        errors.append(f'{BASE.name}: local task permission inference remains')
-
     require(guard, (
-        "from './task-permission-bootstrap-v1.js?v=20260724-01';",
-        'function mergeBootstrapPermissions()',
-        'readTaskPermissionBootstrap(globalThis, dealId)',
-        'permissions = litePermissions;',
-        'const bootstrapped = mergeBootstrapPermissions();',
-        'TASK_PERMISSION_BOOTSTRAP_EVENT',
-        "globalThis.addEventListener(TASK_PERMISSION_BOOTSTRAP_EVENT",
-        'void loadPermissions(true);',
+        "rpc('nav_v2_get_deal_card_lite'",
+        "rpc('nav_v2_get_deal_card'",
+        'function hasAuthoritativePermission(task = {})',
+        'function needsFullCardPermissions(taskPermissions)',
+        'function mergeFullCardPermissions(litePermissions, fullCard = {})',
+        'async function loadFullCardPermissions(basePermissions = new Map())',
+        'if (needsFullCardPermissions(nextPermissions))',
+        'nextPermissions = await loadFullCardPermissions(nextPermissions);',
+        'catch (liteError)',
+        'loaded = false;',
+        'const BOUNDED_TRANSPORT_ENABLED = false;',
+        'event.stopImmediatePropagation()',
+        "app.addEventListener('click', handleTaskAction, true)",
     ), GUARD.name, errors)
-    if 'assigned_to ===' in guard or 'assigned_role ===' in guard:
-        errors.append(f'{GUARD.name}: permission must not be inferred from assignment')
+    if guard.count("rpc('nav_v2_get_deal_card_lite'") != 1:
+        errors.append('guard must keep exactly one lite permission read site')
+    if guard.count("rpc('nav_v2_get_deal_card'") != 1:
+        errors.append('guard must keep exactly one full-card permission fallback site')
+    for forbidden in ('localStorage', 'sessionStorage', 'fetch(', 'sendBeacon', 'collector', 'telemetry'):
+        if forbidden in guard:
+            errors.append(f'{GUARD.name}: forbidden {forbidden!r}')
     if 'const BOUNDED_TRANSPORT_ENABLED = true;' in guard:
-        errors.append(f'{GUARD.name}: bounded transport was enabled')
+        errors.append('bounded transport was enabled')
 
-    require(page, (
-        'deal-card-v2.js?v=20260724-01',
-        'task-action-guard-v2.js?v=20260724-02',
-    ), PAGE.name, errors)
+    require(supabase, (
+        "const DEDUPED_RPC_NAMES = new Set([",
+        "'nav_v2_get_deal_card'",
+        'if (current)',
+        'использую уже выполняющийся запрос',
+    ), SUPABASE.name, errors)
 
-    require(unit, (
-        'buildTaskPermissionBootstrap',
-        'publishTaskPermissionBootstrap',
-        'readTaskPermissionBootstrap',
-        "assert.equal('assigned_to' in snapshot.tasks[0], false)",
-        "readTaskPermissionBootstrap(target, 'another-deal'), null",
-    ), UNIT.name, errors)
+    require(page, ('task-action-guard-v2.js?v=20260724-02',), PAGE.name, errors)
     require(browser, (
-        'lite DTO without can_change_status is repaired by the full-card bootstrap',
-        'mismatched full-card bootstrap stays fail-closed',
-        'TASK_PERMISSION_BOOTSTRAP_EVENT',
-        'includeCanChange',
+        'lite DTO without can_change_status is repaired by the full-card server permission',
+        'full-card denial remains fail-closed when lite DTO omits permission',
+        'full card recovers permissions when the lite DTO request fails',
+        'missing lite and full permission sources keep every action blocked',
+        '/rpc/nav_v2_get_deal_card_lite',
+        '/rpc/nav_v2_get_deal_card',
+        '/rpc/nav_v2_update_task_status',
     ), BROWSER.name, errors)
 
-    if contract.get('decision') != 'full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked':
+    if contract.get('decision') != 'full_card_task_permission_fallback_enabled_lite_dto_database_change_blocked':
         errors.append('contract: unexpected decision')
     diagnosis = contract.get('diagnosis') or {}
     for key, value in {
@@ -114,6 +94,11 @@ def main() -> int:
     }.items():
         if diagnosis.get(key) != value:
             errors.append(f'contract diagnosis: {key} must equal {value!r}')
+    runtime = contract.get('runtime') or {}
+    if runtime.get('authoritative_permission_source') != 'nav_v2_get_deal_card':
+        errors.append('contract: full card must remain the authoritative permission source')
+    if runtime.get('shared_rpc_dedupe') is not True or runtime.get('permission_inference') is not False:
+        errors.append('contract: shared dedupe and no-inference guarantees drifted')
     boundaries = contract.get('boundaries') or {}
     if any(value is not False for value in boundaries.values()):
         errors.append('contract: every production/change boundary must remain false')
@@ -121,21 +106,24 @@ def main() -> int:
     if blocked.get('item') != 'add_authoritative_task_permissions_to_lite_dto':
         errors.append('contract: lite DTO follow-up is not recorded')
     if blocked.get('blocks_frontend_fix') is not False:
-        errors.append('contract: database follow-up must not block safe frontend bridge')
+        errors.append('contract: database follow-up must not block safe frontend fallback')
 
     require(doc, (
-        '# Navigator v2 — мост серверных разрешений задач',
+        '# Navigator v2 — восстановление серверных разрешений задач',
         '`nav_v2_get_deal_card_lite`',
+        '`nav_v2_get_deal_card`',
         '`can_change_status`',
-        'memory-only snapshot',
+        'DEDUPED_RPC_NAMES',
         'Fail-closed',
         'заблокирован',
         'Production Supabase не менялся',
     ), DOC.name, errors)
     require(workflow, (
         'check_nav_v2_task_permission_bridge_v1.py',
-        'nav-v2-task-permission-bootstrap.test.mjs',
-        'node --check assets/js/nav-v2/task-permission-bootstrap-v1.js',
+        'task-permission-bridge.spec.js',
+        'node --check assets/js/nav-v2/task-action-guard-v2.js',
+        'chromium-desktop',
+        'chromium-mobile',
     ), WORKFLOW.name, errors)
 
     if errors:
@@ -143,7 +131,7 @@ def main() -> int:
         for error in errors:
             print(f'- {error}')
         return 1
-    print('Navigator v2 task permission bridge v1 passed: full-card server permissions survive the incomplete lite DTO, remain memory-only and fail closed, with no production change')
+    print('Navigator v2 task permission bridge v1 passed: incomplete lite permissions recover from the deduped full card, explicit denial stays denied, and production remains unchanged')
     return 0
 
 
