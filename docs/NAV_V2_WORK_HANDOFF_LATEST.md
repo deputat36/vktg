@@ -4,7 +4,7 @@
 
 - Дата: 24 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Последний подтверждённый `main`: `a1bbd44421b966775ba1b20fc918124dfaceeb5a` — squash merge PR #497.
+- Последний подтверждённый `main`: `214dc8534a4649b257c86b03761d6f3b7dbfc4e7` — squash merge PR #499.
 - Открытые PR по Navigator v2 отсутствуют на момент фиксации.
 - Shared frontend build: `20260723-02`.
 - Public GitHub Pages: `https://deputat36.github.io/vktg/`.
@@ -47,32 +47,24 @@ Navigator не является основной CRM, файловым архи�
 
 - `assets/js/nav-v2/task-action-guard-v2.js`;
 - `assets/js/nav-v2/task-lifecycle-closure-model-v1.js`;
-- metadata read через `public.nav_v2_get_deal_card_lite(uuid)`;
-- авторитетное восстановление permission-полей через `public.nav_v2_get_deal_card(uuid)`;
 - legacy RPC `public.nav_v2_update_task_status(uuid, nav_v2_task_status)`;
-- командный evidence-комментарий через `public.nav_v2_add_comment(uuid, text, text)`;
+- evidence-комментарий через `public.nav_v2_add_comment(uuid, text, text)`;
 - deployed Edge facade v4 остаётся legacy-only.
-
-Permission fallback использует существующий dedupe-контур `supabase-v2.js`: одновременные вызовы полной карточки разделяют один in-flight request. Клиент не выводит право из роли, назначения, source или текста задачи.
 
 Новый intake, bounded contracts, actor-aware routes и preview packages остаются repository-only.
 
 ## Shared frontend build
 
-Build `20260723-02` содержит:
-
-- integrated Auth storage guard;
-- versioned shared `supabase-v2.js`;
-- versioned `auth-storage-guard-v2.js`;
-- normalized importmap mappings на 35 root pages;
-- диагностический cache-bust;
-- generator `scripts/bump_nav_v2_shared_build.py`;
-- permanent rollout gates.
+Build `20260723-02` содержит integrated Auth storage guard, versioned shared runtime, normalized importmap mappings на 35 root pages, диагностический cache-bust и permanent rollout gates.
 
 Канонические configs:
 
 - `config/nav-v2-public-build-attestation-v1.json`;
 - `config/nav-v2-live-public-browser-runtime-v1.json`.
+
+Build bumper:
+
+- `scripts/bump_nav_v2_shared_build.py`.
 
 Public decision:
 
@@ -102,42 +94,11 @@ Current public state:
 - `authenticated_role_e2e_completed=false`;
 - `live_browser_storage_failure_verified=false`.
 
-Public/browser evidence относится к shared build и не доказывает полноценный новый cloud role/mutation E2E. Реальные `QuotaExceededError` или `SecurityError` не воспроизводились.
+Public/browser evidence относится к shared build и не доказывает полноценный новый cloud role/mutation E2E. Реальные browser storage failures не воспроизводились.
 
-## Shared-project release drift — PR #488
+## Запись для основной CRM
 
-Merge SHA:
-
-`8c354d4dfa51cff100f622f9a92c845e49939663`
-
-Решение:
-
-`shared_project_release_drift_false_positive_removed_repository_only`
-
-Release drift использует семантику `required_present_not_global_latest`: более новые repository-known migrations общего Supabase project не создают ложный Navigator drift только из-за timestamp. Unknown remote-only migrations, отсутствующая approved Navigator migration и Edge version/status/JWT/hash/source drift остаются блокирующими.
-
-Канонические файлы:
-
-- `config/nav-v2-release-baseline.json`;
-- `config/nav-v2-release-migration-aliases.json`;
-- `config/nav-v2-release-drift-shared-project-v1.json`;
-- `scripts/check_nav_v2_release_drift_shared_project.py`;
-- `scripts/check_nav_v2_release_drift_workflow.py`;
-- `.github/workflows/nav-v2-release-drift.yml`.
-
-Production DDL/DML/Auth/RLS/grants/Edge/data не менялись.
-
-## Запись для основной CRM — PR #490
-
-Merge SHA:
-
-`8eb9d11c973a82583cc066940e2587d53ce7f3a9`
-
-Решение:
-
-`crm_handoff_summary_added_read_only_no_crm_write`
-
-В карточке сделки действует блок `В CRM`:
+Действующий read-only блок `В CRM` содержит:
 
 - текущий этап;
 - результат;
@@ -145,24 +106,12 @@ Merge SHA:
 - договорённость;
 - недостающие обязательные пункты;
 - следующее действие;
-- ответственный;
+- ответственного;
 - срок.
 
-Запись не сохраняется автоматически. Сотрудник проверяет и копирует её вручную. Клиентские идентификаторы и свободный `deal.next_action` не используются. Navigator не создаёт параллельную CRM или отдельный журнал.
+Запись не сохраняется автоматически. Сотрудник проверяет и копирует её вручную. Navigator не создаёт параллельную CRM или отдельный журнал.
 
-## Task policy для CRM-handoff — PR #493
-
-Merge SHA:
-
-`3a078f28887033a49ac04443470da7f1b7760f42`
-
-Решение:
-
-`crm_handoff_task_policy_preview_added_no_backfill`
-
-Явные `task_type`, `assigned_role` и `due_date` остаются приоритетными. Для legacy-задач с `task_type = NULL` действует read-only классификация по `source`, безопасная роль по типу задачи и контрольная дата по `created_at + SLA`.
-
-Не выполнялись production task backfill, автоматическое назначение роли или сотрудника и изменение production Supabase.
+Task policy для legacy-задач использует явные `task_type`, `assigned_role` и `due_date`, а при отсутствии `task_type` — read-only классификацию по `source`. Production backfill не выполнялся.
 
 ## Замыкание lifecycle задач — PR #495
 
@@ -174,61 +123,16 @@ Merge SHA:
 
 `legacy_task_lifecycle_closure_frontend_enabled_atomic_server_completion_blocked`
 
-### Подтверждённая исходная проблема
-
-Read-only production-анализ до изменения показал:
-
-- всего задач: 98;
-- открытых: 88;
-- в работе: 0;
-- завершённых: 0;
-- отменённых: 10;
-- non-demo задач: 82;
-- non-demo открытых задач: 78;
-- событий `task_status_changed`: 0;
-- все 98 задач имели уже прошедший явный срок;
-- отсутствующих или отключённых конкретных исполнителей не найдено.
-
-Задачи, сроки и назначения существовали, но пользовательский сценарий не замыкал путь `открыта → в работе → результат → готово`.
-
-### Что действует
-
-Для legacy-задач карточка показывает только разрешённое действие текущей фазы:
+Для legacy-задач действует последовательность:
 
 - `open` → `Начать работу`;
-- `in_progress` → обязательное поле результата и `Сохранить результат и завершить`;
+- `in_progress` → обязательный результат и `Сохранить результат и завершить`;
 - `done` → `Вернуть в работу`;
 - `cancelled` → без рабочих действий.
 
-Завершение выполняется в безопасном порядке:
+Результат сохраняется командным комментарием раньше статуса `done`. Если комментарий не сохранён, задача не закрывается. Если комментарий сохранён, а статус временно не изменён, повтор в текущей сессии не дублирует комментарий.
 
-1. результат проверяется локально;
-2. результат сохраняется командным комментарием;
-3. только после успешного комментария задача переводится в `done`;
-4. карточка перезагружается с серверным состоянием.
-
-Если комментарий сохранён, а статус не изменён, повтор в текущей сессии не создаёт дубликат комментария. Если комментарий не сохранён, запрос `done` не выполняется.
-
-Role matrix проверяет разрешённый переход `open → in_progress`. Завершение с evidence покрыто отдельными desktop/mobile сценариями.
-
-Канонические файлы:
-
-- `assets/js/nav-v2/task-lifecycle-closure-model-v1.js`;
-- `assets/js/nav-v2/task-action-guard-v2.js`;
-- `config/nav-v2-task-lifecycle-closure-v1.json`;
-- `tests/unit/nav-v2-task-lifecycle-closure.test.mjs`;
-- `tests/e2e/task-action-feedback.spec.js`;
-- `tests/e2e/task-action-role-matrix-rehearsal.spec.js`;
-- `tests/fixtures/nav-v2-task-action-feedback.html`;
-- `tests/fixtures/nav-v2-task-role-matrix-rehearsal.html`;
-- `scripts/check_nav_v2_task_action_feedback.py`;
-- `scripts/check_nav_v2_task_rpc_consumer_matrix.py`;
-- `scripts/check_nav_v2_task_role_matrix_rehearsal.py`;
-- `docs/NAV_V2_TASK_LIFECYCLE_CLOSURE_V1_2026-07-24.md`.
-
-Все 31 workflow head PR #495 завершились успешно. Review threads отсутствовали. PR #495 смёржен squash-merge.
-
-## Восстановление серверных разрешений задач — PR #497
+## Восстановление серверных разрешений — PR #497
 
 Merge SHA:
 
@@ -236,93 +140,111 @@ Merge SHA:
 
 Решение:
 
-`full_card_task_permission_fallback_enabled_lite_dto_database_change_blocked`
+`full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked`
 
-### Подтверждённый корневой разрыв
+Подтверждённый разрыв:
 
-Read-only проверка действующих PostgreSQL-функций показала:
+- `nav_v2_get_deal_card` возвращает авторитетные permission-поля;
+- production `nav_v2_get_deal_card_lite` не возвращает их;
+- прежний guard интерпретировал отсутствующее поле как запрет.
 
-- `nav_v2_get_deal_card` возвращает авторитетный `can_change_status`;
-- `nav_v2_get_deal_card_lite` возвращает данные задачи, но не permission-поля;
-- guard преобразовывал отсутствующее поле в `false`;
-- поэтому даже серверно разрешённое действие оставалось заблокированным;
-- production baseline оставался `88 open / 0 in_progress / 0 done / 0 task_status_changed`.
+Действующее поведение:
+
+- lite DTO остаётся быстрым источником состояния;
+- при отсутствии permission-полей guard использует разрешения полной карточки;
+- full-card RPC входит в общий in-flight dedupe-контур;
+- explicit server denial остаётся denial;
+- при ошибке обоих источников действия остаются fail-closed;
+- клиент не вычисляет право по роли, назначению или тексту задачи.
+
+## Маршрут к исполнимой задаче — PR #499
+
+Merge SHA:
+
+`214dc8534a4649b257c86b03761d6f3b7dbfc4e7`
+
+Решение:
+
+`actionable_task_preferred_in_existing_deal_focus_no_new_screen`
+
+### Проверка предыдущего этапа
+
+После permission-fix production по-прежнему не показывал реальных task transitions. Возврат старой permission-ошибки не обнаружен.
+
+Read-only анализ действующих назначений показал:
+
+- у СПН 6 доступных связок «пользователь–сделка» с открытыми задачами;
+- во всех 6 связках есть как минимум одна задача с серверным разрешением на выполнение;
+- во всех 6 прежний блок `Главное действие сейчас` выбирал более срочную задачу другой роли;
+- у юриста 13 из 17 доступных связок имеют исполнимую задачу, ещё 4 являются control-only.
 
 ### Что действует теперь
 
-- lite DTO остаётся быстрым источником статуса и метаданных;
-- при отсутствии permission-полей guard получает их из действующей полной карточки;
-- одновременный полный read проходит через `DEDUPED_RPC_NAMES` и разделяет in-flight request;
-- явный серверный отказ остаётся отказом;
-- при ошибке lite полная карточка может восстановить доступ;
-- при недоступности обоих источников действия остаются fail-closed;
-- permission не вычисляется из роли, назначения, source или текста;
-- bounded transport остаётся выключенным;
-- автоматический переход задачи не выполняется.
+В существующей карточке сделки, без нового task screen:
+
+1. Сначала выбирается открытая задача с серверным `can_change_status=true` для текущего пользователя.
+2. Среди исполнимых задач сохраняется приоритет по просрочке, важности и статусу `in_progress`.
+3. Если исполнимой задачи нет, наиболее важная чужая задача остаётся видимой для контроля.
+4. Для открытой своей задачи CTA называется `Начать эту задачу`.
+5. Для своей задачи в работе CTA называется `Продолжить и завершить`.
+6. CTA открывает существующую вкладку `Задачи`, прокручивает нужную задачу и устанавливает keyboard focus на разрешённую кнопку.
+7. Чужая задача не перехватывает основное действие, но остаётся доступной для контроля.
+
+### Проверка PR #499
+
+Профильный workflow run `30108222992` подтвердил на desktop и mobile:
+
+- более срочная задача юриста не перехватывает focus у исполнимой задачи СПН;
+- открывается существующая вкладка задач;
+- кнопка `Начать работу` видима, разрешена и получает focus;
+- выполняется точный переход `open → in_progress` через действующий status RPC;
+- новый mutation source, task screen или параллельная очередь не создаются.
+
+Все 29 workflow head PR #499 завершились успешно. Один browser-job был повторён только из-за GitHub runner HTTP 429 при скачивании стандартного checkout; повтор завершился успешно. Review threads отсутствовали.
 
 Канонические файлы:
 
-- `assets/js/nav-v2/task-action-guard-v2.js`;
-- `config/nav-v2-task-permission-bridge-v1.json`;
-- `tests/e2e/task-permission-bridge.spec.js`;
-- `tests/e2e/task-action-feedback.spec.js`;
-- `tests/fixtures/nav-v2-task-action-feedback.html`;
-- `tests/fixtures/nav-v2-task-role-matrix-rehearsal.html`;
-- `scripts/check_nav_v2_task_permission_bridge_v1.py`;
-- `scripts/check_nav_v2_task_action_feedback.py`;
-- `scripts/check_nav_v2_task_role_matrix_rehearsal.py`;
-- `.github/workflows/nav-v2-task-permission-bridge-v1.yml`;
-- `docs/NAV_V2_TASK_PERMISSION_BRIDGE_V1_2026-07-24.md`.
+- `config/nav-v2-actionable-task-route-v1.json`;
+- `docs/NAV_V2_ACTIONABLE_TASK_ROUTE_V1_2026-07-24.md`;
+- `tests/e2e/actionable-task-route.spec.js`.
 
-Exact green head PR #497:
+## Operational baseline
 
-- task permission bridge run `30091597927`;
-- task action feedback run `30091597888`;
-- task role matrix rehearsal run `30091597910`;
-- task RPC consumer matrix run `30091597964`;
-- task dual-path run `30091597909`;
-- static checks run `30091597894`;
-- JavaScript syntax run `30091597836`;
-- completion evidence run `30091597885`;
-- CRM handoff run `30091597928`;
-- mobile first screen run `30091597965`;
-- authenticated browser workflow run `30091597997` — существующий gated workflow, не доказательство нового cloud role/mutation E2E;
-- live public browser runtime run `30091597907`.
+Последняя read-only production-сверка перед PR #499:
 
-Все 31 workflow текущего head завершились успешно. Review threads отсутствовали. PR #497 смёржен squash-merge.
+- задач: 98;
+- `open`: 88;
+- `in_progress`: 0;
+- `done`: 0;
+- `cancelled`: 10;
+- событий `task_status_changed`: 0;
+- командных комментариев в `nav_deal_comments_v2`: 5;
+- последнее production task/event изменение: 16 июля 2026 года.
+
+Repository/frontend merges не должны менять эти значения. Автоматические переходы, переназначения, перенос сроков и массовое закрытие не выполнялись.
 
 ## Заблокированные пункты
 
-### Permission-поля в lite DTO
+### Permission-поля непосредственно в lite DTO
 
 Статус: `blocked_requires_explicit_production_database_approval`.
 
-Предпочтительное упрощение — добавить `can_change_status` и bounded permission booleans непосредственно в production-функцию `nav_v2_get_deal_card_lite`.
+Предпочтительное долгосрочное упрощение — добавить `can_change_status` и bounded permission booleans непосредственно в production `nav_v2_get_deal_card_lite`.
 
 Подготовлено:
 
-- доказана разница контрактов lite и full DTO;
+- доказана разница lite/full DTO;
 - действует безопасный full-card fallback;
 - explicit denial и fail-closed покрыты desktop/mobile тестами;
-- граница зафиксирована в `config/nav-v2-task-permission-bridge-v1.json`;
-- rollback frontend-изменения сводится к возврату предыдущего guard/cache-bust.
+- rollback frontend-изменения понятен.
 
-Follow-up требует отдельной production migration, проверки grants/RLS, exact rollback и authenticated permission E2E. Он не блокирует действующий frontend fix.
+Требуются отдельная production migration, проверка grants/RLS, exact rollback и authenticated permission E2E. Этот пункт не блокирует frontend.
 
 ### Атомарное server-side завершение задачи
 
 Статус: `blocked_requires_explicit_production_database_approval`.
 
-Действующий frontend использует два существующих RPC — комментарий и смену статуса. Полная атомарность потребует production migration, rollback package, grants/RLS/actor scope, idempotency key и отдельного authenticated mutation E2E.
-
-Подготовлено:
-
-- frontend сохраняет evidence до статуса;
-- частичный сбой не закрывает задачу без результата;
-- повтор не дублирует комментарий в текущей сессии;
-- граница зафиксирована в `config/nav-v2-task-lifecycle-closure-v1.json`.
-
-Этот пункт не блокирует текущий frontend lifecycle.
+Полная атомарность результата и статуса потребует production migration, rollback package, grants/RLS/actor scope, idempotency key и отдельного authenticated mutation E2E. Действующий frontend безопасно сохраняет evidence раньше статуса.
 
 ### Bounded task transport
 
@@ -336,48 +258,9 @@ Bounded actions распознаются, но network transport остаётс�
 
 Не выполнять массовое заполнение `task_type`, переназначение, изменение сроков или закрытие существующих задач без отдельного решения владельца.
 
-## Supabase boundary
-
-Последняя read-only сверка после merge PR #497:
-
-- project `ACTIVE_HEALTHY`;
-- только default branch `main`;
-- latest Navigator migration `20260716063401_nav_v2_correct_mortgage_broker_scope`;
-- latest overall migration `20260721122333_revoke_anon_execute_leader_internal_rpcs`;
-- `nav-invite-user` v10 ACTIVE, JWT required;
-- `nav-v2-deal-api` v4 ACTIVE, JWT required;
-- `nav-v2-deal-api` hash без изменений;
-- preview branch не создавалась;
-- migration apply/repair не выполнялся;
-- Edge deploy не выполнялся;
-- technical accounts не создавались;
-- cost confirmation не выполнялся.
-
-Operational baseline после repository merge:
-
-- задач: 98;
-- `open`: 88;
-- `in_progress`: 0;
-- `done`: 0;
-- `cancelled`: 10;
-- событий `task_status_changed`: 0;
-- командных комментариев: 5;
-- последнее production-событие: 16 июля 2026 года.
-
-Эти значения не должны были измениться от repository/frontend merge. Они являются baseline для проверки реального использования восстановленного lifecycle. Ни одна задача автоматически не переводилась и не закрывалась.
-
 ## Auth storage hardening
 
-Shared runtime сохраняет:
-
-- fail-closed storage reads;
-- session fingerprint tombstone;
-- remove/null fallback;
-- best-effort profile/email cache;
-- normalized `NAV_AUTH_STORAGE_UNAVAILABLE`;
-- запрет RPC retry, если refreshed session нельзя сохранить;
-- cross-tab и concurrent refresh guards;
-- logout/password reset/sign-in race coverage.
+Shared runtime сохраняет fail-closed storage reads, session fingerprint tombstone, best-effort profile/email cache, normalized storage error, запрет RPC retry при несохраняемой refreshed session и cross-tab/concurrent refresh guards.
 
 Authenticated browser role E2E остаётся отдельным cloud-gated этапом.
 
@@ -416,12 +299,11 @@ Generic `продолжай`, `работай по плану`, `действу�
 
 Cloud шаг требует отдельного решения владельца:
 
-- `authenticated_e2e_only`;
+- exact mode и цель;
 - fresh branch cost;
 - amount/currency/recurrence;
 - explicit cost approval;
-- `confirm_cost` ID;
-- disposable branch ≤6 часов;
+- disposable branch;
 - synthetic technical accounts only;
 - no production data/real employees;
 - cleanup evidence.
@@ -441,11 +323,11 @@ Cloud шаг требует отдельного решения владельц
 ## Следующий безопасный slice
 
 1. Не создавать новый task screen, CRM-summary или параллельный журнал.
-2. В scheduled read-only monitoring проверять появление первых `task_status_changed`, `in_progress`, `done` и evidence-комментариев после публикации permission fallback.
-3. Если реальные переходы появились, проверить, что результат понятен, комментарий не дублируется и задача действительно уходит из активного долга.
-4. Если переходы не появились, выполнить repository-only анализ фактического пути пользователя: вход в карточку, видимость вкладки `Задачи`, переход из блока главного действия и доступность кнопки назначенной роли. Permission DTO больше не считать открытым blocker.
-5. Не создавать новый экран до доказанного разрыва; исправлять только существующий маршрут или видимость.
-6. После появления подтверждённых task outcomes перейти к аналогичному анализу документов и рисков: terminal outcome должен убирать пункт из активного долга.
+2. В read-only monitoring проверять появление первых `task_status_changed`, `in_progress`, `done` и evidence-комментариев после публикации actionable route.
+3. Если реальные переходы появились, проверить, что результат понятен, комментарий не дублируется, завершённая задача уходит из active debt и CRM-handoff выбирает следующий незакрытый пункт.
+4. Если переходы не появились после реального использования, следующий repository-only этап — проверить путь с рабочего стола и списка сделок в конкретную карточку: role filters, приоритетную сделку, ссылку и сохранение `#tasks`. Permission DTO и выбор actionable task больше не считать открытыми blockers.
+5. Исправлять только существующий маршрут и видимость; новый экран создавать только при доказанной необходимости.
+6. После подтверждённых task outcomes перейти к аналогичному замыканию документов и рисков: terminal outcome должен убирать пункт из active debt.
 7. Не выполнять production backfill, массовое назначение, перенос сроков или закрытие задач без отдельного решения владельца.
 8. Permission-поля lite DTO, атомарный task-completion RPC и bounded transport держать заблокированными до отдельного production approval.
 9. Поддерживать scheduled public source/browser monitoring.
