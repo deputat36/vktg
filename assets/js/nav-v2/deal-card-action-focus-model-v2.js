@@ -53,7 +53,13 @@ function taskScore(task, nowValue) {
     + (task?.status === 'in_progress' ? 8 : 0);
 }
 
-function pickPrimaryTask(tasks, nowValue) {
+function isActionableTask(task, profile) {
+  return Boolean(profile?.role)
+    && profile.role !== 'viewer'
+    && task?.can_change_status === true;
+}
+
+function sortOpenTasks(tasks, nowValue) {
   return tasks
     .filter((task) => OPEN_TASK_STATUSES.has(task?.status))
     .sort((a, b) => {
@@ -62,7 +68,12 @@ function pickPrimaryTask(tasks, nowValue) {
       const due = time(a?.due_date) - time(b?.due_date);
       if (due !== 0) return due;
       return text(a?.id).localeCompare(text(b?.id));
-    })[0] || null;
+    });
+}
+
+function pickPrimaryTask(tasks, profile, nowValue) {
+  const ordered = sortOpenTasks(tasks, nowValue);
+  return ordered.find((task) => isActionableTask(task, profile)) || ordered[0] || null;
 }
 
 function taskResponsible(task, profile) {
@@ -146,13 +157,14 @@ function fallbackAction(data) {
 export function buildDealActionFocus(data, profile, nowValue = Date.now()) {
   const deal = data?.deal || {};
   const tasks = list(data, 'tasks');
-  const primaryTask = pickPrimaryTask(tasks, nowValue);
+  const primaryTask = pickPrimaryTask(tasks, profile, nowValue);
   const redRisks = unresolvedRedRisks(data);
   const missingDocs = missingRequiredDocuments(data);
   const overdueTasks = tasks.filter((task) => OPEN_TASK_STATUSES.has(task?.status) && deadlineState(task?.due_date, nowValue) === 'overdue');
 
   let focus;
   if (primaryTask) {
+    const canChangeTask = isActionableTask(primaryTask, profile);
     focus = {
       title: text(primaryTask.title) || text(deal.next_action) || 'Выполнить ближайшую задачу',
       description: text(primaryTask.description) || text(deal.next_action),
@@ -166,7 +178,8 @@ export function buildDealActionFocus(data, profile, nowValue = Date.now()) {
       taskId: primaryTask.id || null,
       taskStatus: primaryTask.status || null,
       taskPriority: primaryTask.priority || null,
-      canChangeTask: primaryTask.can_change_status === true && profile?.role !== 'viewer'
+      canChangeTask,
+      focusScope: canChangeTask ? 'actionable_for_current_user' : 'control_only'
     };
   } else {
     focus = fallbackAction(data);
@@ -176,6 +189,7 @@ export function buildDealActionFocus(data, profile, nowValue = Date.now()) {
     focus.taskStatus = null;
     focus.taskPriority = null;
     focus.canChangeTask = false;
+    focus.focusScope = 'fallback';
   }
 
   return {
