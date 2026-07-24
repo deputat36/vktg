@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "decision": "actionable_task_preferred_in_existing_deal_focus_no_new_screen",
+  "production_read_only_diagnosis": {
+    "captured_on": "2026-07-24",
+    "tasks": 98,
+    "open_tasks": 88,
+    "in_progress_tasks": 0,
+    "done_tasks": 0,
+    "task_status_changed_events": 0,
+    "spn_deal_profile_pairs_with_open_tasks": 6,
+    "spn_pairs_with_actionable_task": 6,
+    "spn_pairs_where_previous_primary_belonged_to_other_role": 6,
+    "lawyer_deal_profile_pairs_with_open_tasks": 17,
+    "lawyer_pairs_with_actionable_task": 13,
+    "lawyer_pairs_without_actionable_task": 4
+  },
+  "behavior": {
+    "prefer_server_authorized_open_task": true,
+    "fallback_to_control_task_when_no_actionable_task": true,
+    "direct_cta_for_open_task": "Начать эту задачу",
+    "direct_cta_for_in_progress_task": "Продолжить и завершить",
+    "route_to_existing_tasks_tab": true,
+    "focus_enabled_task_control": true,
+    "new_task_screen": false,
+    "client_role_permission_recalculation_added": false
+  },
+  "boundaries": {
+    "production_schema_change": false,
+    "production_data_change": false,
+    "automatic_task_transition": false,
+    "automatic_assignment": false,
+    "mass_task_close": false,
+    "bounded_transport_enabled": false,
+    "leader_scope_change": false
+  },
+  "next_observation": "Monitor first real in_progress, done, task_status_changed and result comments after users receive the corrected route."
+}
