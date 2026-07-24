@@ -33,14 +33,22 @@ function tabLabel(tab) {
   return ({ tasks: 'Открыть задачи', risks: 'Открыть риски', docs: 'Открыть документы', overview: 'Открыть сводку' })[tab] || 'Открыть раздел';
 }
 
+function primaryActionLabel(focus) {
+  if (focus.source !== 'task' || !focus.canChangeTask) return tabLabel(focus.primaryTab);
+  return focus.taskStatus === 'in_progress' ? 'Продолжить и завершить' : 'Начать эту задачу';
+}
+
 function focusHtml(focus) {
   const readOnlyNotice = focus.readOnly
     ? '<div class="status">Режим наблюдения: блок показывает приоритет, но не разрешает менять данные.</div>'
     : '';
+  const controlNotice = focus.source === 'task' && !focus.canChangeTask && !focus.readOnly
+    ? '<div class="status">Эта задача показана для контроля. Выполнение и изменение статуса доступны назначенному ответственному.</div>'
+    : '';
   const taskNotice = focus.source === 'task'
-    ? `<span class="pill blue">задача ${focus.taskStatus === 'in_progress' ? 'в работе' : 'открыта'}</span>`
+    ? `<span class="pill blue">${focus.canChangeTask ? 'ваша задача' : 'задача для контроля'} · ${focus.taskStatus === 'in_progress' ? 'в работе' : 'открыта'}</span>`
     : `<span class="pill blue">источник: ${focus.source === 'risk' ? 'риск' : focus.source === 'document' ? 'документ' : 'следующий шаг сделки'}</span>`;
-  const actions = [{ tab: focus.primaryTab, taskId: focus.taskId, label: tabLabel(focus.primaryTab), primary: true }];
+  const actions = [{ tab: focus.primaryTab, taskId: focus.taskId, label: primaryActionLabel(focus), primary: true }];
   if (focus.relatedTab && focus.relatedTab !== focus.primaryTab) actions.push({ tab: focus.relatedTab, label: tabLabel(focus.relatedTab), primary: false });
   const actionPlan = buildMobileFirstScreenPlan('deal-card', { actions });
   const actionButtons = actionPlan.visibleActions.map((action) => `<button class="btn ${action.primary ? 'primary mobile-first-screen-primary-action' : 'light'}" type="button" data-action-focus-tab="${esc(action.tab)}"${action.taskId ? ` data-action-focus-task="${esc(action.taskId)}"` : ''}>${esc(action.label)}</button>`).join('');
@@ -56,6 +64,7 @@ function focusHtml(focus) {
     </div>
     <div class="deal-action-focus-result"><span>Как понять, что готово</span><b>${esc(focus.resultCriteria)}</b></div>
     <div class="actions deal-action-focus-actions">${actionButtons}</div>
+    ${controlNotice}
     <details class="mobile-first-screen-details deal-action-focus-details">
       <summary>Ответственный и препятствия</summary>
       <div class="mobile-first-screen-details-body">
@@ -71,14 +80,36 @@ function focusHtml(focus) {
   </section>`;
 }
 
+function escapedTaskId(taskId) {
+  if (globalThis.CSS?.escape) return CSS.escape(String(taskId || ''));
+  return String(taskId || '').replace(/["\\]/g, '\\$&');
+}
+
+function focusTaskTarget(taskId, attempt = 0) {
+  const escaped = escapedTaskId(taskId);
+  const readyButton = taskId
+    ? document.querySelector(`button[data-task-id="${escaped}"][data-task-action-guard="ready"]:not([disabled])`)
+    : null;
+  const anyTaskControl = taskId ? document.querySelector(`button[data-task-id="${escaped}"]`) : null;
+  const taskTarget = (readyButton || anyTaskControl)?.closest('.list-item') || null;
+
+  if (taskTarget) taskTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (readyButton) {
+    readyButton.focus({ preventScroll: true });
+    return;
+  }
+  if (taskId && attempt < 12) {
+    setTimeout(() => focusTaskTarget(taskId, attempt + 1), 80);
+    return;
+  }
+  document.querySelector('.tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function openTab(tabName, taskId = '') {
   const tab = document.querySelector(`[data-tab="${tabName}"]`);
   if (tab) {
     tab.click();
-    setTimeout(() => {
-      const taskTarget = taskId ? document.querySelector(`[data-task-id="${taskId}"]`)?.closest('.list-item') : null;
-      (taskTarget || document.querySelector('.tabs'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+    setTimeout(() => focusTaskTarget(taskId), 40);
     return;
   }
   location.hash = tabName;
