@@ -69,9 +69,10 @@ export function workRouteLabel(tab) {
   })[VALID_TABS.has(tab) ? tab : 'overview'];
 }
 
-export function hrefWithWorkTab(href, tab) {
+export function hrefWithWorkTab(href, tab, baseHref = '') {
   try {
-    const url = new URL(href, location.href);
+    const runtimeBase = baseHref || (typeof location !== 'undefined' ? location.href : 'https://navigator.test/');
+    const url = new URL(href, runtimeBase);
     if (!url.pathname.endsWith('/deal-card-v2.html') && !url.pathname.endsWith('deal-card-v2.html')) return href;
     const target = VALID_TABS.has(tab) ? tab : 'overview';
     url.hash = target === 'overview' ? '' : target;
@@ -156,6 +157,7 @@ function enhanceDealsList() {
 }
 
 export function applyWorkRouteContinuity() {
+  if (typeof document === 'undefined') return;
   enhanceDashboard();
   enhanceDealsList();
 }
@@ -169,6 +171,8 @@ function scheduleApply() {
   });
 }
 
-window.addEventListener(DEALS_LOADED_EVENT, scheduleApply);
-new MutationObserver(scheduleApply).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
-applyWorkRouteContinuity();
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  window.addEventListener(DEALS_LOADED_EVENT, scheduleApply);
+  new MutationObserver(scheduleApply).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
+  applyWorkRouteContinuity();
+}
