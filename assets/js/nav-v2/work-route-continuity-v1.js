@@ -75,7 +75,8 @@ export function hrefWithWorkTab(href, tab) {
     if (!url.pathname.endsWith('/deal-card-v2.html') && !url.pathname.endsWith('deal-card-v2.html')) return href;
     const target = VALID_TABS.has(tab) ? tab : 'overview';
     url.hash = target === 'overview' ? '' : target;
-    return `${url.pathname.split('/').pop() ? './' + url.pathname.split('/').pop() : url.pathname}${url.search}${url.hash}`;
+    const fileName = url.pathname.split('/').pop();
+    return `${fileName ? './' + fileName : url.pathname}${url.search}${url.hash}`;
   } catch (_) {
     return href;
   }
@@ -100,10 +101,14 @@ function targetFromRenderedDealCard(card) {
 
 function applyLink(link, tab, updateLabel = false) {
   if (!(link instanceof HTMLAnchorElement)) return;
-  const nextHref = hrefWithWorkTab(link.getAttribute('href') || link.href, tab);
+  const target = VALID_TABS.has(tab) ? tab : 'overview';
+  const nextHref = hrefWithWorkTab(link.getAttribute('href') || link.href, target);
   if (nextHref && link.getAttribute('href') !== nextHref) link.setAttribute('href', nextHref);
-  link.dataset.workRouteTab = VALID_TABS.has(tab) ? tab : 'overview';
-  if (updateLabel) link.textContent = workRouteLabel(tab);
+  if (link.dataset.workRouteTab !== target) link.dataset.workRouteTab = target;
+  if (updateLabel) {
+    const label = workRouteLabel(target);
+    if (text(link.textContent) !== label) link.textContent = label;
+  }
 }
 
 function enhanceDashboard() {
