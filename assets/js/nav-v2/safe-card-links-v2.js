@@ -1,3 +1,5 @@
+import './work-route-continuity-v1.js?v=20260725-01';
+
 const SAFE_LINK_ATTR = 'data-safe-card-link-v2';
 const SOURCE = new URLSearchParams(location.search).get('filter') || location.pathname.split('/').pop().replace('.html', '') || 'nav';
 let queued = false;
