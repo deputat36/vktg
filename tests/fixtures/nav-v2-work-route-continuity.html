@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work route continuity fixture</title>
+</head>
+<body>
+  <div id="app">
+    <section class="role-home-focus">
+      <article id="priorityTask" class="role-home-priority-card">
+        <div class="role-home-priority-head"><div><div class="small">Снять просрочку</div></div></div>
+        <div class="role-home-reasons"><span class="role-home-reason danger">Просроченных задач: 2</span></div>
+        <a id="priorityTaskLink" class="btn primary mobile-first-screen-primary-action" href="./deal-card-v2.html?id=priority-task">Открыть карточку</a>
+      </article>
+      <article id="priorityRisk" class="role-home-priority-card">
+        <div class="role-home-priority-head"><div><div class="small">Проверить стоп-фактор</div></div></div>
+        <div class="role-home-reasons"><span class="role-home-reason danger">Красных рисков: 1</span></div>
+        <a id="priorityRiskLink" class="btn primary mobile-first-screen-primary-action" href="./deal-card-v2.html?id=priority-risk">Открыть карточку</a>
+      </article>
+      <article id="priorityDocs" class="role-home-priority-card">
+        <div class="role-home-priority-head"><div><div class="small">Проверить документы</div></div></div>
+        <div class="role-home-reasons"><span class="role-home-reason neutral">Не хватает документов: 3</span></div>
+        <a id="priorityDocsLink" class="btn primary mobile-first-screen-primary-action" href="./deal-card-v2.html?id=priority-docs">Открыть карточку</a>
+      </article>
+    </section>
+
+    <section class="role-home-recent">
+      <a id="recentTaskLink" class="deal-card" href="./deal-card-v2.html?id=recent-task">
+        <div class="deal-head"><span class="pill yellow">Средний риск</span></div>
+        <div class="deal-meta">
+          <div><span class="small">Просрочено</span><b>1</b></div>
+          <div><span class="small">Документы</span><b>2</b></div>
+        </div>
+      </a>
+    </section>
+
+    <article class="deal-card deals-work-card" id="dealListCard">
+      <div class="actions deals-work-actions">
+        <a id="dealListLink" class="btn primary mobile-first-screen-primary-action" href="./deal-card-v2.html?id=deal-list">Продолжить работу</a>
+      </div>
+    </article>
+  </div>
+
+  <script>
+    window.navV2Deals = {
+      profile: { id: 'spn-1', role: 'spn' },
+      filter: 'work',
+      items: [{
+        id: 'deal-list',
+        open_tasks_count: 2,
+        overdue_tasks_count: 1,
+        red_risks_count: 1,
+        missing_documents_count: 4,
+        seller_spn: 'СПН',
+        manager: 'Менеджер'
+      }]
+    };
+  </script>
+  <script type="module" src="../../assets/js/nav-v2/work-route-continuity-v1.js?v=20260725-01"></script>
+</body>
+</html>

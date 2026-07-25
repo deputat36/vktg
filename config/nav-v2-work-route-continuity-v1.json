@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "decision": "existing_dashboard_and_deal_list_links_preserve_work_section",
+  "scope": "repository_frontend_only",
+  "pages": [
+    "dashboard-v2.html",
+    "deals-v2.html",
+    "deal-card-v2.html"
+  ],
+  "destinations": [
+    "overview",
+    "tasks",
+    "risks",
+    "docs"
+  ],
+  "rules": {
+    "explicit_overdue_filter": "tasks",
+    "explicit_red_filter": "risks",
+    "explicit_docs_filter": "docs",
+    "spn_or_broker_with_open_tasks": "tasks",
+    "lawyer_with_red_risk": "risks",
+    "manager_with_missing_responsibility": "overview",
+    "fallback": "strongest_visible_blocker"
+  },
+  "invariants": {
+    "no_new_screen": true,
+    "no_new_rpc": true,
+    "no_mutation": true,
+    "no_storage": true,
+    "preserve_deal_id": true,
+    "preserve_existing_role_filters": true,
+    "idempotent_dom_enhancement": true,
+    "leader_scope_untouched": true
+  },
+  "production_changes": {
+    "schema": false,
+    "data": false,
+    "auth": false,
+    "rls": false,
+    "grants": false,
+    "edge": false
+  }
+}

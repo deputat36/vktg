@@ -1,0 +1,81 @@
+name: Navigator v2 work route continuity
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'assets/js/nav-v2/safe-card-links-v2.js'
+      - 'assets/js/nav-v2/work-route-continuity-v1.js'
+      - 'config/nav-v2-work-route-continuity-v1.json'
+      - 'docs/NAV_V2_WORK_ROUTE_CONTINUITY_V1_2026-07-25.md'
+      - 'scripts/check_nav_v2_work_route_continuity.py'
+      - 'scripts/check-nav-v2-work-route-continuity.mjs'
+      - 'tests/e2e/work-route-continuity.spec.js'
+      - 'tests/fixtures/nav-v2-work-route-continuity.html'
+      - '.github/workflows/nav-v2-work-route-continuity-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard-v2.html'
+      - 'deals-v2.html'
+      - 'assets/js/nav-v2/safe-card-links-v2.js'
+      - 'assets/js/nav-v2/work-route-continuity-v1.js'
+      - 'config/nav-v2-work-route-continuity-v1.json'
+      - 'docs/NAV_V2_WORK_ROUTE_CONTINUITY_V1_2026-07-25.md'
+      - 'scripts/check_nav_v2_work_route_continuity.py'
+      - 'scripts/check-nav-v2-work-route-continuity.mjs'
+      - 'tests/e2e/work-route-continuity.spec.js'
+      - 'tests/fixtures/nav-v2-work-route-continuity.html'
+      - '.github/workflows/nav-v2-work-route-continuity-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/js/nav-v2/work-route-continuity-v1.js
+          node --check assets/js/nav-v2/safe-card-links-v2.js
+          node --check scripts/check-nav-v2-work-route-continuity.mjs
+          node --check tests/e2e/work-route-continuity.spec.js
+      - name: Check work route contract
+        run: python3 scripts/check_nav_v2_work_route_continuity.py
+      - name: Check work route semantics
+        run: node scripts/check-nav-v2-work-route-continuity.mjs
+      - name: Recheck module budgets
+        run: python3 scripts/check_nav_v2_module_budget.py
+      - name: Compile Python contract
+        run: python3 -m py_compile scripts/check_nav_v2_work_route_continuity.py
+
+  public-browser:
+    needs: semantic-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run work route continuity on desktop and mobile
+        run: npx playwright test tests/e2e/work-route-continuity.spec.js --project=chromium-desktop --project=chromium-mobile
+      - name: Upload work route evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-v2-work-route-continuity-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
