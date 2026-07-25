@@ -2,10 +2,10 @@
 
 ## Точка продолжения
 
-- Дата: 24 июля 2026 года.
+- Дата: 25 июля 2026 года.
 - Репозиторий: `deputat36/vktg`.
-- Последний подтверждённый `main`: `214dc8534a4649b257c86b03761d6f3b7dbfc4e7` — squash merge PR #499.
-- Открытые PR по Navigator v2 отсутствуют на момент фиксации.
+- Последний подтверждённый product `main`: `6cdfc18a4dc191111bb1f559de09b018de15d734` — squash merge PR #501.
+- Открытые product PR по Navigator v2 отсутствуют на момент фиксации.
 - Shared frontend build: `20260723-02`.
 - Public GitHub Pages: `https://deputat36.github.io/vktg/`.
 - Supabase project: `ofewxuqfjhamgerwzull`.
@@ -98,119 +98,92 @@ Public/browser evidence относится к shared build и не доказы�
 
 ## Запись для основной CRM
 
-Действующий read-only блок `В CRM` содержит:
-
-- текущий этап;
-- результат;
-- риск или препятствие;
-- договорённость;
-- недостающие обязательные пункты;
-- следующее действие;
-- ответственного;
-- срок.
+Действующий read-only блок `В CRM` содержит текущий этап, результат, препятствие, договорённость, недостающие пункты, следующее действие, ответственного и срок.
 
 Запись не сохраняется автоматически. Сотрудник проверяет и копирует её вручную. Navigator не создаёт параллельную CRM или отдельный журнал.
 
 Task policy для legacy-задач использует явные `task_type`, `assigned_role` и `due_date`, а при отсутствии `task_type` — read-only классификацию по `source`. Production backfill не выполнялся.
 
-## Замыкание lifecycle задач — PR #495
+## Закрытые frontend-блокеры task lifecycle
 
-Merge SHA:
+### Замыкание lifecycle — PR #495
 
-`8ce918a2bb3f2551b7797530400f9ded4cea15aa`
+Merge SHA: `8ce918a2bb3f2551b7797530400f9ded4cea15aa`.
 
-Решение:
+Решение: `legacy_task_lifecycle_closure_frontend_enabled_atomic_server_completion_blocked`.
 
-`legacy_task_lifecycle_closure_frontend_enabled_atomic_server_completion_blocked`
-
-Для legacy-задач действует последовательность:
+Действует последовательность:
 
 - `open` → `Начать работу`;
 - `in_progress` → обязательный результат и `Сохранить результат и завершить`;
 - `done` → `Вернуть в работу`;
 - `cancelled` → без рабочих действий.
 
-Результат сохраняется командным комментарием раньше статуса `done`. Если комментарий не сохранён, задача не закрывается. Если комментарий сохранён, а статус временно не изменён, повтор в текущей сессии не дублирует комментарий.
+Результат сохраняется раньше статуса `done`. Неуспешное сохранение результата не закрывает задачу; повтор в текущей сессии не дублирует уже сохранённый комментарий.
 
-## Восстановление серверных разрешений — PR #497
+### Восстановление серверных разрешений — PR #497
 
-Merge SHA:
+Merge SHA: `a1bbd44421b966775ba1b20fc918124dfaceeb5a`.
 
-`a1bbd44421b966775ba1b20fc918124dfaceeb5a`
+Решение: `full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked`.
 
-Решение:
+Production lite DTO не содержит permission-полей. Frontend использует полный deal-card DTO как авторитетный fallback, сохраняет explicit denial и fail-closed поведение и не вычисляет права по роли или тексту задачи.
 
-`full_card_task_permission_bridge_enabled_lite_dto_database_change_blocked`
+### Выбор исполнимой задачи — PR #499
 
-Подтверждённый разрыв:
+Merge SHA: `214dc8534a4649b257c86b03761d6f3b7dbfc4e7`.
 
-- `nav_v2_get_deal_card` возвращает авторитетные permission-поля;
-- production `nav_v2_get_deal_card_lite` не возвращает их;
-- прежний guard интерпретировал отсутствующее поле как запрет.
+Решение: `actionable_task_preferred_in_existing_deal_focus_no_new_screen`.
 
-Действующее поведение:
+Подтверждённый разрыв до исправления:
 
-- lite DTO остаётся быстрым источником состояния;
-- при отсутствии permission-полей guard использует разрешения полной карточки;
-- full-card RPC входит в общий in-flight dedupe-контур;
-- explicit server denial остаётся denial;
-- при ошибке обоих источников действия остаются fail-closed;
-- клиент не вычисляет право по роли, назначению или тексту задачи.
+- у СПН было 6 доступных связок «пользователь–сделка» с открытыми задачами;
+- во всех 6 была собственная исполнимая задача;
+- во всех 6 прежний focus выбирал более срочную задачу другой роли;
+- у юриста 13 из 17 связок имели исполнимую задачу, ещё 4 были control-only.
 
-## Маршрут к исполнимой задаче — PR #499
+Теперь карточка сначала выбирает задачу с серверным `can_change_status=true`, открывает вкладку `Задачи`, прокручивает точный пункт и устанавливает keyboard focus на разрешённую кнопку. Чужие задачи остаются видимыми для контроля, но не перехватывают главное действие.
 
-Merge SHA:
+Профильная desktop/mobile проверка подтвердила точный переход `open → in_progress` через действующий status RPC. Новый task screen или mutation source не создавались.
 
-`214dc8534a4649b257c86b03761d6f3b7dbfc4e7`
+### Непрерывный маршрут из списков — PR #501
 
-Решение:
+Merge SHA: `6cdfc18a4dc191111bb1f559de09b018de15d734`.
 
-`actionable_task_preferred_in_existing_deal_focus_no_new_screen`
+Решение: `existing_dashboard_and_deal_list_links_preserve_work_section`.
 
-### Проверка предыдущего этапа
+Проверка перед изменением показала, что production transitions всё ещё отсутствуют, а рабочий стол и список сделок теряли уже известный контекст работы: кнопка открывала общую сводку вместо нужной вкладки.
 
-После permission-fix production по-прежнему не показывал реальных task transitions. Возврат старой permission-ошибки не обнаружен.
+Теперь существующие ссылки сохраняют рабочий контекст:
 
-Read-only анализ действующих назначений показал:
+- просрочка и задачи СПН/брокера → `#tasks`;
+- красный риск и стоп-фактор → `#risks`;
+- документный режим → `#docs`;
+- назначение ответственности → сводка;
+- явные фильтры `overdue`, `red`, `docs` сохраняют соответствующую вкладку.
 
-- у СПН 6 доступных связок «пользователь–сделка» с открытыми задачами;
-- во всех 6 связках есть как минимум одна задача с серверным разрешением на выполнение;
-- во всех 6 прежний блок `Главное действие сейчас` выбирал более срочную задачу другой роли;
-- у юриста 13 из 17 доступных связок имеют исполнимую задачу, ещё 4 являются control-only.
+CTA показывает конкретное действие: `Открыть задачи`, `Открыть риски`, `Открыть документы` или `Открыть карточку`.
 
-### Что действует теперь
+Логика встроена в существующий safe-link контур, не увеличивает module budget, не выполняет RPC/mutation/storage и не создаёт новый экран.
 
-В существующей карточке сделки, без нового task screen:
+Проверка PR #501:
 
-1. Сначала выбирается открытая задача с серверным `can_change_status=true` для текущего пользователя.
-2. Среди исполнимых задач сохраняется приоритет по просрочке, важности и статусу `in_progress`.
-3. Если исполнимой задачи нет, наиболее важная чужая задача остаётся видимой для контроля.
-4. Для открытой своей задачи CTA называется `Начать эту задачу`.
-5. Для своей задачи в работе CTA называется `Продолжить и завершить`.
-6. CTA открывает существующую вкладку `Задачи`, прокручивает нужную задачу и устанавливает keyboard focus на разрешённую кнопку.
-7. Чужая задача не перехватывает основное действие, но остаётся доступной для контроля.
-
-### Проверка PR #499
-
-Профильный workflow run `30108222992` подтвердил на desktop и mobile:
-
-- более срочная задача юриста не перехватывает focus у исполнимой задачи СПН;
-- открывается существующая вкладка задач;
-- кнопка `Начать работу` видима, разрешена и получает focus;
-- выполняется точный переход `open → in_progress` через действующий status RPC;
-- новый mutation source, task screen или параллельная очередь не создаются.
-
-Все 29 workflow head PR #499 завершились успешно. Один browser-job был повторён только из-за GitHub runner HTTP 429 при скачивании стандартного checkout; повтор завершился успешно. Review threads отсутствовали.
+- 18 workflow завершились успешно;
+- semantic/static contract и module budget зелёные;
+- desktop/mobile browser scenarios для `#tasks`, `#risks`, `#docs` зелёные;
+- public build, live runtime, Auth storage, session recovery, keyboard focus и screen structure зелёные;
+- первоначальный browser failure был вызван неверным импортом test helper, тест не запускался; импорт исправлен, повторный полный head зелёный;
+- review threads отсутствовали.
 
 Канонические файлы:
 
-- `config/nav-v2-actionable-task-route-v1.json`;
-- `docs/NAV_V2_ACTIONABLE_TASK_ROUTE_V1_2026-07-24.md`;
-- `tests/e2e/actionable-task-route.spec.js`.
+- `config/nav-v2-work-route-continuity-v1.json`;
+- `docs/NAV_V2_WORK_ROUTE_CONTINUITY_V1_2026-07-25.md`;
+- `tests/e2e/work-route-continuity.spec.js`.
 
 ## Operational baseline
 
-Последняя read-only production-сверка перед PR #499:
+Последняя read-only production-сверка перед PR #501:
 
 - задач: 98;
 - `open`: 88;
@@ -219,9 +192,12 @@ Read-only анализ действующих назначений показа�
 - `cancelled`: 10;
 - событий `task_status_changed`: 0;
 - командных комментариев в `nav_deal_comments_v2`: 5;
-- последнее production task/event изменение: 16 июля 2026 года.
+- последнее production task/event изменение: 16 июля 2026 года;
+- последний комментарий: 24 мая 2026 года.
 
 Repository/frontend merges не должны менять эти значения. Автоматические переходы, переназначения, перенос сроков и массовое закрытие не выполнялись.
+
+Permission DTO, выбор actionable task и потеря вкладки при входе из dashboard/deals больше не считать открытыми blockers.
 
 ## Заблокированные пункты
 
@@ -229,16 +205,7 @@ Repository/frontend merges не должны менять эти значени�
 
 Статус: `blocked_requires_explicit_production_database_approval`.
 
-Предпочтительное долгосрочное упрощение — добавить `can_change_status` и bounded permission booleans непосредственно в production `nav_v2_get_deal_card_lite`.
-
-Подготовлено:
-
-- доказана разница lite/full DTO;
-- действует безопасный full-card fallback;
-- explicit denial и fail-closed покрыты desktop/mobile тестами;
-- rollback frontend-изменения понятен.
-
-Требуются отдельная production migration, проверка grants/RLS, exact rollback и authenticated permission E2E. Этот пункт не блокирует frontend.
+Долгосрочное упрощение потребует production migration, проверки grants/RLS, exact rollback и authenticated permission E2E. Действующий fallback не блокирует frontend.
 
 ### Атомарное server-side завершение задачи
 
@@ -297,16 +264,7 @@ Generic `продолжай`, `работай по плану`, `действу�
 
 ### Preview/Auth E2E
 
-Cloud шаг требует отдельного решения владельца:
-
-- exact mode и цель;
-- fresh branch cost;
-- amount/currency/recurrence;
-- explicit cost approval;
-- disposable branch;
-- synthetic technical accounts only;
-- no production data/real employees;
-- cleanup evidence.
+Cloud шаг требует отдельного решения владельца: exact mode и цель, fresh branch cost, amount/currency/recurrence, explicit cost approval, disposable branch, synthetic technical accounts only, no production data/real employees и cleanup evidence.
 
 Не вызывать cost confirmation.
 
@@ -323,11 +281,11 @@ Cloud шаг требует отдельного решения владельц
 ## Следующий безопасный slice
 
 1. Не создавать новый task screen, CRM-summary или параллельный журнал.
-2. В read-only monitoring проверять появление первых `task_status_changed`, `in_progress`, `done` и evidence-комментариев после публикации actionable route.
-3. Если реальные переходы появились, проверить, что результат понятен, комментарий не дублируется, завершённая задача уходит из active debt и CRM-handoff выбирает следующий незакрытый пункт.
-4. Если переходы не появились после реального использования, следующий repository-only этап — проверить путь с рабочего стола и списка сделок в конкретную карточку: role filters, приоритетную сделку, ссылку и сохранение `#tasks`. Permission DTO и выбор actionable task больше не считать открытыми blockers.
-5. Исправлять только существующий маршрут и видимость; новый экран создавать только при доказанной необходимости.
-6. После подтверждённых task outcomes перейти к аналогичному замыканию документов и рисков: terminal outcome должен убирать пункт из active debt.
+2. В read-only monitoring проверить появление первых `task_status_changed`, `in_progress`, `done` и evidence-комментариев после публикации work-route continuity.
+3. Если реальные переходы появились, проверить порядок evidence → done, отсутствие дубля комментария, уход завершённой задачи из active debt и выбор следующего пункта блоком `В CRM`.
+4. Если переходы не появились после фактического использования обновлённого интерфейса, следующий repository-only этап — сопоставить role-specific list DTO с полной карточкой: доступность одной и той же приоритетной сделки, значения `open_tasks_count`/`overdue_tasks_count`, наличие задач текущей роли и сохранение exact deal id.
+5. Исправлять существующий маршрут или DTO-consumer; новый экран создавать только при доказанной необходимости.
+6. После подтверждённых task outcomes перейти к документам и рискам: terminal outcome должен убирать пункт из active debt.
 7. Не выполнять production backfill, массовое назначение, перенос сроков или закрытие задач без отдельного решения владельца.
 8. Permission-поля lite DTO, атомарный task-completion RPC и bounded transport держать заблокированными до отдельного production approval.
 9. Поддерживать scheduled public source/browser monitoring.
