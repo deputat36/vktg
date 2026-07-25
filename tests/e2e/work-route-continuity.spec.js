@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { captureRuntimeFailures, expectNoRuntimeFailures, openPage } from './helpers.js';
+import { captureRuntimeFailures, expectNoRuntimeFailures, openPage } from './helpers.mjs';
 
 const fixture = '/tests/fixtures/nav-v2-work-route-continuity.html';
 
