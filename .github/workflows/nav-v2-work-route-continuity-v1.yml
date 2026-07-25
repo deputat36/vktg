@@ -5,6 +5,7 @@ on:
     paths:
       - 'dashboard-v2.html'
       - 'deals-v2.html'
+      - 'assets/js/nav-v2/safe-card-links-v2.js'
       - 'assets/js/nav-v2/work-route-continuity-v1.js'
       - 'config/nav-v2-work-route-continuity-v1.json'
       - 'docs/NAV_V2_WORK_ROUTE_CONTINUITY_V1_2026-07-25.md'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'dashboard-v2.html'
       - 'deals-v2.html'
+      - 'assets/js/nav-v2/safe-card-links-v2.js'
       - 'assets/js/nav-v2/work-route-continuity-v1.js'
       - 'config/nav-v2-work-route-continuity-v1.json'
       - 'docs/NAV_V2_WORK_ROUTE_CONTINUITY_V1_2026-07-25.md'
@@ -41,6 +43,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check assets/js/nav-v2/work-route-continuity-v1.js
+          node --check assets/js/nav-v2/safe-card-links-v2.js
           node --check scripts/check-nav-v2-work-route-continuity.mjs
           node --check tests/e2e/work-route-continuity.spec.js
       - name: Check work route contract
