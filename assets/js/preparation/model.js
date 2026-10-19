@@ -140,6 +140,7 @@ export function buildSummary(result, catalog, audience = 'lawyer') {
   return [
     `${audience === 'broker' ? 'Вопрос брокеру / банку' : 'Вопрос юристу'} · ${label(catalog.modes,state.mode)}.`,
     `Объект: ${label(catalog.objects,state.object)}. Оплата: ${state.funding.map((id) => label(catalog.funding,id)).join(', ')}.`,
+    state.features.length ? `Выбраны темы для проверки (не подтверждение фактов): ${state.features.map((id) => label(catalog.features,id)).join(', ')}.` : '',
     `По документам (без юридического вывода): ${compactList(facts.document.map(factText),'не отмечено')}.`,
     `Со слов клиента: ${compactList(facts.client.map(factText),'не отмечено')}.`,
     `Источник не указан: ${compactList(facts.unchecked.map(factText),'нет таких ответов')}.`,
@@ -148,6 +149,7 @@ export function buildSummary(result, catalog, audience = 'lawyer') {
     facts.not_applicable.length ? `Отмечено «не относится» (применимость не проверена): ${facts.not_applicable.map((item) => item.short || item.title).join(', ')}.` : '',
     `Доступны в CRM: ${compactList(state.available.map((id) => label(catalog.documents,id)),'наличие документов не отмечено')}. Получение не означает профессиональную проверку.`,
     `Прошу уточнить: ${compactList(questions,'какие сведения и документы ещё нужны до следующего действия')}.`,
+    `Следующий шаг: ${result.next}`,
     result.program.length && audience === 'lawyer' ? `У оператора программы: ${result.program.join('; ')}.` : '',
     state.coordination === 'two_spn' ? 'Разные СПН: согласовать единый набор вводных и кто вернёт ответ сторонам.' : '',
     `Ответ нужен: ${state.urgency === 'urgent' ? 'срочно; реальный срок согласовать до подписания' : state.mode === 'deal' ? 'до подписания основной сделки' : state.mode === 'deposit' ? 'до подписания и передачи денег' : 'до следующего действия'}.`,
