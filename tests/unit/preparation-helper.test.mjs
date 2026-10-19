@@ -77,7 +77,9 @@ test('14 urgent deposit still asks for real expert timing',()=>{
 });
 test('15 matcap, certificate and child funds without mortgage never route automatically to broker',()=>{
   for(const funding of [['own','matcap'],['certificate'],['matcap','certificate'],['child_funds']]){
-    const r=result({funding});assert.equal(r.broker.length,0);assert.ok(r.lawyer.length>0);assert.ok(r.program.length>0);
+    const r=result({funding});assert.equal(r.broker.length,0);assert.ok(r.lawyer.length>0);
+    if(funding.includes('child_funds')){assert.equal(r.program.length,0);assert.ok(r.documents.some((d)=>d.id==='child_money_docs'));}
+    else assert.ok(r.program.length>0);
   }
 });
 test('negative statements without a source are not confirmed absence of risk',()=>{
@@ -120,4 +122,15 @@ test('selection of a feature without confirmation remains unknown',()=>{
 test('main deal adds transfer questions; new building variants use the correct route',()=>{
   const r=result({mode:'deal'});assert.ok(ids(r).includes('transfer'));
   for(const object of ['new_build','ddu','assignment'])assert.ok(result({object}).documents.some((d)=>d.id==='developer_docs'));
+});
+test('DDU and assignment do not ask for existing apartment ownership evidence',()=>{
+  for(const object of ['ddu','assignment']){
+    const r=result({object});assert.ok(ids(r).includes('contract_parties'));assert.ok(!ids(r).includes('owners'));
+    assert.ok(!r.documents.some((d)=>d.id==='egrn'||d.id==='title_basis'));
+  }
+  assert.ok(!ids(result({object:'ddu'})).includes('past_matcap'));
+});
+test('child-owned money is a legal question, not automatically a benefit program',()=>{
+  const r=result({funding:['child_funds']});assert.ok(ids(r).includes('child_money'));assert.ok(!ids(r).includes('social'));
+  assert.equal(r.program.length,0);assert.equal(r.broker.length,0);
 });

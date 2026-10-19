@@ -128,3 +128,11 @@ test('methodologist edits a draft and exports without any server mutation',async
   expect(download.suggestedFilename()).toBe('preparation-catalog-draft-0.1.1.json');await expect(page.locator('#editor-status')).toContainText('сайт не изменён');
   expect(requests.filter((method)=>method!=='GET')).toEqual([]);expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);
 });
+test('DDU and child money avoid unrelated ownership and social program questions',async({page})=>{
+  await start(page);await choose(page,{object:'ddu',funding:['child_funds']});await page.locator('[data-action=details]').click();
+  await expect(page.locator('[data-question=contract_parties]')).toBeVisible();await expect(page.locator('[data-question=child_money]')).toBeVisible();
+  await expect(page.locator('[data-question=owners]')).toHaveCount(0);await expect(page.locator('[data-question=social]')).toHaveCount(0);
+  await expect(page.locator('[data-question=past_matcap]')).toHaveCount(0);await page.locator('[data-action=result]').click();
+  await expect(page.getByRole('heading',{name:'У оператора программы'})).toHaveCount(0);await page.locator('#documents summary').click();
+  await expect(page.locator('#main')).not.toContainText('Сведения ЕГРН по объекту');
+});
