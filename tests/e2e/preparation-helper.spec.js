@@ -52,7 +52,7 @@ for(const scenario of scenarios)test(scenario.name,async({page},testInfo)=>{
     await page.locator('[data-action=result]').click();
   }else await page.locator('[data-action=result]').click();
   await expect(page.locator('h1')).toHaveText('Ваш план подготовки');
-  await page.locator('#documents summary').click();
+  await page.locator('#documents > summary').click();
   await expect(page.locator('#main')).toContainText(scenario.expected);
   if(scenario.notBank)await expect(page.getByRole('heading',{name:'Что уточнить у брокера / банка'})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
@@ -70,7 +70,7 @@ test('beginner flow: provenance, copying fallback, missing details, reset and re
   await page.locator('#fact-owners-yes').check();await page.locator('#source-owners').selectOption('document');
   await page.locator('[data-action=result]').click();
   await expect(page.locator('.fact-group').filter({hasText:'Со слов клиента'})).toContainText('Несовершеннолетний собственник');
-  await page.locator('#documents summary').click();await page.locator('#available-egrn').check();
+  await page.locator('#documents > summary').click();await page.locator('#available-egrn').check();
   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:()=>Promise.reject(new Error('not_allowed'))}}));
   await page.locator('[data-action=copy-lawyer]').click();await expect(page.locator('#summary-text')).toBeFocused();
   const copied=await page.locator('#summary-text').inputValue();expect(copied).toContain('Со слов клиента:');expect(copied).toContain('Сведения ЕГРН');expect(copied).toContain('не является юридическим решением');
@@ -141,7 +141,7 @@ test('DDU and child money avoid unrelated ownership and social program questions
   await expect(page.locator('[data-question=contract_parties]')).toBeVisible();await expect(page.locator('[data-question=child_money]')).toBeVisible();
   await expect(page.locator('[data-question=owners]')).toHaveCount(0);await expect(page.locator('[data-question=social]')).toHaveCount(0);
   await expect(page.locator('[data-question=past_matcap]')).toHaveCount(0);await page.locator('[data-action=result]').click();
-  await expect(page.getByRole('heading',{name:'У оператора программы'})).toHaveCount(0);await page.locator('#documents summary').click();
+  await expect(page.getByRole('heading',{name:'У оператора программы'})).toHaveCount(0);await page.locator('#documents > summary').click();
   await expect(page.locator('#main')).not.toContainText('Сведения ЕГРН по объекту');
 });
 
@@ -188,7 +188,7 @@ test('plan copying and preview update immediately after corrections',async({page
   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
   await page.locator('[data-action=copy-plan]').click();expect(await page.evaluate(()=>window.__copied)).toContain('План подготовки');
   await page.locator('#request-preview summary').click();await expect(page.locator('.summary-preview')).toContainText('наличие документов не отмечено');
-  await page.locator('#documents summary').click();await page.locator('#available-egrn').check();
+  await page.locator('#documents > summary').click();await page.locator('#available-egrn').check();
   await expect(page.locator('.summary-preview')).toContainText('Доступны в CRM: Сведения ЕГРН');
   await page.locator('[data-action=details]').click();await page.locator('#fact-past_matcap-yes').check();
   await page.locator('#source-past_matcap').selectOption('client');await page.locator('[data-action=result]').click();
