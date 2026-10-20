@@ -439,9 +439,22 @@ h1[tabindex] {
   font-size:.9rem;
   font-weight:650;
 }
-.source-toolbar .help {
+.source-toolbar .help,.source-help {
   grid-column:1/-1;
   margin:0;
+}
+.source-help {
+  font-size:.82rem;
+  color:var(--muted);
+}
+.source-help summary {
+  min-height:36px;
+  padding-top:6px;
+}
+.next-step p {
+  max-width:850px;
+  font-size:.95rem;
+  color:#e6e7eb;
 }
 .topic-section h2 {
   font-size:1.1rem;
