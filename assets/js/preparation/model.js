@@ -21,7 +21,10 @@ export function matches(state, condition = {}) {
 }
 
 export function activeQuestions(state, catalog) {
-  return catalog.questions.filter((question) => matches(state, question.when));
+  return catalog.questions.filter((question) => matches(state, question.when)).map((question) => {
+    const variant = question.variants?.find((item) => matches(state,item.when));
+    return variant ? { ...question, ...variant, id:question.id } : question;
+  });
 }
 
 export function normalizeState(input, catalog) {
@@ -65,6 +68,19 @@ export function validateCatalog(catalog) {
   };
   for (const question of catalog.questions) {
     checkWhen(question.when);
+    if (question.variants !== undefined) {
+      if (!Array.isArray(question.variants)) errors.push(`Неверные варианты ${question.id}.`);
+      else for (const variant of question.variants) {
+        if (!variant || typeof variant !== 'object' || Array.isArray(variant)) { errors.push(`Неверный вариант ${question.id}.`); continue; }
+        checkWhen(variant.when);
+        if (!variant.when || Object.keys(variant).some((key) => !['when','title','short','why','clarify','verify','attention_next'].includes(key))) errors.push(`Неверный вариант ${question.id}.`);
+        for (const key of ['title','short','why','clarify']) if (typeof variant[key] !== 'string' || !variant[key].trim()) errors.push(`Не заполнен вариант ${question.id}/${key}.`);
+        for (const key of ['attention_next','verify']) if (variant[key] !== undefined && (typeof variant[key] !== 'string' || !variant[key].trim())) errors.push(`Не заполнен вариант ${question.id}/${key}.`);
+      }
+    }
+    if (question.group && !['core','context','topic'].includes(question.group)) errors.push(`Неверная группа ${question.id}.`);
+    if (question.priority !== undefined && (!Number.isFinite(question.priority) || question.priority < 0 || question.priority > 100)) errors.push(`Неверный приоритет ${question.id}.`);
+    for (const key of ['attention_next','verify']) if (question[key] !== undefined && (typeof question[key] !== 'string' || !question[key].trim())) errors.push(`Не заполнено ${question.id}/${key}.`);
     if (!['yes','no'].includes(question.attention)) errors.push(`Неверное направление проверки ${question.id}.`);
     for (const key of ['why','clarify']) if (typeof question[key] !== 'string' || !question[key].trim()) errors.push(`Не заполнено ${question.id}/${key}.`);
   }
@@ -110,8 +126,13 @@ export function assess(input, catalog) {
     if (fact.value === 'unknown') facts.unknown.push(item);
     else if (fact.value === 'not_applicable') facts.not_applicable.push(item);
     else facts[fact.source].push(item);
-    if (fact.value === 'unknown' || fact.value === question.attention || (fact.source === 'unchecked' && fact.value !== 'not_applicable')) clarify.push(item);
+    let reason;
+    if (fact.value === 'unknown') reason = 'unknown';
+    else if (fact.value === question.attention) reason = 'attention';
+    else if (fact.source === 'unchecked' && fact.value !== 'not_applicable') reason = 'source';
+    if (reason) clarify.push({ ...item, reason, clarify: reason === 'attention' ? (question.attention_next || question.clarify) : reason === 'source' ? (question.verify || `Уточните источник ответа: «${question.title}»`) : question.clarify });
   }
+  clarify.sort((a,b) => (b.priority || 0) - (a.priority || 0));
   const active = catalog.rules.filter((rule) => {
     if (!matches(state, rule.when)) return false;
     if (rule.kind === 'internal_required' && rule.approval !== 'approved') return false;
@@ -125,11 +146,28 @@ export function assess(input, catalog) {
   const program = unique(active.filter((rule) => rule.owner === 'program').map((rule) => rule.question));
   const relevantFeatures = catalog.features.filter((feature) => matches(state, feature.when));
   const unreviewed = relevantFeatures.filter((feature) => !state.features.includes(feature.id));
-  const signals = unique(active.filter((rule) => rule.fact || rule.priority >= 80).map((rule) => rule.signal));
-  let next = active.find((rule) => rule.priority >= 90)?.next;
+  const signals = unique(active.filter((rule) => rule.fact || rule.priority >= 80).map((rule) => state.facts[rule.fact]?.value === 'unknown' ? `Пока не подтверждено: ${rule.title.toLowerCase()}. ${entry(questions,rule.fact)?.clarify || rule.signal}` : rule.signal));
+  const priorityRule = active.find((rule) => rule.priority >= 90);
+  let next = priorityRule && (state.facts[priorityRule.fact]?.value === 'unknown' ? entry(questions,priorityRule.fact)?.clarify : priorityRule.next);
+  if (!next && state.object === 'unknown') next = 'Определить тип объекта по документам; если документов пока нет, уточнить его у сопровождающего СПН.';
+  if (!next && state.funding.includes('unknown')) next = 'Уточните у покупателя источники оплаты и зависимость от другой продажи.';
   if (!next && clarify.length) next = clarify[0].clarify;
   if (!next) next = 'Передайте юристу вводные и доступные в CRM документы; получите ответ о следующем действии и зафиксируйте его в CRM.';
   return { state, questions, facts, clarify, active, documents, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
+}
+
+export function buildPlan(result, catalog) {
+  return [
+    `План подготовки · ${label(catalog.modes,result.state.mode)} · ${label(catalog.objects,result.state.object)}.`,
+    `Сейчас: ${result.next}`,
+    ...result.clarify.map((item) => `• ${item.clarify}`),
+    `Документы-ориентиры: ${result.documents.map((item) => item.title).join('; ')}. Наличие не означает проверку.`,
+    result.lawyer.length ? `Юристу: ${result.lawyer.join('; ')}` : '',
+    result.broker.length ? `Брокеру / банку: ${result.broker.join('; ')}` : '',
+    result.program.length ? `Оператору программы: ${result.program.join('; ')}` : '',
+    result.unreviewed.length ? 'Неотмеченные особенности не проверены; отсутствие отметки не означает отсутствие обстоятельства.' : '',
+    'Документы, ответ специалиста и следующие действия — в CRM. Это план подготовки, а не юридическое решение.'
+  ].filter(Boolean).join('\n');
 }
 
 const compactList = (items, fallback) => items.length ? items.join('; ') : fallback;

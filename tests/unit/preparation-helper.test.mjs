@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assess, buildSummary, emptyState, normalizeFact, normalizeState, validateCatalog } from '../../assets/js/preparation/model.js';
+import { assess, buildSummary, buildPlan, emptyState, normalizeFact, normalizeState, validateCatalog } from '../../assets/js/preparation/model.js';
 
 const catalog=JSON.parse(readFileSync(new URL('../../config/preparation-catalog.json',import.meta.url)));
 const basic=(extra={})=>({...emptyState(),mode:'deposit',object:'flat',funding:['own'],...extra});
@@ -13,10 +13,10 @@ test('catalog is valid and all rules preserve their review status',()=>{
   assert.deepEqual(validateCatalog(catalog),[]);
   assert.ok(catalog.rules.every((rule)=>rule.approval==='draft' && rule.kind!=='internal_required'));
 });
-test('01 simple flat with own funds asks five relevant questions and no bank questions',()=>{
-  const r=result();assert.equal(r.broker.length,0);assert.equal(r.questions.length,5);
+test('01 simple flat with own funds asks four relevant questions and no bank questions',()=>{
+  const r=result();assert.equal(r.broker.length,0);assert.equal(r.questions.length,4);
   assert.ok(!ids(r).includes('loan'));assert.ok(!ids(r).includes('land'));assert.ok(!ids(r).includes('minor'));
-  assert.ok(r.documents.some((d)=>d.id==='title_basis'));assert.equal(r.facts.unknown.length,5);
+  assert.ok(r.documents.some((d)=>d.id==='title_basis'));assert.equal(r.facts.unknown.length,4);
 });
 test('02 mortgage asks about bank approval without claiming approval itself',()=>{
   const r=result({funding:['own','mortgage']});assert.ok(ids(r).includes('loan'));assert.ok(r.broker.length>0);
@@ -133,4 +133,58 @@ test('DDU and assignment do not ask for existing apartment ownership evidence',(
 test('child-owned money is a legal question, not automatically a benefit program',()=>{
   const r=result({funding:['child_funds']});assert.ok(ids(r).includes('child_money'));assert.ok(!ids(r).includes('social'));
   assert.equal(r.program.length,0);assert.equal(r.broker.length,0);
+});
+
+test('ordinary flow does not repeat a prior-consent question without that topic',()=>{
+  assert.ok(!ids(result()).includes('changes'));
+  const r=result({features:['changed']});assert.ok(ids(r).includes('changes'));
+  assert.match(r.next,/Уточните/);assert.match(r.next,/повторную проверку/);
+  assert.equal(r.active.filter((rule)=>rule.id.startsWith('changed')).length,1);
+});
+test('unknown selected features never become confirmed signals or a concrete incident',()=>{
+  for(const feature of ['minor','poa','seller_mortgage','dispute','changed']){
+    const r=result({features:[feature]});assert.equal(r.facts.document.length,0);assert.equal(r.facts.client.length,0);
+    assert.ok(r.signals.every((signal)=>signal.startsWith('Пока не подтверждено:')));
+    assert.match(r.next,/Уточните|Передайте/);
+  }
+});
+test('clarification is ordered by consequence and distinguishes missing from known facts',()=>{
+  const unknown=result();assert.equal(unknown.clarify[0].id,'restrictions');
+  const r=result({facts:{restrictions:fact('yes','document'),past_matcap:fact('yes','client')}});
+  assert.equal(r.clarify.find((q)=>q.id==='restrictions').reason,'attention');
+  assert.match(r.clarify.find((q)=>q.id==='restrictions').clarify,/Передайте юристу вид/);
+  assert.match(r.clarify.find((q)=>q.id==='past_matcap').clarify,/Передайте юристу сведения/);
+});
+test('a positive source-less answer asks for its source instead of repeating the whole investigation',()=>{
+  const r=result({facts:{owners:fact('yes')}});
+  const item=r.clarify.find((q)=>q.id==='owners');assert.equal(item.reason,'source');assert.match(item.clarify,/откуда известен ответ/);
+});
+test('land-only and contract completion questions do not invent a house or key handover',()=>{
+  const land=result({object:'land'});const q=land.questions.find((q)=>q.id==='land');
+  assert.ok(!q.clarify.includes('дому'));assert.ok(!q.clarify.includes('обоим объектам'));
+  for(const object of ['ddu','assignment']){
+    const r=result({mode:'deal',object,features:['minor']});
+    const minor=r.questions.find((q)=>q.id==='minor');assert.match(minor.title,/правообладатель/);assert.ok(!minor.title.includes('собственник'));
+    assert.match(r.questions.find((q)=>q.id==='transfer').title,/регистрацию договора/);
+    assert.ok(!r.questions.find((q)=>q.id==='transfer').title.includes('ключи'));
+  }
+});
+test('unknown context wins over ordinary checklist and no source is guessed',()=>{
+  const r=assess({...emptyState(),mode:'deposit'},catalog);assert.match(r.next,/Определить тип объекта/);
+  const funding=result({funding:['unknown']});assert.match(funding.next,/источники оплаты/);
+  assert.ok(r.questions.every((q)=>r.state.facts[q.id].source==='unchecked'));
+});
+test('mixed payment is a funding question and not an inferred sale chain or mortgage',()=>{
+  const r=result({funding:['mixed']});assert.ok(ids(r).includes('funding_scheme'));assert.ok(!ids(r).includes('alternative'));
+  assert.equal(r.broker.length,0);assert.equal(r.program.length,0);
+});
+test('plan copying retains document guidance, missing items and legal boundaries',()=>{
+  const r=result({facts:{past_matcap:fact('yes','client')}});const plan=buildPlan(r,catalog);
+  assert.match(plan,/Сейчас:/);assert.match(plan,/семейных долях/);assert.match(plan,/Документы-ориентиры:/);
+  assert.match(plan,/отсутствие отметки не означает/);assert.match(plan,/не юридическое решение/);
+});
+test('variant metadata cannot change a question identity or smuggle unvalidated conditions',()=>{
+  for(const mutate of [c=>c.questions[0].variants={},c=>c.questions[0].variants=[null],c=>c.questions[0].variants=[{id:'hidden',when:{objects:['flat']}}],c=>c.questions[0].variants=[{when:{objects:['not_real']},title:'x',short:'x',why:'x',clarify:'x'}]]){
+    const c=structuredClone(catalog);mutate(c);assert.ok(validateCatalog(c).length);
+  }
 });
