@@ -648,6 +648,29 @@ h1[tabindex] {
 .document strong {
   color:var(--ink);
 }
+.document-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px 16px;
+}
+.document-row h3 {
+  flex:1 1 240px;
+  font-size:.95rem;
+}
+.document-row .plain-check {
+  min-height:44px;
+  margin:0;
+}
+.document-progress {
+  margin-top:16px;
+  padding:12px 14px;
+  border-radius:10px;
+  background:var(--soft);
+  color:var(--muted);
+  font-size:.85rem;
+}
 .source-list {
   padding-top:10px;
 }
@@ -914,6 +937,30 @@ h1[tabindex] {
 }
 .editable-list .answer-edit {
   display:block;
+}
+.clarification-title {
+  font-weight:600;
+}
+.clarification-tools {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:0 16px;
+}
+.clarification-help {
+  flex:1 1 auto;
+  color:var(--muted);
+  font-size:.85rem;
+}
+.clarification-help[open] {
+  flex-basis:100%;
+}
+.clarification-help summary {
+  min-height:44px;
+  padding:7px 0;
+}
+.clarification-help p {
+  margin:4px 0 12px;
 }
 .answer-edit {
   scroll-margin-block:24px 150px;
