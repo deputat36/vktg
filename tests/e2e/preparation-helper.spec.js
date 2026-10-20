@@ -119,7 +119,7 @@ test('responsive screenshots at narrow phone, tablet and desktop widths',async({
     await page.setViewportSize({width,height:900});await open(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     await testInfo.attach(`home-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
     await page.locator('[data-mode=deposit]').click();await choose(page,{features:['minor','poa']});
-    const wordLines=await page.locator('#feature-minor span, #funding-own span').evaluateAll(nodes=>nodes.map(node=>{
+    const wordLines=await page.locator('label[for=feature-minor] span, label[for=funding-own] span').evaluateAll(nodes=>nodes.map(node=>{
       const text=node.firstChild;const range=document.createRange();range.setStart(text,0);range.setEnd(text,text.textContent.split(' ')[0].length);return range.getClientRects().length;
     }));expect(wordLines).toEqual([1,1]);
     await testInfo.attach(`situation-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
