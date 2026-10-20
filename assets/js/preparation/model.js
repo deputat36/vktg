@@ -21,7 +21,7 @@ export function matches(state, condition = {}) {
 }
 
 export function activeQuestions(state, catalog) {
-  return catalog.questions.filter((question) => matches(state, question.when)).map((question) => {
+  return catalog.questions.filter((question) => matches(state, question.when) && (state.mode !== 'question' || question.group !== 'core')).map((question) => {
     const variant = question.variants?.find((item) => matches(state,item.when));
     return variant ? { ...question, ...variant, id:question.id } : question;
   });
@@ -89,6 +89,7 @@ export function validateCatalog(catalog) {
   }
   for (const rule of catalog.rules) {
     checkWhen(rule.when);
+    if (rule.preparation_only !== undefined && typeof rule.preparation_only !== 'boolean') errors.push(`Неверная область применения ${rule.id}.`);
     if (rule.fact && !has('questions', rule.fact)) errors.push(`Неизвестный вопрос ${rule.id}.`);
     if (rule.fact && (!Array.isArray(rule.values) || !rule.values.length || rule.values.some((value) => !VALUES.includes(value)))) errors.push(`Неверные ответы правила ${rule.id}.`);
     if (!['lawyer','broker','spn','program'].includes(rule.owner)) errors.push(`Неизвестный адресат ${rule.id}.`);
@@ -117,6 +118,7 @@ export function validateCatalog(catalog) {
 
 export function assess(input, catalog) {
   const state = normalizeState(input, catalog);
+  const focused = state.mode === 'question';
   const questions = activeQuestions(state, catalog);
   const facts = { document: [], client: [], unchecked: [], unknown: [], not_applicable: [] };
   const clarify = [];
@@ -135,6 +137,7 @@ export function assess(input, catalog) {
   clarify.sort((a,b) => (b.priority || 0) - (a.priority || 0));
   const active = catalog.rules.filter((rule) => {
     if (!matches(state, rule.when)) return false;
+    if (focused && rule.preparation_only) return false;
     if (rule.kind === 'internal_required' && rule.approval !== 'approved') return false;
     if (!rule.fact) return true;
     return Boolean(state.facts[rule.fact]) && rule.values.includes(state.facts[rule.fact].value);
@@ -149,23 +152,26 @@ export function assess(input, catalog) {
   const signals = unique(active.filter((rule) => rule.fact || rule.priority >= 80).map((rule) => state.facts[rule.fact]?.value === 'unknown' ? `Пока не подтверждено: ${rule.title.toLowerCase()}. ${entry(questions,rule.fact)?.clarify || rule.signal}` : rule.signal));
   const priorityRule = active.find((rule) => rule.priority >= 90);
   let next = priorityRule && (state.facts[priorityRule.fact]?.value === 'unknown' ? entry(questions,priorityRule.fact)?.clarify : priorityRule.next);
-  if (!next && state.object === 'unknown') next = 'Определить тип объекта по документам; если документов пока нет, уточнить его у сопровождающего СПН.';
-  if (!next && state.funding.includes('unknown')) next = 'Уточните у покупателя источники оплаты и зависимость от другой продажи.';
+  if (!next && !focused && state.object === 'unknown') next = 'Определить тип объекта по документам; если документов пока нет, уточнить его у сопровождающего СПН.';
+  if (!next && !focused && state.funding.includes('unknown')) next = 'Уточните у покупателя источники оплаты и зависимость от другой продажи.';
   if (!next && clarify.length) next = clarify[0].clarify;
+  if (!next && focused) next = active[0]?.next || (questions.length ? 'Перепроверьте выбранную тему. Если отдельного вопроса нет, перейдите к подготовке задатка или сделки.' : 'Выберите тему вопроса на шаге «Ситуация». При необходимости уточните тип объекта или оплату.');
   if (!next) next = 'Передайте юристу вводные и доступные в CRM документы; получите ответ о следующем действии и зафиксируйте его в CRM.';
-  return { state, questions, facts, clarify, active, documents, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
+  return { state, focused, scopeNote: focused ? focusNote : '', questions, facts, clarify, active, documents, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
 }
 
+const focusNote = 'План только по выбранным темам, типу объекта и оплате. Остальные обстоятельства сделки здесь не проверялись.';
 export function buildPlan(result, catalog) {
   return [
     `План подготовки · ${label(catalog.modes,result.state.mode)} · ${label(catalog.objects,result.state.object)}.`,
+    result.focused ? focusNote : '',
     `Сейчас: ${result.next}`,
     ...result.clarify.map((item) => `• ${item.clarify}`),
-    `Документы-ориентиры: ${result.documents.map((item) => item.title).join('; ')}. Наличие не означает проверку.`,
+    result.documents.length ? `Документы-ориентиры: ${result.documents.map((item) => item.title).join('; ')}. Наличие не означает проверку.` : '',
     result.lawyer.length ? `Юристу: ${result.lawyer.join('; ')}` : '',
     result.broker.length ? `Брокеру / банку: ${result.broker.join('; ')}` : '',
     result.program.length ? `Оператору программы: ${result.program.join('; ')}` : '',
-    result.unreviewed.length ? 'Неотмеченные особенности не проверены; отсутствие отметки не означает отсутствие обстоятельства.' : '',
+    !result.focused && result.unreviewed.length ? 'Неотмеченные особенности не проверены; отсутствие отметки не означает отсутствие обстоятельства.' : '',
     'Документы, ответ специалиста и следующие действия — в CRM. Это план подготовки, а не юридическое решение.'
   ].filter(Boolean).join('\n');
 }
@@ -177,13 +183,14 @@ export function buildSummary(result, catalog, audience = 'lawyer') {
   const questions = audience === 'broker' ? result.broker : result.lawyer;
   return [
     `${audience === 'broker' ? 'Вопрос брокеру / банку' : 'Вопрос юристу'} · ${label(catalog.modes,state.mode)}.`,
+    result.focused ? focusNote : '',
     `Объект: ${label(catalog.objects,state.object)}. Оплата: ${state.funding.map((id) => label(catalog.funding,id)).join(', ')}.`,
     state.features.length ? `Выбраны темы для проверки (не подтверждение фактов): ${state.features.map((id) => label(catalog.features,id)).join(', ')}.` : '',
     `По документам (без юридического вывода): ${compactList(facts.document.map(factText),'не отмечено')}.`,
     `Со слов клиента: ${compactList(facts.client.map(factText),'не отмечено')}.`,
     `Источник не указан: ${compactList(facts.unchecked.map(factText),'нет таких ответов')}.`,
     `Неизвестно: ${compactList(facts.unknown.map((item) => item.short || item.title),'в показанных вопросах неизвестного не осталось')}.`,
-    result.unreviewed.length ? `Отдельно не проверялись: ${result.unreviewed.map((item) => item.title).join(', ')}.` : '',
+    !result.focused && result.unreviewed.length ? `Отдельно не проверялись: ${result.unreviewed.map((item) => item.title).join(', ')}.` : '',
     facts.not_applicable.length ? `Отмечено «не относится» (применимость не проверена): ${facts.not_applicable.map((item) => item.short || item.title).join(', ')}.` : '',
     `Доступны в CRM: ${compactList(state.available.map((id) => label(catalog.documents,id)),'наличие документов не отмечено')}. Получение не означает профессиональную проверку.`,
     `Прошу уточнить: ${compactList(questions,'какие сведения и документы ещё нужны до следующего действия')}.`,

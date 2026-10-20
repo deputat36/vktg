@@ -10,6 +10,7 @@ async function start(page,mode='deposit'){
   await expect(page.locator('h1')).toHaveText('Какая у вас ситуация?');
 }
 async function choose(page,{object='flat',funding=['own'],features=[],urgency,coordination}={}){
+  if(await page.locator('#question-context').count())await page.locator('#question-context > summary').click();
   await page.locator('#object').selectOption(object);
   for(const id of funding){
     const input=page.locator(`#funding-${id}`);
@@ -93,7 +94,7 @@ test('experienced flow: skip, successful clipboard, main deal and context correc
 });
 test('question flow and every four-way answer are usable with native keyboard controls',async({page})=>{
   await start(page,'question');await choose(page,{features:['poa']});await page.locator('[data-action=details]').click();
-  await expect(page.locator('h1')).toBeFocused();await page.locator('#topic-poa > summary').click();await page.locator('#fact-poa-unknown').focus();await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('h1')).toBeFocused();await expect(page.locator('[data-question]')).toHaveCount(1);await page.locator('#fact-poa-unknown').focus();await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#fact-poa-no')).toBeChecked();
   await page.locator('#fact-poa-not_applicable').check();await page.locator('[data-action=result]').click();
   await expect(page.locator('#main')).toContainText('применимость не проверена');
@@ -229,4 +230,94 @@ test('methodologist can edit an object-specific question and export its variant 
   const c=JSON.parse(Buffer.concat(chunks).toString());
   expect(c.questions.find((q)=>q.id==='land').variants[0].title).toBe('Проверены сведения об участке и доступе?');
   expect(c.rules.every((rule)=>rule.approval==='draft')).toBe(true);
+});
+
+test('focused bank question skips optional context and produces only a bank request',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await start(page,'question');
+  await expect(page.locator('#object')).not.toBeVisible();await page.locator('#feature-bank_question').check();
+  await page.locator('[data-action=result]').click();
+  await expect(page.locator('#question-scope')).toContainText('Остальные обстоятельства сделки здесь не проверялись');
+  await expect(page.locator('#clarifications [data-edit-question]')).toHaveCount(1);
+  await expect(page.locator('#lawyer-request')).toHaveCount(0);await expect(page.locator('[data-action=copy-lawyer]')).toHaveCount(0);
+  await expect(page.locator('#broker-request')).toBeVisible();await expect(page.locator('.next-step')).not.toContainText('Определить тип объекта');
+  await page.locator('#broker-preview > summary').click();await expect(page.locator('.summary-preview')).toContainText('Вопрос брокеру / банку');
+  await expect(page.locator('.summary-preview')).not.toContainText('Отдельно не проверялись:');
+  await page.locator('#documents > summary').click();await expect(page.locator('#available-loan_docs')).toBeVisible();await expect(page.locator('#available-egrn')).toHaveCount(0);
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
+  await page.locator('[data-action=copy-broker]').click();expect(await page.evaluate(()=>window.__copied)).toContain('Остальные обстоятельства сделки здесь не проверялись');
+  expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);await expectNoRuntimeFailures(failures,testInfo,'focused-bank');
+});
+test('focused topic can be corrected from the plan without unrelated documents or requests',async({page})=>{
+  await start(page,'question');await page.locator('#feature-poa').check();await page.locator('[data-action=result]').click();
+  await expect(page.locator('#clarifications [data-edit-question]')).toHaveCount(1);
+  await page.locator('#edit-clarify-poa').click();await expect(page.getByRole('dialog')).toBeVisible();
+  await page.locator('#fact-poa-no').check();await page.locator('#source-poa').selectOption('client');
+  await expect(page.getByRole('dialog')).toBeVisible();await page.locator('[data-action=close-answer]').click();
+  await expect(page.locator('#lawyer-request')).toHaveCount(0);await expect(page.locator('#documents')).toHaveCount(0);
+  await expect(page.locator('#edit-known-poa')).toBeFocused();await expect(page.locator('#known-facts')).toContainText('Со слов клиента');
+  await page.locator('[data-action=details]').click();await expect(page.locator('[data-question]')).toHaveCount(1);await expect(page.locator('#fact-poa-no')).toBeChecked();
+});
+test('empty focused question provides a topic prompt without a false zero-risk plan',async({page})=>{
+  await start(page,'question');await page.locator('[data-action=details]').click();
+  await expect(page.getByRole('heading',{name:'Выберите тему вопроса'})).toBeVisible();
+  await page.locator('[data-action=result]').click();await expect(page.locator('.next-step')).toContainText('Выберите тему вопроса');
+  await expect(page.locator('#clarifications')).not.toContainText('неизвестного не осталось');
+  await expect(page.locator('#lawyer-request, #broker-request, #documents')).toHaveCount(0);
+});
+test('answer dialog recomputes the plan and returns focus without inheriting the bulk source',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await start(page);await choose(page);await page.locator('[data-action=details]').click();
+  await page.locator('#answer-source').selectOption('document');await page.locator('[data-action=result]').click();
+  await page.locator('#request-preview > summary').click();await page.locator('#edit-clarify-owners').click();
+  await expect(page.locator('#answer-editor-title')).toBeFocused();
+  await page.locator('#fact-owners-yes').check();await expect(page.locator('#source-owners')).toHaveValue('unchecked');
+  await expect(page.locator('#fact-owners-yes')).toBeFocused();await page.keyboard.press('Tab');
+  await expect(page.locator('#source-owners')).toBeFocused();await page.locator('#source-owners').selectOption('client');
+  await expect(page.locator('#source-owners')).toBeFocused();await expect(page.locator('#answer-editor')).toBeVisible();
+  for(let index=0;index<8;index++){
+    await page.keyboard.press('Tab');expect(await page.evaluate(()=>document.activeElement.closest('dialog')?.id)).toBe('answer-editor');
+  }
+  await page.locator('[data-action=close-answer]').focus();await page.keyboard.press('Tab');
+  await expect(page.locator('#fact-owners-yes')).toBeFocused();await page.keyboard.press('Shift+Tab');
+  await expect(page.locator('[data-action=close-answer]')).toBeFocused();
+  await page.keyboard.press('Escape');await expect(page.locator('#answer-editor')).toHaveCount(0);
+  await expect(page.locator('#edit-known-owners')).toBeFocused();await expect(page.locator('#known-facts')).toHaveAttribute('open','');
+  await expect(page.locator('.summary-preview')).toContainText('Со слов клиента: Собственники и подписанты понятны: да');
+  await expect(page.locator('#clarifications')).not.toContainText('откуда известен ответ: «Собственники');
+  expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);await expectNoRuntimeFailures(failures,testInfo,'answer-dialog');
+});
+test('correction removes obsolete documents while dialog stays open and not-applicable can be edited',async({page})=>{
+  await start(page);await choose(page,{features:['minor']});await page.locator('[data-action=result]').click();
+  await page.locator('#documents > summary').click();await page.locator('#available-minor_docs').check();
+  await page.locator('#edit-clarify-minor').click();await page.locator('#fact-minor-no').check();await page.locator('#source-minor').selectOption('document');
+  await expect(page.locator('#answer-editor')).toBeVisible();await expect(page.locator('#available-minor_docs')).toHaveCount(0);
+  await page.locator('[data-action=close-answer]').click();await expect(page.locator('#edit-known-minor')).toBeFocused();
+  await page.locator('#edit-known-minor').click();await page.locator('#fact-minor-not_applicable').check();await page.keyboard.press('Escape');
+  await expect(page.locator('#known-facts')).toContainText('«Не относится» — применимость не проверена');
+  await page.locator('#edit-known-minor').click();await page.locator('#fact-minor-unknown').check();await page.locator('[data-action=close-answer]').click();
+  await expect(page.locator('#edit-clarify-minor')).toBeFocused();await expect(page.locator('#available-minor_docs')).not.toBeChecked();
+  await page.reload();await expect(page.locator('.mode-grid')).toBeVisible();await expect(page.locator('#answer-editor')).toHaveCount(0);
+});
+test('focused question and answer dialog fit 320, 768 and 1280 pixels',async({page},testInfo)=>{
+  for(const width of [320,768,1280]){
+    await page.setViewportSize({width,height:800});await start(page,'question');
+    await testInfo.attach(`focused-situation-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+    await page.locator('#feature-bank_question').check();await page.locator('[data-action=result]').click();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await testInfo.attach(`focused-result-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+    await page.locator('#edit-clarify-bank_question').click();await page.locator('#fact-bank_question-yes').check();
+    await page.locator('#source-bank_question').selectOption('client');await page.locator('#why-bank_question > summary').click();
+    const dialog=page.locator('#answer-editor');await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate((node)=>node.scrollWidth<=node.clientWidth)).toBe(true);
+    expect(await dialog.locator('.answer').evaluateAll((labels)=>labels.every((label)=>{
+      const box=label.getBoundingClientRect();
+      return [...label.childNodes].filter((node)=>node.nodeType===Node.TEXT_NODE && node.textContent.trim()).every((node)=>{
+        const range=document.createRange();range.selectNodeContents(node);
+        return [...range.getClientRects()].every((rect)=>rect.left>=box.left && rect.right<=box.right);
+      });
+    }))).toBe(true);
+    expect(await dialog.evaluate((node)=>{const rect=node.getBoundingClientRect();return rect.left>=0 && rect.right<=innerWidth && rect.top>=0 && rect.bottom<=innerHeight;})).toBe(true);
+    await page.locator('[data-action=close-answer]').scrollIntoViewIfNeeded();await expect(page.locator('[data-action=close-answer]')).toBeInViewport();
+    await testInfo.attach(`answer-dialog-${width}.png`,{body:await page.screenshot(),contentType:'image/png'});
+    await page.locator('[data-action=close-answer]').click();await expect(page.locator('#answer-editor')).toHaveCount(0);
+  }
 });
