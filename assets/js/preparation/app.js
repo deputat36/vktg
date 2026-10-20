@@ -156,6 +156,17 @@ main.addEventListener('click',(event) => {
 
 main.addEventListener('cancel',(event) => {if(event.target.id === 'answer-editor'){event.preventDefault();closeAnswer();}},true);
 
+main.addEventListener('keydown',(event) => {
+  const dialog=event.target.closest('#answer-editor');
+  if(!dialog || event.key !== 'Tab')return;
+  const controls=[...dialog.querySelectorAll('button,input,select,summary')].filter((element) => !element.disabled && element.getClientRects().length && (element.type !== 'radio' || element.checked));
+  const first=controls[0],last=controls.at(-1);
+  if(!first)return;
+  const current=document.activeElement;
+  if(event.shiftKey && (current === first || !controls.includes(current))){event.preventDefault();last.focus();}
+  else if(!event.shiftKey && (current === last || !controls.includes(current))){event.preventDefault();first.focus();}
+});
+
 main.addEventListener('change',(event) => {
   const target=event.target;
   if(target.id === 'answer-source'){answerSource=target.value;render();return;}

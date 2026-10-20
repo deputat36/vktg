@@ -276,6 +276,9 @@ test('answer dialog recomputes the plan and returns focus without inheriting the
   for(let index=0;index<8;index++){
     await page.keyboard.press('Tab');expect(await page.evaluate(()=>document.activeElement.closest('dialog')?.id)).toBe('answer-editor');
   }
+  await page.locator('[data-action=close-answer]').focus();await page.keyboard.press('Tab');
+  await expect(page.locator('#fact-owners-yes')).toBeFocused();await page.keyboard.press('Shift+Tab');
+  await expect(page.locator('[data-action=close-answer]')).toBeFocused();
   await page.keyboard.press('Escape');await expect(page.locator('#answer-editor')).toHaveCount(0);
   await expect(page.locator('#edit-known-owners')).toBeFocused();await expect(page.locator('#known-facts')).toHaveAttribute('open','');
   await expect(page.locator('.summary-preview')).toContainText('Со слов клиента: Собственники и подписанты понятны: да');
