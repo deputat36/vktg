@@ -270,7 +270,8 @@ test('answer dialog recomputes the plan and returns focus without inheriting the
   await page.locator('#request-preview > summary').click();await page.locator('#edit-clarify-owners').click();
   await expect(page.locator('#answer-editor-title')).toBeFocused();
   await page.locator('#fact-owners-yes').check();await expect(page.locator('#source-owners')).toHaveValue('unchecked');
-  await expect(page.locator('#fact-owners-yes')).toBeFocused();await page.locator('#source-owners').selectOption('client');
+  await expect(page.locator('#fact-owners-yes')).toBeFocused();await page.keyboard.press('Tab');
+  await expect(page.locator('#source-owners')).toBeFocused();await page.locator('#source-owners').selectOption('client');
   await expect(page.locator('#source-owners')).toBeFocused();await expect(page.locator('#answer-editor')).toBeVisible();
   for(let index=0;index<8;index++){
     await page.keyboard.press('Tab');expect(await page.evaluate(()=>document.activeElement.closest('dialog')?.id)).toBe('answer-editor');
