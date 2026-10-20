@@ -1,0 +1,42 @@
+name: Preparation helper published pilot
+
+on:
+  workflow_run:
+    workflows: ['Deploy GitHub Pages']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published-pilot:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Compare all seven published assets with checkout
+        run: python3 scripts/attest_preparation_live.py --report-path preparation-live-source.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run synthetic desktop and mobile scenarios on the published pilot
+        env:
+          NAV_E2E_BASE_URL: https://deputat36.github.io/vktg/
+        run: npx playwright test tests/e2e/preparation-helper.spec.js --project=chromium-desktop --project=chromium-mobile
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preparation-helper-published-evidence
+          path: |
+            preparation-live-source.json
+            playwright-report/
+            test-results/
+          retention-days: 14

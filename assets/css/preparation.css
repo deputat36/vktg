@@ -295,7 +295,7 @@ h1[tabindex] {
 }
 .context-layout {
   display:grid;
-  grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:24px;
   align-items:start;
 }
@@ -325,7 +325,7 @@ h1[tabindex] {
 }
 .check-grid {
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));
   gap:10px;
   margin-top:12px;
 }
@@ -405,9 +405,109 @@ h1[tabindex] {
   color:var(--ink);
 }
 .questions {
-  max-width:850px;
   display:grid;
   gap:16px;
+}
+.details-layout {
+  display:grid;
+  grid-template-columns:minmax(0,2fr) minmax(240px,1fr);
+  gap:24px;
+  align-items:start;
+}
+.details-aside {
+  position:sticky;
+  top:20px;
+}
+.details-aside p {
+  font-size:.9rem;
+}
+.details-aside .button {
+  margin-top:20px;
+  width:100%;
+}
+.source-toolbar {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(190px,1fr);
+  gap:8px 16px;
+  align-items:center;
+  padding:18px 20px;
+  background:var(--soft);
+  border-radius:12px;
+  border:1px solid var(--line);
+}
+.source-toolbar label {
+  font-size:.9rem;
+  font-weight:650;
+}
+.source-toolbar .help,.source-help {
+  grid-column:1/-1;
+  margin:0;
+}
+.source-help {
+  font-size:.82rem;
+  color:var(--muted);
+}
+.source-help summary {
+  min-height:36px;
+  padding-top:6px;
+}
+.next-step p {
+  max-width:850px;
+  font-size:.95rem;
+  color:#e6e7eb;
+}
+.topic-section h2 {
+  font-size:1.1rem;
+}
+.topic-confirmation {
+  background:white;
+  border:1px solid var(--line);
+  border-radius:12px;
+  margin-top:12px;
+}
+.topic-confirmation>summary {
+  min-height:56px;
+  padding:14px 18px;
+  font-size:.9rem;
+  font-weight:600;
+}
+.topic-state {
+  color:var(--muted);
+  font-weight:400;
+  margin-left:10px;
+}
+.topic-confirmation .question {
+  border:0;
+  padding-top:8px;
+}
+.timing-panel {
+  margin-top:20px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:16px 24px;
+  align-items:start;
+}
+.timing-panel .inline-details {
+  margin:0;
+}
+.summary-preview {
+  font:inherit;
+  font-size:.84rem;
+  line-height:1.5;
+  color:var(--muted);
+  background:var(--soft);
+  padding:14px;
+  border-radius:8px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.count {
+  font-size:.8rem;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.urgent-notice {
+  margin-bottom:20px;
 }
 .question {
   background:white;
@@ -465,7 +565,7 @@ h1[tabindex] {
 .progress-copy {
   color:var(--muted);
   font-size:.88rem;
-  margin-bottom:20px;
+  margin:0;
 }
 .result-layout {
   display:grid;
@@ -500,7 +600,7 @@ h1[tabindex] {
 .result-card h2 {
   font-size:1.15rem;
 }
-.result-card+.result-card {
+.result-side>.result-card+.result-card {
   margin-top:17px;
 }
 .result-card li {
@@ -707,7 +807,7 @@ h1[tabindex] {
     flex-direction:column;
     gap:18px;
   }
-  .context-layout,.result-layout,.editor-grid {
+  .context-layout,.result-layout,.editor-grid,.details-layout,.timing-panel {
     grid-template-columns:1fr;
   }
   .heading-row {
@@ -723,7 +823,54 @@ h1[tabindex] {
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
   .check-grid {
+    gap:8px;
+  }
+  .check-grid .check {
+    font-size:.84rem;
+    padding:10px;
+    min-width:0;
+  }
+  .check span {
+    overflow-wrap:normal;
+    min-width:0;
+  }
+  .details-aside {
+    display:none;
+  }
+  .source-toolbar {
     grid-template-columns:1fr;
+    gap:8px;
+  }
+  .action-bar {
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    z-index:2;
+    margin:0;
+    padding:12px 20px max(12px,env(safe-area-inset-bottom));
+    background:rgba(250,250,250,.98);
+    border-top:1px solid var(--line);
+    gap:8px;
+  }
+  body:has(.action-bar) {
+    padding-bottom:140px;
+  }
+  .action-bar .button {
+    font-size:.85rem;
+    padding:11px 13px;
+  }
+  .action-bar>.tertiary {
+    width:100%;
+    min-height:40px;
+    padding:5px;
+  }
+  .heading-row {
+    flex-wrap:wrap;
+  }
+  .heading-row .text-button {
+    min-height:36px;
+    padding:0;
   }
   .source-field {
     grid-template-columns:1fr;
