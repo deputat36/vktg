@@ -189,3 +189,47 @@ test('variant metadata cannot change a question identity or smuggle unvalidated 
     const c=structuredClone(catalog);mutate(c);assert.ok(validateCatalog(c).length);
   }
 });
+
+test('focused power-of-attorney question needs one answer and no generic preparation checklist',()=>{
+  const r=assess({...emptyState(),mode:'question',features:['poa']},catalog);
+  assert.deepEqual(ids(r),['poa']);assert.deepEqual(r.documents.map((d)=>d.id),['poa_docs']);
+  assert.equal(r.lawyer.length,1);assert.equal(r.broker.length,0);assert.match(r.next,/будет ли представитель/);
+  assert.ok(!r.next.includes('тип объекта'));assert.equal(r.facts.unknown.length,1);
+  for(const text of [buildPlan(r,catalog),buildSummary(r,catalog)]){
+    assert.match(text,/Остальные обстоятельства сделки здесь не проверялись/);
+    assert.ok(!text.includes('Отдельно не проверялись:'));assert.match(text,/не юридическое решение|не является юридическим решением/);
+  }
+});
+test('focused bank question routes only to bank and a negative correction removes that route',()=>{
+  const r=assess({...emptyState(),mode:'question',features:['bank_question']},catalog);
+  assert.deepEqual(ids(r),['bank_question']);assert.equal(r.lawyer.length,0);assert.equal(r.broker.length,1);
+  assert.deepEqual(r.documents.map((d)=>d.id),['loan_docs']);assert.match(r.next,/именно ответ нужен от банка/);
+  assert.match(buildSummary(r,catalog,'broker'),/Вопрос брокеру \/ банку/);
+  const corrected=result({mode:'question',features:['bank_question'],facts:{bank_question:fact('no','document')}});
+  assert.equal(corrected.broker.length,0);assert.equal(corrected.lawyer.length,0);assert.equal(corrected.documents.length,0);
+  assert.ok(!corrected.next.includes('Передайте юристу'));
+});
+test('focused question retains relevant object and funding context without general core checks',()=>{
+  for(const [extra,question] of [[{object:'land'},'land'],[{object:'share'},'share'],[{object:'ddu'},'developer'],[{funding:['mortgage']},'loan'],[{funding:['matcap']},'social'],[{funding:['child_funds']},'child_money']]){
+    const r=result({mode:'question',...extra});assert.deepEqual(ids(r),[question]);
+    assert.ok(!r.active.some((rule)=>rule.preparation_only));
+    if(!extra.funding?.includes('mortgage'))assert.equal(r.broker.length,0);
+  }
+  const ordinary=result();assert.equal(ordinary.questions.length,4);assert.ok(ordinary.active.some((rule)=>rule.id==='base'));
+});
+test('empty question mode asks for a topic instead of inventing a legal or banking request',()=>{
+  const r=assess({...emptyState(),mode:'question'},catalog);
+  assert.equal(r.questions.length,0);assert.equal(r.active.length,0);assert.equal(r.documents.length,0);
+  assert.equal(r.lawyer.length,0);assert.equal(r.broker.length,0);assert.match(r.next,/Выберите тему вопроса/);
+  assert.ok(!buildPlan(r,catalog).includes('Документы-ориентиры: .'));
+});
+test('focused mode drops hidden core facts and documents after a topic is removed',()=>{
+  const r=result({mode:'question',features:['bank_question'],facts:{owners:fact('yes','document'),poa:fact('yes','client')},available:['parties','egrn','poa_docs','loan_docs']});
+  assert.deepEqual(Object.keys(r.state.facts),['bank_question']);assert.deepEqual(r.state.available,['loan_docs']);
+  const removed=assess({...r.state,features:[]},catalog);assert.deepEqual(removed.state.facts,{});assert.deepEqual(removed.state.available,[]);
+  assert.ok(!buildSummary(r,catalog,'broker').includes('Есть представитель по доверенности: да'));
+});
+test('catalog validates the preparation-only scope flag without changing approval requirements',()=>{
+  const c=structuredClone(catalog);c.rules[0].preparation_only='yes';assert.ok(validateCatalog(c).some((e)=>e.includes('область применения')));
+  c.rules[0].preparation_only=true;c.rules[0].kind='internal_required';assert.ok(validateCatalog(c).some((e)=>e.includes('Неутверждённое')));
+});

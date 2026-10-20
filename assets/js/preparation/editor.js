@@ -1,4 +1,4 @@
-import { validateCatalog } from './model.js?v=20261020-01';
+import { validateCatalog } from './model.js?v=20261020-02';
 
 const main=document.getElementById('main');
 let catalog;
