@@ -525,7 +525,7 @@ h1[tabindex] {
 }
 .answers {
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));
   gap:9px;
   clear:both;
 }
@@ -818,9 +818,6 @@ h1[tabindex] {
   }
   .panel,.question,.result-card {
     padding:20px;
-  }
-  .answers {
-    grid-template-columns:repeat(2,minmax(0,1fr));
   }
   .check-grid {
     gap:8px;

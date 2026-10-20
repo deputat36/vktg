@@ -305,6 +305,13 @@ test('focused question and answer dialog fit 320, 768 and 1280 pixels',async({pa
     await page.locator('#source-bank_question').selectOption('client');await page.locator('#why-bank_question > summary').click();
     const dialog=page.locator('#answer-editor');await expect(dialog).toBeVisible();
     expect(await dialog.evaluate((node)=>node.scrollWidth<=node.clientWidth)).toBe(true);
+    expect(await dialog.locator('.answer').evaluateAll((labels)=>labels.every((label)=>{
+      const box=label.getBoundingClientRect();
+      return [...label.childNodes].filter((node)=>node.nodeType===Node.TEXT_NODE && node.textContent.trim()).every((node)=>{
+        const range=document.createRange();range.selectNodeContents(node);
+        return [...range.getClientRects()].every((rect)=>rect.left>=box.left && rect.right<=box.right);
+      });
+    }))).toBe(true);
     expect(await dialog.evaluate((node)=>{const rect=node.getBoundingClientRect();return rect.left>=0 && rect.right<=innerWidth && rect.top>=0 && rect.bottom<=innerHeight;})).toBe(true);
     await page.locator('[data-action=close-answer]').scrollIntoViewIfNeeded();await expect(page.locator('[data-action=close-answer]')).toBeInViewport();
     await testInfo.attach(`answer-dialog-${width}.png`,{body:await page.screenshot(),contentType:'image/png'});
