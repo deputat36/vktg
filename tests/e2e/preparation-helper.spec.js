@@ -321,3 +321,52 @@ test('focused question and answer dialog fit 320, 768 and 1280 pixels',async({pa
     await page.locator('[data-action=close-answer]').click();await expect(page.locator('#answer-editor')).toHaveCount(0);
   }
 });
+
+test('compact clarifications retain guidance and source correction opens the relevant control',async({page})=>{
+  await start(page);await choose(page);await page.locator('[data-action=result]').click();
+  const row=page.locator('#clarifications [data-clarification=owners]');
+  await expect(row.locator('.clarification-title')).toBeVisible();await expect(row.locator('#clarify-help-owners')).not.toHaveAttribute('open','');
+  await expect(row.locator('#clarify-help-owners p')).not.toBeVisible();
+  await row.locator('#clarify-help-owners > summary').click();await expect(row.locator('#clarify-help-owners p')).toBeVisible();
+  await page.locator('#edit-clarify-owners').click();await page.locator('#fact-owners-yes').check();await page.locator('[data-action=close-answer]').click();
+  await expect(page.locator('#edit-clarify-owners')).toContainText('Указать источник');
+  await expect(page.locator('#clarify-help-owners')).toHaveAttribute('open','');
+  await page.locator('#edit-clarify-owners').click();await expect(page.locator('#source-owners')).toBeFocused();
+  await page.locator('#source-owners').selectOption('document');await page.keyboard.press('Escape');
+  await expect(page.locator('#edit-known-owners')).toBeFocused();await expect(page.locator('#known-facts')).toContainText('Сверено с документом');
+});
+test('document guidance is compact and copied plan respects availability marks',async({page})=>{
+  await start(page);await choose(page);await page.locator('[data-action=result]').click();await page.locator('#documents > summary').click();
+  await expect(page.locator('#document-progress')).toContainText('Есть в CRM по вашей отметке: 0 из');
+  await expect(page.locator('#available-egrn')).toBeVisible();await expect(page.locator('#document-egrn')).not.toHaveAttribute('open','');
+  await page.locator('#document-egrn > summary').click();await expect(page.locator('#document-egrn')).toContainText('У кого:');await expect(page.locator('#document-egrn')).toContainText('Кто проверяет:');
+  await page.locator('#available-egrn').check();await expect(page.locator('#available-egrn')).toBeFocused();
+  await expect(page.locator('#document-egrn')).toHaveAttribute('open','');await expect(page.locator('#document-progress')).toContainText('Есть в CRM по вашей отметке: 1 из');
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
+  await page.locator('[data-action=copy-plan]').click();const copied=await page.evaluate(()=>window.__copied);
+  expect(copied).toContain('Есть в CRM (по отметке СПН): Сведения ЕГРН');
+  const unmarked=copied.split('\n').find((line)=>line.startsWith('Наличие в CRM не отмечено:'));
+  expect(unmarked).toContain('Документ об основании права');expect(unmarked).not.toContain('Сведения ЕГРН');expect(copied).toContain('Наличие не означает проверку');
+  await page.locator('#available-egrn').uncheck();await expect(page.locator('#document-progress')).toContainText('Есть в CRM по вашей отметке: 0 из');
+});
+test('marking every document still describes availability rather than legal readiness',async({page})=>{
+  await start(page,'question');await page.locator('#feature-poa').check();await page.locator('[data-action=result]').click();await page.locator('#documents > summary').click();
+  await page.locator('#available-poa_docs').check();await expect(page.locator('#document-progress')).toContainText('1 из 1');
+  await expect(page.locator('#document-progress')).toContainText('это не означает проверку документов');
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
+  await page.locator('[data-action=copy-plan]').click();const copied=await page.evaluate(()=>window.__copied);
+  expect(copied).not.toContain('Наличие в CRM не отмечено:');expect(copied).toContain('Наличие не означает проверку');
+  await page.locator('#edit-clarify-poa').click();await page.locator('#fact-poa-no').check();await page.locator('#source-poa').selectOption('client');await page.keyboard.press('Escape');
+  await expect(page.locator('#documents')).toHaveCount(0);await page.locator('[data-action=copy-plan]').click();
+  expect(await page.evaluate(()=>window.__copied)).not.toContain('Доверенность и сведения');expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);
+});
+test('compact plan and document guidance fit phone, tablet and desktop',async({page},testInfo)=>{
+  for(const width of [320,768,1280]){
+    await page.setViewportSize({width,height:900});await start(page);await choose(page,{features:['minor','poa'],funding:['mortgage']});
+    await page.locator('[data-action=result]').click();await page.locator('#clarify-help-owners > summary').click();
+    await page.locator('#documents > summary').click();await page.locator('#document-egrn > summary').click();await page.locator('#available-egrn').check();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await expect(page.locator('#available-egrn')).toBeVisible();await expect(page.locator('#document-progress')).toContainText('1 из');
+    await testInfo.attach(`compact-plan-documents-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  }
+});

@@ -144,6 +144,10 @@ export function assess(input, catalog) {
   }).sort((a,b) => (b.priority || 0) - (a.priority || 0));
   const documents = unique(active.flatMap((rule) => rule.documents)).map((id) => entry(catalog.documents,id));
   state.available = state.available.filter((id) => documents.some((document) => document.id === id));
+  const documentGroups = {
+    available: documents.filter((document) => state.available.includes(document.id)),
+    unmarked: documents.filter((document) => !state.available.includes(document.id))
+  };
   const lawyer = unique(active.filter((rule) => rule.owner === 'lawyer').map((rule) => rule.question));
   const broker = unique(active.filter((rule) => rule.owner === 'broker').map((rule) => rule.question));
   const program = unique(active.filter((rule) => rule.owner === 'program').map((rule) => rule.question));
@@ -157,17 +161,21 @@ export function assess(input, catalog) {
   if (!next && clarify.length) next = clarify[0].clarify;
   if (!next && focused) next = active[0]?.next || (questions.length ? 'Перепроверьте выбранную тему. Если отдельного вопроса нет, перейдите к подготовке задатка или сделки.' : 'Выберите тему вопроса на шаге «Ситуация». При необходимости уточните тип объекта или оплату.');
   if (!next) next = 'Передайте юристу вводные и доступные в CRM документы; получите ответ о следующем действии и зафиксируйте его в CRM.';
-  return { state, focused, scopeNote: focused ? focusNote : '', questions, facts, clarify, active, documents, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
+  return { state, focused, scopeNote: focused ? focusNote : '', questions, facts, clarify, active, documents, documentGroups, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
 }
 
 const focusNote = 'План только по выбранным темам, типу объекта и оплате. Остальные обстоятельства сделки здесь не проверялись.';
 export function buildPlan(result, catalog) {
+  const clarifications = unique(result.clarify.map((item) => item.clarify)).filter((text) => text !== result.next);
   return [
     `План подготовки · ${label(catalog.modes,result.state.mode)} · ${label(catalog.objects,result.state.object)}.`,
     result.focused ? focusNote : '',
     `Сейчас: ${result.next}`,
-    ...result.clarify.map((item) => `• ${item.clarify}`),
-    result.documents.length ? `Документы-ориентиры: ${result.documents.map((item) => item.title).join('; ')}. Наличие не означает проверку.` : '',
+    ...clarifications.map((text) => `• ${text}`),
+    result.documents.length ? 'Документы-ориентиры:' : '',
+    result.documentGroups.available.length ? `Есть в CRM (по отметке СПН): ${result.documentGroups.available.map((item) => item.title).join('; ')}.` : '',
+    result.documentGroups.unmarked.length ? `Наличие в CRM не отмечено: ${result.documentGroups.unmarked.map((item) => item.title).join('; ')}.` : '',
+    result.documents.length ? 'Уточните состав пакета у специалиста. Наличие не означает проверку.' : '',
     result.lawyer.length ? `Юристу: ${result.lawyer.join('; ')}` : '',
     result.broker.length ? `Брокеру / банку: ${result.broker.join('; ')}` : '',
     result.program.length ? `Оператору программы: ${result.program.join('; ')}` : '',

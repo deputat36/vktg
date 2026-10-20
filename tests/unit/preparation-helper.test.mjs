@@ -233,3 +233,35 @@ test('catalog validates the preparation-only scope flag without changing approva
   const c=structuredClone(catalog);c.rules[0].preparation_only='yes';assert.ok(validateCatalog(c).some((e)=>e.includes('область применения')));
   c.rules[0].preparation_only=true;c.rules[0].kind='internal_required';assert.ok(validateCatalog(c).some((e)=>e.includes('Неутверждённое')));
 });
+
+test('document groups distinguish a user mark from unrecorded availability and drop irrelevant marks',()=>{
+  const r=result({available:['egrn','egrn','loan_docs','not_real']});
+  assert.deepEqual(r.documentGroups.available.map((d)=>d.id),['egrn']);
+  assert.deepEqual(r.documentGroups.unmarked.map((d)=>d.id),r.documents.filter((d)=>d.id!=='egrn').map((d)=>d.id));
+  assert.deepEqual(r.state.available,['egrn']);assert.equal(r.documentGroups.available.length+r.documentGroups.unmarked.length,r.documents.length);
+});
+test('copied plan keeps already available documents separate without calling unmarked ones absent',()=>{
+  const r=result({available:['egrn']});const plan=buildPlan(r,catalog);
+  assert.match(plan,/Есть в CRM \(по отметке СПН\): Сведения ЕГРН/);
+  const unmarked=plan.split('\n').find((line)=>line.startsWith('Наличие в CRM не отмечено:'));
+  assert.ok(unmarked);assert.ok(!unmarked.includes(catalog.documents.find((d)=>d.id==='egrn').title));
+  assert.match(unmarked,/Документ об основании права/);assert.match(plan,/Наличие не означает проверку/);
+  assert.ok(!/отсутствуют|повторно запросить/.test(plan));
+});
+test('all document marks never produce readiness and disappear when their scenario no longer applies',()=>{
+  const initial=result({mode:'question',features:['poa']});
+  const marked=assess({...initial.state,available:initial.documents.map((d)=>d.id)},catalog);
+  assert.equal(marked.documentGroups.unmarked.length,0);assert.match(buildPlan(marked,catalog),/Наличие не означает проверку/);
+  assert.ok(!buildPlan(marked,catalog).includes('Наличие в CRM не отмечено:'));
+  assert.ok(!('ready' in marked));
+  const removed=assess({...marked.state,features:[]},catalog);
+  assert.deepEqual(removed.documentGroups,{available:[],unmarked:[]});assert.deepEqual(removed.state.available,[]);
+  assert.ok(!buildPlan(removed,catalog).includes('Доверенность и сведения'));
+});
+test('copied plan states the nearest clarification once and preserves the other actions',()=>{
+  for(const extra of [{},{mode:'question',features:['poa']}]){
+    const r=result(extra);const plan=buildPlan(r,catalog);
+    assert.equal(plan.split(r.next).length-1,1);
+    for(const q of r.clarify)assert.ok(plan.includes(q.clarify));
+  }
+});

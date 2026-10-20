@@ -1,4 +1,4 @@
-import { emptyState, normalizeState, normalizeFact, activeQuestions, assess, buildSummary, buildPlan, validateCatalog } from './model.js?v=20261020-02';
+import { emptyState, normalizeState, normalizeFact, activeQuestions, assess, buildSummary, buildPlan, validateCatalog } from './model.js?v=20261020-03';
 
 const main = document.getElementById('main');
 let catalog;
@@ -61,12 +61,16 @@ function details() {
 }
 
 function editAnswer(item,place) {
-  const title=item.value === 'unknown' ? 'Ответить' : 'Изменить';
-  return `<button type="button" class="text-button answer-edit" id="edit-${place}-${item.id}" data-edit-question="${item.id}" aria-label="${title}: ${esc(item.short || item.title)}">${title}</button>`;
+  const title=item.reason === 'source' ? 'Указать источник' : item.value === 'unknown' ? 'Ответить' : 'Изменить';
+  return `<button type="button" class="text-button answer-edit" id="edit-${place}-${item.id}" data-edit-question="${item.id}" ${item.reason === 'source' ? 'data-edit-source' : ''} aria-haspopup="dialog" aria-label="${title}: ${esc(item.short || item.title)}">${title}</button>`;
 }
 
 function clarificationList(items,empty) {
-  return items.length ? `<ul class="editable-list">${items.map((item) => `<li><span>${esc(item.clarify)}</span>${editAnswer(item,'clarify')}</li>`).join('')}</ul>` : `<p class="help">${esc(empty)}</p>`;
+  return items.length ? `<ul class="editable-list">${items.map((item) => {
+    if(item.reason === 'attention')return `<li data-clarification="${item.id}"><span>${esc(item.clarify)}</span>${editAnswer(item,'clarify')}</li>`;
+    const title=item.reason === 'source' ? `${item.short || item.title} — ${titles[item.value].toLowerCase()}.` : item.title;
+    return `<li data-clarification="${item.id}"><strong class="clarification-title">${esc(title)}</strong>${item.reason === 'source' ? '<p class="help">Источник пока не указан.</p>' : ''}<div class="clarification-tools">${editAnswer(item,'clarify')}<details class="clarification-help" id="clarify-help-${item.id}"><summary>${item.reason === 'source' ? 'Почему нужен источник' : 'Что уточнить'}</summary><p>${esc(item.clarify)}</p></details></div></li>`;
+  }).join('')}</ul>` : `<p class="help">${esc(empty)}</p>`;
 }
 
 function factGroup(title,items) {
@@ -81,7 +85,9 @@ function answerEditor(result) {
 }
 
 function documentsView(result) {
-  return `<section class="result-card"><details id="documents"><summary><strong>Какие документы могут понадобиться <span class="count">${result.documents.length}</span></strong></summary><p class="help">Ориентир по ситуации, а не обязательный пакет. Достаточность проверит специалист. Уже доступные документы повторно запрашивать не нужно.</p>${result.documents.map((document) => `<article class="document"><h3>${esc(document.title)}</h3><p>${esc(document.why)}</p><p><strong>У кого:</strong> ${esc(document.from)}</p><details class="why" id="document-${document.id}"><summary>Когда и кто проверяет</summary><p>${esc(document.stage)}</p><p>${esc(document.review)}</p></details><label class="plain-check" for="available-${document.id}"><input type="checkbox" id="available-${document.id}" data-available="${document.id}" ${state.available.includes(document.id) ? 'checked' : ''}>Есть в CRM — указать в запросе</label></article>`).join('')}</details></section>`;
+  const available=result.documentGroups.available.length;
+  const unmarked=result.documentGroups.unmarked.length;
+  return `<section class="result-card"><details id="documents"><summary><strong>Какие документы могут понадобиться <span class="count">${result.documents.length}</span></strong></summary><p class="help">Ориентир по ситуации, а не обязательный пакет. Состав и достаточность проверит специалист.</p><p class="document-progress" id="document-progress" role="status">Есть в CRM по вашей отметке: ${available} из ${result.documents.length}. ${unmarked ? `Наличие остальных не отмечено: ${unmarked}.` : 'Все документы из списка отмечены; это не означает проверку документов.'}</p>${result.documents.map((document) => `<article class="document"><div class="document-row"><h3>${esc(document.title)}</h3><label class="plain-check" for="available-${document.id}"><input type="checkbox" id="available-${document.id}" data-available="${document.id}" ${state.available.includes(document.id) ? 'checked' : ''}>Есть в CRM</label></div><details class="why" id="document-${document.id}"><summary>Зачем и у кого получить</summary><p>${esc(document.why)}</p><p><strong>У кого:</strong> ${esc(document.from)}</p><p><strong>Когда:</strong> ${esc(document.stage)}</p><p><strong>Кто проверяет:</strong> ${esc(document.review)}</p></details></article>`).join('')}</details></section>`;
 }
 
 function resultView() {
@@ -142,7 +148,11 @@ async function copy(audience) {
 
 main.addEventListener('click',(event) => {
   const target=event.target.closest('button');if(!target)return;
-  if(target.dataset.editQuestion){editingQuestion=target.dataset.editQuestion;returnFocusId=target.id;render();return;}
+  if(target.dataset.editQuestion){
+    editingQuestion=target.dataset.editQuestion;returnFocusId=target.id;render();
+    if(target.hasAttribute('data-edit-source'))document.getElementById(`source-${editingQuestion}`)?.focus();
+    return;
+  }
   if(target.dataset.action === 'close-answer'){closeAnswer();return;}
   if(target.dataset.mode){state=emptyState();state.mode=target.dataset.mode;contextNotice='';answerSource='unchecked';go('situation');return;}
   if(target.dataset.nav){go(target.dataset.nav);return;}
