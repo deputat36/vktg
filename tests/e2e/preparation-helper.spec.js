@@ -118,7 +118,9 @@ test('responsive screenshots at narrow phone, tablet and desktop widths',async({
   for(const width of [320,768,1280]){
     await page.setViewportSize({width,height:900});await open(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     await testInfo.attach(`home-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
-    await page.locator('[data-mode=deposit]').click();await choose(page,{features:['minor','poa']});await page.locator('[data-action=details]').click();
+    await page.locator('[data-mode=deposit]').click();await choose(page,{features:['minor','poa']});
+    await testInfo.attach(`situation-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+    await page.locator('[data-action=details]').click();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     await testInfo.attach(`details-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
     await page.locator('[data-action=result]').click();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);

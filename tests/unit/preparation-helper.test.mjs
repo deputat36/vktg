@@ -145,7 +145,8 @@ test('unknown selected features never become confirmed signals or a concrete inc
   for(const feature of ['minor','poa','seller_mortgage','dispute','changed']){
     const r=result({features:[feature]});assert.equal(r.facts.document.length,0);assert.equal(r.facts.client.length,0);
     assert.ok(r.signals.every((signal)=>signal.startsWith('Пока не подтверждено:')));
-    assert.match(r.next,/Уточните|Передайте/);
+    const prompts={minor:/есть ли/,poa:/будет ли/,seller_mortgage:/сохраняются ли/,dispute:/есть ли/,changed:/менялись ли/};
+    assert.match(r.next,prompts[feature]);
   }
 });
 test('clarification is ordered by consequence and distinguishes missing from known facts',()=>{
