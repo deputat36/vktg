@@ -399,7 +399,8 @@ test('regional house capital shows suitability guidance and switching the progra
   await page.locator('#available-house_suitability_docs').check();await page.locator('#available-social_docs').check();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await testInfo.attach('regional-capital-house-320.png',{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
-  await page.locator('[data-action=situation]').click();await page.locator('#funding-regional_matcap').uncheck();
+  await page.locator('[data-action=situation]').click();await page.locator('#question-context > summary').click();
+  await page.locator('#funding-regional_matcap').uncheck();
   await page.locator('#funding-matcap').check();await page.locator('[data-action=details]').click();
   await expect(page.locator('#fact-social-unknown')).toBeChecked();await expect(page.locator('#source-social')).toHaveCount(0);
   await page.locator('[data-action=result]').click();await page.locator('#documents > summary').click();
