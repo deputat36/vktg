@@ -24,7 +24,7 @@ test('02 mortgage asks about bank approval without claiming approval itself',()=
 });
 test('03 house and land have separate document and boundary questions',()=>{
   const r=result({object:'house_land'});assert.ok(ids(r).includes('land'));assert.ok(r.documents.some((d)=>d.id==='land_docs'));
-  assert.ok(r.lawyer.some((q)=>q.includes('границы')));
+  assert.ok(r.lawyer.some((q)=>/границ/.test(q)));
   const land=result({object:'land'});assert.ok(!ids(land).includes('past_matcap'));
 });
 test('04 sale of a share asks a professional about the procedure',()=>{
@@ -76,10 +76,48 @@ test('14 urgent deposit still asks for real expert timing',()=>{
   const r=result({urgency:'urgent'});assert.match(buildSummary(r,catalog),/реальный срок согласовать до подписания/);
 });
 test('15 matcap, certificate and child funds without mortgage never route automatically to broker',()=>{
-  for(const funding of [['own','matcap'],['certificate'],['matcap','certificate'],['child_funds']]){
+  for(const funding of [['own','matcap'],['regional_matcap'],['certificate'],['matcap','certificate'],['child_funds']]){
     const r=result({funding});assert.equal(r.broker.length,0);assert.ok(r.lawyer.length>0);
     if(funding.includes('child_funds')){assert.equal(r.program.length,0);assert.ok(r.documents.some((d)=>d.id==='child_money_docs'));}
     else assert.ok(r.program.length>0);
+  }
+});
+
+test('family mortgage replaces the ordinary bank question without adding form questions',()=>{
+  const family=result({funding:['family_mortgage']});const ordinary=result({funding:['mortgage']});
+  assert.deepEqual(ids(family),ids(ordinary));assert.equal(family.broker.length,1);
+  assert.ok(family.active.some((rule)=>rule.id==='family_loan'));assert.ok(!family.active.some((rule)=>rule.id==='loan'));
+  assert.ok(ordinary.active.some((rule)=>rule.id==='loan'));assert.ok(!ordinary.active.some((rule)=>rule.id==='family_loan'));
+  assert.match(family.questions.find((q)=>q.id==='loan').title,/семейную ипотеку/);
+  assert.match(family.broker[0],/дату кредитного договора/);assert.match(family.broker[0],/перечень городов/);
+  assert.match(buildPlan(family,catalog),/после 15 лет/);
+});
+test('regional capital has a program and legal route, never an inferred loan or extra question',()=>{
+  const r=result({funding:['regional_matcap']});const federal=result({funding:['matcap']});
+  assert.deepEqual(ids(r),ids(federal));assert.equal(r.broker.length,0);assert.ok(r.program.length>0);assert.ok(r.lawyer.length>0);
+  assert.match(r.program[0],/областной — в УСЗН/);assert.match(buildSummary(r,catalog),/Областной маткапитал/);
+  assert.equal(r.facts.document.length,0);assert.equal(r.state.facts.social.value,'unknown');
+});
+test('house suitability guidance is limited to ready houses paid with federal or regional capital',()=>{
+  for(const object of ['house_land','flat','land','ddu','assignment']){
+    for(const funding of ['own','mortgage','matcap','regional_matcap','certificate','child_funds']){
+      const r=result({object,funding:[funding],available:['house_suitability_docs']});
+      const applies=object==='house_land' && ['matcap','regional_matcap'].includes(funding);
+      assert.equal(r.active.some((rule)=>rule.id==='house_suitability'),applies,`${object}/${funding}`);
+      assert.equal(r.documents.some((document)=>document.id==='house_suitability_docs'),applies);
+      assert.equal(r.state.available.includes('house_suitability_docs'),applies);
+      if(applies){assert.ok(r.lawyer.some((question)=>question.includes('межведомственной комиссии')));assert.equal(r.broker.length,0);}
+    }
+  }
+});
+test('combined capitals deduplicate program context and documents while retaining unknown provenance',()=>{
+  const r=result({object:'house_land',funding:['matcap','regional_matcap']});
+  assert.equal(ids(r).filter((id)=>id==='social').length,1);
+  assert.equal(r.documents.filter((d)=>d.id==='house_suitability_docs').length,1);
+  assert.equal(r.broker.length,0);assert.equal(r.facts.document.length,0);
+  assert.ok(!ids(result()).includes('land'));assert.equal(result().questions.length,4);
+  for(const text of [buildPlan(r,catalog),buildSummary(r,catalog)]){
+    assert.match(text,/0\.4\.0/);assert.match(text,/2026-10-21/);
   }
 });
 test('negative statements without a source are not confirmed absence of risk',()=>{

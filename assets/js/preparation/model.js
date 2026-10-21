@@ -180,6 +180,7 @@ export function buildPlan(result, catalog) {
     result.broker.length ? `Брокеру / банку: ${result.broker.join('; ')}` : '',
     result.program.length ? `Оператору программы: ${result.program.join('; ')}` : '',
     !result.focused && result.unreviewed.length ? 'Неотмеченные особенности не проверены; отсутствие отметки не означает отсутствие обстоятельства.' : '',
+    `Каталог рекомендаций ${catalog.version} · ${catalog.reviewed_at}.`,
     'Документы, ответ специалиста и следующие действия — в CRM. Это план подготовки, а не юридическое решение.'
   ].filter(Boolean).join('\n');
 }
@@ -207,6 +208,6 @@ export function buildSummary(result, catalog, audience = 'lawyer') {
     state.coordination === 'two_spn' ? 'Разные СПН: согласовать единый набор вводных и кто вернёт ответ сторонам.' : '',
     `Ответ нужен: ${state.urgency === 'urgent' ? 'срочно; реальный срок согласовать до подписания' : state.mode === 'deal' ? 'до подписания основной сделки' : state.mode === 'deposit' ? 'до подписания и передачи денег' : 'до следующего действия'}.`,
     'Код карточки, точный срок и ссылки на документы добавлю в разрешённом рабочем канале. Ответ и следующий шаг зафиксирую в CRM.',
-    `Сводка подготовки · версия ${catalog.version}. Сводка не является юридическим решением.`
+    `Сводка подготовки · версия ${catalog.version} · ${catalog.reviewed_at}. Сводка не является юридическим решением.`
   ].filter(Boolean).join('\n');
 }
