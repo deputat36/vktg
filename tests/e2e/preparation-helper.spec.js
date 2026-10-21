@@ -370,3 +370,55 @@ test('compact plan and document guidance fit phone, tablet and desktop',async({p
     await testInfo.attach(`compact-plan-documents-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
   }
 });
+
+test('family mortgage uses the dated bank route with the same number of form questions',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await start(page);await choose(page,{funding:['family_mortgage']});
+  await page.locator('[data-action=details]').click();await expect(page.locator('[data-question]')).toHaveCount(5);
+  await expect(page.locator('[data-question=loan] legend')).toContainText('семейную ипотеку');
+  await page.locator('#why-loan > summary').click();await expect(page.locator('#why-loan')).toContainText('01.10.2026');
+  await expect(page.locator('#why-loan')).toContainText('до 15 лет');await expect(page.locator('#fact-loan-unknown')).toBeChecked();
+  await page.locator('[data-action=result]').click();await expect(page.locator('#broker-request li')).toHaveCount(1);
+  await expect(page.locator('#broker-request')).toContainText('перечень городов');
+  await page.locator('#broker-preview > summary').click();await expect(page.locator('#broker-preview')).toContainText('2026-10-21');
+  await page.locator('#source-details > summary').click();await expect(page.locator('#source-details')).toContainText('Борисоглебска, Воронежская область');
+  await expect(page.locator('#source-details')).toContainText('Юридическая и ипотечная виза не получены');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await testInfo.attach('family-mortgage-updated-sources.png',{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  await expectNoRuntimeFailures(failures,testInfo,'family-mortgage-sources');
+});
+test('regional house capital shows suitability guidance and switching the program clears receipt marks',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await page.setViewportSize({width:320,height:900});
+  await start(page,'question');await choose(page,{object:'house_land',funding:['regional_matcap']});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.locator('[data-action=details]').click();await expect(page.locator('[data-question]')).toHaveCount(2);
+  await page.locator('#fact-social-yes').check();await page.locator('#source-social').selectOption('document');
+  await page.locator('[data-action=result]').click();await expect(page.locator('#broker-request')).toHaveCount(0);
+  await expect(page.locator('#main')).toContainText('областной — в УСЗН');await page.locator('#documents > summary').click();
+  await page.locator('#document-house_suitability_docs > summary').click();
+  await expect(page.locator('#document-house_suitability_docs')).toContainText('межведомственной комиссии');
+  await page.locator('#available-house_suitability_docs').check();await page.locator('#available-social_docs').check();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await testInfo.attach('regional-capital-house-320.png',{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  await page.locator('[data-action=situation]').click();await page.locator('#funding-regional_matcap').uncheck();
+  await page.locator('#funding-matcap').check();await page.locator('[data-action=details]').click();
+  await expect(page.locator('#fact-social-unknown')).toBeChecked();await expect(page.locator('#source-social')).toHaveCount(0);
+  await page.locator('[data-action=result]').click();await page.locator('#documents > summary').click();
+  await expect(page.locator('#available-house_suitability_docs')).not.toBeChecked();await expect(page.locator('#available-social_docs')).not.toBeChecked();
+  await expect(page.locator('#broker-request')).toHaveCount(0);expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);
+  await expectNoRuntimeFailures(failures,testInfo,'regional-capital');
+});
+
+test('methodologist can identify and edit a funding-specific question variant',async({page})=>{
+  await page.goto('preparation-rules.html');await page.locator('#question-editor > summary').click();
+  await page.locator('#question-select').selectOption('loan');await page.locator('#question-variant').selectOption({label:'Семейная ипотека'});
+  await expect(page.locator('#question-title')).toHaveValue('Банк подтвердил семейную ипотеку для этой семьи, объекта и даты договора?');
+  await page.locator('#question-title').fill('Семейная ипотека подтверждена на дату договора?');
+  await page.locator('#question-variant').selectOption('-1');
+  await expect(page.locator('#question-title')).toHaveValue('Банк подтвердил и покупателя, и объект, и условия оплаты?');
+  const downloadPromise=page.waitForEvent('download');await page.locator('#export-catalog').click();
+  const download=await downloadPromise;const stream=await download.createReadStream();const chunks=[];
+  for await(const chunk of stream)chunks.push(chunk);
+  const c=JSON.parse(Buffer.concat(chunks).toString());
+  expect(c.questions.find((q)=>q.id==='loan').variants[0].title).toBe('Семейная ипотека подтверждена на дату договора?');
+  expect(c.rules.every((rule)=>rule.approval==='draft')).toBe(true);
+});
