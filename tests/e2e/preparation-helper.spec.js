@@ -423,3 +423,62 @@ test('methodologist can identify and edit a funding-specific question variant',a
   expect(c.questions.find((q)=>q.id==='loan').variants[0].title).toBe('Семейная ипотека подтверждена на дату договора?');
   expect(c.rules.every((rule)=>rule.approval==='draft')).toBe(true);
 });
+
+test('office preparation separates facts, documents and conditions without adding answers',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);
+  for(const width of [320,768,1280]){
+    await page.setViewportSize({width,height:900});await start(page);await choose(page);
+    await page.locator('[data-action=details]').click();await expect(page.locator('[data-question]')).toHaveCount(4);
+    await page.locator('[data-action=result]').click();
+    await expect(page.locator('#facts-check [data-edit-question=owners]')).toBeVisible();
+    await expect(page.locator('#facts-check [data-edit-question=terms]')).toHaveCount(0);
+    await expect(page.locator('#conditions-check [data-edit-question=terms]')).toBeVisible();
+    await expect(page.locator('#conditions-check [data-edit-question=owners]')).toHaveCount(0);
+    const boxes=await Promise.all(['#facts-check','#documents','#conditions-check'].map((selector)=>page.locator(selector).boundingBox()));
+    expect(boxes[0].y).toBeLessThan(boxes[1].y);expect(boxes[1].y).toBeLessThan(boxes[2].y);
+    await page.locator('#clarify-help-terms > summary').click();await expect(page.locator('#clarify-help-terms')).toContainText('при отказе банка');
+    await page.locator('#documents > summary').click();await expect(page.locator('#document-progress')).toContainText('Наличие остальных не отмечено');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await testInfo.attach(`office-three-priorities-${width}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  }
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
+  await page.locator('[data-action=copy-plan]').click();const copied=await page.evaluate(()=>window.__copied);
+  expect(copied).toContain('Факты — что уточнить:');expect(copied).toContain('Документы-ориентиры:');expect(copied).toContain('Условия — что согласовать:');
+  expect(copied).toContain('Наличие не означает проверку');await expectNoRuntimeFailures(failures,testInfo,'office-priorities');
+});
+
+for(const funding of ['young_family','resettlement'])test(`office certificate ${funding} has one question and no implicit loan`,async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await start(page,'question');await choose(page,{funding:[funding]});
+  await page.locator('[data-action=details]').click();await expect(page.locator('[data-question]')).toHaveCount(1);
+  await expect(page.locator('#fact-social-unknown')).toBeChecked();await page.locator('[data-action=result]').click();
+  await expect(page.locator('#broker-request, #office-banks')).toHaveCount(0);
+  await expect(page.locator('#facts-check')).toHaveCount(0);await expect(page.locator('#conditions-check')).toBeVisible();
+  await page.locator('#program-guidance > summary').click();await expect(page.locator('#program-guidance article')).toHaveCount(1);
+  await expect(page.locator('#program-guidance')).toContainText(funding==='young_family' ? 'две даты' : 'точное название программы');
+  await page.locator('#documents > summary').click();await expect(page.locator('#available-social_docs')).toBeVisible();
+  await expect(page.locator('#available-loan_docs, #available-house_suitability_docs')).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await testInfo.attach(`office-certificate-${funding}.png`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  expect(await page.evaluate(()=>window.__storageHits)).toEqual([]);await expectNoRuntimeFailures(failures,testInfo,`office-${funding}`);
+});
+
+test('local house practice and bank reference are scoped and copied as office information',async({page},testInfo)=>{
+  const failures=captureRuntimeFailures(page);await page.setViewportSize({width:320,height:900});
+  await start(page,'question');await choose(page,{object:'house_land',funding:['matcap','mortgage']});
+  await page.locator('[data-action=result]').click();await page.locator('#documents > summary').click();
+  await page.locator('#document-house_suitability_docs > summary').click();
+  await expect(page.locator('.office-practice')).toContainText('Практика офиса · 2026-10-21');
+  await expect(page.locator('.office-practice')).toContainText('ориентировочно 12 000–15 000 ₽');
+  await expect(page.locator('.office-practice')).toContainText('до месяца по опыту офиса');
+  await page.locator('#office-banks > summary').click();await expect(page.locator('#office-banks')).toContainText('Чаще — Сбер');
+  for(const bank of ['Альфа-Банк','Банк ДОМ.РФ','Т-Банк','ВТБ','Совкомбанк','Уралсиб'])await expect(page.locator('#office-banks')).toContainText(bank);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await testInfo.attach('office-house-and-banks-320.png',{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copied=text;}}}));
+  await page.locator('[data-action=copy-plan]').click();expect(await page.evaluate(()=>window.__copied)).toContain('Практика офиса · 2026-10-21');
+  await page.locator('[data-action=situation]').click();await page.locator('#question-context > summary').click();
+  await page.locator('#object').selectOption('flat');await page.locator('#funding-mortgage').uncheck();await page.locator('[data-action=result]').click();
+  await expect(page.locator('.office-practice, #office-banks, #broker-request')).toHaveCount(0);
+  await page.locator('[data-action=copy-plan]').click();expect(await page.evaluate(()=>window.__copied)).not.toContain('12 000');
+  await expectNoRuntimeFailures(failures,testInfo,'office-house-practice');
+});

@@ -117,7 +117,7 @@ test('combined capitals deduplicate program context and documents while retainin
   assert.equal(r.broker.length,0);assert.equal(r.facts.document.length,0);
   assert.ok(!ids(result()).includes('land'));assert.equal(result().questions.length,4);
   for(const text of [buildPlan(r,catalog),buildSummary(r,catalog)]){
-    assert.match(text,/0\.4\.0/);assert.match(text,/2026-10-21/);
+    assert.ok(text.includes(catalog.version));assert.match(text,/2026-10-21/);
   }
 });
 test('negative statements without a source are not confirmed absence of risk',()=>{
@@ -302,4 +302,52 @@ test('copied plan states the nearest clarification once and preserves the other 
     assert.equal(plan.split(r.next).length-1,1);
     for(const q of r.clarify)assert.ok(plan.includes(q.clarify));
   }
+});
+
+test('young family and resettlement certificates use one program question without assuming a loan',()=>{
+  for(const funding of ['young_family','resettlement']){
+    const r=result({mode:'question',funding:[funding]});
+    assert.deepEqual(ids(r),['social']);assert.equal(r.fundingGuidance.length,1);
+    assert.equal(r.fundingGuidance[0].id,funding);assert.equal(r.broker.length,0);assert.ok(r.program.length>0);
+    assert.equal(r.facts.document.length,0);assert.equal(r.facts.unknown.length,1);
+    assert.ok(!r.documents.some((d)=>['egrn','loan_docs','house_suitability_docs'].includes(d.id)));
+  }
+});
+test('combined benefits retain both program notes and drop them when funding changes',()=>{
+  const r=result({object:'house_land',funding:['matcap','regional_matcap','young_family','resettlement']});
+  assert.equal(ids(r).filter((id)=>id==='social').length,1);assert.equal(r.fundingGuidance.length,2);
+  assert.equal(r.documents.filter((d)=>d.id==='house_suitability_docs').length,1);assert.equal(r.broker.length,0);
+  const own=assess({...r.state,funding:['own']},catalog);
+  assert.equal(own.fundingGuidance.length,0);assert.ok(!('social' in own.state.facts));
+  assert.ok(!buildPlan(own,catalog).includes('12 000'));assert.ok(!buildSummary(own,catalog).includes('Сертификат переселения:'));
+});
+test('fact and condition groups partition clarifications without approving either area',()=>{
+  const r=result({features:['changed'],funding:['mortgage'],facts:{restrictions:fact('yes','document'),terms:fact('no','client')}});
+  const all=[...r.clarificationGroups.facts,...r.clarificationGroups.conditions];
+  assert.deepEqual(all.map((q)=>q.id).sort(),r.clarify.map((q)=>q.id).sort());
+  assert.ok(r.clarificationGroups.facts.some((q)=>q.id==='restrictions' && q.reason==='attention'));
+  assert.ok(r.clarificationGroups.conditions.some((q)=>q.id==='terms' && q.reason==='attention'));
+  assert.ok(r.clarificationGroups.conditions.some((q)=>q.id==='loan'));assert.ok(!('ready' in r));
+  const plan=buildPlan(r,catalog);assert.match(plan,/Факты — что уточнить:/);assert.match(plan,/Условия — что согласовать:/);
+  assert.ok(plan.indexOf('Документы-ориентиры:')<plan.indexOf('Условия — что согласовать:'));
+  for(const q of r.clarify)assert.ok(plan.includes(q.clarify));assert.equal(plan.split(r.next).length-1,1);
+});
+test('local assessment cost and timing remain dated office practice, scoped to the active house document',()=>{
+  for(const funding of ['matcap','regional_matcap']){
+    const r=result({object:'house_land',funding:[funding]});
+    assert.equal(r.facts.document.length,0);assert.equal(r.broker.length,0);
+    for(const text of [buildPlan(r,catalog),buildSummary(r,catalog)]){
+      assert.match(text,/Практика офиса · 2026-10-21/);assert.match(text,/ориентировочно 12 000–15 000/);assert.match(text,/по опыту офиса/);
+    }
+  }
+  for(const extra of [{object:'flat',funding:['matcap']},{object:'house_land',funding:['young_family']},{object:'land',funding:['regional_matcap']}]){
+    const r=result(extra);assert.ok(!buildPlan(r,catalog).includes('12 000'));assert.ok(!r.documents.some((d)=>d.practice));
+  }
+});
+test('catalog validates office evidence and preparation areas while the state rejects office payloads',()=>{
+  for(const mutate of [c=>c.questions[0].preparation_area='approved',c=>c.office_context.primary_bank={},c=>c.office_context.source='missing',c=>c.documents.find((d)=>d.practice).practice=null,c=>c.documents.find((d)=>d.practice).practice.checked_at='yesterday',c=>c.funding.find((f)=>f.guidance).sources=['missing']]){
+    const c=structuredClone(catalog);mutate(c);assert.ok(validateCatalog(c).length);
+  }
+  const state=normalizeState({...basic(),office_context:{primary_bank:'UNTRUSTED'},bank:'UNTRUSTED',practice:{text:'UNTRUSTED'}},catalog);
+  assert.ok(!('bank' in state));assert.ok(!('office_context' in state));assert.ok(!('practice' in state));
 });

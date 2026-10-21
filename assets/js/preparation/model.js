@@ -59,6 +59,14 @@ export function validateCatalog(catalog) {
   }
   if (errors.length) return errors;
   const has = (key, id) => Boolean(entry(catalog[key], id));
+  for (const funding of catalog.funding) {
+    if (funding.guidance !== undefined && (typeof funding.guidance !== 'string' || !funding.guidance.trim() || funding.guidance.length > 1500)) errors.push(`Неверная подсказка оплаты ${funding.id}.`);
+    if (funding.guidance && (!Array.isArray(funding.sources) || !funding.sources.length || funding.sources.some((id) => !has('sources',id)))) errors.push(`Нет источника подсказки оплаты ${funding.id}.`);
+  }
+  if (catalog.office_context !== undefined) {
+    const office = catalog.office_context;
+    if (!office || typeof office !== 'object' || Array.isArray(office) || !/^\d{4}-\d{2}-\d{2}$/.test(office.checked_at || '') || !has('sources',office.source) || typeof office.primary_bank !== 'string' || !office.primary_bank.trim() || office.primary_bank.length > 100 || !Array.isArray(office.other_banks) || office.other_banks.some((bank) => typeof bank !== 'string' || !bank.trim() || bank.length > 100) || !Array.isArray(office.frequent_objects) || office.frequent_objects.some((id) => !has('objects',id))) errors.push('Неверные сведения практики офиса.');
+  }
   const checkWhen = (when = {}) => {
     if (!when || typeof when !== 'object' || Array.isArray(when)) { errors.push('Неверное условие показа.'); return; }
     for (const [key, allowed] of Object.entries(when)) {
@@ -79,6 +87,7 @@ export function validateCatalog(catalog) {
       }
     }
     if (question.group && !['core','context','topic'].includes(question.group)) errors.push(`Неверная группа ${question.id}.`);
+    if (question.preparation_area !== undefined && !['facts','conditions'].includes(question.preparation_area)) errors.push(`Неверная область подготовки ${question.id}.`);
     if (question.priority !== undefined && (!Number.isFinite(question.priority) || question.priority < 0 || question.priority > 100)) errors.push(`Неверный приоритет ${question.id}.`);
     for (const key of ['attention_next','verify']) if (question[key] !== undefined && (typeof question[key] !== 'string' || !question[key].trim())) errors.push(`Не заполнено ${question.id}/${key}.`);
     if (!['yes','no'].includes(question.attention)) errors.push(`Неверное направление проверки ${question.id}.`);
@@ -86,6 +95,10 @@ export function validateCatalog(catalog) {
   }
   for (const document of catalog.documents) {
     for (const key of ['why','from','stage','review']) if (typeof document[key] !== 'string' || !document[key].trim()) errors.push(`Не заполнено ${document.id}/${key}.`);
+    if (document.practice !== undefined) {
+      const practice = document.practice;
+      if (!practice || typeof practice !== 'object' || Array.isArray(practice) || typeof practice.text !== 'string' || !practice.text.trim() || practice.text.length > 1500 || !/^\d{4}-\d{2}-\d{2}$/.test(practice.checked_at || '') || !has('sources',practice.source)) errors.push(`Неверная практика офиса ${document.id}.`);
+    }
   }
   for (const rule of catalog.rules) {
     checkWhen(rule.when);
@@ -135,6 +148,11 @@ export function assess(input, catalog) {
     if (reason) clarify.push({ ...item, reason, clarify: reason === 'attention' ? (question.attention_next || question.clarify) : reason === 'source' ? (question.verify || `Уточните источник ответа: «${question.title}»`) : question.clarify });
   }
   clarify.sort((a,b) => (b.priority || 0) - (a.priority || 0));
+  const clarificationGroups = {
+    facts: clarify.filter((item) => item.preparation_area !== 'conditions'),
+    conditions: clarify.filter((item) => item.preparation_area === 'conditions')
+  };
+  const fundingGuidance = state.funding.map((id) => entry(catalog.funding,id)).filter((item) => item.guidance).map((item) => ({ id:item.id, title:item.title, text:item.guidance }));
   const active = catalog.rules.filter((rule) => {
     if (!matches(state, rule.when)) return false;
     if (focused && rule.preparation_only) return false;
@@ -161,24 +179,30 @@ export function assess(input, catalog) {
   if (!next && clarify.length) next = clarify[0].clarify;
   if (!next && focused) next = active[0]?.next || (questions.length ? 'Перепроверьте выбранную тему. Если отдельного вопроса нет, перейдите к подготовке задатка или сделки.' : 'Выберите тему вопроса на шаге «Ситуация». При необходимости уточните тип объекта или оплату.');
   if (!next) next = 'Передайте юристу вводные и доступные в CRM документы; получите ответ о следующем действии и зафиксируйте его в CRM.';
-  return { state, focused, scopeNote: focused ? focusNote : '', questions, facts, clarify, active, documents, documentGroups, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
+  return { state, focused, scopeNote: focused ? focusNote : '', questions, facts, clarify, clarificationGroups, fundingGuidance, active, documents, documentGroups, lawyer, broker, program, unreviewed, signals, next, version: catalog.version };
 }
 
 const focusNote = 'План только по выбранным темам, типу объекта и оплате. Остальные обстоятельства сделки здесь не проверялись.';
+const officePracticeNotes = (result) => result.documents.filter((item) => item.practice).map((item) => `Практика офиса · ${item.practice.checked_at}: ${item.practice.text}`);
 export function buildPlan(result, catalog) {
-  const clarifications = unique(result.clarify.map((item) => item.clarify)).filter((text) => text !== result.next);
+  const clarifications = (area) => unique(result.clarificationGroups[area].map((item) => item.clarify)).filter((text) => text !== result.next);
   return [
     `План подготовки · ${label(catalog.modes,result.state.mode)} · ${label(catalog.objects,result.state.object)}.`,
     result.focused ? focusNote : '',
     `Сейчас: ${result.next}`,
-    ...clarifications.map((text) => `• ${text}`),
+    clarifications('facts').length ? 'Факты — что уточнить:' : '',
+    ...clarifications('facts').map((text) => `• ${text}`),
     result.documents.length ? 'Документы-ориентиры:' : '',
     result.documentGroups.available.length ? `Есть в CRM (по отметке СПН): ${result.documentGroups.available.map((item) => item.title).join('; ')}.` : '',
     result.documentGroups.unmarked.length ? `Наличие в CRM не отмечено: ${result.documentGroups.unmarked.map((item) => item.title).join('; ')}.` : '',
     result.documents.length ? 'Уточните состав пакета у специалиста. Наличие не означает проверку.' : '',
+    ...officePracticeNotes(result),
+    clarifications('conditions').length ? 'Условия — что согласовать:' : '',
+    ...clarifications('conditions').map((text) => `• ${text}`),
     result.lawyer.length ? `Юристу: ${result.lawyer.join('; ')}` : '',
     result.broker.length ? `Брокеру / банку: ${result.broker.join('; ')}` : '',
     result.program.length ? `Оператору программы: ${result.program.join('; ')}` : '',
+    ...result.fundingGuidance.map((item) => `${item.title}: ${item.text}`),
     !result.focused && result.unreviewed.length ? 'Неотмеченные особенности не проверены; отсутствие отметки не означает отсутствие обстоятельства.' : '',
     `Каталог рекомендаций ${catalog.version} · ${catalog.reviewed_at}.`,
     'Документы, ответ специалиста и следующие действия — в CRM. Это план подготовки, а не юридическое решение.'
@@ -202,9 +226,11 @@ export function buildSummary(result, catalog, audience = 'lawyer') {
     !result.focused && result.unreviewed.length ? `Отдельно не проверялись: ${result.unreviewed.map((item) => item.title).join(', ')}.` : '',
     facts.not_applicable.length ? `Отмечено «не относится» (применимость не проверена): ${facts.not_applicable.map((item) => item.short || item.title).join(', ')}.` : '',
     `Доступны в CRM: ${compactList(state.available.map((id) => label(catalog.documents,id)),'наличие документов не отмечено')}. Получение не означает профессиональную проверку.`,
+    ...officePracticeNotes(result),
     `Прошу уточнить: ${compactList(questions,'какие сведения и документы ещё нужны до следующего действия')}.`,
     `Следующий шаг: ${result.next}`,
     result.program.length && audience === 'lawyer' ? `У оператора программы: ${result.program.join('; ')}.` : '',
+    ...result.fundingGuidance.map((item) => `${item.title}: ${item.text}`),
     state.coordination === 'two_spn' ? 'Разные СПН: согласовать единый набор вводных и кто вернёт ответ сторонам.' : '',
     `Ответ нужен: ${state.urgency === 'urgent' ? 'срочно; реальный срок согласовать до подписания' : state.mode === 'deal' ? 'до подписания основной сделки' : state.mode === 'deposit' ? 'до подписания и передачи денег' : 'до следующего действия'}.`,
     'Код карточки, точный срок и ссылки на документы добавлю в разрешённом рабочем канале. Ответ и следующий шаг зафиксирую в CRM.',
