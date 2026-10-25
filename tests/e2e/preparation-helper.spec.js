@@ -379,7 +379,7 @@ test('family mortgage uses the dated bank route with the same number of form que
   await expect(page.locator('#why-loan')).toContainText('до 15 лет');await expect(page.locator('#fact-loan-unknown')).toBeChecked();
   await page.locator('[data-action=result]').click();await expect(page.locator('#broker-request li')).toHaveCount(1);
   await expect(page.locator('#broker-request')).toContainText('перечень городов');
-  await page.locator('#broker-preview > summary').click();await expect(page.locator('#broker-preview')).toContainText('2026-10-21');
+  await page.locator('#broker-preview > summary').click();await expect(page.locator('#broker-preview')).toContainText('2026-10-25');
   await page.locator('#source-details > summary').click();await expect(page.locator('#source-details')).toContainText('Борисоглебска, Воронежская область');
   await expect(page.locator('#source-details')).toContainText('Юридическая и ипотечная виза не получены');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
