@@ -319,7 +319,7 @@ test('combined benefits retain both program notes and drop them when funding cha
   assert.equal(r.documents.filter((d)=>d.id==='house_suitability_docs').length,1);assert.equal(r.broker.length,0);
   const own=assess({...r.state,funding:['own']},catalog);
   assert.equal(own.fundingGuidance.length,0);assert.ok(!('social' in own.state.facts));
-  assert.ok(!buildPlan(own,catalog).includes('12 000'));assert.ok(!buildSummary(own,catalog).includes('Сертификат переселения:'));
+  assert.ok(!buildPlan(own,catalog).includes('12 000'));assert.ok(!buildSummary(own,catalog).includes('Переселение из аварийного жилья:'));
 });
 test('fact and condition groups partition clarifications without approving either area',()=>{
   const r=result({features:['changed'],funding:['mortgage'],facts:{restrictions:fact('yes','document'),terms:fact('no','client')}});
